@@ -1,35 +1,59 @@
 @import "tailwindcss";
 
-/* Creads "modo suave": dark by default, light when the visitor prefers it */
+/*
+  Creads landing — "the ad is the hero".
+  Layout: left-aligned copy beside a live 9:16 Meta ad mock whose captions play the real script;
+  sections below follow the actual pipeline (script → cuts → video → QA → montage).
+  Dark "modo suave" by default, light when the visitor's system asks for it.
+*/
 :root {
-  --bg: #1d2228;
-  --surface: #242a31;
-  --surface-2: #2a3139;
-  --ink: #d5dce4;
-  --muted: #8c97a3;
-  --line: #353d47;
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --surface-2: #f4f6f9;
+  --ink: #1e2630;
+  --muted: #5d6875;
+  --line: #d6dce3;
+  --accent: #5b4fd9;
+  --accent-ink: #ffffff;
+  --accent-text: #4a3fc0;
+  --caption: #ffd84d; /* the reel caption highlight — used inside the phone only */
+  --good: #1f8f50;
+  --bad: #c2413a;
+  --grad: linear-gradient(135deg, #7b6cf6 0%, #c46bd8 55%, #ff8a5c 100%);
+  --font-display: "Archivo Variable", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b2027;
+    --surface: #232a33;
+    --surface-2: #29313b;
+    --ink: #e3e8ee;
+    --muted: #93a0ae;
+    --line: #343d48;
+    --accent: #8f86f5;
+    --accent-ink: #15122b;
+    --accent-text: #b9b3fa;
+    --good: #6fcf97;
+    --bad: #f2877c;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b2027;
+  --surface: #232a33;
+  --surface-2: #29313b;
+  --ink: #e3e8ee;
+  --muted: #93a0ae;
+  --line: #343d48;
   --accent: #8f86f5;
   --accent-ink: #15122b;
   --accent-text: #b9b3fa;
   --good: #6fcf97;
   --bad: #f2877c;
-  --grad: linear-gradient(135deg, #7b6cf6 0%, #c46bd8 55%, #ff8a5c 100%);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #eceff3;
-    --surface: #f7f8fa;
-    --surface-2: #f1f3f6;
-    --ink: #27303a;
-    --muted: #66717d;
-    --line: #d9dee4;
-    --accent: #5b4fd9;
-    --accent-ink: #ffffff;
-    --accent-text: #4a3fc0;
-    --good: #1f8f50;
-    --bad: #c2413a;
-  }
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -42,9 +66,11 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-text: var(--accent-text);
+  --color-caption: var(--caption);
   --color-good: var(--good);
   --color-bad: var(--bad);
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 html,
@@ -53,9 +79,53 @@ body {
   color: var(--ink);
 }
 
+body {
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  text-wrap: balance;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+}
+
 .grad-text {
   background: var(--grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Reel captions: condensed, heavy, uppercase — the way captions look in the feed. */
+.caption {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  color: #fff;
+  text-shadow:
+    0 2px 0 #000,
+    0 -2px 0 #000,
+    2px 0 0 #000,
+    -2px 0 0 #000,
+    0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
