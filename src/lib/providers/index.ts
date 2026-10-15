@@ -1,4 +1,5 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
+import { claude } from "./claude";
 
 // Registry of providers. Each entry is wired to its real API in Phase 1;
 // until then `configured()` only reports whether its key is present.
@@ -55,11 +56,7 @@ export const voiceProviders: VoiceProvider[] = [
   },
 ];
 
-export const textAI: TextAI = {
-  id: "claude",
-  configured: () => has("ANTHROPIC_API_KEY"),
-  complete: notYet("Claude API"),
-};
+export const textAI: TextAI = claude;
 
 /** Which services have keys configured (for /api/health and the admin panel). */
 export function providerStatus() {
