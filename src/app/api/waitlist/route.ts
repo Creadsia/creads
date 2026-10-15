@@ -35,7 +35,19 @@ export async function POST(req: Request) {
     // Log Supabase's answer (never the key) so it shows in Vercel → Logs, and give a short code to the visitor.
     const detail = await res.text().catch(() => "");
     console.error("waitlist insert failed", res.status, detail.slice(0, 500));
-    return NextResponse.json({ error: `No se pudo guardar (código ${res.status}). Intenta de nuevo.` }, { status: 502 });
+    // Supabase's error text never contains the key, so a short hint is safe to show while we set things up.
+    let hint = "";
+    try {
+      const j = JSON.parse(detail);
+      hint = [j.code, j.message || j.msg || j.error].filter(Boolean).join(" ").slice(0, 140);
+    } catch {
+      hint = detail.slice(0, 140);
+    }
+    const keyKind = key.startsWith("sb_secret_") ? "secret" : key.startsWith("eyJ") ? "legacy" : key.startsWith("sb_publishable_") ? "publishable" : "otra";
+    return NextResponse.json(
+      { error: `No se pudo guardar (código ${res.status}; clave ${keyKind}; ${hint || "sin detalle"}).` },
+      { status: 502 },
+    );
   }
   return NextResponse.json({ ok: true });
 }
