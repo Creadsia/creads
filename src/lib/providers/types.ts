@@ -37,6 +37,8 @@ export interface VideoProvider {
   configured(): boolean;
   submit(req: VideoRequest): Promise<Job>;
   status(job: Job): Promise<JobStatus>;
+  /** For providers whose result links need our key (Veo): fetch the finished file so we can re-host it. */
+  download?(url: string): Promise<ArrayBuffer>;
 }
 
 export interface ImageRequest {
@@ -50,8 +52,8 @@ export interface ImageProvider {
   label: string;
   usdPerImage: number;
   configured(): boolean;
-  submit(req: ImageRequest): Promise<Job>;
-  status(job: Job): Promise<JobStatus>;
+  /** Images take seconds, so this waits for the result and returns the file. */
+  generate(req: ImageRequest): Promise<{ bytes: Uint8Array; mime: string }>;
 }
 
 export interface VoiceProvider {

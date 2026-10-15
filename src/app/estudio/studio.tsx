@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ModelLab from "./model-lab";
 
 interface Cut {
   tipo: string;
@@ -130,6 +131,7 @@ export default function Studio() {
           </ol>
         </section>
       )}
+      <ModelLab code={code} />
     </div>
   );
 }

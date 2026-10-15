@@ -1,8 +1,9 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
+import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 
-// Registry of providers. Each entry is wired to its real API in Phase 1;
-// until then `configured()` only reports whether its key is present.
+// Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
+// `configured()` reports whether the provider's key is present.
 const has = (name: string) => Boolean(process.env[name]);
 
 const notYet = (what: string) => () => {
@@ -10,14 +11,9 @@ const notYet = (what: string) => () => {
 };
 
 export const videoProviders: VideoProvider[] = [
-  {
-    id: "veo-3.1-fast",
-    label: "Veo 3.1 Fast (Gemini API)",
-    usdPerSecond: 0.12, // 1080p, Gemini API, checked 2026-10-13
-    configured: () => has("GEMINI_API_KEY"),
-    submit: notYet("Veo 3.1"),
-    status: notYet("Veo 3.1"),
-  },
+  veoLite,
+  veoFast,
+  veoStd,
   {
     id: "seedance-2.0",
     label: "Seedance 2.0 (fal.ai)",
@@ -36,16 +32,7 @@ export const videoProviders: VideoProvider[] = [
   },
 ];
 
-export const imageProviders: ImageProvider[] = [
-  {
-    id: "nano-banana-pro",
-    label: "Nano Banana Pro (Gemini API)",
-    usdPerImage: 0.134, // 1K/2K, checked 2026-10-13
-    configured: () => has("GEMINI_API_KEY"),
-    submit: notYet("Nano Banana Pro"),
-    status: notYet("Nano Banana Pro"),
-  },
-];
+export const imageProviders: ImageProvider[] = [nanoBananaPro];
 
 export const voiceProviders: VoiceProvider[] = [
   {
@@ -57,6 +44,9 @@ export const voiceProviders: VoiceProvider[] = [
 ];
 
 export const textAI: TextAI = claude;
+
+export const findVideo = (id: string) => videoProviders.find((p) => p.id === id);
+export const findImage = (id: string) => imageProviders.find((p) => p.id === id);
 
 /** Which services have keys configured (for /api/health and the admin panel). */
 export function providerStatus() {
