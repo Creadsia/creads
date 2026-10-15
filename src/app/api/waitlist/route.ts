@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+
+// Saves a waitlist sign-up in Supabase (table `waitlist`, see supabase/schema.sql).
+// Uses the REST endpoint with the service-role key, which stays on the server.
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => null);
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return NextResponse.json({ error: "Escribe un correo válido." }, { status: 400 });
+  }
+
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    return NextResponse.json({ error: "La lista abre muy pronto. Escríbenos a hola@creadsia.com." }, { status: 503 });
+  }
+
+  const res = await fetch(`${url}/rest/v1/waitlist`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      "content-type": "application/json",
+      prefer: "resolution=ignore-duplicates,return=minimal",
+    },
+    body: JSON.stringify({
+      email,
+      niche: String(body?.niche ?? "").slice(0, 80),
+      ads_per_month: String(body?.ads_per_month ?? "").slice(0, 20),
+    }),
+  });
+
+  if (!res.ok && res.status !== 409) {
+    return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true });
+}

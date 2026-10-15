@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Creads "modo suave": dark by default, light when the visitor prefers it */
+:root {
+  --bg: #1d2228;
+  --surface: #242a31;
+  --surface-2: #2a3139;
+  --ink: #d5dce4;
+  --muted: #8c97a3;
+  --line: #353d47;
+  --accent: #8f86f5;
+  --accent-ink: #15122b;
+  --accent-text: #b9b3fa;
+  --good: #6fcf97;
+  --bad: #f2877c;
+  --grad: linear-gradient(135deg, #7b6cf6 0%, #c46bd8 55%, #ff8a5c 100%);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #eceff3;
+    --surface: #f7f8fa;
+    --surface-2: #f1f3f6;
+    --ink: #27303a;
+    --muted: #66717d;
+    --line: #d9dee4;
+    --accent: #5b4fd9;
+    --accent-ink: #ffffff;
+    --accent-text: #4a3fc0;
+    --good: #1f8f50;
+    --bad: #c2413a;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-text: var(--accent-text);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
