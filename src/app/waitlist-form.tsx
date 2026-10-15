@@ -5,10 +5,11 @@ import { useState } from "react";
 type State = "idle" | "sending" | "done" | "error";
 
 const NICHES = [
-  "Seguros de auto",
-  "Remodelación de baños",
-  "Reparación de fundaciones",
-  "Otro servicio para el hogar",
+  "Creador o influencer",
+  "Marketer o agencia",
+  "Marca o e-commerce",
+  "Negocio local",
+  "Afiliado o lead-gen",
   "Otro",
 ];
 
@@ -68,22 +69,22 @@ export default function WaitlistForm({ id, compact = false }: { id: string; comp
       {!compact && (
         <div className="grid gap-2.5 sm:grid-cols-2">
           <label htmlFor={`${id}-niche`} className="sr-only">
-            Tu nicho principal
+            A qué te dedicas
           </label>
           <select id={`${id}-niche`} name="niche" defaultValue="" className={field}>
             <option value="" disabled>
-              Tu nicho principal
+              ¿A qué te dedicas?
             </option>
             {NICHES.map((n) => (
               <option key={n}>{n}</option>
             ))}
           </select>
           <label htmlFor={`${id}-ads`} className="sr-only">
-            Anuncios que haces al mes
+            Contenidos que publicas al mes
           </label>
           <select id={`${id}-ads`} name="ads_per_month" defaultValue="" className={field}>
             <option value="" disabled>
-              Anuncios que haces al mes
+              Contenidos que publicas al mes
             </option>
             <option>1–5</option>
             <option>6–15</option>

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
-  Creads landing — "the ad is the hero".
-  Layout: left-aligned copy beside a live 9:16 Meta ad mock whose captions play the real script;
-  sections below follow the actual pipeline (script → cuts → video → QA → montage).
+  Creads — the AI content studio in Spanish.
+  Layout: a composer hero (type an idea, pick what to make) over a wall of generated scenes;
+  then studios, the directing difference, models, audiences, Spanish-first, founders, FAQ.
   Dark "modo suave" by default, light when the visitor's system asks for it.
 */
 :root {
@@ -19,19 +19,20 @@
   --caption: #ffd84d; /* the reel caption highlight — used inside the phone only */
   --good: #1f8f50;
   --bad: #c2413a;
-  --grad: linear-gradient(135deg, #7b6cf6 0%, #c46bd8 55%, #ff8a5c 100%);
+  --grad: linear-gradient(120deg, #8b7cff 0%, #e06cc8 55%, #ff8a5c 100%);
+  --rec: #ff5a4e;
   --font-display: "Archivo Variable", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Hanken Grotesk Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1b2027;
-    --surface: #232a33;
-    --surface-2: #29313b;
-    --ink: #e3e8ee;
-    --muted: #93a0ae;
-    --line: #343d48;
+    --bg: #12151c;
+    --surface: #1a1e27;
+    --surface-2: #222733;
+    --ink: #eceff4;
+    --muted: #9aa3b2;
+    --line: #2b313e;
     --accent: #8f86f5;
     --accent-ink: #15122b;
     --accent-text: #b9b3fa;
@@ -42,12 +43,12 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #1b2027;
-  --surface: #232a33;
-  --surface-2: #29313b;
-  --ink: #e3e8ee;
-  --muted: #93a0ae;
-  --line: #343d48;
+  --bg: #12151c;
+  --surface: #1a1e27;
+  --surface-2: #222733;
+  --ink: #eceff4;
+  --muted: #9aa3b2;
+  --line: #2b313e;
   --accent: #8f86f5;
   --accent-ink: #15122b;
   --accent-text: #b9b3fa;
@@ -67,6 +68,7 @@
   --color-accent-ink: var(--accent-ink);
   --color-accent-text: var(--accent-text);
   --color-caption: var(--caption);
+  --color-rec: var(--rec);
   --color-good: var(--good);
   --color-bad: var(--bad);
   --font-sans: var(--font-body);

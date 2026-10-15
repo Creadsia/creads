@@ -4,13 +4,13 @@ import "@fontsource-variable/hanken-grotesk";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Creads · Anuncios de video para lead-gen",
+  title: "Creads · Estudio de contenido con IA en español",
   description:
-    "Pega tu guion ganador y recibe anuncios de video terminados para Meta: cortes, voz, subtítulos y revisión automática.",
+    "Crea anuncios, reels, podcasts y fotos de producto con IA, en español. Escribe la idea y recibe el contenido terminado.",
   metadataBase: new URL("https://www.creadsia.com"),
   openGraph: {
-    title: "Creads · Tu guion ganador, convertido en anuncios",
-    description: "Anuncios de video para lead-gen en Meta, hechos con IA y revisados antes de entregártelos.",
+    title: "Creads · Escribe la idea. Recibe el contenido terminado.",
+    description: "El estudio de contenido con IA en español: anuncios, reels, podcasts y fotos de producto.",
     url: "https://www.creadsia.com",
     siteName: "Creads",
     locale: "es_CL",
