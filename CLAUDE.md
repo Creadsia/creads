@@ -5,7 +5,7 @@ Creads is a SaaS for lead-gen advertisers on Meta (auto insurance, bath remodel,
 ## Vision (owner's words, Oct 2026)
 Compete head-on with Higgsfield and win Latin America. Creads exists to help marketers grow, so it protects the customer's money:
 - **As many models as possible** behind one simple studio (Veo, Kling, Seedance, Nano Banana, ElevenLabs, and more as they appear).
-- **Fewer errors**: every failed generation is money the customer loses. Check before spending, QA after, free automatic redos, never charge for our failures. The system keeps learning: failures and fixes are stored as rules (like `vrules` in the prototype) and fed back into prompts for every customer.
+- **Fewer errors**: every failed generation is money the customer loses. Check before spending, QA after, free automatic redos when QA catches a severe error. Don't advertise a "no pay if it fails" guarantee (owner's call): the message is quality, not refunds. The system keeps learning: failures and fixes are stored as rules (like `vrules` in the prototype) and fed back into prompts for every customer.
 - **Easy**: Spanish and English, simple flows that replace a full day of work. Easier than Higgsfield.
 - **Price/quality** is the brand. API and MCP access for power users and agencies.
 
