@@ -171,8 +171,8 @@ export const es: Content = {
       {
         id: "starter",
         name: "Starter",
-        price: 39,
-        yearly: 32,
+        price: 59,
+        yearly: 49,
         credits: "1.000",
         for: "Para creadores y negocios que están partiendo.",
         features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "1080p, uso comercial"],
@@ -180,8 +180,8 @@ export const es: Content = {
       {
         id: "plus",
         name: "Plus",
-        price: 99,
-        yearly: 82,
+        price: 129,
+        yearly: 108,
         credits: "3.000",
         for: "Para marketers y creadores que publican todas las semanas.",
         features: ["≈ 10 anuncios UGC de 30 s, o 375 imágenes", "Producción automática: 3 versiones por guion", "3 avatares y 3 voces clonadas", "Cola prioritaria", "Los créditos se guardan 1 mes"],
@@ -189,8 +189,8 @@ export const es: Content = {
       {
         id: "studio",
         name: "Studio",
-        price: 259,
-        yearly: 216,
+        price: 249,
+        yearly: 208,
         credits: "8.000",
         for: "Para agencias, marcas y equipos que producen a escala.",
         features: ["≈ 26 anuncios UGC de 30 s, o 1.000 imágenes", "Avatares y voces ilimitados", "3 usuarios de equipo", "La cola más rápida y acceso anticipado a modelos nuevos", "Soporte directo"],
