@@ -2,6 +2,13 @@
 
 Creads is a SaaS for lead-gen advertisers on Meta (auto insurance, bath remodel, foundation repair…): the user pastes a winning script and gets finished video ads — cuts, AI video, voice, subtitles and automatic QA. Owner: Creadsia (hola@creadsia.com), domain creadsia.com. The owner is non-technical and speaks Spanish: talk to him in plain Spanish (Chile), no jargon.
 
+## Vision (owner's words, Oct 2026)
+Compete head-on with Higgsfield and win Latin America. Creads exists to help marketers grow, so it protects the customer's money:
+- **As many models as possible** behind one simple studio (Veo, Kling, Seedance, Nano Banana, ElevenLabs, and more as they appear).
+- **Fewer errors**: every failed generation is money the customer loses. Check before spending, QA after, free automatic redos, never charge for our failures. The system keeps learning: failures and fixes are stored as rules (like `vrules` in the prototype) and fed back into prompts for every customer.
+- **Easy**: Spanish and English, simple flows that replace a full day of work. Easier than Higgsfield.
+- **Price/quality** is the brand. API and MCP access for power users and agencies.
+
 ## Where it comes from
 `legacy/creads-artifact.html` is the working prototype (a single-page Claude artifact) and `legacy/af.py` its montage tool (Whisper QA, FFmpeg assembly, ASS subtitles, contact sheets). They are the source of truth for behaviour being migrated: formats (ugc, podcast, entrevista, ronda, noticiero, comentario, drive-thru), FORMAT_LOCK/FMT_DIR prompts, cut rules (≤8 cuts, dialogue cuts for podcast), number normalisation in QA, severe-only auto-redo (max 1 per cut, 2 per ad), learned rules (`vrules`), image QA and safe zones, 4:5 feed images, Chilean Spanish mode. Read the relevant part before re-implementing a feature.
 
