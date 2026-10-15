@@ -115,15 +115,36 @@ export default function Landing({ t }: { t: Content }) {
 
   return (
     <div className="overflow-x-clip">
+      {/* Offer bar */}
+      <div className="bg-[image:var(--grad)] text-white">
+        <a
+          href="#pricing"
+          className={`mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 py-2 text-center text-sm font-medium ${gutter}`}
+        >
+          <span>{t.bar.text}</span>
+          <span className="rounded-full bg-white/20 px-2.5 py-0.5 font-semibold">{t.bar.cta}</span>
+        </a>
+      </div>
+
       {/* Header */}
-      <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/80 backdrop-blur">
-        <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 py-3.5 ${gutter}`}>
+      <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
+        <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
           <Logo href={home} />
-          <nav aria-label="Main" className="hidden items-center gap-7 text-[15px] text-muted lg:flex">
-            <a href="#studios" className="hover:text-ink">{t.nav.studios}</a>
-            <a href="#models" className="hover:text-ink">{t.nav.models}</a>
-            <a href="#pricing" className="hover:text-ink">{t.nav.pricing}</a>
-            <a href="#faq" className="hover:text-ink">{t.nav.faq}</a>
+          <nav aria-label="Main" className="hidden items-center gap-1 text-[15px] lg:flex">
+            {t.menu.map((m) => (
+              <a key={m.label} href={m.href} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-muted transition-colors hover:bg-surface hover:text-ink">
+                {m.label}
+                {m.badge && (
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                      m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
+                    }`}
+                  >
+                    {m.badge}
+                  </span>
+                )}
+              </a>
+            ))}
           </nav>
           <div className="flex items-center gap-2">
             <a
@@ -141,34 +162,106 @@ export default function Landing({ t }: { t: Content }) {
         </div>
       </header>
 
-      <main className="flex flex-col gap-32 pb-24">
-        {/* Hero */}
-        <section className={`relative pt-16 sm:pt-24 ${gutter}`}>
+      <main className="flex flex-col gap-28 pb-24">
+        {/* Hero: pitch + composer on the left, featured studios on the right */}
+        <section className={`relative pt-10 sm:pt-14 ${gutter}`}>
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-[520px] max-w-5xl rounded-full opacity-40 blur-[120px]"
+            className="pointer-events-none absolute -top-24 left-0 h-[520px] w-[60%] rounded-full opacity-35 blur-[120px]"
             style={{ background: "var(--grad)" }}
           />
-          <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-8 text-center">
-            <a
-              href="#pricing"
-              className="flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-sm text-muted backdrop-blur hover:text-ink"
-            >
-              <span className="h-2 w-2 rounded-full bg-rec" aria-hidden="true" />
-              {t.hero.promo}
-            </a>
-            <h1 className="text-[2.9rem] font-black leading-[1.02] [font-stretch:118%] sm:text-7xl">{t.hero.title}</h1>
-            <p className="max-w-[60ch] text-lg text-muted sm:text-xl">{t.hero.lead}</p>
-            <Composer t={t.composer} />
+          <div className="relative mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-[1fr_1.05fr]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <h1 className="text-[2.7rem] font-black leading-[1.02] [font-stretch:118%] sm:text-6xl">{t.hero.title}</h1>
+              <p className="max-w-[58ch] text-lg text-muted">{t.hero.lead}</p>
+              <Composer t={t.composer} />
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+                <span>{t.hero.poweredBy}</span>
+                {["Veo 3.1", "Seedance", "Kling", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
+                  <b key={m} className="font-display font-bold text-ink/80 [font-stretch:100%]">
+                    {m}
+                  </b>
+                ))}
+              </div>
+            </div>
+            <div className="grid min-w-0 grid-cols-2 gap-3" aria-label={t.featured.title}>
+              {t.featured.items.map((f, i) => {
+                const sc = SCENES[f.k as SceneKey];
+                return (
+                  <a
+                    key={f.title}
+                    href="#tools"
+                    className={`group relative flex overflow-hidden rounded-2xl border border-line ${
+                      i === 0 ? "row-span-2 min-h-[340px] sm:min-h-[420px]" : i === 3 ? "col-span-2 min-h-[150px] sm:min-h-[170px]" : "min-h-[160px] sm:min-h-[202px]"
+                    }`}
+                  >
+                    <Image
+                      src={sc.src}
+                      alt=""
+                      fill
+                      priority={i < 2}
+                      sizes="(max-width: 1024px) 50vw, 26vw"
+                      className={`object-cover transition-transform duration-500 group-hover:scale-[1.04] ${i === 3 ? "object-[50%_30%]" : ""}`}
+                    />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                    <span
+                      className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-bold text-white ${
+                        f.badge.startsWith("-") ? "bg-rec" : "bg-[image:var(--grad)]"
+                      }`}
+                    >
+                      {f.badge}
+                    </span>
+                    <span className="relative mt-auto flex flex-col gap-1 p-4 text-white">
+                      <b className={`font-display font-extrabold leading-tight [font-stretch:105%] ${i === 0 ? "text-2xl" : "text-lg"}`}>{f.title}</b>
+                      <span className="text-sm text-white/80">{f.text}</span>
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
-          {/* model strip */}
-          <div className="relative mx-auto mt-12 flex max-w-5xl flex-col items-center gap-4">
-            <p className="text-sm text-muted">{t.hero.poweredBy}</p>
-            <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 font-display text-lg font-bold text-muted [font-stretch:100%]">
-              {["Veo 3.1", "Seedance", "Kling", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
-                <li key={m}>{m}</li>
+
+          {/* real numbers about the product */}
+          <dl className="relative mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+            {t.stats.map(([n, l]) => (
+              <div key={l} className="flex flex-col gap-1 bg-surface px-5 py-4">
+                <dt className="order-2 text-sm text-muted">{l}</dt>
+                <dd className="order-1 font-display text-3xl font-black [font-stretch:110%]">{n}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        {/* Tools */}
+        <section aria-labelledby="tools" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-8">
+            <SectionHead id="tools" title={t.tools.title} lead={t.tools.lead} />
+            <div className="grid gap-6 lg:grid-cols-4">
+              {(["image", "video", "audio", "growth"] as const).map((g) => (
+                <div key={g} className="flex flex-col gap-2">
+                  <h3 className="px-1 text-sm font-semibold text-muted">{t.tools.groups[g]}</h3>
+                  {t.tools.items
+                    .filter((x) => x.group === g)
+                    .map((x) => (
+                      <div key={x.name} className="flex flex-col gap-1 rounded-xl border border-line bg-surface p-4 transition-colors hover:border-muted/50">
+                        <span className="flex items-center justify-between gap-2">
+                          <b className="font-semibold">{x.name}</b>
+                          {x.badge && (
+                            <span
+                              className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                                x.badge === "new" ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"
+                              }`}
+                            >
+                              {x.badge === "new" ? t.tools.new : t.tools.soon}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-sm text-muted">{x.text}</span>
+                      </div>
+                    ))}
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </section>
 
