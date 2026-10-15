@@ -3,6 +3,7 @@ import type { Content } from "@/content/en";
 import { Logo, Mark } from "./brand";
 import Composer from "./composer";
 import Pricing from "./pricing";
+import LoopVideo from "./loop-video";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -21,6 +22,18 @@ const SCENES = {
   news: { src: img("4201ea1f-ac6c-48db-9c04-d0d4385b6468"), w: 1536, h: 2752 },
 };
 type SceneKey = keyof typeof SCENES;
+
+// Short silent loops animated from the stills (Kling 3.0 Turbo, 5 s), re-encoded to ~200 KB each.
+// TODO(phase 1): move to our own storage.
+const CLIP = "https://d2ol7oe51mr4n9.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/";
+const VIDEOS: Partial<Record<SceneKey, string>> = {
+  ugc: `${CLIP}9d9f2c3e-4480-4706-93dc-92bb94a8e8f0.mp4`,
+  valpo: `${CLIP}9b933c53-6d3c-4306-9eff-5d0bd4bd58b0.mp4`,
+  serum: `${CLIP}dbfb983f-a3d8-4a46-bb53-e86fc64f91d6.mp4`,
+  podcast: `${CLIP}dbf87bbe-75ec-407e-8dfb-b8a48c570644.mp4`,
+  coach: `${CLIP}1d1b7dbe-d2c5-4930-a843-2dbe2834c080.mp4`,
+};
+const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=640&q=70`;
 const WALL: SceneKey[] = ["ugc", "serum", "valpo", "podcast", "coach", "chef", "car", "sneaker", "realtor", "news"];
 
 const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
@@ -216,6 +229,13 @@ export default function Landing({ t }: { t: Content }) {
                       sizes="(max-width: 1024px) 50vw, 26vw"
                       className={`object-cover transition-transform duration-500 group-hover:scale-[1.04] ${i === 3 ? "object-[50%_30%]" : ""}`}
                     />
+                    {VIDEOS[f.k as SceneKey] && (
+                      <LoopVideo
+                        src={VIDEOS[f.k as SceneKey]!}
+                        poster={poster(sc.src)}
+                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] ${i === 3 ? "object-[50%_30%]" : ""}`}
+                      />
+                    )}
                     <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                     <span
                       className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-bold text-white ${
@@ -297,6 +317,9 @@ export default function Landing({ t }: { t: Content }) {
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                     className="h-auto w-full transition-transform duration-500 group-hover:scale-[1.03]"
                   />
+                  {VIDEOS[k] && (
+                    <LoopVideo src={VIDEOS[k]!} poster={poster(s.src)} className="absolute inset-0 h-full w-full object-cover" />
+                  )}
                   <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pt-10 text-left text-white">
                     <span className="block text-sm font-semibold">{label}</span>
                     <span className="block text-xs opacity-75">{line}</span>
