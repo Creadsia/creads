@@ -4,11 +4,22 @@ import { useEffect, useRef, useState } from "react";
 
 // Test bench for the connected models. Every button here spends real money, so the price is always shown first.
 
-const VIDEO_MODELS = [
-  { id: "veo-3.1-lite", label: "Veo 3.1 Lite", usd: 0.05 },
-  { id: "veo-3.1-fast", label: "Veo 3.1 Fast", usd: 0.1 },
-  { id: "veo-3.1", label: "Veo 3.1", usd: 0.4 },
-] as const;
+interface VideoModel {
+  id: string;
+  label: string;
+  configured: boolean;
+  usdPerSecond: number;
+  live: boolean;
+  aspects: string[];
+  seconds: number[];
+}
+
+// Shown until /api/models answers.
+const FALLBACK: VideoModel[] = [
+  { id: "veo-3.1-lite", label: "Veo 3.1 Lite", usdPerSecond: 0.05 },
+  { id: "veo-3.1-fast", label: "Veo 3.1 Fast", usdPerSecond: 0.1 },
+  { id: "veo-3.1", label: "Veo 3.1", usdPerSecond: 0.4 },
+].map((m) => ({ ...m, configured: true, live: false, aspects: ["9:16", "16:9"], seconds: [4, 6, 8] }));
 
 const IMAGE_USD = 0.134;
 const clp = (usd: number) => Math.round((usd * 950) / 10) * 10; // rough CLP, for orientation only
@@ -27,7 +38,8 @@ export default function ModelLab({ code }: { code: string }) {
   const [imgErr, setImgErr] = useState("");
   const [image, setImage] = useState<string | null>(null);
 
-  const [model, setModel] = useState<(typeof VIDEO_MODELS)[number]["id"]>("veo-3.1-lite");
+  const [models, setModels] = useState<VideoModel[]>(FALLBACK);
+  const [model, setModel] = useState("veo-3.1-lite");
   const [seconds, setSeconds] = useState(4);
   const [useImage, setUseImage] = useState(true);
   const [video, setVideo] = useState<VideoState>({ s: "idle" });
@@ -36,15 +48,23 @@ export default function ModelLab({ code }: { code: string }) {
 
   useEffect(() => () => void (poll.current && clearTimeout(poll.current)), []);
   useEffect(() => {
+    if (!code) return;
+    fetch("/api/models", { headers: { "x-creads-code": code } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.video?.length && setModels(d.video))
+      .catch(() => {});
+  }, [code]);
+  useEffect(() => {
     if (video.s !== "running") return;
     const t = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(t);
   }, [video.s]);
 
   const headers = { "content-type": "application/json", "x-creads-code": code };
-  const vm = VIDEO_MODELS.find((m) => m.id === model)!;
-  const videoUsd = +(vm.usd * seconds).toFixed(2);
-  const videoAspect = aspect === "16:9" ? "16:9" : "9:16";
+  const vm = models.find((m) => m.id === model) ?? models[0];
+  const secs = vm.seconds.includes(seconds) ? seconds : vm.seconds[0];
+  const videoUsd = +(vm.usdPerSecond * secs).toFixed(2);
+  const videoAspect = vm.aspects.includes(aspect) ? aspect : aspect === "16:9" ? "16:9" : "9:16";
 
   async function makeImage() {
     setImgBusy(true);
@@ -61,15 +81,15 @@ export default function ModelLab({ code }: { code: string }) {
     }
   }
 
-  async function check(job: string, tries: number) {
+  async function check(id: string, job: string, tries: number) {
     try {
-      const res = await fetch(`/api/generate/video?model=${model}&job=${encodeURIComponent(job)}`, { headers });
+      const res = await fetch(`/api/generate/video?model=${id}&job=${encodeURIComponent(job)}`, { headers });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo revisar el video.");
       if (data.state === "done") return setVideo({ s: "done", url: data.url });
       if (data.state === "failed") throw new Error(data.error || "El video falló.");
       if (tries > 60) throw new Error("Se demoró demasiado (más de 10 minutos).");
-      poll.current = setTimeout(() => check(job, tries + 1), 10000);
+      poll.current = setTimeout(() => check(id, job, tries + 1), 10000);
     } catch (e) {
       setVideo({ s: "error", msg: e instanceof Error ? e.message : "El video falló." });
     }
@@ -81,11 +101,12 @@ export default function ModelLab({ code }: { code: string }) {
       const res = await fetch("/api/generate/video", {
         method: "POST",
         headers,
-        body: JSON.stringify({ prompt, aspect: videoAspect, seconds, model, firstFrame: useImage && image ? image : "" }),
+        body: JSON.stringify({ prompt, aspect: videoAspect, seconds: secs, model: vm.id, firstFrame: useImage && image ? image : "" }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el video.");
-      poll.current = setTimeout(() => check(data.job.jobId, 0), 15000);
+      const id = vm.id;
+      poll.current = setTimeout(() => check(id, data.job.jobId, 0), 15000);
     } catch (e) {
       setVideo({ s: "error", msg: e instanceof Error ? e.message : "No se pudo iniciar el video." });
     }
@@ -161,17 +182,17 @@ export default function ModelLab({ code }: { code: string }) {
 
         {/* Video */}
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
-          <h3 className="font-semibold">2 · Video con Veo</h3>
+          <h3 className="font-semibold">2 · Video</h3>
           <div className="flex flex-wrap gap-2">
-            <select value={model} onChange={(e) => setModel(e.target.value as typeof model)} className={pill} aria-label="Modelo">
-              {VIDEO_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label} · US${m.usd.toFixed(2)}/s
+            <select value={vm.id} onChange={(e) => setModel(e.target.value)} className={pill} aria-label="Modelo">
+              {models.map((m) => (
+                <option key={m.id} value={m.id} disabled={!m.configured}>
+                  {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `US$${m.usdPerSecond.toFixed(2)}/s` : "sin conectar"}
                 </option>
               ))}
             </select>
-            <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className={pill} aria-label="Duración">
-              {[4, 6, 8].map((s) => (
+            <select value={secs} onChange={(e) => setSeconds(Number(e.target.value))} className={pill} aria-label="Duración">
+              {vm.seconds.map((s) => (
                 <option key={s} value={s}>
                   {s} segundos
                 </option>
@@ -183,7 +204,7 @@ export default function ModelLab({ code }: { code: string }) {
             <span className={image ? "" : "text-muted"}>Partir desde la imagen generada</span>
           </label>
           <p className="text-xs text-muted">
-            Veo hace videos {videoAspect} a 720p, con audio. Si el texto incluye lo que dice la persona entre comillas, lo habla.
+            Se genera en {videoAspect} a 720p, con audio{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
           </p>
           <button
             type="button"

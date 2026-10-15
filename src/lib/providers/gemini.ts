@@ -100,7 +100,7 @@ function veo(id: string, model: string, label: string, usdPerSecond: number): Vi
         );
       }
       // Reference images and 1080p only work with 8-second clips.
-      const dur = assets.length || resolution === "1080p" ? 8 : [4, 6, 8].includes(seconds) ? seconds : 8;
+      const dur = assets.length || resolution === "1080p" ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8;
 
       const res = await fetch(`${BASE}/models/${model}:predictLongRunning`, {
         method: "POST",

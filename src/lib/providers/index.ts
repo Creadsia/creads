@@ -1,5 +1,6 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
+import { falVideoProviders } from "./fal";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
@@ -14,22 +15,7 @@ export const videoProviders: VideoProvider[] = [
   veoLite,
   veoFast,
   veoStd,
-  {
-    id: "seedance-2.0",
-    label: "Seedance 2.0 (fal.ai)",
-    usdPerSecond: 0, // to confirm on fal.ai before pricing
-    configured: () => has("FAL_KEY"),
-    submit: notYet("Seedance 2.0"),
-    status: notYet("Seedance 2.0"),
-  },
-  {
-    id: "kling-3.0",
-    label: "Kling 3.0 (fal.ai)",
-    usdPerSecond: 0, // to confirm on fal.ai before pricing
-    configured: () => has("FAL_KEY"),
-    submit: notYet("Kling 3.0"),
-    status: notYet("Kling 3.0"),
-  },
+  ...falVideoProviders,
 ];
 
 export const imageProviders: ImageProvider[] = [nanoBananaPro];

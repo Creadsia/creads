@@ -16,8 +16,8 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim().slice(0, 3000) : "";
-  const aspect: AspectRatio = body?.aspect === "16:9" ? "16:9" : "9:16";
-  const seconds = [4, 6, 8].includes(Number(body?.seconds)) ? Number(body.seconds) : 8;
+  const aspect: AspectRatio = (["9:16", "16:9", "1:1", "4:5"] as const).find((a) => a === body?.aspect) ?? "9:16";
+  const seconds = Math.min(15, Math.max(3, Math.round(Number(body?.seconds) || 8)));
   const firstFrame = typeof body?.firstFrame === "string" && body.firstFrame.startsWith("https://") ? body.firstFrame : "";
   if (prompt.length < 10) return NextResponse.json({ error: "Describe la escena con un poco más de detalle." }, { status: 400 });
 
