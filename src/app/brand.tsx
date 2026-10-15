@@ -20,9 +20,9 @@ export function Mark({ size = 32, className }: { size?: number; className?: stri
   );
 }
 
-export function Logo({ size = 30 }: { size?: number }) {
+export function Logo({ size = 30, href = "/" }: { size?: number; href?: string }) {
   return (
-    <a href="#inicio" className="flex items-center gap-2.5" aria-label="Creads, inicio">
+    <a href={href} className="flex items-center gap-2.5" aria-label="Creads">
       <Mark size={size} />
       <span className="font-display text-[1.35rem] font-black tracking-[-0.03em] [font-stretch:118%]">creads</span>
     </a>

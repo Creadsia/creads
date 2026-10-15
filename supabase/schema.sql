@@ -12,3 +12,7 @@ create table if not exists public.waitlist (
 -- Only the server (service role) writes or reads it; the public site cannot.
 alter table public.waitlist enable row level security;
 grant all on table public.waitlist to service_role;
+
+-- Plan reservations from the pricing section (added with the subscription site).
+alter table public.waitlist add column if not exists plan text;
+alter table public.waitlist add column if not exists lang text;
