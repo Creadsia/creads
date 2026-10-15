@@ -21,17 +21,17 @@ const SCENES = {
 };
 type SceneKey = keyof typeof SCENES;
 
-const wall: { k: SceneKey; label: string; model: string }[] = [
-  { k: "ugc", label: "Anuncio UGC", model: "Seedance + voz clonada" },
-  { k: "serum", label: "Foto de producto", model: "Nano Banana Pro" },
-  { k: "valpo", label: "Reel de viaje", model: "Veo 3.1" },
-  { k: "podcast", label: "Podcast con dos voces", model: "Seedance" },
-  { k: "coach", label: "Reel de entrenamiento", model: "Kling 3.0" },
-  { k: "chef", label: "Contenido para restaurante", model: "Veo 3.1" },
-  { k: "car", label: "Testimonio drive-thru", model: "Seedance" },
-  { k: "sneaker", label: "Hero de e-commerce", model: "Nano Banana Pro" },
-  { k: "realtor", label: "Recorrido de propiedad", model: "Veo 3.1" },
-  { k: "news", label: "Formato noticiero", model: "Seedance" },
+const wall: { k: SceneKey; label: string; model: string }[] /* model = format line under each tile */ = [
+  { k: "ugc", label: "Anuncio UGC", model: "9:16 · con tu voz clonada" },
+  { k: "serum", label: "Foto de producto", model: "4:5 · para el feed" },
+  { k: "valpo", label: "Reel de viaje", model: "9:16 · Reels y TikTok" },
+  { k: "podcast", label: "Podcast con dos voces", model: "4:5 · video podcast" },
+  { k: "coach", label: "Reel de entrenamiento", model: "9:16 · creador fitness" },
+  { k: "chef", label: "Contenido para restaurante", model: "4:5 · negocio local" },
+  { k: "car", label: "Testimonio drive-thru", model: "9:16 · lead-gen en EE. UU." },
+  { k: "sneaker", label: "Hero de e-commerce", model: "4:5 · tienda online" },
+  { k: "realtor", label: "Recorrido de propiedad", model: "9:16 · inmobiliaria" },
+  { k: "news", label: "Formato noticiero", model: "9:16 · agencia" },
 ];
 
 const studios: { name: string; does: string; k?: SceneKey }[] = [
@@ -181,7 +181,7 @@ export default function Home() {
             })}
           </div>
           <p className="mx-auto mt-4 max-w-7xl text-sm text-muted">
-            Escenas generadas con los modelos que usa Creads. Ninguna de estas personas existe.
+            Imágenes generadas con IA para este sitio. Ninguna de estas personas existe.
           </p>
         </section>
 
