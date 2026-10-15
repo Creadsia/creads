@@ -69,7 +69,12 @@ export default function Studio() {
             id="code"
             type="password"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => {
+              setCode(e.target.value);
+              try {
+                localStorage.setItem(CODE_KEY, e.target.value);
+              } catch {}
+            }}
             className="max-w-xs rounded-lg border border-line bg-surface-2 px-3 py-2"
             autoComplete="off"
           />

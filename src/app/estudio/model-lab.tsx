@@ -117,6 +117,14 @@ export default function ModelLab({ code }: { code: string }) {
         />
       </label>
 
+      {!ready && (
+        <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">
+          {!code
+            ? "👆 Para activar los botones, escribe tu código de acceso arriba, en «Código de acceso»."
+            : "Escribe qué quieres ver (al menos una frase) para activar los botones."}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="font-semibold text-muted">Formato</span>
         {(["9:16", "4:5", "1:1", "16:9"] as const).map((a) => (
