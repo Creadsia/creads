@@ -160,6 +160,19 @@ export default function Landing({ t }: { t: Content }) {
             </a>
           </div>
         </div>
+        {/* phone: the same menu as a scrollable row */}
+        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm lg:hidden ${gutter}`}>
+          {t.menu.map((m) => (
+            <a key={m.label} href={m.href} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted">
+              {m.label}
+              {m.badge && (
+                <span className={`rounded px-1 py-0.5 text-[9px] font-bold leading-none ${m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"}`}>
+                  {m.badge}
+                </span>
+              )}
+            </a>
+          ))}
+        </nav>
       </header>
 
       <main className="flex flex-col gap-28 pb-24">
