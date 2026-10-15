@@ -32,7 +32,10 @@ export async function POST(req: Request) {
   });
 
   if (!res.ok && res.status !== 409) {
-    return NextResponse.json({ error: "No se pudo guardar. Intenta de nuevo." }, { status: 502 });
+    // Log Supabase's answer (never the key) so it shows in Vercel → Logs, and give a short code to the visitor.
+    const detail = await res.text().catch(() => "");
+    console.error("waitlist insert failed", res.status, detail.slice(0, 500));
+    return NextResponse.json({ error: `No se pudo guardar (código ${res.status}). Intenta de nuevo.` }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
 }
