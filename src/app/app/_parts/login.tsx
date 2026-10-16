@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import ThemeToggle from "../../theme-toggle";
 
@@ -9,6 +9,11 @@ const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
 export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
   const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover">(initial);
+  const [rescue, setRescue] = useState("");
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("rescate");
+    if (t) { setRescue(t); setMode("recover"); }
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -22,14 +27,14 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
     setError("");
     if ((mode === "setup" || mode === "recover") && password !== password2) return setError("Las dos claves no coinciden.");
     setBusy(true);
-    const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? "/api/auth/recover" : "/api/auth/login";
+    const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? (rescue ? "/api/auth/rescue" : "/api/auth/recover") : "/api/auth/login";
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password }),
+      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? (rescue ? { password, token: rescue } : { password, code }) : { email, password }),
     });
     const d = await res.json().catch(() => ({}));
-    if (res.ok) return window.location.reload();
+    if (res.ok) { window.location.href = "/app"; return; }
     setError(d.error || "No se pudo entrar.");
     setBusy(false);
   }
@@ -53,7 +58,7 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
               {mode === "setup"
                 ? "Es la primera vez que se abre la plataforma. Esta cuenta tendrá acceso a todo y podrá invitar a otras personas."
                 : mode === "recover"
-                  ? "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador."
+                  ? rescue ? "Elige tu clave nueva para entrar. Este enlace sirve una sola vez." : "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador."
                   : "Entra con tu correo y tu clave."}
             </p>
           </div>
@@ -80,11 +85,13 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
                 Repite la clave
                 <input id="password2" type="password" required value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" className={input} />
               </label>
+              {!rescue && (
               <label htmlFor="code" className="flex flex-col gap-1 text-sm font-semibold text-muted">
                 Clave de administrador de Vercel
                 <input id="code" type="password" required value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" className={input} />
                 <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production)."}</span>
               </label>
+              )}
             </>
           )}
           <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
