@@ -3,7 +3,7 @@
 export const en = {
   lang: "en" as "en" | "es",
   meta: {
-    title: "Creads · The AI content studio",
+    title: "Creads IA · Every AI model, one studio",
     description:
       "Create ads, reels, podcasts and product photos with the world's best AI models. Type the idea, get finished content.",
   },
@@ -70,9 +70,10 @@ export const en = {
   ],
   hero: {
     promo: "Launch offer: 50% off your first month",
-    title: "Type the idea. Get finished content.",
-    lead: "Creads is the AI studio for ads, reels, podcasts and product photos. It writes the script, directs every scene with the world's best models, and checks everything before it's yours.",
+    title: "Every AI model. One studio.",
+    lead: "Creads IA is 100% AI: Veo, Kling, Seedance, Nano Banana, ElevenLabs and Claude behind one simple studio. Paste your script and get finished ads, reels and product photos, checked before they're yours.",
     poweredBy: "Powered by",
+    wall: "Every clip on this page was made with AI. The tag shows the model.",
   },
   composer: {
     label: "Describe what you want to create",
@@ -303,7 +304,7 @@ export const en = {
     planLabel: "Plan",
   },
   footer: {
-    tagline: "The AI content studio, in English and Spanish.",
+    tagline: "Creads IA. Every AI model in one studio, in English and Spanish.",
     studios: "Studios",
     platform: "Platform",
     contact: "Contact",

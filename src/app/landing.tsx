@@ -37,6 +37,94 @@ const VIDEOS: Partial<Record<SceneKey, string>> = {
 const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=640&q=70`;
 const WALL: SceneKey[] = ["ugc", "serum", "valpo", "podcast", "coach", "chef", "car", "sneaker", "realtor", "news"];
 
+// Hero wall: short silent clips generated for the site, each tagged with the model that made it.
+// Re-encoded to 480x854, 24 fps, no sound (~120-500 KB). TODO(phase 1): move to our own storage.
+type Maker = "google" | "kling" | "bytedance" | "xai" | "minimax" | "alibaba";
+const MAKER_DOT: Record<Maker, string> = {
+  google: "#4f8bff",
+  kling: "#2ee6a6",
+  bytedance: "#ff2bd6",
+  xai: "#f3f4f6",
+  minimax: "#ff8a3d",
+  alibaba: "#ffc23d",
+};
+interface WallClip { id: string; still: string; model: string; maker: Maker }
+const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
+const C = (video: string, still: string, model: string, maker: Maker): WallClip => ({ id: hf(video, "mp4"), still: hf(still, "jpg"), model, maker });
+const K = (k: SceneKey, model: string, maker: Maker): WallClip => ({ id: VIDEOS[k]!, still: poster(SCENES[k].src), model, maker });
+const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
+  {
+    dir: "up",
+    speed: "70s",
+    clips: [
+      C("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling 3.0 Turbo", "kling"),
+      C("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo 3.1 Lite", "google"),
+      C("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan 3.0", "alibaba"),
+      K("ugc", "Nano Banana + Kling", "google"),
+      C("81fb90d2-22c5-404f-92d8-a201275530cf", "9a50f2c6-6bbd-4891-8299-f1151a77c433", "Grok Video", "xai"),
+    ],
+  },
+  {
+    dir: "down",
+    speed: "88s",
+    clips: [
+      C("4017cd54-61b4-43e9-97bc-5271ff328c79", "4f285d47-5240-4a5c-a485-3d0bfc2c9c55", "Seedance 2.0", "bytedance"),
+      C("9c9fb74d-c0af-46f9-9d43-211d4783ef90", "d82cb55a-cbb2-41dd-8bc7-209000b0a58d", "Grok Video", "xai"),
+      C("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "Kling 3.0 Turbo", "kling"),
+      K("valpo", "Nano Banana + Kling", "google"),
+      C("59617700-cf90-497f-8a75-4ed74416c22f", "94ba857c-b593-487c-8d18-819c0141addb", "Seedance 2.5", "bytedance"),
+    ],
+  },
+  {
+    dir: "up",
+    speed: "62s",
+    clips: [
+      C("a1310874-fe73-4989-9e6f-7de4d4d96426", "b9c4463c-3d31-414a-a898-2158c8df5112", "Veo 3.1 Lite", "google"),
+      C("e5596388-8427-4692-9439-d29b17e7a190", "ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "Gemini Omni", "google"),
+      C("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "minimax"),
+      K("podcast", "Nano Banana + Kling", "google"),
+      K("coach", "Nano Banana + Kling", "google"),
+    ],
+  },
+];
+
+function WallTile({ c }: { c: WallClip }) {
+  return (
+    <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2">
+      <LoopVideo src={c.id} poster={c.still} className="absolute inset-0 h-full w-full object-cover" />
+      <figcaption className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 font-mono text-[10.5px] leading-none text-white backdrop-blur-sm">
+        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: MAKER_DOT[c.maker] }} />
+        {c.model}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Three columns of clips drifting up and down; each column is drawn twice so the loop has no seam. */
+function ClipWall({ label }: { label: string }) {
+  return (
+    <div className="relative min-w-0">
+      <div
+        className="grid h-[460px] grid-cols-3 gap-2.5 overflow-hidden sm:h-[600px] sm:gap-3 lg:h-[min(820px,calc(100svh-120px))]"
+        style={{ maskImage: "linear-gradient(transparent, #000 12%, #000 88%, transparent)", WebkitMaskImage: "linear-gradient(transparent, #000 12%, #000 88%, transparent)" }}
+      >
+        {WALL_COLS.map((col, i) => (
+          <div key={i} className={`${col.dir === "up" ? "marquee-up" : "marquee-down"} flex flex-col`} style={{ ["--speed" as string]: col.speed }}>
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex flex-col gap-2.5 pb-2.5 sm:gap-3 sm:pb-3" aria-hidden={copy === 1 || undefined}>
+                {col.clips.map((c) => (
+                  <WallTile key={c.id} c={c} />
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-xs text-muted lg:absolute lg:inset-x-0 lg:bottom-4 lg:mt-0">{label}</p>
+    </div>
+  );
+}
+
 const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
 
 function SectionHead({ id, title, lead }: { id: string; title: string; lead?: string }) {
@@ -209,80 +297,62 @@ export default function Landing({ t }: { t: Content }) {
       </header>
 
       <main className="flex flex-col gap-28 pb-24">
-        {/* Hero: pitch + composer on the left, featured studios on the right */}
-        <section className={`relative pt-10 sm:pt-14 ${gutter}`}>
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -top-24 left-0 h-[520px] w-[60%] rounded-full opacity-35 blur-[120px]"
-            style={{ background: "var(--grad)" }}
-          />
-          <div className="relative mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-[1fr_1.05fr]">
-            <div className="flex min-w-0 flex-col gap-6">
-              <h1 className="text-[2.7rem] font-black leading-[1.02] [font-stretch:118%] sm:text-6xl">{t.hero.title}</h1>
-              <p className="max-w-[58ch] text-lg text-muted">{t.hero.lead}</p>
+        {/* Hero: a dark stage. Pitch + composer on the left, a moving wall of AI clips tagged with their model on the right. */}
+        <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 py-12 sm:py-16 lg:min-h-[min(820px,calc(100svh-120px))] lg:grid-cols-[1fr_1.08fr] lg:py-0">
+            <div className="relative z-10 flex min-w-0 flex-col gap-7">
+              <h1 className="chroma font-display text-[2.55rem] leading-[1.02] font-semibold sm:text-6xl lg:text-[4.1rem]">{t.hero.title}</h1>
+              <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
               <Composer t={t.composer} />
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                 <span>{t.hero.poweredBy}</span>
-                {["Veo 3.1", "Seedance", "Kling", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
-                  <b key={m} className="font-display font-bold text-ink/80 [font-stretch:100%]">
+                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
+                  <b key={m} className="font-mono text-[13px] font-medium text-ink/85">
                     {m}
                   </b>
                 ))}
               </div>
             </div>
-            <div className="grid min-w-0 grid-cols-2 gap-3" aria-label={t.featured.title}>
+            <ClipWall label={t.hero.wall} />
+          </div>
+        </section>
+
+        {/* Featured studios */}
+        <section aria-labelledby="featured" className={`-mt-12 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-8">
+            <SectionHead id="featured" title={t.featured.title} />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {t.featured.items.map((f, i) => {
                 const sc = SCENES[f.k as SceneKey];
                 return (
-                  <a
-                    key={f.title}
-                    href="#tools"
-                    className={`group relative flex overflow-hidden rounded-2xl border border-line ${
-                      i === 0 ? "row-span-2 min-h-[340px] sm:min-h-[420px]" : i === 3 ? "col-span-2 min-h-[150px] sm:min-h-[170px]" : "min-h-[160px] sm:min-h-[202px]"
-                    }`}
-                  >
-                    <Image
-                      src={sc.src}
-                      alt=""
-                      fill
-                      priority={i < 2}
-                      sizes="(max-width: 1024px) 50vw, 26vw"
-                      className={`object-cover transition-transform duration-500 group-hover:scale-[1.04] ${i === 3 ? "object-[50%_30%]" : ""}`}
-                    />
+                  <a key={f.title} href="#tools" className="group relative flex aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-surface-2">
+                    <Image src={sc.src} alt="" fill priority={i < 2} sizes="(max-width: 1024px) 50vw, 25vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     {VIDEOS[f.k as SceneKey] && (
-                      <LoopVideo
-                        src={VIDEOS[f.k as SceneKey]!}
-                        poster={poster(sc.src)}
-                        className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04] ${i === 3 ? "object-[50%_30%]" : ""}`}
-                      />
+                      <LoopVideo src={VIDEOS[f.k as SceneKey]!} poster={poster(sc.src)} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                     )}
                     <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                    <span
-                      className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-bold text-white ${
-                        f.badge.startsWith("-") ? "bg-rec" : "bg-[image:var(--grad)]"
-                      }`}
-                    >
+                    <span className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-bold ${f.badge.startsWith("-") ? "bg-rec text-white" : "bg-[image:var(--grad)] text-black"}`}>
                       {f.badge}
                     </span>
                     <span className="relative mt-auto flex flex-col gap-1 p-4 text-white">
-                      <b className={`font-display font-extrabold leading-tight [font-stretch:105%] ${i === 0 ? "text-2xl" : "text-lg"}`}>{f.title}</b>
+                      <b className="font-display text-base leading-tight font-semibold sm:text-lg">{f.title}</b>
                       <span className="text-sm text-white/80">{f.text}</span>
                     </span>
                   </a>
                 );
               })}
             </div>
-          </div>
 
-          {/* real numbers about the product */}
-          <dl className="relative mx-auto mt-12 grid max-w-7xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
-            {t.stats.map(([n, l]) => (
-              <div key={l} className="flex flex-col gap-1 bg-surface px-5 py-4">
-                <dt className="order-2 text-sm text-muted">{l}</dt>
-                <dd className="order-1 font-display text-3xl font-black [font-stretch:110%]">{n}</dd>
-              </div>
-            ))}
-          </dl>
+            {/* real numbers about the product */}
+            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
+              {t.stats.map(([n, l]) => (
+                <div key={l} className="flex flex-col gap-1 bg-surface px-5 py-4">
+                  <dt className="order-2 text-sm text-muted">{l}</dt>
+                  <dd className="order-1 font-display text-3xl font-semibold">{n}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </section>
 
         {/* Tools */}
@@ -469,7 +539,7 @@ export default function Landing({ t }: { t: Content }) {
                     <th scope="col" className="p-4 font-medium text-muted">{t.diff.colOther}</th>
                     <th scope="col" className="p-4">
                       <span className="flex items-center gap-2 font-bold">
-                        <Mark size={20} /> Creads
+                        <Mark size={20} /> Creads IA
                       </span>
                     </th>
                   </tr>
@@ -610,7 +680,7 @@ export default function Landing({ t }: { t: Content }) {
             <a href={other} className="text-muted hover:text-ink">{t.nav.switchLabel}</a>
           </div>
         </div>
-        <p className="mx-auto max-w-7xl border-t border-line py-6 text-sm text-muted">© {new Date().getFullYear()} Creads</p>
+        <p className="mx-auto max-w-7xl border-t border-line py-6 text-sm text-muted">© {new Date().getFullYear()} Creads IA</p>
       </footer>
     </div>
   );

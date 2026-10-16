@@ -4,7 +4,7 @@ import type { Content } from "./en";
 export const es: Content = {
   lang: "es",
   meta: {
-    title: "Creads · El estudio de contenido con IA",
+    title: "Creads IA · Todos los modelos de IA, un solo estudio",
     description:
       "Crea anuncios, reels, podcasts y fotos de producto con los mejores modelos de IA del mundo. Escribe la idea y recibe el contenido terminado.",
   },
@@ -71,9 +71,10 @@ export const es: Content = {
   ],
   hero: {
     promo: "Oferta de lanzamiento: 50% de descuento el primer mes",
-    title: "Escribe la idea. Recibe el contenido terminado.",
-    lead: "Creads es el estudio de IA para anuncios, reels, podcasts y fotos de producto. Escribe el guion, dirige cada escena con los mejores modelos del mundo y revisa todo antes de entregártelo.",
+    title: "Todos los modelos de IA. Un solo estudio.",
+    lead: "Creads IA es 100% inteligencia artificial: Veo, Kling, Seedance, Nano Banana, ElevenLabs y Claude en un estudio simple. Pega tu guion y recibe anuncios, reels y fotos de producto terminados y revisados.",
     poweredBy: "Con la tecnología de",
+    wall: "Todos los clips de esta página están hechos con IA. La etiqueta dice el modelo.",
   },
   composer: {
     label: "Describe lo que quieres crear",
@@ -304,7 +305,7 @@ export const es: Content = {
     planLabel: "Plan",
   },
   footer: {
-    tagline: "El estudio de contenido con IA, en inglés y en español.",
+    tagline: "Creads IA. Todos los modelos de IA en un solo estudio, en español e inglés.",
     studios: "Estudios",
     platform: "Plataforma",
     contact: "Contacto",

@@ -1,31 +1,36 @@
-// Creads mark: a "C" made of four cuts — the way Creads builds every video — with a REC dot at the opening.
-// `gid` must be unique when several marks are on the page (a hidden SVG can't lend its gradient to others).
-export function Mark({ size = 32, className, gid = "creads-mark" }: { size?: number; className?: string; gid?: string }) {
+// Creads IA mark: a camera viewfinder (the frame every ad lives in) around a play signal split into
+// magenta and cyan channels — video made by AI. Drawn in currentColor so it works in both themes.
+// `gid` is kept for compatibility with callers that pass a unique id; the mark no longer uses gradients.
+export function Mark({ size = 32, className }: { size?: number; className?: string; gid?: string }) {
   return (
-    <svg viewBox="0 0 64 60" width={size} height={(size * 60) / 64} aria-hidden="true" className={className}>
-      <defs>
-        <linearGradient id={gid} gradientUnits="userSpaceOnUse" x1="8" y1="6" x2="48" y2="54">
-          <stop offset="0" stopColor="#8B7CFF" />
-          <stop offset=".55" stopColor="#E06CC8" />
-          <stop offset="1" stopColor="#FF8A5C" />
-        </linearGradient>
-      </defs>
-      <g fill="none" stroke={`url(#${gid})`} strokeWidth="11">
-        <path d="M44.55 17.79A19 19 0 0 0 25.89 11.45" />
-        <path d="M22.73 12.45A19 19 0 0 0 11.07 28.34" />
-        <path d="M11.07 31.66A19 19 0 0 0 22.73 47.55" />
-        <path d="M25.89 48.55A19 19 0 0 0 44.55 42.21" />
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className={className}>
+      <g fill="none" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round">
+        <path d="M6 21V11a5 5 0 0 1 5-5h10" />
+        <path d="M43 6h10a5 5 0 0 1 5 5v10" />
+        <path d="M58 43v10a5 5 0 0 1-5 5H43" />
+        <path d="M21 58H11a5 5 0 0 1-5-5V43" />
       </g>
-      <circle cx="51" cy="30" r="7" fill="#FF5A4E" />
+      <path d="M25.5 20.5 45 32 25.5 43.5Z" fill="#FF2BD6" transform="translate(-2.6 0)" strokeLinejoin="round" />
+      <path d="M25.5 20.5 45 32 25.5 43.5Z" fill="#19E3FF" transform="translate(2.6 0)" strokeLinejoin="round" />
+      <path d="M25.5 20.5 45 32 25.5 43.5Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }
 
-export function Logo({ size = 30, href = "/", gid }: { size?: number; href?: string; gid?: string }) {
+export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <a href={href} className="flex items-center gap-2.5" aria-label="Creads">
-      <Mark size={size} gid={gid} />
-      <span className="font-display text-[1.35rem] font-black tracking-[-0.03em] [font-stretch:118%]">creads</span>
+    <span className={`flex items-center gap-1.5 ${className}`}>
+      <span className="font-display text-[1.28rem] leading-none font-semibold tracking-[-0.05em]">creads</span>
+      <span className="rounded-[5px] bg-[image:var(--grad)] px-1.5 py-[3px] font-display text-[0.62rem] leading-none font-bold tracking-tight text-black">IA</span>
+    </span>
+  );
+}
+
+export function Logo({ size = 30, href = "/" }: { size?: number; href?: string; gid?: string }) {
+  return (
+    <a href={href} className="flex items-center gap-2.5" aria-label="Creads IA">
+      <Mark size={size} />
+      <Wordmark />
     </a>
   );
 }

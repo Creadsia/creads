@@ -1,1 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 60"><defs><linearGradient id="cg" gradientUnits="userSpaceOnUse" x1="8" y1="6" x2="48" y2="54"><stop offset="0" stop-color="#8B7CFF"/><stop offset=".55" stop-color="#E06CC8"/><stop offset="1" stop-color="#FF8A5C"/></linearGradient></defs><g fill="none" stroke="url(#cg)" stroke-width="11"><path d="M44.55 17.79A19 19 0 0 0 25.89 11.45"/><path d="M22.73 12.45A19 19 0 0 0 11.07 28.34"/><path d="M11.07 31.66A19 19 0 0 0 22.73 47.55"/><path d="M25.89 48.55A19 19 0 0 0 44.55 42.21"/></g><circle cx="51.00" cy="30" r="7" fill="#FF5A4E"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#000"/>
+  <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round">
+    <path d="M10 23v-8a5 5 0 0 1 5-5h8"/><path d="M41 10h8a5 5 0 0 1 5 5v8"/>
+    <path d="M54 41v8a5 5 0 0 1-5 5h-8"/><path d="M23 54h-8a5 5 0 0 1-5-5v-8"/>
+  </g>
+  <path d="M26.5 22.5 43 32 26.5 41.5Z" fill="#FF2BD6" transform="translate(-2.4 0)"/>
+  <path d="M26.5 22.5 43 32 26.5 41.5Z" fill="#19E3FF" transform="translate(2.4 0)"/>
+  <path d="M26.5 22.5 43 32 26.5 41.5Z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+</svg>

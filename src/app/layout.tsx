@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/hanken-grotesk";
+import "@fontsource-variable/unbounded";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Creads · The AI content studio",
+  title: "Creads IA · Every AI model, one studio",
   description: "Create ads, reels, podcasts and product photos with the world's best AI models.",
   metadataBase: new URL("https://www.creadsia.com"),
   openGraph: { siteName: "Creads", type: "website" },
