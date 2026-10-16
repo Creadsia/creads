@@ -251,15 +251,18 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   };
   const edit = (fn: (p: StoryPlan) => StoryPlan) => { setPlan((p) => (p ? fn(structuredClone(p)) : p)); setDirty(true); };
   const save = () => run("save", async () => { await post("/api/historias", { adId: id, plan }, "PATCH"); setDirty(false); });
+  // anything that uses the story saves the customer's edits first (descriptions, lines, lengths)
+  const saved = async () => { if (dirty) { await post("/api/historias", { adId: id, plan }, "PATCH"); setDirty(false); } };
   const changeModel = (model: string) => run("model", () => post("/api/historias", { adId: id, model }, "PATCH"));
 
-  const sheet = (key: string, extra?: string) => run(`c:${key}`, () => post("/api/historias/personaje", { adId: id, key, extra }));
-  const fromAvatar = (key: string, avatarId: string) => run(`c:${key}`, () => post("/api/historias/personaje", { adId: id, key, avatarId }));
-  const ownSheet = (key: string, f: File) => run(`c:${key}`, async () => post("/api/historias/personaje", { adId: id, key, image: await uploadFile(f) }));
-  const frame = (idx: number, extra?: string) => run(`f:${idx}`, () => post("/api/historias/toma", { adId: id, idx, extra }));
+  const sheet = (key: string, extra?: string) => run(`c:${key}`, async () => { await saved(); return post("/api/historias/personaje", { adId: id, key, extra }); });
+  const fromAvatar = (key: string, avatarId: string) => run(`c:${key}`, async () => { await saved(); return post("/api/historias/personaje", { adId: id, key, avatarId }); });
+  const ownSheet = (key: string, f: File) => run(`c:${key}`, async () => { await saved(); return post("/api/historias/personaje", { adId: id, key, image: await uploadFile(f) }); });
+  const frame = (idx: number, extra?: string) => run(`f:${idx}`, async () => { await saved(); return post("/api/historias/toma", { adId: id, idx, extra }); });
   const animate = (clipId: string, idx: number) => run(`v:${idx}`, () => post("/api/clips/run", { id: clipId }));
   async function many(keys: number[], fn: (i: number) => Promise<unknown>, tag: string) {
     setBusy((b) => ({ ...b, [tag]: true })); setErr("");
+    try { await saved(); } catch (e) { setErr(e instanceof Error ? e.message : "No se pudieron guardar los cambios."); setBusy((b) => ({ ...b, [tag]: false })); return; }
     for (let i = 0; i < keys.length; i += 2) {
       const r = await Promise.allSettled(keys.slice(i, i + 2).map(fn));
       const bad = r.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
@@ -326,15 +329,14 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             <p className="text-sm text-muted">Cada personaje tiene una ficha fija. Todas las tomas se dibujan desde estas fichas, así se ven iguales en toda la película.</p>
           </div>
           {missingSheets.length > 0 && (
-            <button type="button" disabled={busy.sheets || dirty} onClick={() => many(missingSheets.map((_, i) => i), (i) => post("/api/historias/personaje", { adId: id, key: missingSheets[i].key }), "sheets")} className={btnCls}>
+            <button type="button" disabled={busy.sheets} onClick={() => many(missingSheets.map((_, i) => i), (i) => post("/api/historias/personaje", { adId: id, key: missingSheets[i].key }), "sheets")} className={btnCls}>
               {busy.sheets ? "Creando…" : `Crear ${missingSheets.length > 1 ? `los ${missingSheets.length} personajes` : "el personaje"} · ${price(imgUsd * missingSheets.length)}`}
             </button>
           )}
         </div>
-        {dirty && <p className="text-sm text-warn">Guarda los cambios del guion antes de seguir.</p>}
         <div className="grid gap-4 md:grid-cols-2">
           {plan.characters.map((c, i) => (
-            <CharacterCard key={c.key} name={c.name} look={c.look} image={c.image_url ?? null} busy={Boolean(busy[`c:${c.key}`]) || dirty} priceLabel={price(imgUsd)}
+            <CharacterCard key={c.key} name={c.name} look={c.look} image={c.image_url ?? null} busy={Boolean(busy[`c:${c.key}`])} priceLabel={price(imgUsd)}
               avatars={avatars} avatarId={c.avatar ?? ""} onAvatar={(a) => fromAvatar(c.key, a)}
               onLook={(v) => edit((p) => { p.characters[i].look = v; return p; })}
               onMake={(extra) => sheet(c.key, extra)} onUpload={(f) => ownSheet(c.key, f)} />
@@ -358,7 +360,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {missingFrames.length > 0 && (
-            <button type="button" disabled={!sheetsReady || busy.frames || dirty} onClick={() => many(missingFrames.map((c) => c.idx), (i) => post("/api/historias/toma", { adId: id, idx: i }), "frames")} className={btnCls}>
+            <button type="button" disabled={!sheetsReady || busy.frames} onClick={() => many(missingFrames.map((c) => c.idx), (i) => post("/api/historias/toma", { adId: id, idx: i }), "frames")} className={btnCls}>
               {busy.frames ? "Creando imágenes…" : `Crear ${missingFrames.length} imágenes · ${price(imgUsd * missingFrames.length)}`}
             </button>
           )}
@@ -374,7 +376,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {clips.map((c) => (
             <ShotCard key={c.id} n={c.idx + 1} aspect={ad.aspect} text={plan.shots[c.idx]?.es ?? ""} secs={plan.shots[c.idx]?.seconds ?? 0} clip={c}
-              busy={Boolean(busy[`f:${c.idx}`] || busy[`v:${c.idx}`])} canFrame={sheetsReady && !dirty}
+              busy={Boolean(busy[`f:${c.idx}`] || busy[`v:${c.idx}`])} canFrame={sheetsReady}
               framePrice={price(imgUsd)} videoPrice={price(vidUsd(plan.shots[c.idx]?.seconds ?? 2.5))}
               onFrame={(extra) => frame(c.idx, extra)} onAnimate={() => animate(c.id, c.idx)} />
           ))}
@@ -397,6 +399,12 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         {ad.final_url && <FinalFilm refUrl={ad.final_url} aspect={ad.aspect} />}
       </section>
 
+      {dirty && (
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-text/50 bg-surface px-4 py-3 shadow-lg">
+          <span className="text-sm">Tienes cambios sin guardar. Se guardan solos cuando crees algo, o guárdalos ahora.</span>
+          <button type="button" onClick={save} disabled={busy.save} className={btnCls}>{busy.save ? "Guardando…" : "Guardar cambios"}</button>
+        </div>
+      )}
       {err && <p role="alert" className="sticky bottom-4 rounded-xl border border-bad/40 bg-surface px-4 py-3 text-sm text-bad shadow-lg">{err}</p>}
     </div>
   );
