@@ -422,11 +422,13 @@ function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId,
       {image && <input value={fix} onChange={(e) => setFix(e.target.value)} placeholder="Corrección (opcional): «más joven», «pelo más corto»…" className={`${inputCls} text-xs`} />}
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => { onMake(fix || undefined); setFix(""); }} className={image ? ghostCls : btnCls}>{busy ? "Dibujando…" : image ? `Rehacer · ${priceLabel}` : `Crear · ${priceLabel}`}</button>
-        {avatars.length > 0 && (
+        {avatars.length > 0 ? (
           <select value="" disabled={busy} onChange={(e) => e.target.value && onAvatar(e.target.value)} className={`${inputCls} max-w-[13rem]`} aria-label={`Usar un avatar para ${name}`}>
             <option value="">{avatarId ? `Avatar: ${avatars.find((a) => a.id === avatarId)?.name ?? "elegido"} · cambiar` : `Usar un avatar · ${priceLabel}`}</option>
             {avatars.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
+        ) : (
+          <Link href="/app/avatares" className={ghostCls}>Usar un avatar: crea uno con foto</Link>
         )}
         <label className={`${ghostCls} cursor-pointer`}>
           Subir mi imagen
