@@ -80,6 +80,8 @@ function veo(id: string, model: string, label: string, usdPerSecond: number): Vi
     label,
     usdPerSecond, // 720p
     configured: () => Boolean(process.env.GEMINI_API_KEY),
+    durations: [4, 6, 8],
+    aspects: ["9:16", "16:9"],
 
     async submit({ prompt, seconds, aspect, resolution, refs }) {
       if (aspect !== "9:16" && aspect !== "16:9") throw new Error("Veo solo hace videos 9:16 o 16:9.");

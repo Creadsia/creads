@@ -37,6 +37,11 @@ export interface VideoProvider {
   configured(): boolean;
   submit(req: VideoRequest): Promise<Job>;
   status(job: Job): Promise<JobStatus>;
+  /** Formats and lengths the model accepts (the studio only offers these). */
+  aspects?: AspectRatio[];
+  durations?: number[];
+  /** True when the model can only animate a starting image (no text-only clips). */
+  needsImage?: boolean;
   /** For providers whose result links need our key (Veo): fetch the finished file so we can re-host it. */
   download?(url: string): Promise<ArrayBuffer>;
 }

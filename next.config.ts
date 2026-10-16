@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/montage": ffmpegFiles,
     "/api/review": ffmpegFiles,
+    // the tools measure uploaded videos and audio with FFmpeg before spending
+    "/api/tools/*": ["./node_modules/ffmpeg-static/ffmpeg"],
   },
 };
 

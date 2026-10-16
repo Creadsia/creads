@@ -86,3 +86,25 @@ export async function selectRows<T>(table: string, query: string): Promise<T[]> 
   if (!res.ok) throw new Error(`Base de datos: no se pudo leer ${table} (${res.status}).`);
   return (await res.json()) as T[];
 }
+
+/** The public link prefix of our media bucket; tool inputs must start with it (no outside links). */
+export const mediaPrefix = () => publicUrl("");
+export const isOurMedia = (u: unknown): u is string => typeof u === "string" && u.startsWith(mediaPrefix()) && !u.includes("..");
+
+/**
+ * A one-time link that lets the browser upload one file straight to storage (for videos over the
+ * 4 MB a server request allows). Returns the URL to PUT to and the file's public link.
+ */
+export async function signedUpload(path: string) {
+  await ensureBucket();
+  const { url, key } = env();
+  const res = await fetch(`${url}/storage/v1/object/upload/sign/${BUCKET}/${path}`, {
+    method: "POST",
+    headers: { ...sbHeaders(key), "content-type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) throw new Error(`Storage: no se pudo preparar la subida (${res.status}).`);
+  const data = await res.json();
+  if (typeof data?.url !== "string") throw new Error("Storage: respuesta inesperada al preparar la subida.");
+  return { uploadUrl: `${url}/storage/v1${data.url}`, publicUrl: publicUrl(path) };
+}

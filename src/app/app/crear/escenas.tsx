@@ -13,7 +13,7 @@ interface Avatar extends Row { name: string; description: string | null; image_u
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
-interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[] }
+interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
@@ -208,7 +208,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Modelo de video">
                   <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · US${x.usdPerSecond.toFixed(2)}/s</option>)}
+                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage ? "solo desde imagen, sin voz" : `US$${x.usdPerSecond.toFixed(2)}/s`}</option>)}
                   </select>
                 </Field>
               </div>

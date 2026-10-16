@@ -97,8 +97,19 @@ export function useTable<T extends Row>(table: string) {
   return { rows, error, missing, reload: load, add, update, remove };
 }
 
-/** Uploads a file to our storage and returns its public link. */
+/** Uploads a file to our storage and returns its public link. Big files (videos) go straight to storage. */
 export async function uploadFile(file: File): Promise<string> {
+  if (file.size > 3.5 * 1024 * 1024) {
+    const res = await fetch("/api/upload/sign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ type: file.type, size: file.size }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || "No se pudo preparar la subida.");
+    const fd = new FormData();
+    fd.append("cacheControl", "3600");
+    fd.append("", file);
+    const up = await fetch(d.uploadUrl, { method: "PUT", body: fd, headers: { "x-upsert": "false" } });
+    if (!up.ok) throw new Error(`No se pudo subir el archivo (${up.status}).`);
+    return d.publicUrl as string;
+  }
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch("/api/upload", { method: "POST", body: fd });

@@ -98,3 +98,42 @@ export const elevenlabs: VoiceProvider = {
     return { used: Number(d.character_count ?? 0), limit: Number(d.character_limit ?? 0), tier: String(d.tier ?? "") };
   },
 };
+
+// ---------- dubbing ----------
+// Dubbing v1: translates and re-voices a video with the original speakers' voices. No watermark
+// (US$0.50/min; the Creator plan includes 12 min a month).
+
+/** Starts a dub of a hosted video/audio into `target` (ISO 639-1). Returns ElevenLabs' dubbing id. */
+export async function dubStart(sourceUrl: string, target: string, name: string): Promise<string> {
+  const form = new FormData();
+  form.append("source_url", sourceUrl);
+  form.append("target_lang", target);
+  form.append("source_lang", "auto");
+  form.append("num_speakers", "0");
+  form.append("watermark", "false");
+  form.append("name", name.slice(0, 80));
+  const res = await fetch(`${API}/v1/dubbing`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
+  if (!res.ok) return fail(res, "ElevenLabs (doblaje)");
+  const data = await res.json();
+  if (!data?.dubbing_id) throw new Error("ElevenLabs (doblaje): no devolvió un trabajo.");
+  return String(data.dubbing_id);
+}
+
+/** Where a dub is: still working, failed, or finished (then `file` downloads it). */
+export async function dubStatus(id: string): Promise<{ state: "running" } | { state: "failed"; error: string } | { state: "done"; mime: string }> {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return { state: "failed", error: "Trabajo inválido." };
+  const res = await fetch(`${API}/v1/dubbing/${id}`, { headers: { "xi-api-key": key() }, cache: "no-store" });
+  if (!res.ok) return fail(res, "ElevenLabs (doblaje)");
+  const d = await res.json();
+  if (d?.status === "dubbed") return { state: "done", mime: String(d?.media_metadata?.content_type ?? "video/mp4") };
+  if (d?.status === "failed") return { state: "failed", error: `ElevenLabs (doblaje): ${String(d?.error ?? "falló").slice(0, 300)}` };
+  return { state: "running" };
+}
+
+/** Downloads the finished dub (mp4 for videos, mp3 for audio). */
+export async function dubFile(id: string, lang: string): Promise<ArrayBuffer> {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id) || !/^[a-z]{2,3}$/.test(lang)) throw new Error("Trabajo inválido.");
+  const res = await fetch(`${API}/v1/dubbing/${id}/audio/${lang}`, { headers: { "xi-api-key": key() } });
+  if (!res.ok) return fail(res, "ElevenLabs (doblaje)");
+  return res.arrayBuffer();
+}

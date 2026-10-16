@@ -42,7 +42,10 @@ export async function download(url: string, file: string) {
 
 /** Duration and whether the file has sound. */
 export async function probe(file: string) {
-  const log = await ff(["-i", file, "-f", "null", "-t", "0", "-"]).catch((e: Error) => e.message);
+  // ffmpeg exits with an error here on purpose (no output); the full log still has what we need.
+  const log = await run(ffmpeg(), ["-hide_banner", "-i", file, "-f", "null", "-t", "0", "-"], { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 })
+    .then((r) => r.stderr + r.stdout)
+    .catch((e: { stderr?: string; message?: string }) => `${e.stderr ?? ""}${e.message ?? ""}`);
   const m = log.match(/Duration: (\d+):(\d+):([\d.]+)/);
   const dur = m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : 0;
   return { dur, audio: /Stream #\d+:\d+[^:]*: Audio/.test(log) };

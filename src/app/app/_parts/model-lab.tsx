@@ -12,6 +12,7 @@ interface VideoModel {
   live: boolean;
   aspects: string[];
   seconds: number[];
+  needsImage?: boolean;
 }
 
 // Shown until /api/models answers.
@@ -121,9 +122,9 @@ export default function ModelLab({ code }: { code: string }) {
   return (
     <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold">Probar modelos</h2>
+        <h2 className="text-xl font-semibold">Generar</h2>
         <p className="text-sm text-muted">
-          Cada botón genera de verdad y se cobra en tu cuenta de Google. El precio aparece en el botón antes de apretarlo.
+          Cada botón genera de verdad y se cobra en la cuenta del proveedor (Google o fal.ai). El precio aparece en el botón antes de apretarlo.
         </p>
       </div>
 
@@ -200,12 +201,13 @@ export default function ModelLab({ code }: { code: string }) {
             <span className={image ? "" : "text-muted"}>Partir desde la imagen generada</span>
           </label>
           <p className="text-xs text-muted">
+            {vm.needsImage && <b className="block text-warn">Este modelo solo anima una imagen: genera la imagen primero.</b>}
             Se genera en {videoAspect} a 720p, con audio{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
           </p>
           <button
             type="button"
             onClick={makeVideo}
-            disabled={!ready || video.s === "running"}
+            disabled={!ready || video.s === "running" || (vm.needsImage && !(useImage && image))}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
             {video.s === "running"

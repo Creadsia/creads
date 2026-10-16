@@ -12,7 +12,10 @@ export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   try {
     const data = (await readPrivateJSON<Finanzas>(FILE)) ?? DEFAULT_FINANZAS;
-    return NextResponse.json(data);
+    // models connected after the book was first saved show up automatically
+    const known = new Set(data.modelos.map((m) => m.id));
+    const added = DEFAULT_FINANZAS.modelos.filter((m) => !known.has(m.id));
+    return NextResponse.json(added.length ? { ...data, modelos: [...data.modelos, ...added] } : data);
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo leer." }, { status: 502 });
   }

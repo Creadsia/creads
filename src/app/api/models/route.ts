@@ -20,9 +20,9 @@ export async function GET(req: Request) {
         configured: p.configured(),
         usdPerSecond: perSecond ?? p.usdPerSecond,
         live: perSecond != null,
-        // Veo only makes vertical or horizontal clips of 4, 6 or 8 s.
-        aspects: p.id.startsWith("veo") ? ["9:16", "16:9"] : ["9:16", "4:5", "1:1", "16:9"],
-        seconds: p.id.startsWith("veo") ? [4, 6, 8] : [4, 5, 6, 8, 10],
+        aspects: p.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
+        seconds: p.durations ?? [4, 5, 6, 8, 10],
+        needsImage: Boolean(p.needsImage),
       };
     }),
     image: imageProviders.map((p) => ({ id: p.id, label: p.label, configured: p.configured(), usd: p.usdPerImage })),

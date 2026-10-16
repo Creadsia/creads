@@ -14,7 +14,8 @@ export async function POST(req: Request) {
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, 3000) : "";
   const voiceId = typeof body?.voiceId === "string" ? body.voiceId : "";
   const model = VOICE_MODELS.some((m) => m.id === body?.model) ? body.model : "eleven_multilingual_v2";
-  const lang = body?.lang === "es" || body?.lang === "en" ? body.lang : undefined;
+  // Only the Flash/Turbo models accept a forced language; the others detect it from the text (and reject the field).
+  const lang = (body?.lang === "es" || body?.lang === "en") && /flash|turbo/.test(model) ? body.lang : undefined;
   if (text.length < 2 || !voiceId) return NextResponse.json({ error: "Elige una voz y escribe el texto." }, { status: 400 });
   try {
     const { bytes, mime } = await elevenlabs.speak(voiceId, text, { model, lang });

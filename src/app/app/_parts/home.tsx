@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { TOOLS } from "@/lib/tools";
 import { PageHead, SetupNotice, cardCls } from "./ui";
 
 type Counts = Record<"avatars" | "products" | "scripts" | "ads", number | null>;
@@ -58,6 +59,19 @@ export default function Home() {
           </li>
         ))}
       </ol>
+      <section className={cardCls} aria-labelledby="quick">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="quick" className="font-display text-lg font-bold">Herramientas IA</h2>
+          <Link href="/app/herramientas" className="text-sm text-accent-text">Ver todas →</Link>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/app/laboratorio" className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Video IA</Link>
+          <Link href="/app/laboratorio" className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Imagen IA</Link>
+          {TOOLS.map((t) => (
+            <Link key={t.id} href={`/app/herramientas/${t.id}`} className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">{t.name}</Link>
+          ))}
+        </div>
+      </section>
       <section className={cardCls}>
         <h2 className="font-display text-lg font-bold">Cómo se hace un anuncio en Creads</h2>
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -25,6 +25,7 @@ const I = {
   key: "M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7Zm1 2h.01",
   chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
+  spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z",
 };
 
 function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: string }) {
@@ -40,11 +41,11 @@ const NAV: { group?: string; items: Item[] }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true }] },
   {
-    group: "Producir",
+    group: "Crear",
     items: [
       { href: "/app/crear", label: "Crear anuncio", icon: I.create },
-      { href: "/app/videos", label: "Videos", icon: I.film },
-      { href: "/app/laboratorio", label: "Probar modelos", icon: I.lab },
+      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark },
+      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab },
     ],
   },
   {
@@ -58,6 +59,7 @@ const NAV: { group?: string; items: Item[] }[] = [
   {
     group: "Biblioteca",
     items: [
+      { href: "/app/videos", label: "Videos", icon: I.film },
       { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain },
     ],

@@ -1,0 +1,136 @@
+// The "Crear" tools: one-step jobs on a photo, video or audio (remove a background, upscale, edit,
+// make a photo talk, lip-sync, dub). This file is safe for the browser: names, inputs, limits and
+// price estimates. The calls to fal.ai / ElevenLabs live in src/lib/providers/tools.ts (server only).
+
+export type ToolId =
+  | "quitar-fondo"
+  | "editar-imagen"
+  | "mejorar-imagen"
+  | "mejorar-video"
+  | "avatar-habla"
+  | "sincronizar-labios"
+  | "doblaje";
+
+export interface ToolDef {
+  id: ToolId;
+  name: string;
+  /** One line for the menu card. */
+  short: string;
+  /** What it does and what to give it, for the tool page. */
+  lead: string;
+  output: "image" | "video";
+  /** The model doing the work, shown to the customer. */
+  model: string;
+  inputs: {
+    image?: boolean; // one photo
+    images?: number; // several photos (max)
+    video?: { min: number; max: number }; // seconds
+    audio?: { min: number; max: number }; // seconds; can also be written and read by a voice
+    prompt?: "required" | "optional";
+    promptHint?: string;
+    target?: boolean; // dubbing: language to dub into
+  };
+  /** US$ estimate. `seconds` is the length of the video or audio the customer gave. */
+  estimate: (seconds: number) => number;
+  priceNote: string;
+  /** True when the provider doesn't publish an exact price (we show "aprox."). */
+  approx?: boolean;
+  /** Needs the person's permission (faces and voices). */
+  consent?: boolean;
+}
+
+const ceil5 = (s: number) => Math.max(5, Math.ceil(s / 5) * 5);
+
+export const TOOLS: ToolDef[] = [
+  {
+    id: "quitar-fondo",
+    name: "Quitar fondo",
+    short: "Recorta la persona o el producto en un segundo.",
+    lead: "Sube una foto y te devolvemos el recorte con fondo transparente (PNG), listo para poner sobre cualquier fondo.",
+    output: "image",
+    model: "Bria RMBG",
+    inputs: { image: true, prompt: "optional", promptHint: "Opcional: qué conservar, por ejemplo «solo la botella» o «la persona con el perro»." },
+    estimate: () => 0.03,
+    priceNote: "US$0,02–0,03 por imagen",
+  },
+  {
+    id: "editar-imagen",
+    name: "Editar imagen",
+    short: "Cambia lo que quieras de una foto, escribiéndolo.",
+    lead: "Sube una o varias fotos y escribe el cambio: «ponle una polera azul», «cambia el fondo por una cocina», «pon este producto en su mano».",
+    output: "image",
+    model: "Nano Banana Pro",
+    inputs: { images: 4, prompt: "required", promptHint: "Describe el cambio. Si subes varias fotos, di qué tomar de cada una." },
+    estimate: () => 0.15,
+    priceNote: "US$0,15 por imagen",
+  },
+  {
+    id: "mejorar-imagen",
+    name: "Mejorar calidad (imagen)",
+    short: "Sube la resolución al doble sin perder detalle.",
+    lead: "Para fotos chicas o borrosas: la devolvemos al doble de tamaño, más nítida.",
+    output: "image",
+    model: "SeedVR2",
+    inputs: { image: true },
+    estimate: () => 0.02,
+    priceNote: "≈ US$0,01–0,02 por imagen",
+    approx: true,
+  },
+  {
+    id: "mejorar-video",
+    name: "Mejorar calidad (video)",
+    short: "Lleva un clip a 1080p, más nítido.",
+    lead: "Sube un clip de hasta 30 segundos y lo devolvemos en 1080p, con más detalle.",
+    output: "video",
+    model: "SeedVR2",
+    inputs: { video: { min: 1, max: 30 } },
+    // US$0.001 per megapixel-frame: 1080×1920 × 30 fps ≈ US$0.062 per second.
+    estimate: (s) => +(0.062 * Math.max(1, s)).toFixed(2),
+    priceNote: "≈ US$0,06 por segundo",
+  },
+  {
+    id: "avatar-habla",
+    name: "Avatar que habla",
+    short: "Una foto + una voz = una persona hablando a cámara.",
+    lead: "Sube la foto de una persona y su audio (o escribe el texto y elige una voz). La foto cobra vida y habla con labios sincronizados.",
+    output: "video",
+    model: "OmniHuman 2 (ByteDance)",
+    inputs: { image: true, audio: { min: 4, max: 60 }, prompt: "optional", promptHint: "Opcional: cómo se mueve, por ejemplo «gesticula con las manos, sonríe al final»." },
+    estimate: (s) => +(0.16 * Math.max(4, s)).toFixed(2),
+    priceNote: "≈ US$0,16 por segundo de audio",
+    approx: true,
+    consent: true,
+  },
+  {
+    id: "sincronizar-labios",
+    name: "Sincronizar labios",
+    short: "Cambia lo que dice una persona en un video.",
+    lead: "Sube un video de 2 a 10 segundos y el audio nuevo (o escríbelo y elige una voz). La boca se mueve con las palabras nuevas.",
+    output: "video",
+    model: "Kling Lipsync",
+    inputs: { video: { min: 2, max: 10 }, audio: { min: 2, max: 60 } },
+    estimate: (s) => +(0.014 * ceil5(s)).toFixed(2),
+    priceNote: "US$0,014 por segundo de video",
+    consent: true,
+  },
+  {
+    id: "doblaje",
+    name: "Doblaje EN ⇄ ES",
+    short: "Tu video en otro idioma, con la misma voz.",
+    lead: "Sube un video o audio de hasta 5 minutos y elige el idioma. Lo traducimos y lo doblamos con la voz original.",
+    output: "video",
+    model: "ElevenLabs Dubbing",
+    inputs: { video: { min: 2, max: 300 }, target: true },
+    estimate: (s) => +((0.5 * Math.max(s, 10)) / 60).toFixed(2),
+    priceNote: "US$0,50 por minuto (tu plan incluye 12 min al mes)",
+    consent: true,
+  },
+];
+
+export const findTool = (id: string) => TOOLS.find((t) => t.id === id);
+
+export const DUB_LANGS = [
+  { id: "es", label: "Español" },
+  { id: "en", label: "Inglés" },
+  { id: "pt", label: "Portugués" },
+] as const;
