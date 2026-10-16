@@ -37,6 +37,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [rulesUsed, setRulesUsed] = useState(0);
+  const [copied, setCopied] = useState<number | "all" | null>(null);
 
   const [models, setModels] = useState<Model[]>([]);
   const [model, setModel] = useState("veo-3.1-fast");
@@ -71,6 +72,16 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     } catch (e2) { setErr(e2 instanceof Error ? e2.message : "No se pudieron dirigir las escenas."); }
     finally { setBusy(false); }
   }
+
+  async function copy(text: string, which: number | "all") {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(which);
+      setTimeout(() => setCopied((c) => (c === which ? null : c)), 2000);
+    } catch { setErr("No se pudo copiar. Selecciona el texto y cópialo a mano."); }
+  }
+  const allPrompts = () => (scenes ?? []).map((s) => s.prompt).join("\n\n────────────\n\n");
+  const editPrompt = (i: number, prompt: string) => setScenes((ss) => ss && ss.map((x, k) => (k === i ? { ...x, prompt } : x)));
 
   function framePrompt(i: number) {
     const d = scenes?.[i]?.dir ?? {};
@@ -108,7 +119,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
             <h2 className="font-display text-xl font-bold">3 · Escenas</h2>
             <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-muted">{f.icon} {f.name}</span>
           </div>
-          <p className="text-sm text-muted">Claude lee todo el guion y decide dónde está la persona y qué pasa en cada corte. Las palabras de cada corte no se tocan.</p>
+          <p className="text-sm text-muted">Claude lee todo el guion, decide dónde está la persona y qué pasa en cada corte, y escribe el prompt de cada video. Las palabras de cada corte no se tocan. Puedes copiar los prompts para usarlos en otra herramienta, o generar los videos aquí mismo en el paso 4.</p>
 
           {f.av !== "none" && (
             <div className="flex flex-col gap-2">
@@ -164,7 +175,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 <option value="16:9">16:9 horizontal</option>
               </select>
             </Field>
-            <button type="submit" disabled={busy || (f.av === "req" && !avatarId && !avatarText.trim())} className={btnCls}>{busy ? "Dirigiendo las escenas… (20–60 s)" : scenes ? "Volver a dirigir" : `Dirigir los ${cuts.length} cortes`}</button>
+            <button type="submit" disabled={busy || (f.av === "req" && !avatarId && !avatarText.trim())} className={btnCls}>{busy ? "Creando los prompts… (20–60 s)" : scenes ? "Volver a crear los prompts" : `Crear los prompts (${cuts.length} cortes)`}</button>
+            {scenes && <button type="button" onClick={() => copy(allPrompts(), "all")} className={ghostCls}>{copied === "all" ? "Copiados ✓" : "Copiar todos"}</button>}
             {err && <span className="text-sm text-bad">{err}</span>}
           </div>
 
@@ -182,9 +194,16 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                       <p className="text-sm"><b>{s.dir.setting}</b>{s.dir.action ? ` — ${s.dir.action}` : ""}{s.dir.broll ? ` ${s.dir.broll}` : ""}</p>
                       <p className="text-xs text-muted">{s.dir.framing}{s.dir.emotion ? ` · ${s.dir.emotion}` : ""}</p>
                       <details>
-                        <summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver prompt completo</summary>
-                        <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-surface-2 p-3 text-xs whitespace-pre-wrap">{s.prompt}</pre>
+                        <summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver y editar el prompt</summary>
+                        <textarea value={s.prompt} onChange={(e) => editPrompt(i, e.target.value)} rows={10} aria-label={`Prompt del corte ${i + 1}`}
+                          className="mt-2 w-full rounded-lg border border-line bg-surface-2 p-3 font-mono text-xs" />
+                        <p className="text-xs text-muted">Lo que cambies aquí es lo que se usa al generar este corte.</p>
                       </details>
+                      <div>
+                        <button type="button" onClick={() => copy(s.prompt, i)} className="rounded-lg bg-accent/12 px-3 py-1.5 text-xs font-semibold text-accent-text hover:bg-accent/20">
+                          {copied === i ? "Copiado ✓" : `Copiar prompt del corte ${i + 1}`}
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -192,6 +211,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               <p className="text-xs text-muted">{rulesUsed ? `Se aplicaron ${rulesUsed} aprendizajes de videos anteriores.` : "Todavía no hay aprendizajes guardados; se agregan solos cuando la revisión encuentra errores."}</p>
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" onClick={() => setStep(1)} className={ghostCls}>← Volver a los cortes</button>
+                <button type="button" onClick={() => copy(allPrompts(), "all")} className={ghostCls}>{copied === "all" ? "Copiados ✓" : "Copiar todos los prompts"}</button>
                 <button type="button" onClick={() => setStep(3)} className={btnCls}>Siguiente: generar videos →</button>
               </div>
             </>
