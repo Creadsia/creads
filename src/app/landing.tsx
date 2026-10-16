@@ -150,131 +150,224 @@ function Ticker({ t }: { t: Content["bar"] }) {
 
 type Tool = Content["tools"]["items"][number];
 
-/** Small picture on each tool card: a real still when we have one, otherwise a drawing of what the tool does. */
+/**
+ * Small picture on each tool card: a real still when we have one, otherwise a mini screen of the tool
+ * that shows what goes in and what comes out, with a short label so it reads at a glance.
+ */
 function ToolArt({ art, es }: { art: string; es: boolean }) {
+  const L = (en: string, sp: string) => (es ? sp : en);
   const still = (k: SceneKey, pos = "50% 30%") => (
-    <Image src={SCENES[k].src} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" style={{ objectPosition: pos }} />
+    <Image src={SCENES[k].src} alt="" fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" style={{ objectPosition: pos }} />
   );
-  const bars = (n: number, seed: number, cls: string) => (
-    <div className="flex h-14 items-center gap-[3px]">
+  /** The label at the bottom of every picture: what goes in → what comes out. */
+  const cap = (txt: string) => (
+    <span className="absolute inset-x-2 bottom-2 hidden truncate rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm sm:block">{txt}</span>
+  );
+  const wave = (n: number, seed: number, cls: string, h = "h-10") => (
+    <span className={`flex ${h} items-center gap-[3px]`}>
       {Array.from({ length: n }, (_, i) => (
-        <span key={i} className={`w-[3px] rounded-full ${cls}`} style={{ height: `${18 + Math.abs(Math.sin(i * 0.7 + seed)) * 70}%` }} />
+        <span key={i} className={`w-[3px] rounded-full ${cls}`} style={{ height: `${18 + Math.abs(Math.sin(i * 0.7 + seed)) * 72}%` }} />
       ))}
-    </div>
+    </span>
   );
-  const chip = (txt: string, cls = "bg-white/10 text-white/85") => <span key={txt} className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${cls}`}>{txt}</span>;
+  const row = (label: string, body: React.ReactNode, dot: string) => (
+    <span className="flex w-full items-center gap-2">
+      <span className="w-14 shrink-0 text-right text-[10px] font-semibold text-white/70">{label}</span>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot }} />
+      {body}
+    </span>
+  );
+  const frame = (ratio: string, label: string, w: string, tint: string) => (
+    <span className={`flex ${ratio} ${w} flex-col items-center justify-end overflow-hidden rounded-md border border-white/20 pb-1`} style={{ background: `linear-gradient(170deg, ${tint}, #0d0e11 75%)` }}>
+      <span className="text-[9px] font-semibold text-white/85">{label}</span>
+    </span>
+  );
+
   switch (art) {
-    case "chef": return still("chef");
-    case "realtor": return still("realtor");
-    case "car": return still("car", "50% 35%");
-    case "news": return still("news", "50% 25%");
+    case "chef":
+      return <>{still("chef")}{cap(L("“A chef plating pasta” → photo", "“Un chef sirviendo pasta” → foto"))}</>;
+    case "realtor":
+      return <>{still("realtor")}{cap(L("Text or photo → 8 s video", "Texto o foto → video de 8 s"))}</>;
+    case "car":
+      return <>{still("car", "50% 35%")}{cap(L("Photo + voice → talking video", "Foto + voz → video hablando"))}</>;
+    case "news":
+      return <>{still("news", "50% 25%")}{cap(L("New audio → lips match", "Audio nuevo → labios sincronizados"))}</>;
     case "cutout":
       return (
         <>
           {still("sneaker", "50% 50%")}
-          {/* right half shows the cut-out on a transparency grid */}
-          <span className="absolute inset-y-0 right-0 w-1/2 border-l-2 border-white/80 bg-[length:16px_16px] opacity-90 mix-blend-normal" style={{ backgroundImage: "conic-gradient(#d9d9de 25%, #fff 0 50%, #d9d9de 0 75%, #fff 0)" }} />
-          <span className="absolute right-2 bottom-2">{chip("2× HD", "bg-black/70 text-white")}</span>
+          {/* right half: the same product on a transparency grid, as after removing the background */}
+          <span className="absolute inset-y-0 right-0 w-1/2 border-l-2 border-white bg-[length:14px_14px]" style={{ backgroundImage: "conic-gradient(#d9d9de 25%, #fff 0 50%, #d9d9de 0 75%, #fff 0)" }} />
+          <span className="absolute top-2 left-[calc(50%+8px)] hidden rounded bg-black/70 sm:block px-1.5 py-0.5 text-[10px] font-bold text-white">PNG · 2×</span>
+          {cap(L("Background removed, double quality", "Sin fondo y al doble de calidad"))}
         </>
       );
     case "frames":
       return (
-        <div className="flex h-full items-center justify-center gap-2">
-          {["#2a2340", "#3a2a52", "#4b2f63"].map((c, i) => (
-            <span key={c} className="flex aspect-[4/5] w-[24%] items-end justify-center rounded-lg border border-white/15 pb-1.5" style={{ background: `linear-gradient(160deg, ${c}, #0d0e11)`, transform: `translateY(${(i - 1) * -6}px)` }}>
-              {chip("4:5")}
+        <>
+          <span className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center gap-2 px-3">
+            <span className="flex aspect-square w-[22%] flex-col items-center justify-center rounded-md border border-dashed border-white/40 text-white/80">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 8h3l2-2h6l2 2h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" /></svg>
+              <span className="text-[9px]">{L("Your photo", "Tu foto")}</span>
             </span>
-          ))}
-        </div>
+            <span className="text-white/60">→</span>
+            {frame("aspect-[4/5]", "Feed", "w-[17%]", "#5b3fa6")}
+            {frame("aspect-[9/16]", "Story", "w-[13%]", "#a63f8e")}
+            {frame("aspect-square", L("Catalog", "Catálogo"), "w-[19%]", "#3f7ba6")}
+          </span>
+          {cap(L("One product photo → every format", "Una foto → todos los formatos"))}
+        </>
       );
     case "edit":
       return (
-        <div className="flex h-full flex-col justify-center gap-2 px-5">
-          <span className="w-fit max-w-full rounded-xl rounded-bl-sm bg-white/90 px-3 py-1.5 text-xs font-semibold text-black">{es ? "“Cambia el fondo por una playa al atardecer”" : "“Change the background to a beach at sunset”"}</span>
-          <span className="hidden gap-1.5 sm:flex">{chip("Nano Banana Pro")}{chip("1K")}{chip("PNG")}</span>
-        </div>
+        <>
+          <span className="absolute inset-x-3 top-3 line-clamp-2 rounded-xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[10px] leading-snug font-semibold text-black sm:text-[11px]">
+            {L("“Make the background a beach at sunset”", "“Pon de fondo una playa al atardecer”")}
+          </span>
+          <span className="absolute inset-x-3 bottom-3 grid grid-cols-2 gap-1.5 sm:bottom-9">
+            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-zinc-500 to-zinc-700 p-1 text-[9px] font-semibold text-white">{L("Before", "Antes")}</span>
+            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-orange-400 via-pink-500 to-sky-700 p-1 text-[9px] font-semibold text-white">{L("After", "Después")}</span>
+          </span>
+          {cap(L("Ask in words → edited photo", "Pídelo con palabras → foto editada"))}
+        </>
       );
     case "phone":
     case "reel":
       return (
-        <div className="flex h-full items-center justify-center">
-          <span className="relative flex aspect-[9/16] h-[88%] flex-col justify-end overflow-hidden rounded-[14px] border-2 border-white/25 p-2" style={{ background: art === "phone" ? "linear-gradient(180deg,#2c3446,#12141a)" : "linear-gradient(180deg,#3b1d4a,#12141a)" }}>
-            <span className="mx-auto mb-3 max-w-full rounded bg-black/70 px-1 py-0.5 text-center font-display text-[8px] leading-tight font-black break-words text-white sm:text-[9px]">
-              {art === "phone" ? <>{es ? "costaba" : "it cost"} <span className="text-[#FFE100]">{es ? "$34.000" : "$34,000"}</span></> : <>{es ? "espera" : "wait for"} <span className="text-[#3DFF6E]">{es ? "esto…" : "it…"}</span></>}
+        <>
+          <span className="absolute inset-x-0 top-2 bottom-9 flex items-center justify-center gap-3">
+            <span className="relative flex aspect-[9/16] h-full flex-col justify-end overflow-hidden rounded-[12px] border-2 border-white/30 p-1.5" style={{ background: art === "phone" ? "linear-gradient(180deg,#3a4458,#12141a)" : "linear-gradient(180deg,#4a2360,#12141a)" }}>
+              <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-rec" />
+              <span className="mx-auto mb-2 rounded bg-black/75 px-1 text-center font-display text-[9px] leading-tight font-black text-white">
+                {art === "phone" ? <>{L("it cost", "costaba")} <span className="text-[#FFE100]">$34K</span></> : <>{L("wait for", "espera")} <span className="text-[#3DFF6E]">{L("it…", "esto…")}</span></>}
+              </span>
             </span>
-            <span className="absolute top-2 left-2 h-1.5 w-1.5 animate-pulse rounded-full bg-rec" />
+            <span className="flex flex-col gap-1 text-[10px] text-white/80">
+              <span>9:16</span>
+              <span>{art === "phone" ? L("8 cuts", "8 cortes") : "Reels · TikTok"}</span>
+              <span>{L("Subtitles", "Subtítulos")} ✓</span>
+            </span>
           </span>
-        </div>
+          {cap(art === "phone" ? L("Your script → finished ad", "Tu guion → anuncio terminado") : L("Idea → vertical video", "Idea → video vertical"))}
+        </>
       );
     case "influencer":
       return (
-        <div className="flex h-full items-center justify-center gap-3 px-4">
-          <span className="h-14 w-14 shrink-0 rounded-full bg-[image:var(--grad)] p-[2px]"><span className="block h-full w-full rounded-full bg-[#1a1b21]" /></span>
-          <span className="grid grid-cols-3 gap-1">
-            {Array.from({ length: 6 }, (_, i) => <span key={i} className="aspect-square w-6 rounded-sm" style={{ background: `hsl(${270 + i * 14} 45% ${22 + (i % 3) * 8}%)` }} />)}
+        <>
+          <span className="absolute inset-x-3 top-3 flex items-center gap-2">
+            <span className="h-9 w-9 shrink-0 rounded-full bg-[image:var(--grad)] p-[2px]"><span className="block h-full w-full rounded-full bg-[#2a2b33]" /></span>
+            <span className="flex min-w-0 flex-col">
+              <b className="truncate text-[11px] text-white">@sofia.creates ✓</b>
+              <span className="text-[10px] text-white/60">{L("7 posts this week", "7 posts esta semana")}</span>
+            </span>
           </span>
-        </div>
+          <span className="absolute inset-x-3 bottom-9 grid grid-cols-6 gap-1">
+            {Array.from({ length: 6 }, (_, i) => <span key={i} className="aspect-[4/5] rounded-sm" style={{ background: `hsl(${265 + i * 16} 45% ${24 + (i % 3) * 8}%)` }} />)}
+          </span>
+          {cap(L("Same face and voice, every post", "Misma cara y voz en cada post"))}
+        </>
       );
-    case "voice": return <div className="flex h-full items-center justify-center px-6">{bars(34, 1, "bg-white/80")}</div>;
+    case "voice":
+      return (
+        <>
+          <span className="absolute inset-x-3 top-3 bottom-9 flex flex-col justify-center gap-2">
+            {row(L("Sample", "Muestra"), wave(10, 1, "bg-white/50", "h-6"), "#9ca3af")}
+            {row(L("Script", "Guion"), wave(22, 2, "bg-white", "h-8"), "#ffffff")}
+          </span>
+          {cap(L("30 s of your voice → it reads anything", "30 s de tu voz → lee cualquier guion"))}
+        </>
+      );
     case "podcast":
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-1 px-6">
-          {bars(30, 2, "bg-[#8b7cff]")}
-          <div className="-mt-6">{bars(30, 5, "bg-[#ff4fd8]/80")}</div>
-        </div>
+        <>
+          <span className="absolute inset-x-3 top-3 bottom-9 flex flex-col justify-center gap-2">
+            {row(L("Host", "Conductor"), wave(22, 2, "bg-[#8b7cff]", "h-7"), "#8b7cff")}
+            {row(L("Guest", "Invitado"), wave(22, 5, "bg-[#ff4fd8]", "h-7"), "#ff4fd8")}
+          </span>
+          {cap(L("Two AI voices in conversation", "Dos voces IA conversando"))}
+        </>
       );
     case "dub":
       return (
-        <div className="flex h-full items-center justify-center gap-3 px-4">
-          {chip("EN", "bg-white text-black font-bold")}
-          {bars(12, 3, "bg-white/70")}
-          <span className="text-white/60">→</span>
-          {bars(12, 4, "bg-[#3DFF6E]/80")}
-          {chip("ES", "bg-[#3DFF6E] text-black font-bold")}
-        </div>
+        <>
+          <span className="absolute inset-x-3 top-3 bottom-9 flex flex-col justify-center gap-2">
+            {row("English", wave(22, 3, "bg-white/80", "h-7"), "#ffffff")}
+            {row("Español", wave(22, 4, "bg-[#3DFF6E]", "h-7"), "#3DFF6E")}
+          </span>
+          {cap(L("Same voice, other language", "Misma voz, otro idioma"))}
+        </>
       );
     case "music":
       return (
-        <div className="flex h-full items-end justify-center gap-1 px-6 pb-6">
-          {Array.from({ length: 16 }, (_, i) => <span key={i} className="w-2.5 rounded-t-sm bg-[image:var(--grad)]" style={{ height: `${20 + Math.abs(Math.sin(i * 1.3)) * 60}%` }} />)}
-        </div>
+        <>
+          <span className="absolute inset-x-4 top-8 bottom-9 flex items-end justify-center gap-1">
+            {Array.from({ length: 18 }, (_, i) => <span key={i} className="flex-1 rounded-t-sm bg-[image:var(--grad)] opacity-90" style={{ height: `${20 + Math.abs(Math.sin(i * 1.3)) * 75}%` }} />)}
+          </span>
+          {cap(L("“Upbeat, 30 s” → royalty-free track", "“Alegre, 30 s” → música libre de derechos"))}
+        </>
       );
     case "sfx":
       return (
-        <div className="flex h-full items-center justify-center gap-2 px-4">
-          {(es ? ["whoosh", "pop", "lluvia", "ding"] : ["whoosh", "pop", "rain", "ding"]).map((x) => chip(x, "bg-white/10 text-white"))}
-        </div>
+        <>
+          <span className="absolute inset-x-3 top-8 bottom-9 flex flex-wrap content-center items-center justify-center gap-1.5">
+            {(es ? ["Whoosh", "Pop", "Lluvia", "Ding", "Aplausos", "Caja registradora"] : ["Whoosh", "Pop", "Rain", "Ding", "Applause", "Cash register"]).map((x) => (
+              <span key={x} className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-white">▶ {x}</span>
+            ))}
+          </span>
+          {cap(L("Describe a sound → get it", "Describe un sonido → lo tienes"))}
+        </>
       );
     case "multiply":
       return (
-        <div className="flex h-full items-center justify-center gap-1.5">
-          <span className="flex aspect-[9/16] h-[46%] items-center justify-center rounded-md border-2 border-white/80 bg-white/10 font-display text-xs font-bold text-white">1</span>
-          <span className="text-white/60">→</span>
-          {Array.from({ length: 5 }, (_, i) => <span key={i} className="aspect-[9/16] h-[34%] rounded-md border border-white/25" style={{ background: `hsl(${255 + i * 18} 50% 28%)` }} />)}
-        </div>
+        <>
+          <span className="absolute inset-x-0 top-3 bottom-9 flex items-center justify-center gap-1">
+            <span className="flex aspect-[9/16] h-[66%] flex-col items-center justify-center rounded-md border-2 border-[#3DFF6E] bg-[#3DFF6E]/10 text-[9px] font-bold text-[#3DFF6E]">{L("Winner", "Ganador")}</span>
+            <span className="text-white/60">→</span>
+            {["A", "B", "C", "D", "E"].map((x, i) => (
+              <span key={x} className="flex aspect-[9/16] h-[50%] items-end justify-center rounded-md border border-white/25 pb-0.5 text-[9px] font-bold text-white/80" style={{ background: `hsl(${255 + i * 18} 50% 28%)` }}>{x}</span>
+            ))}
+          </span>
+          {cap(L("1 winning ad → 5 new hooks", "1 anuncio ganador → 5 ganchos nuevos"))}
+        </>
       );
     case "score":
       return (
-        <div className="flex h-full items-center justify-center gap-3">
-          <span className="relative grid h-16 w-16 place-items-center rounded-full" style={{ background: "conic-gradient(#3DFF6E 0 87%, rgba(255,255,255,.12) 0)" }}>
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#121318] font-display text-lg font-bold text-white">87</span>
+        <>
+          <span className="absolute inset-x-0 top-3 bottom-9 flex items-center justify-center gap-3">
+            <span className="grid h-14 w-14 place-items-center rounded-full" style={{ background: "conic-gradient(#3DFF6E 0 87%, rgba(255,255,255,.12) 0)" }}>
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#121318] font-display text-base font-bold text-white">87</span>
+            </span>
+            <span className="flex flex-col gap-0.5 text-[10px] text-white/85">
+              <span>{L("Hook", "Gancho")} <b className="text-[#3DFF6E]">9/10</b></span>
+              <span>{L("Offer", "Oferta")} <b className="text-[#3DFF6E]">8/10</b></span>
+              <span>CTA <b className="text-[#FFE100]">6/10</b></span>
+            </span>
           </span>
-          <span className="flex flex-col gap-1 text-[11px] text-white/80"><span>{es ? "Gancho" : "Hook"} ✓</span><span>{es ? "Oferta" : "Offer"} ✓</span><span>CTA ~</span></span>
-        </div>
+          {cap(L("Score before you spend", "Puntaje antes de gastar"))}
+        </>
       );
     case "publish":
       return (
-        <div className="flex h-full items-center justify-center gap-2">
-          {["Meta", "Instagram", "TikTok"].map((x) => chip(x, "bg-white/10 text-white"))}
-        </div>
+        <>
+          <span className="absolute inset-x-3 top-3 bottom-9 flex flex-col justify-center gap-1.5">
+            {[["Meta", L("Mon 9:00", "Lun 9:00")], ["Instagram", L("Tue 18:00", "Mar 18:00")], ["TikTok", L("Wed 20:00", "Mié 20:00")]].map(([n, d]) => (
+              <span key={n} className="flex items-center justify-between rounded-md bg-white/10 px-2 py-1 text-[10px] text-white"><b>{n}</b><span className="text-white/70">{d}</span></span>
+            ))}
+          </span>
+          {cap(L("Scheduled from Creads", "Programado desde Creads"))}
+        </>
       );
     case "api":
       return (
-        <pre className="flex h-full items-center px-4 font-mono text-[10.5px] leading-relaxed text-white/80">
-          <code>{"POST /v1/ads\n{ \"script\": \"…\",\n  \"model\": \"veo-3.1\" }"}</code>
-        </pre>
+        <>
+          <pre className="absolute inset-x-3 top-3 bottom-9 overflow-hidden rounded-md bg-white/5 p-2 font-mono text-[10px] leading-relaxed text-white/85">
+            <code><span className="text-[#3DFF6E]">POST</span>{" /v1/ads\n{ \"script\": \"…\",\n  \"model\": \"veo-3.1\" }"}</code>
+          </pre>
+          {cap(L("Your tools and agents → Creads", "Tus herramientas y agentes → Creads"))}
+        </>
       );
-    default: return null;
+    default:
+      return null;
   }
 }
 
@@ -282,9 +375,9 @@ function ToolCard({ x, t, es }: { x: Tool; t: Content["tools"]; es: boolean }) {
   return (
     <a href="#pricing" className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-colors hover:border-muted/60">
       <div className="stage relative aspect-[16/10] overflow-hidden bg-[#0d0e11]">
-        <ToolArt art={x.art} es={es} />
+        <span aria-hidden="true" className="absolute inset-0"><ToolArt art={x.art} es={es} /></span>
         {x.badge && (
-          <span className={`absolute top-2 left-2 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold leading-none ${x.badge === "new" ? "bg-[image:var(--grad)] text-white" : "bg-black/70 text-white/80"}`}>
+          <span className={`absolute top-2 right-2 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold leading-none ${x.badge === "new" ? "bg-[image:var(--grad)] text-white" : "bg-black/70 text-white/80"}`}>
             {x.badge === "new" ? t.new : t.soon}
           </span>
         )}
