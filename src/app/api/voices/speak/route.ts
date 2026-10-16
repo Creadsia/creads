@@ -3,6 +3,8 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { elevenlabs, VOICE_MODELS } from "@/lib/providers/elevenlabs";
 import { saveMedia } from "@/lib/media";
 import { canUseVoice } from "@/lib/voices";
+import { ensureFunds, explainFailure } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 60;
 
@@ -19,12 +21,13 @@ export async function POST(req: Request) {
   if (text.length < 2 || !voiceId) return NextResponse.json({ error: "Elige una voz y escribe el texto." }, { status: 400 });
   try {
     if (!(await canUseVoice(s.user.workspace, voiceId))) return NextResponse.json({ error: "Esa voz no está en tu cuenta." }, { status: 403 });
+    await ensureFunds("eleven", 0, text.length);
     const { bytes, mime } = await elevenlabs.speak(voiceId, text, { model, lang });
     const url = await saveMedia(s.user.workspace, "audio", bytes, mime);
     return NextResponse.json({ url, chars: text.length });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo generar la voz.";
-    console.error("voices/speak", msg);
+    console.error("voices/speak", err instanceof Error ? err.message : err);
+    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo generar la voz."), isOwner(s.user), "eleven");
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

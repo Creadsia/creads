@@ -121,6 +121,21 @@ function Status() {
   );
 }
 
+/** Owner only: a thin warning when a service is running out of money. */
+function MoneyAlerts() {
+  const [alerts, setAlerts] = useState<{ service: string; name: string; text: string }[]>([]);
+  useEffect(() => {
+    fetch("/api/admin/saldos?alertas=1").then((r) => (r.ok ? r.json() : null)).then((d) => setAlerts(d?.alerts ?? [])).catch(() => {});
+  }, []);
+  if (!alerts.length) return null;
+  return (
+    <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm">
+      <span className="font-semibold">{alerts.length === 1 ? alerts[0].text : `Revisa el saldo de ${alerts.map((a) => a.name).join(", ").replace(/, ([^,]*)$/, " y $1")}.`}</span>
+      <a href="/admin" className="font-semibold text-accent-text hover:underline">Ver saldos</a>
+    </div>
+  );
+}
+
 async function logout() {
   await fetch("/api/auth/logout", { method: "POST" });
   window.location.href = "/app";
@@ -183,7 +198,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       )}
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6">{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">{user.owner && <MoneyAlerts />}{children}</div>
       </main>
     </div>
   );

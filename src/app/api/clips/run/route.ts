@@ -4,6 +4,8 @@ import { findVideo } from "@/lib/providers";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
+import { ensureFunds, explainFailure, serviceOfModel } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 
@@ -41,6 +43,8 @@ export async function POST(req: Request) {
     if (provider.id.startsWith("veo") && aspect !== "16:9") aspect = "9:16";
     const words = String(clip.text || "").split(/\s+/).filter(Boolean).length;
     const seconds = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    // check the money before spending anything (the opening frame below already costs)
+    await ensureFunds(serviceOfModel(provider.id), provider.usdPerSecond * (provider.id.startsWith("veo") ? 8 : seconds));
 
     let refs: MediaRef[] = [];
     let image = (clip.image_url as string | null) || "";
@@ -63,7 +67,7 @@ export async function POST(req: Request) {
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd });
     return NextResponse.json({ clip: row });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo iniciar el corte.";
+    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo iniciar el corte."), isOwner(s.user));
     await db.update("clips", id, { status: "failed", error: msg.slice(0, 500) }).catch(() => {});
     return NextResponse.json({ error: msg }, { status: 502 });
   }

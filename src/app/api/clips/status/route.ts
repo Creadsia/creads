@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import { mediaRefOf, mediaSaved, saveMedia } from "@/lib/media";
+import { explainFailure, serviceOfModel } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -22,7 +24,8 @@ export async function GET(req: Request) {
 
     const st = await provider.status({ provider: provider.id, jobId: String(clip.provider_job) });
     if (st.state === "failed") {
-      const row = await db.update("clips", id, { status: "failed", error: st.error.slice(0, 500) });
+      const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOfModel(provider.id));
+      const row = await db.update("clips", id, { status: "failed", error: error.slice(0, 500) });
       return NextResponse.json({ clip: row });
     }
     if (st.state !== "done") return NextResponse.json({ clip });

@@ -4,6 +4,8 @@ import { fullSession } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/lib/media";
+import { ensureFunds, explainFailure, serviceOfModel } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 
@@ -26,7 +28,9 @@ export async function POST(req: Request) {
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
 
+  const svc = serviceOfModel(provider.id);
   try {
+    await ensureFunds(svc, provider.usdPerSecond * seconds);
     const refs: MediaRef[] = firstFrame ? [{ url: await fetchableUrl(firstFrame, s.user.workspace), role: "first_frame" }] : [];
     const job = await provider.submit({ prompt, seconds, aspect, resolution: "720p", withAudio: true, refs });
     const usd = +(provider.usdPerSecond * seconds).toFixed(2);
@@ -34,8 +38,8 @@ export async function POST(req: Request) {
     await db.insert("clips", { kind: "gen:video", prompt, model: provider.id, provider_job: job.jobId, status: "running", image_url: firstFrame || null, text: `${seconds} s`, usd });
     return NextResponse.json({ job, usd });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo iniciar el video.";
-    console.error("generate/video submit", provider.id, msg);
+    console.error("generate/video submit", provider.id, err instanceof Error ? err.message : err);
+    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo iniciar el video."), isOwner(s.user), svc);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
@@ -56,7 +60,11 @@ export async function GET(req: Request) {
     if (!row) return NextResponse.json({ error: "No encontré ese video en tu cuenta." }, { status: 404 });
     if (row.status === "done" && row.url) return NextResponse.json({ state: "done", url: row.url });
     const st = await provider.status({ provider: provider.id, jobId });
-    if (st.state === "failed") await db.update("clips", String(row.id), { status: "failed", error: st.error }).catch(() => null);
+    if (st.state === "failed") {
+      const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOfModel(provider.id));
+      await db.update("clips", String(row.id), { status: "failed", error }).catch(() => null);
+      return NextResponse.json({ state: "failed", error });
+    }
     if (st.state !== "done") return NextResponse.json(st);
 
     // Copy once into the customer's private storage, under a stable name derived from the job.

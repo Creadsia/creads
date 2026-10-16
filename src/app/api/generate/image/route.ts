@@ -3,6 +3,8 @@ import { fullSession } from "@/lib/access";
 import { findImage } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
+import { ensureFunds, explainFailure, serviceOfModel } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 
@@ -29,7 +31,9 @@ export async function POST(req: Request) {
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
 
+  const svc = serviceOfModel(provider.id);
   try {
+    await ensureFunds(svc, provider.usdPerImage);
     const open = await Promise.all(refs.map(async (r) => ({ ...r, url: await fetchableUrl(r.url, s.user.workspace) })));
     const { bytes, mime } = await provider.generate({ prompt, aspect, refs: open });
     const url = await saveMedia(s.user.workspace, "images", bytes, mime);
@@ -40,8 +44,8 @@ export async function POST(req: Request) {
     ]).catch(() => null);
     return NextResponse.json({ url, model: provider.id, usd: provider.usdPerImage });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo generar la imagen.";
-    console.error("generate/image", provider.id, msg);
+    console.error("generate/image", provider.id, err instanceof Error ? err.message : err);
+    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo generar la imagen."), isOwner(s.user), svc);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

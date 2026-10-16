@@ -4,6 +4,8 @@ import { probe } from "@/lib/montage";
 import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/providers/tools";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
+import { ensureFunds, explainFailure, serviceOf } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 
@@ -91,6 +93,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   const read = await readInput(t, b, s.user.workspace);
   if (typeof read === "string") return bad(read);
   const usd = t.estimate(read.seconds);
+  const svc = serviceOf(`tool:${t.id}`, null);
+  try {
+    await ensureFunds(svc, usd);
+  } catch (err) {
+    return bad(await explainFailure(err, isOwner(s.user), svc), 402);
+  }
 
   // Record first, then start: if the provider takes the job, it is never lost (and never paid twice).
   let row: Record<string, unknown>;
@@ -123,8 +131,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
     await db.update("clips", id, { provider_job: job });
     return NextResponse.json({ id, usd });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo iniciar.";
-    console.error("tools start", t.id, msg);
+    console.error("tools start", t.id, err instanceof Error ? err.message : err);
+    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo iniciar."), isOwner(s.user), svc);
     await db.update("clips", id, { status: "failed", error: msg }).catch(() => null);
     return bad(msg, 502);
   }
@@ -148,8 +156,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
 
     const st = await checkTool(t, String(row.provider_job));
     if (st.state === "failed") {
-      await db.update("clips", id, { status: "failed", error: st.error });
-      return NextResponse.json(st);
+      const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
+      await db.update("clips", id, { status: "failed", error });
+      return NextResponse.json({ state: "failed", error });
     }
     if (st.state !== "done") return NextResponse.json(st);
 

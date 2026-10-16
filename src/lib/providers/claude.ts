@@ -1,4 +1,5 @@
 import type { TextAI } from "./types";
+import { noteOutage } from "../balances";
 
 // Claude through the Anthropic Messages API, called only from the server.
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
@@ -37,6 +38,10 @@ export const claude: TextAI = {
     if (!res.ok) {
       const msg = data?.error?.message || `HTTP ${res.status}`;
       console.error("claude error", res.status, msg);
+      if (/credit balance is too low/i.test(msg)) {
+        await noteOutage("claude", msg);
+        throw new Error("El asistente de Creads no está disponible en este momento. Vuelve a intentar en un rato.");
+      }
       throw new Error(`Claude respondió con error (${res.status}).`);
     }
     const text: string = (data?.content ?? [])

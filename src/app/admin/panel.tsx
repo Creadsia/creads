@@ -15,9 +15,10 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "resumen" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["resumen", "Resumen"],
+  ["saldos", "Saldos y alertas"],
   ["clientes", "Clientes y accesos"],
   ["planes", "Planes y afiliados"],
   ["movs", "Movimientos"],
@@ -153,7 +154,7 @@ export default function AdminPanel() {
       </nav>
 
       {!data ? (
-        tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes /> : <div className={card}><p className="text-muted">{status}</p></div>
+        tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -162,6 +163,7 @@ export default function AdminPanel() {
           {tab === "fijos" && <Fijos d={data} change={change} />}
           {tab === "modelos" && <Modelos d={data} change={change} />}
           {tab === "cuentas" && <Cuentas d={data} />}
+          {tab === "saldos" && <Saldos />}
           {tab === "clientes" && <Clientes />}
           {tab === "registros" && <Registros />}
           {tab === "estado" && <Estado />}
@@ -859,5 +861,115 @@ function Estado() {
         </ul>
       )}
     </section>
+  );
+}
+
+// ---------- Saldos y alertas ----------
+type Svc = "fal" | "google" | "eleven" | "claude";
+interface SvcStatus {
+  id: Svc; name: string; what: string; recharge: string;
+  level: "ok" | "bajo" | "agotado" | "desconocido";
+  headline: string; detail: string; usd: number | null; estimated: boolean;
+  spentMonth: number; topUps: number; lastFailure: { at: string; msg: string } | null;
+}
+interface SaldosData { services: SvcStatus[]; umbrales: { fal: number; google: number; eleven: number }; alerts: { service: Svc; text: string }[] }
+
+const LEVEL: Record<SvcStatus["level"], [string, string]> = {
+  ok: ["good", "Bien"],
+  bajo: ["warn", "Saldo bajo"],
+  agotado: ["bad", "Sin saldo"],
+  desconocido: ["", "Sin lectura"],
+};
+
+function Saldos() {
+  const [d, setD] = useState<SaldosData | null>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [u, setU] = useState<SaldosData["umbrales"] | null>(null);
+  const [saved, setSaved] = useState("");
+
+  const load = useCallback(async (init?: RequestInit) => {
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/admin/saldos", init);
+      const x = await r.json();
+      if (!r.ok) throw new Error(x.error);
+      setD(x); setU(x.umbrales);
+      return true;
+    } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo revisar."); return false; } finally { setBusy(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const put = (body: unknown) => load({ method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">Saldos y alertas</h2>
+          <p className="text-sm text-muted">Cuánta plata queda en cada servicio que usa Creads. Si un servicio se queda sin saldo, sus modelos dejan de funcionar: Creads revisa antes de gastar y avisa en vez de fallar a medias.</p>
+        </div>
+        <button type="button" onClick={() => load()} disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{busy ? "Revisando…" : "Revisar ahora"}</button>
+      </div>
+
+      {err && <p className="rounded-lg border border-bad/40 bg-bad/10 p-3 text-sm">{err}</p>}
+      {!d && !err && <p className="text-muted">Revisando saldos…</p>}
+
+      {d && (d.alerts.length ? (
+        <ul className="flex flex-col gap-2" aria-label="Alertas">
+          {d.alerts.map((a) => (
+            <li key={a.service + a.text} className="rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm font-semibold">{a.text}</li>
+          ))}
+        </ul>
+      ) : <p className="rounded-lg bg-good/10 px-3 py-2 text-sm font-semibold text-good">Todo con saldo. No hay alertas.</p>)}
+
+      {d && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {d.services.map((s) => {
+            const [t, label] = LEVEL[s.level];
+            return (
+              <section key={s.id} className={card} aria-labelledby={`sv-${s.id}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 id={`sv-${s.id}`} className="font-display text-lg font-bold">{s.name}</h3>
+                    <p className="text-xs text-muted">{s.what}</p>
+                  </div>
+                  <Pill t={t}>{label}</Pill>
+                </div>
+                <p className={`${num} text-2xl font-bold`}>{s.headline}</p>
+                <p className="text-sm text-muted">{s.detail}</p>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-surface-2 px-3 py-2"><dt className="text-xs text-muted">Gastado este mes (Creads)</dt><dd className={num}>{fmtUsd(s.spentMonth, 2)}</dd></div>
+                  <div className="rounded-lg bg-surface-2 px-3 py-2"><dt className="text-xs text-muted">Recargas anotadas</dt><dd className={num}>{s.topUps ? fmtUsd(s.topUps, 2) : "—"}</dd></div>
+                </dl>
+                {s.lastFailure && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
+                    <span>Último rechazo por saldo: {new Date(s.lastFailure.at).toLocaleString("es-CL")}</span>
+                    <button type="button" onClick={() => put({ listo: s.id })} className="text-xs font-semibold text-muted hover:text-ink">Ya cargué, ocultar</button>
+                  </div>
+                )}
+                <a href={s.recharge} target="_blank" rel="noreferrer" className={`${btn} w-fit`}>Cargar saldo en {s.name}</a>
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      {u && (
+        <section className={card}>
+          <div>
+            <h3 className="font-display text-lg font-bold">Cuándo avisarte</h3>
+            <p className="text-sm text-muted">Te aviso aquí y arriba en el estudio cuando un servicio baje de estos montos.</p>
+          </div>
+          <form className="flex flex-wrap items-end gap-3" onSubmit={async (e) => { e.preventDefault(); setSaved(""); if (await put({ umbrales: u })) setSaved("Guardado."); }}>
+            <Field label="fal.ai: menos de (US$)"><Num id="u-fal" value={u.fal} onChange={(v) => setU({ ...u, fal: v })} /></Field>
+            <Field label="Google: menos de (US$)"><Num id="u-google" value={u.google} onChange={(v) => setU({ ...u, google: v })} /></Field>
+            <Field label="ElevenLabs: menos del (% del plan)"><Num id="u-eleven" value={u.eleven} max={100} onChange={(v) => setU({ ...u, eleven: v })} /></Field>
+            <button type="submit" disabled={busy} className={btn}>Guardar</button>
+            {saved && <span className="text-sm text-good" role="status">{saved}</span>}
+          </form>
+        </section>
+      )}
+    </div>
   );
 }
