@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { checkAccess } from "@/lib/access";
 import { findImage } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
+import { db } from "@/lib/db";
 import { uploadMedia } from "@/lib/supabase";
 
 export const maxDuration = 120;
@@ -32,6 +33,11 @@ export async function POST(req: Request) {
     const { bytes, mime } = await provider.generate({ prompt, aspect, refs });
     const ext = mime.includes("jpeg") ? "jpg" : mime.split("/")[1] || "png";
     const url = await uploadMedia(`images/${randomUUID()}.${ext}`, bytes, mime);
+    // keep it in the library and in "Tus creaciones" (a missing table never blocks the result)
+    await Promise.all([
+      db.insert("images", { prompt, url, model: provider.id, aspect }),
+      db.insert("clips", { kind: "gen:image", prompt, model: provider.label, status: "done", url, usd: provider.usdPerImage }),
+    ]).catch(() => null);
     return NextResponse.json({ url, model: provider.id, usd: provider.usdPerImage });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "No se pudo generar la imagen.";

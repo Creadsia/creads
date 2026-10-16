@@ -11,7 +11,7 @@ const clp = (usd: number) => Math.round((usd * 950) / 10) * 10; // rough CLP, fo
 const money = (usd: number) => `US$${usd.toFixed(2).replace(".", ",")} (≈ $${clp(usd).toLocaleString("es-CL")})`;
 
 interface Job extends Row { kind: string; status: string; url: string | null; image_url: string | null; prompt: string | null; error: string | null; usd: number | null; text: string | null }
-interface Img extends Row { url: string; prompt: string | null }
+export interface Img extends Row { url: string; prompt: string | null }
 interface Voice { id: string; name: string; category: string }
 
 /** Length of a local video/audio file, read by the browser before uploading. */
@@ -48,7 +48,7 @@ function Group({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function ImageInput({ value, onChange, library }: { value: string; onChange: (u: string) => void; library: Img[] }) {
+export function ImageInput({ value, onChange, library }: { value: string; onChange: (u: string) => void; library: Img[] }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [pick, setPick] = useState(false);

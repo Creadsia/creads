@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ImageInput, type Img } from "./tool-run";
+import { useTable } from "./ui";
 
 // Test bench for the connected models. Every button here spends real money, so the price is always shown first.
 
@@ -42,7 +44,8 @@ export default function ModelLab({ code }: { code: string }) {
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [model, setModel] = useState("veo-3.1-lite");
   const [seconds, setSeconds] = useState(4);
-  const [useImage, setUseImage] = useState(true);
+  const [frame, setFrame] = useState(""); // starting image for the video (generated, uploaded or from the library)
+  const library = useTable<Img>("images");
   const [video, setVideo] = useState<VideoState>({ s: "idle" });
   const [tick, setTick] = useState(0);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,6 +78,7 @@ export default function ModelLab({ code }: { code: string }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo generar la imagen.");
       setImage(data.url);
+      setFrame(data.url);
     } catch (e) {
       setImgErr(e instanceof Error ? e.message : "No se pudo generar la imagen.");
     } finally {
@@ -102,7 +106,7 @@ export default function ModelLab({ code }: { code: string }) {
       const res = await fetch("/api/generate/video", {
         method: "POST",
         headers,
-        body: JSON.stringify({ prompt, aspect: videoAspect, seconds: secs, model: vm.id, firstFrame: useImage && image ? image : "" }),
+        body: JSON.stringify({ prompt, aspect: videoAspect, seconds: secs, model: vm.id, firstFrame: frame }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el video.");
@@ -196,18 +200,18 @@ export default function ModelLab({ code }: { code: string }) {
               ))}
             </select>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={useImage} onChange={(e) => setUseImage(e.target.checked)} disabled={!image} />
-            <span className={image ? "" : "text-muted"}>Partir desde la imagen generada</span>
-          </label>
+          <div role="group" aria-labelledby="frame-l" className="flex flex-col gap-1 text-sm">
+            <span id="frame-l" className="font-semibold text-muted">Imagen de partida {vm.needsImage ? "(obligatoria para este modelo)" : "(opcional)"}</span>
+            <ImageInput value={frame} onChange={setFrame} library={library.rows ?? []} />
+          </div>
           <p className="text-xs text-muted">
-            {vm.needsImage && <b className="block text-warn">Este modelo solo anima una imagen: genera la imagen primero.</b>}
-            Se genera en {videoAspect} a 720p, con audio{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
+            {vm.needsImage && <b className="block text-warn">Este modelo solo anima una imagen: genera una, súbela o elígela de tus imágenes.</b>}
+            Se genera en {videoAspect} a 720p{vm.id.startsWith("hailuo") ? ", sin audio" : ", con audio"}{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
           </p>
           <button
             type="button"
             onClick={makeVideo}
-            disabled={!ready || video.s === "running" || (vm.needsImage && !(useImage && image))}
+            disabled={!ready || video.s === "running" || (vm.needsImage && !frame)}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
             {video.s === "running"

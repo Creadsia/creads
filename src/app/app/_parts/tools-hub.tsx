@@ -7,7 +7,7 @@ import { cardCls, Empty, SetupNotice } from "./ui";
 
 // The "Crear" menu: generators first, then the one-click tools, then everything you've made with them.
 
-interface Job { id: string; kind: string; status: string; url: string | null; image_url: string | null; created_at: string; usd: number | null }
+interface Job { id: string; kind: string; status: string; url: string | null; image_url: string | null; created_at: string; usd: number | null; model: string | null; provider_job: string | null }
 
 const GENERATE = [
   { href: "/app/laboratorio", name: "Video IA", short: "Un clip desde texto o desde una imagen.", models: "Veo 3.1 · Kling 3.0 · Seedance 2.5 · Hailuo 2.3 · Wan 3.0 · Grok" },
@@ -38,7 +38,25 @@ export default function ToolsHub() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [missing, setMissing] = useState(false);
   useEffect(() => {
-    fetch("/api/tools").then((r) => r.json()).then((d) => { setMissing(Boolean(d.missingTable)); setJobs(d.rows ?? []); }).catch(() => setJobs([]));
+    let alive = true;
+    fetch("/api/tools").then((r) => r.json()).then((d) => {
+      if (!alive) return;
+      setMissing(Boolean(d.missingTable));
+      const rows: Job[] = d.rows ?? [];
+      setJobs(rows);
+      // Jobs still marked as running (the tab was closed): ask once more, which also saves finished ones.
+      rows.filter((j) => j.status === "running").slice(0, 8).forEach((j) => {
+        const url = j.kind === "gen:video"
+          ? j.model && j.provider_job ? `/api/generate/video?model=${encodeURIComponent(j.model)}&job=${encodeURIComponent(j.provider_job)}` : ""
+          : j.kind.startsWith("tool:") ? `/api/tools/${j.kind.slice(5)}?id=${j.id}` : "";
+        if (!url) return;
+        fetch(url).then((r) => r.json()).then((st) => {
+          if (!alive || (st.state !== "done" && st.state !== "failed")) return;
+          setJobs((js) => js && js.map((x) => (x.id === j.id ? { ...x, status: st.state, url: st.url ?? x.url } : x)));
+        }).catch(() => {});
+      });
+    }).catch(() => setJobs([]));
+    return () => { alive = false; };
   }, []);
 
   return (
@@ -81,12 +99,14 @@ export default function ToolsHub() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {jobs.map((j) => {
-              const t = findTool(j.kind.replace(/^tool:/, ""));
+              const t = j.kind === "gen:video" ? { id: "video", name: "Video IA", href: "/app/laboratorio" }
+                : j.kind === "gen:image" ? { id: "image", name: "Imagen IA", href: "/app/laboratorio" }
+                : (() => { const x = findTool(j.kind.replace(/^tool:/, "")); return x && { id: x.id, name: x.name, href: `/app/herramientas/${x.id}` }; })();
               if (!t) return null;
               const thumb = j.url ?? j.image_url;
               const isVid = thumb && /\.(mp4|mov|webm)$/i.test(thumb);
               return (
-                <Link key={j.id} href={j.url ? j.url : `/app/herramientas/${t.id}`} target={j.url ? "_blank" : undefined} className="flex flex-col gap-1.5">
+                <Link key={j.id} href={j.url ? j.url : t.href} target={j.url ? "_blank" : undefined} className="flex flex-col gap-1.5">
                   <span className="relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-2">
                     {thumb && (isVid
                       ? <video src={thumb} muted playsInline preload="metadata" className="h-full w-full object-cover" />
