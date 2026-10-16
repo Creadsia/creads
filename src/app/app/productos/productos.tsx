@@ -76,7 +76,7 @@ export default function Productos() {
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
           {t.rows.map((p) => (
             <li key={p.id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-              <div className="aspect-square bg-surface-2">
+              <div className="aspect-square overflow-hidden bg-surface-2">
                 {p.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.image_url} alt={p.name} className="h-full w-full object-contain" />

@@ -73,7 +73,7 @@ export default function Avatares() {
               <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-xl border border-dashed border-line bg-surface-2">
                 {form.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.image_url} alt="Cara del avatar" className="h-full w-full object-cover" />
+                  <img src={form.image_url} alt="Cara del avatar" className="h-full w-full object-cover object-[50%_20%]" />
                 ) : (
                   <span className="px-4 text-center text-xs text-muted">Foto de frente, buena luz, sin lentes de sol</span>
                 )}
@@ -131,10 +131,11 @@ export default function Avatares() {
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
           {t.rows.map((a) => (
             <li key={a.id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
-              <div className="aspect-[3/4] bg-surface-2">
+              {/* overflow-hidden keeps tall photos (full body) from stretching the card; the crop favors the face */}
+              <div className="aspect-[4/5] overflow-hidden bg-surface-2">
                 {a.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.image_url} alt={a.name} className="h-full w-full object-cover" />
+                  <img src={a.image_url} alt={a.name} className="h-full w-full object-cover object-[50%_20%]" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">
