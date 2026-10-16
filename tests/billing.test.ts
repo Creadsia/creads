@@ -91,6 +91,14 @@ describe("free redos", () => {
   });
 });
 
+describe("online payments", () => {
+  test("a Mercado Pago payment gives credits only once", async () => {
+    await pg.query("insert into public.credits (owner, delta, kind, note, ref) values ('cliente-b', 1000, 'plan', 'Starter', 'mp:123456')");
+    await assert.rejects(pg.query("insert into public.credits (owner, delta, kind, note, ref) values ('cliente-b', 1000, 'plan', 'Starter', 'mp:123456')"));
+    assert.equal(await balance("cliente-b"), 1000);
+  });
+});
+
 describe("rate limits", () => {
   test("allows up to the limit, then refuses", async () => {
     const hit = async () => (await q("select public.hit_rate('login:test', 600, 3) as ok"))[0].ok;

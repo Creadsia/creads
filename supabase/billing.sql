@@ -28,6 +28,8 @@ create table if not exists public.credits (
 );
 create index if not exists credits_owner_idx on public.credits (owner, id desc);
 create index if not exists credits_ref_idx on public.credits (owner, ref);
+-- a payment from Mercado Pago gives credits only once, however many times it is notified
+create unique index if not exists credits_payment_once on public.credits (ref) where ref like 'mp:%';
 alter table public.credits enable row level security; -- no policies: only the service role
 revoke all on table public.credits from anon, authenticated;
 grant all on table public.credits to service_role;

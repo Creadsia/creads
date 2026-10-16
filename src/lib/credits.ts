@@ -140,9 +140,17 @@ export async function history(ws: string, limit = 30) {
 }
 
 /** Adds (or takes away) credits by hand. */
-export async function grant(ws: string, delta: number, kind: "plan" | "topup" | "adjust", note: string, by: string) {
+export class AlreadyDone extends Error {}
+
+/** Adds (or takes away) credits. With `ref` "mp:<payment>", the same payment can only count once. */
+export async function grant(ws: string, delta: number, kind: "plan" | "topup" | "adjust", note: string, by: string, ref?: string) {
   if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 1_000_000) throw new CreditError("Cantidad inválida.", 400);
-  await sbRest("credits", { method: "POST", body: JSON.stringify({ owner: ws, delta, kind, note: note.slice(0, 200), by_user: by }) });
+  try {
+    await sbRest("credits", { method: "POST", body: JSON.stringify({ owner: ws, delta, kind, note: note.slice(0, 200), by_user: by, ...(ref ? { ref } : {}) }) });
+  } catch (err) {
+    if (ref && err instanceof SbError && err.status === 409) throw new AlreadyDone(ref);
+    throw err;
+  }
 }
 
 /** Balances of every workspace (for the customer list). */

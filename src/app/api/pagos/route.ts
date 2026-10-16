@@ -1,31 +1,42 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { addOrder, hasPaidBefore, orders, workspaceRow } from "@/lib/billing";
-import { type ItemId, METHODS, type MethodId, type Period, quote } from "@/lib/catalog";
-import { tooMany } from "@/lib/rate";
+import { addOrder, hasPaidBefore, orders, updateOrder, workspaceRow } from "@/lib/billing";
+import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { DEFAULT_FINANZAS, type Finanzas } from "@/lib/finance";
 import { sendMeta, visitorFrom } from "@/lib/meta";
+import { createPreference, createSubscription, mpReady } from "@/lib/mercadopago";
+import { tooMany } from "@/lib/rate";
+import { readPrivateJSON } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-// The customer's side of payments. Online payment (Stripe / Mercado Pago) isn't connected yet:
-// an order is saved and Creadsia completes it by hand (the owner sees it in the panel).
+// The customer's side of payments. With Mercado Pago connected (MP_ACCESS_TOKEN), "Tarjeta o Mercado
+// Pago" sends the customer to pay online: monthly plans become a monthly subscription, yearly plans
+// and credit top-ups a one-time payment. Transfers are completed by hand from the owner's panel.
 // The amount is always computed here, never taken from the browser.
 
-const ONLINE = false; // turns true when a payment provider is connected
+const usdClp = async () => {
+  const book = await readPrivateJSON<Finanzas>("finanzas.json").catch(() => null);
+  return Number(book?.config?.usdClp) > 0 ? Number(book!.config.usdClp) : DEFAULT_FINANZAS.config.usdClp;
+};
 
 export async function GET(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const ws = s.user.workspace;
-  if (ws === "main") return NextResponse.json({ online: ONLINE, owner: true, firstPurchase: true, discount: 0, orders: [] });
+  const rate = await usdClp();
+  if (ws === "main") return NextResponse.json({ online: mpReady(), owner: true, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   try {
     const [w, paid, all] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), orders()]);
+    const mine = all.filter((o) => o.ws === ws);
+    const sub = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
     return NextResponse.json({
-      online: ONLINE, owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0),
-      orders: all.filter((o) => o.ws === ws).slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
+      online: mpReady(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
+      subscription: sub ? { id: sub.id, label: sub.quote.label } : null,
+      orders: mine.slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
     });
   } catch {
-    return NextResponse.json({ online: ONLINE, owner: false, firstPurchase: true, discount: 0, orders: [] });
+    return NextResponse.json({ online: mpReady(), owner: false, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   }
 }
 
@@ -41,14 +52,34 @@ export async function POST(req: Request) {
   const ws = s.user.workspace;
   if (ws === "main") return NextResponse.json({ error: "Esta es la vista de cliente: tu cuenta no paga." }, { status: 400 });
   try {
-    const [w, paid] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws)]);
-    const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct: Number(w.discount ?? 0), firstPurchase: !paid });
+    const [w, paid, rate] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), usdClp()]);
+    const discountPct = Number(w.discount ?? 0);
+    const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct, firstPurchase: !paid });
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });
     const visitor = visitorFrom(req);
     const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q, visitor });
     await sendMeta({ name: "InitiateCheckout", eventId: typeof b?.eventId === "string" ? b.eventId : undefined, email: s.user.email, value: q.total, content: q.label }, visitor);
-    return NextResponse.json({ online: ONLINE, order: { id: order.id, label: q.label, total: q.total, method } });
-  } catch {
-    return NextResponse.json({ error: "No se pudo guardar tu pedido. Escríbenos a hola@creadsia.com." }, { status: 502 });
+
+    let redirect: string | null = null;
+    if (method === "mercadopago" && mpReady()) {
+      const clp = clpFor(q.total, rate);
+      const title = `Creads IA · ${q.label}`;
+      if (q.period === "mensual") {
+        // monthly plan: subscription; the first charge may carry the launch offer
+        const plan = PLANS.find((p) => p.id === q.item)!;
+        const fullClp = clpFor(plan.monthly * (1 - discountPct / 100), rate);
+        const sub = await createSubscription({ orderId: order.id, title, firstClp: clp, email: s.user.email });
+        await updateOrder(order.id, (o) => { o.mp = { kind: "subscription", id: sub.id, clp, fullClp }; });
+        redirect = sub.url;
+      } else {
+        const pref = await createPreference({ orderId: order.id, title, clp, email: s.user.email });
+        await updateOrder(order.id, (o) => { o.mp = { kind: "preference", id: pref.id, clp }; });
+        redirect = pref.url;
+      }
+    }
+    return NextResponse.json({ online: Boolean(redirect), redirect, order: { id: order.id, label: q.label, total: q.total, clp: clpFor(q.total, rate), method } });
+  } catch (err) {
+    console.error("pagos", err instanceof Error ? err.message : err);
+    return NextResponse.json({ error: "No se pudo preparar el pago. Intenta de nuevo o escríbenos a hola@creadsia.com." }, { status: 502 });
   }
 }

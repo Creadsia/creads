@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, METHODS, type MethodId, PACKS, PLANS, type Period, quote } from "@/lib/catalog";
+import { type ItemId, LAUNCH_PCT, METHODS, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
-import { useCredits } from "../_parts/use-credits";
+import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { newEventId, track } from "@/lib/track";
 
 // Plans and credits: choose a plan or a top-up, see exactly what you'll pay, pick how to pay.
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
 
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
-interface PayInfo { online: boolean; owner: boolean; firstPurchase: boolean; discount: number; orders: OrderRow[] }
+interface PayInfo { online: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string } | null }
 
 const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
-const clp = (n: number) => `≈ $${(Math.round((n * 950) / 100) * 100).toLocaleString("es-CL")} CLP`;
+const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const STATUS: Record<string, [string, string]> = {
   pendiente: ["Esperando pago", "bg-warn/15 text-warn"],
   pagado: ["Pagado", "bg-good/15 text-good"],
@@ -34,13 +34,34 @@ export default function Planes() {
   const [tab, setTab] = useState<"planes" | "creditos">("planes");
   const [period, setPeriod] = useState<Period>("mensual");
   const [item, setItem] = useState<ItemId | null>(null);
-  const [method, setMethod] = useState<MethodId>("tarjeta");
+  const [method, setMethod] = useState<MethodId>("mercadopago");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState<{ id: string; label: string; total: number; method: MethodId } | null>(null);
 
+  const [back, setBack] = useState<{ state: string; id: string } | null>(null);
   const load = () => fetch("/api/pagos").then((r) => (r.ok ? r.json() : null)).then(setPay).catch(() => {});
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // back from Mercado Pago: check the payment right away
+    const sp = new URLSearchParams(window.location.search);
+    const pedido = sp.get("pedido");
+    if (sp.get("pago") === "volver" && pedido) {
+      setBack({ state: "revisando", id: pedido });
+      fetch("/api/pagos/confirmar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pedido, payment_id: sp.get("payment_id") ?? sp.get("collection_id"), preapproval_id: sp.get("preapproval_id") }) })
+        .then((r) => r.json()).then((d) => { setBack({ state: d.state ?? "procesando", id: pedido }); load(); refreshCredits(); })
+        .catch(() => setBack({ state: "procesando", id: pedido }));
+      window.history.replaceState(null, "", "/app/planes");
+    }
+  }, []);
+  const rate = pay?.usdClp ?? 950;
+  async function cancelSub() {
+    if (!window.confirm("¿Cancelar la renovación automática? Tu plan sigue activo hasta la fecha ya pagada.")) return;
+    const r = await fetch("/api/pagos/cancelar", { method: "POST" });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return setErr(d.error || "No se pudo cancelar.");
+    load();
+  }
 
   const opts = { discountPct: pay?.discount ?? 0, firstPurchase: pay?.firstPurchase ?? true };
   const q = useMemo(() => (item ? quote(item, period, opts) : null), [item, period, opts.discountPct, opts.firstPurchase]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -61,6 +82,7 @@ export default function Planes() {
     setBusy(false);
     if (!r.ok) return setErr(d.error || "No se pudo crear el pedido.");
     track("InitiateCheckout", { value: d.order.total, currency: "USD", content_name: d.order.label }, eventId);
+    if (d.redirect) { window.location.href = d.redirect; return; } // pay on Mercado Pago's page
     setDone(d.order); setItem(null); load();
     requestAnimationFrame(() => document.getElementById("pedido-ok")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }
@@ -71,7 +93,7 @@ export default function Planes() {
 
       {pay?.owner && (
         <p className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm">
-          <b>Vista de cliente.</b> Así ven esta página tus clientes. Los pagos en línea (tarjeta y Mercado Pago) todavía no están conectados: por ahora cada pedido te llega al Panel interno y lo marcas como pagado.
+          <b>Vista de cliente.</b> Así ven esta página tus clientes. {pay.online ? "Mercado Pago está conectado: los pagos con tarjeta se activan solos." : "Mercado Pago todavía no está conectado: por ahora cada pedido te llega al Panel interno y lo marcas como pagado."}
         </p>
       )}
 
@@ -91,6 +113,24 @@ export default function Planes() {
           <span className="text-sm text-muted">Cada video, imagen o voz descuenta créditos según el modelo. Si algo falla, vuelven solos.</span>
         </div>
       </section>
+
+      {back && (
+        <section className={`${cardCls} ${back.state === "pagado" ? "border-good/50" : back.state === "rechazado" ? "border-bad/50" : ""}`} aria-live="polite">
+          <h2 className="font-display text-xl font-bold">
+            {back.state === "pagado" ? "¡Pago recibido! Tus créditos ya están cargados." : back.state === "rechazado" ? "El pago fue rechazado" : back.state === "revisando" ? "Revisando tu pago…" : "Estamos confirmando tu pago"}
+          </h2>
+          <p className="text-sm text-muted">
+            {back.state === "pagado" ? `Pedido ${back.id}. Te llega el comprobante de Mercado Pago a tu correo.` : back.state === "rechazado" ? "No se cobró nada. Puedes intentar con otra tarjeta o medio de pago." : "Mercado Pago avisa en unos minutos. Tus créditos aparecen solos en esta página; no necesitas pagar de nuevo."}
+          </p>
+        </section>
+      )}
+
+      {pay?.subscription && (
+        <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
+          <span>Renovación automática activa: <b>{pay.subscription.label}</b>, con Mercado Pago.</span>
+          <button type="button" onClick={cancelSub} className="text-sm font-semibold text-muted underline hover:text-ink">Cancelar renovación</button>
+        </p>
+      )}
 
       {done && (
         <section id="pedido-ok" className={`${cardCls} scroll-mt-20 border-good/50`} aria-live="polite">
@@ -205,13 +245,13 @@ export default function Planes() {
               {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{usd(q.launch)}</dd></div>}
               {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{usd(q.discount)}</dd></div>}
               <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{usd(q.total)}</dd></div>
-              <div className="flex justify-between gap-3 text-xs text-muted"><dt>En pesos chilenos</dt><dd>{clp(q.total)}</dd></div>
+              <div className="flex justify-between gap-3 text-sm"><dt>{method === "mercadopago" ? "Pagas en pesos chilenos" : "En pesos chilenos"}</dt><dd className="font-mono font-semibold">{pesos(clpFor(q.total, rate))}</dd></div>
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && <p className="text-xs text-muted">Desde el segundo mes: {usd(PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100))}/mes. Cancela cuando quieras.</p>}
-            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : `Ir a pagar ${usd(q.total)}`}</button>
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{method === "mercadopago" ? `Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). ` : `Desde el segundo mes: ${usd(m)}/mes. `}Cancela cuando quieras.</p>; })()}
+            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : method === "mercadopago" && pay?.online ? `Pagar ${pesos(clpFor(q.total, rate))} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
-            {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
+            {!pay?.online && !pay?.owner && method === "mercadopago" && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
             <button type="button" onClick={() => setItem(null)} className="text-xs text-muted underline">Cancelar</button>
             {err && <p className="text-sm text-bad" role="alert">{err}</p>}
           </aside>

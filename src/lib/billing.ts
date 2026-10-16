@@ -42,7 +42,7 @@ export async function recordIncome(who: string, detail: string, amount: number, 
  * A plan was paid for `months`: gives the plan's credits for each month, moves the paid-until date
  * and (unless `amount` is null) writes the income. Returns the new paid-until date.
  */
-export async function recordPlanPayment(ws: string, planId: string, months: number, opts: { note?: string; amount?: number | null; currency?: "USD" | "CLP"; by: string }) {
+export async function recordPlanPayment(ws: string, planId: string, months: number, opts: { note?: string; amount?: number | null; currency?: "USD" | "CLP"; by: string; ref?: string }) {
   const w = await workspaceRow(ws);
   const b = await book();
   const plan = b.config.planes.find((p) => p.id === planId);
@@ -51,7 +51,7 @@ export async function recordPlanPayment(ws: string, planId: string, months: numb
   const from = w.paid_until && w.paid_until > today() ? w.paid_until : today();
   const until = addMonths(from, m);
   const what = `Plan ${plan.nombre} · ${m === 1 ? "1 mes" : `${m} meses`}${opts.note ? ` · ${opts.note}` : ""}`;
-  await grant(ws, plan.creditos * m, "plan", `Pago ${what}`, opts.by);
+  await grant(ws, plan.creditos * m, "plan", `Pago ${what}`, opts.by, opts.ref); // first: a repeated payment stops here
   await sbRest(`workspaces?id=eq.${encodeURIComponent(ws)}`, { method: "PATCH", body: JSON.stringify({ plan: plan.nombre, paid_until: until }) });
   forgetWorkspace(ws);
   if (opts.amount !== null) {
@@ -77,6 +77,10 @@ export interface Order {
   closed?: string;
   /** For Meta: consent and browser ids at checkout, so the purchase can be matched later. */
   visitor?: Visitor;
+  /** Online payment with Mercado Pago. */
+  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean };
+  /** Mercado Pago payments already applied (renewals add one each month). */
+  payments?: string[];
 }
 
 const FILE = "pedidos.json";
@@ -93,6 +97,15 @@ export async function addOrder(o: Omit<Order, "id" | "status" | "created">) {
   // one open order per customer and item: a new click replaces the old one
   await saveOrders([order, ...list.filter((x) => !(x.ws === o.ws && x.item === o.item && x.status === "pendiente"))]);
   return order;
+}
+
+export async function updateOrder(id: string, fn: (o: Order) => void) {
+  const list = await orders();
+  const o = list.find((x) => x.id === id);
+  if (!o) throw new CreditError("Pedido no encontrado.", 404);
+  fn(o);
+  await saveOrders(list);
+  return o;
 }
 
 export async function setOrderStatus(id: string, status: "pagado" | "cancelado") {

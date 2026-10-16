@@ -56,9 +56,14 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   };
 }
 
+/** Price in Chilean pesos (Mercado Pago charges in CLP): rounded to a ...990 price. */
+export function clpFor(usd: number, usdClp = 950) {
+  if (!(usd > 0)) return 0;
+  return Math.max(990, Math.round((usd * usdClp) / 1000) * 1000 - 10);
+}
+
 export const METHODS = [
-  { id: "tarjeta", name: "Tarjeta de crédito o débito", hint: "Visa, Mastercard y American Express. Pago seguro en la ventana del procesador: Creads nunca ve tu tarjeta." },
-  { id: "mercadopago", name: "Mercado Pago", hint: "Tarjetas, débito y saldo de Mercado Pago, en pesos chilenos y otras monedas de Latinoamérica." },
+  { id: "mercadopago", name: "Tarjeta o Mercado Pago", hint: "Crédito, débito o saldo de Mercado Pago, en pesos chilenos. Pagas en la ventana segura de Mercado Pago: Creads nunca ve tu tarjeta." },
   { id: "transferencia", name: "Transferencia bancaria", hint: "Te enviamos los datos por correo y activamos tu plan apenas llegue el pago." },
 ] as const;
 export type MethodId = (typeof METHODS)[number]["id"];
