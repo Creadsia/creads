@@ -84,12 +84,17 @@ export default function Avatares() {
               </label>
             </div>
             <div className="flex flex-col gap-3">
+              <h3 className="text-sm font-bold">Cara</h3>
               <Field label="Nombre"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Papá (Chile)" className={inputCls} /></Field>
               <Field label="Cómo es" hint="Mejor en inglés. Se usa en cada escena para que siempre sea la misma persona.">
                 <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej: 62-year-old Chilean man, short gray hair, light stubble, navy polo shirt" className={inputCls} />
               </Field>
+              <div className="mt-2 flex flex-col gap-1 border-t border-line pt-4">
+                <h3 className="text-sm font-bold">Voz</h3>
+                <p className="text-xs text-muted">La voz es aparte de la cara: puedes dejar la del modelo de video o usar una voz clonada de <a href="/app/voces" className="underline">Voces</a>.</p>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Voz">
+                <Field label="Voz que usa">
                   <select value={form.voice_id} onChange={(e) => setForm({ ...form, voice_id: e.target.value })} className={inputCls}>
                     <option value="">La voz del modelo de video</option>
                     {own.length > 0 && <optgroup label="Tus voces">{own.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>}
@@ -104,7 +109,6 @@ export default function Avatares() {
                   </select>
                 </Field>
               </div>
-              <p className="text-xs text-muted">¿Falta la voz? Clónala en <a href="/app/voces" className="underline">Voces</a> y vuelve aquí.</p>
               <label className="flex items-start gap-2 text-sm">
                 <input type="checkbox" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} className="mt-1" required />
                 <span>Tengo el permiso de esta persona para usar su cara y su voz en anuncios.</span>
@@ -135,7 +139,12 @@ export default function Avatares() {
               </div>
               <div className="flex flex-1 flex-col gap-1 p-3">
                 <strong>{a.name}</strong>
-                <span className="text-xs text-muted">{a.lang === "es-CL" ? "Español (Chile)" : a.lang === "es" ? "Español" : "Inglés"} · {a.voice_name ? `voz: ${a.voice_name}` : "voz del modelo"}</span>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                  <dt className="font-semibold text-muted">Cara</dt>
+                  <dd className={a.image_url ? "" : "text-warn"}>{a.image_url ? "Con foto" : "Falta la foto"}</dd>
+                  <dt className="font-semibold text-muted">Voz</dt>
+                  <dd>{a.voice_name || "La del modelo de video"} · {a.lang === "es-CL" ? "Español (Chile)" : a.lang === "es" ? "Español" : "Inglés"}</dd>
+                </dl>
                 {a.description && <p className="line-clamp-2 text-xs text-muted">{a.description}</p>}
                 <div className="mt-auto flex items-center justify-between pt-2">
                   <button type="button" onClick={() => open(a)} className="text-xs font-semibold text-accent-text">Editar</button>

@@ -4,6 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
 import type { Word } from "./textmatch";
+import { type CaptionStyle, assColor, assInline, fontOf, fontPx, marginPx, normalizeStyle, shapeWord } from "./caption-style";
 
 // Assembles the final ad: trims the silence at the ends of every clip, joins them, and burns TikTok-style
 // captions. Ported from the prototype's montage tool (legacy/af.py: trim_points, build, ASS presets).
@@ -76,15 +77,47 @@ export async function still(file: string, at: number, out: string) {
 }
 
 // ---------- captions ----------
-export interface CaptionStyle { preset: 1 | 2 | 3 | 4; size: number }
+export type { CaptionStyle } from "./caption-style";
 const ts = (t: number) => `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}:${(t % 60).toFixed(2).padStart(5, "0")}`;
 const srtTs = (t: number) => {
   const ms = Math.round(t * 1000);
   return `${String(Math.floor(ms / 3600000)).padStart(2, "0")}:${String(Math.floor(ms / 60000) % 60).padStart(2, "0")}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")},${String(ms % 1000).padStart(3, "0")}`;
 };
 
+/** Lowercase letters and digits only, no accents: how two spellings of the same word are compared. */
+const bare = (w: string) => w.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9ñ]/g, "");
+
+/**
+ * Spells the transcribed words as in the script (keeps the timings). The transcription sometimes hears
+ * "their" for "there", drops accents or writes numbers differently; the script is what the person
+ * was told to say, so its spelling wins wherever the two line up.
+ */
+export function respell(words: Word[], script: string): Word[] {
+  const toks = script.split(/\s+/).filter((t) => bare(t));
+  const a = words.map((w) => bare(w.w));
+  const b = toks.map(bare);
+  const n = a.length, m = b.length;
+  if (!n || !m) return words;
+  // edit distance table (match = 0, substitute/insert/delete = 1)
+  const d: number[][] = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) d[i][j] = Math.min(d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), d[i - 1][j] + 1, d[i][j - 1] + 1);
+  const out = words.map((w) => ({ ...w }));
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    const diag = d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
+    if (d[i][j] === diag) {
+      // same word, or a word heard wrong in the same spot: show the script's spelling
+      out[i - 1].w = toks[j - 1];
+      i--; j--;
+    } else if (d[i][j] === d[i - 1][j] + 1) i--;
+    else j--;
+  }
+  return out;
+}
+
 /** Builds the .ass captions (and an .srt) from word timings on the final timeline. */
-export function captions(words0: Word[], W: number, H: number, aspect: string, style: CaptionStyle) {
+export function captions(words0: Word[], W: number, H: number, aspect: string, style0: CaptionStyle) {
+  const st = normalizeStyle(style0);
   // join "34" + ",000" back into one token
   const words: Word[] = [];
   for (const w of words0) {
@@ -92,48 +125,63 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
     if (last && /^[,.]?\d{3}[.,]?$/.test(w.w) && /\d$/.test(last.w)) { last.w += w.w.startsWith(",") ? w.w : `,${w.w}`; last.e = w.e; continue; }
     words.push({ ...w });
   }
-  let size = style.size;
-  if (aspect === "1:1" || aspect === "16:9") size = Math.round(size * 0.8);
-  const [MAXW, MAXC] = size >= 92 ? [3, 15] : size >= 72 ? [3, 19] : [4, 26];
+  const font = fontOf(st.font);
+  const vertical = aspect === "9:16" || aspect === "4:5";
+  const size = fontPx(st.size, W, H);
+  const caps = st.case === "upper" || font.capsOnly;
+  const maxWords = st.look === "palabra" ? 1 : st.words;
+  // how many characters fit on one line at this size (bold caps are wider)
+  const maxChars = Math.max(6, Math.floor((W * 0.86) / (size * font.width * (caps ? 1.15 : 1))));
+
   const cues: Word[][] = [];
   let cur: Word[] = [];
   words.forEach((w, i) => {
-    if (cur.length && [...cur, w].map((x) => x.w).join(" ").length > MAXC) { cues.push(cur); cur = []; }
+    if (cur.length && [...cur, w].map((x) => x.w).join(" ").length > maxChars) { cues.push(cur); cur = []; }
     cur.push(w);
     const nx = words[i + 1];
-    if (cur.length >= MAXW || /[.,!?:]$/.test(w.w) || (nx && nx.s - w.e > 0.35) || !nx) { cues.push(cur); cur = []; }
+    if (cur.length >= maxWords || /[.,!?:]$/.test(w.w) || (nx && nx.s - w.e > 0.35) || !nx) { cues.push(cur); cur = []; }
   });
-  const p = style.preset;
-  const up = p === 4;
-  const col = p === 4 ? "&H0000E1FF" : "&H00FFFFFF";
-  const [border, back, outl] = p === 3 ? [3, "&HD0000000", Math.max(8, Math.floor(size / 7))] : [1, "&H64000000", Math.max(4, Math.floor(size / 10))];
-  const mv = Math.round(H * (aspect === "9:16" || aspect === "4:5" ? 0.26 : 0.12));
+
+  const outline = Math.max(3, Math.round(size / 11));
+  const look = st.look;
+  // BorderStyle 3 = opaque box behind the text
+  const [border, outl, shadow, outCol, backCol] =
+    look === "caja" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor("#000000", 0x30), assColor("#000000", 0x30)]
+      : look === "suave" ? [1, 0, Math.max(3, Math.round(size / 14)), assColor("#000000"), assColor("#000000", 0x60)]
+        : [1, outline, Math.max(2, Math.round(size / 24)), assColor("#000000"), assColor("#000000", 0x64)];
+  const align = st.position === "arriba" ? 8 : st.position === "centro" ? 5 : 2;
+  const mv = marginPx(st.position, H, vertical);
   const ass = [
-    "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "", "[V4+ Styles]",
+    "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "ScaledBorderAndShadow: yes", "", "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Cap,Montserrat ExtraBold,${size},${col},&H00FFFFFF,&H00000000,${back},-1,0,0,0,100,100,0,0,${border},${outl},${p === 3 ? 0 : 2},2,40,40,${mv},1`,
+    `Style: Cap,${font.ass},${size},${assColor(st.color)},${assColor(st.accent)},${outCol},${backCol},0,0,0,0,100,100,0,0,${border},${outl},${shadow},${align},50,50,${mv},1`,
     "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
   const srt: string[] = [];
+  const clean = (t: string) => t.replace(/[{}\\]/g, "");
+  const accent = assInline(st.accent), base = assInline(st.color);
   cues.forEach((c, k) => {
     const a = c[0].s;
     let b = c[c.length - 1].e;
-    if (k + 1 < cues.length) b = Math.min(Math.max(b + 0.15, a + 0.5), cues[k + 1][0].s);
+    if (k + 1 < cues.length) b = Math.min(Math.max(b + 0.15, a + (look === "palabra" ? 0.25 : 0.5)), cues[k + 1][0].s);
     const toks = c.map((x) => x.w);
     toks[toks.length - 1] = toks[toks.length - 1].replace(/,$/, "");
-    const disp = toks.map((t) => (up ? t.toUpperCase() : t).replace(/[{}\\]/g, ""));
-    if (p === 2) {
+    const disp = toks.map((t) => clean(shapeWord(t, st))).map((t) => (font.capsOnly && st.case !== "lower" ? t.toLocaleUpperCase("es") : t));
+    if (look === "resaltar") {
       c.forEach((w, j) => {
         const s0 = j === 0 ? a : w.s;
         const e0 = j + 1 < c.length ? c[j + 1].s : b;
         if (e0 <= s0) return;
-        const line = disp.map((t, q) => (q === j ? `{\\c&H00E1FF&}${t}{\\c&HFFFFFF&}` : t)).join(" ");
+        const line = disp.map((t, q) => (q === j ? `{\\c${accent}}${t}{\\c${base}}` : t)).join(" ");
         ass.push(`Dialogue: 0,${ts(s0)},${ts(e0)},Cap,,0,0,0,,${line}`);
       });
+    } else if (look === "palabra") {
+      // one word, a quick "pop" as it appears
+      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,{\\fscx80\\fscy80\\t(0,90,\\fscx108\\fscy108)\\t(90,160,\\fscx100\\fscy100)}${disp.join(" ")}`);
     } else {
       ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${disp.join(" ")}`);
     }
-    srt.push(`${k + 1}\n${srtTs(a)} --> ${srtTs(b)}\n${toks.join(" ")}\n`);
+    srt.push(`${k + 1}\n${srtTs(a)} --> ${srtTs(b)}\n${toks.map((t) => shapeWord(t, { case: "normal", punct: true })).join(" ")}\n`);
   });
   return { ass: `${ass.join("\n")}\n`, srt: srt.join("\n"), cues: cues.length };
 }

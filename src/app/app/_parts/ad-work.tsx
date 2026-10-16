@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatById } from "@/lib/formats";
+import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
+import CaptionEditor from "./caption-editor";
 import { btnCls, cardCls, ghostCls, inputCls } from "./ui";
 
 // One ad in production: its clips (with live status), the automatic review, the free automatic redos,
@@ -12,12 +14,6 @@ interface Clip { id: string; idx: number; text: string; status: string; url: str
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string }
 
-const PRESETS: { id: 1 | 2 | 3 | 4; name: string; demo: React.ReactNode }[] = [
-  { id: 1, name: "Clásico", demo: <span className="font-black text-white [text-shadow:0_2px_0_#000,0_-2px_0_#000,2px_0_0_#000,-2px_0_0_#000]">Listen up</span> },
-  { id: 2, name: "Palabra amarilla", demo: <span className="font-black text-white [text-shadow:0_2px_0_#000,0_-2px_0_#000,2px_0_0_#000,-2px_0_0_#000]">Listen <span className="text-[#FFE100]">up</span></span> },
-  { id: 3, name: "Caja negra", demo: <span className="rounded bg-black/80 px-1.5 font-black text-white">Listen up</span> },
-  { id: 4, name: "Amarillo mayúsculas", demo: <span className="font-black text-[#FFE100] uppercase [text-shadow:0_2px_0_#000,0_-2px_0_#000,2px_0_0_#000,-2px_0_0_#000]">Listen up</span> },
-];
 const MAX_REDO_PER_CLIP = 1;
 const MAX_REDO_PER_AD = 2;
 
@@ -29,8 +25,9 @@ export default function AdWork({ adId }: { adId: string }) {
   const [phase, setPhase] = useState<"" | "review" | "redo" | "build">("");
   const [note, setNote] = useState("");
   const [captionsOn, setCaptionsOn] = useState(true);
-  const [preset, setPreset] = useState<1 | 2 | 3 | 4>(2);
-  const [size, setSize] = useState(96);
+  const [capStyle, setCapStyle] = useState<CaptionStyle>(DEFAULT_STYLE);
+  // start from the style used last time (per browser)
+  useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [models, setModels] = useState<{ id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean }[]>([]);
   const [retryModel, setRetryModel] = useState("veo-3.1-fast");
@@ -42,6 +39,7 @@ export default function AdWork({ adId }: { adId: string }) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return setErr(d.error || "No se pudo cargar el anuncio.");
     setAd(d.row);
+    if (d.row.settings?.captions) setCapStyle(normalizeStyle(d.row.settings.captions));
     const rv = (d.row.settings?.review ?? null) as ReviewRow[] | null;
     if (rv) setReview(rv);
   }, [adId]);
@@ -111,7 +109,8 @@ export default function AdWork({ adId }: { adId: string }) {
 
   async function doBuild() {
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: { preset, size } }) });
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle }) });
+    try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
     const d = await res.json().catch(() => ({}));
     setPhase("");
     if (!res.ok) return setErr(d.error || "No se pudo armar el anuncio.");
@@ -216,21 +215,8 @@ export default function AdWork({ adId }: { adId: string }) {
                 <input type="checkbox" checked={captionsOn} onChange={(e) => setCaptionsOn(e.target.checked)} /> Subtítulos
               </label>
               {captionsOn && (
-                <>
-                  <div role="radiogroup" aria-label="Estilo de subtítulos" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {PRESETS.map((p) => (
-                      <button key={p.id} type="button" role="radio" aria-checked={preset === p.id} onClick={() => setPreset(p.id)}
-                        className={`flex flex-col items-center gap-2 rounded-xl border p-3 ${preset === p.id ? "border-accent bg-accent/10" : "border-line bg-surface"}`}>
-                        <span className="grid h-12 w-full place-items-center rounded-lg bg-gradient-to-b from-slate-500 to-slate-700 text-sm">{p.demo}</span>
-                        <span className="text-xs font-semibold">{p.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <label className="flex items-center gap-3 text-sm text-muted">
-                    Tamaño
-                    <input type="range" min={70} max={130} step={2} value={size} onChange={(e) => setSize(Number(e.target.value))} aria-label="Tamaño de los subtítulos" />
-                  </label>
-                </>
+                <CaptionEditor value={capStyle} onChange={setCapStyle} aspect={ad.aspect ?? "9:16"}
+                  sample={clips[0]?.text || "Así se ven tus subtítulos"} video={clips.find((c) => c.url)?.url} />
               )}
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" onClick={doBuild} disabled={!!phase} className={btnCls}>

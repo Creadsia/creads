@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import path from "node:path";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
-import { type BuildClip, build, captions, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
+import { normalizeStyle } from "@/lib/caption-style";
+import { type BuildClip, build, captions, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import type { Word } from "@/lib/textmatch";
 
 export const maxDuration = 300;
 
-interface ClipRow { id: string; idx: number; url: string | null; status: string }
+interface ClipRow { id: string; idx: number; url: string | null; status: string; text: string | null }
 
 // GET: is the montage engine working on this server? (no data, no auth needed)
 export async function GET() {
@@ -24,8 +25,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
   const withCaptions = b?.captions !== false;
-  const preset = [1, 2, 3, 4].includes(Number(b?.style?.preset)) ? (Number(b.style.preset) as 1 | 2 | 3 | 4) : 2;
-  const size = Math.min(140, Math.max(60, Number(b?.style?.size) || 96));
+  const style = normalizeStyle(b?.style);
   try {
     const ad = await db.get("ads", adId);
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
@@ -48,6 +48,8 @@ export async function POST(req: Request) {
         if (!words?.length && withCaptions && elevenlabs.configured() && !formatById(String(ad.format)).narr) {
           words = (await elevenlabs.transcribe!(src, lang).catch(() => null))?.words;
         }
+        // spell the words as in the script when they line up (fixes what the transcription misheard)
+        if (words?.length && style.script && c.text) words = respell(words, c.text);
         return { clip: { file, a: t.a, b: t.b, audio: p.audio } as BuildClip, words: words ?? [] };
       }),
     );
@@ -60,14 +62,14 @@ export async function POST(req: Request) {
       offset += segLen(p.clip);
     }
     const [W, H] = frameSize(aspect);
-    const cap = withCaptions && timeline.length ? captions(timeline, W, H, aspect, { preset, size }) : null;
+    const cap = withCaptions && timeline.length ? captions(timeline, W, H, aspect, style) : null;
     const bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
 
     const stamp = Date.now();
     const ws = s.user.workspace;
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
     const srtUrl = cap ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
-    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap ? { preset, size } : null } });
+    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap ? style : null } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration: offset });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo armar el anuncio." }, { status: 502 });

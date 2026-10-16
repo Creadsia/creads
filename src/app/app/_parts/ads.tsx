@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { NICHES, cleanNiche, nicheKey } from "@/lib/niches";
 import { formatById } from "@/lib/formats";
 import { DeleteButton, Empty, PageHead, type Row, SetupNotice, btnCls, useTable } from "./ui";
 
-interface Ad extends Row { title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; favorite: boolean }
+interface Ad extends Row { title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; favorite: boolean; settings: Record<string, unknown> | null }
 
 const STATUS: Record<string, [string, string]> = {
   draft: ["Borrador", "bg-surface-2 text-muted"],
@@ -18,7 +19,22 @@ const STATUS: Record<string, [string, string]> = {
 export default function Ads({ mode }: { mode: "work" | "done" }) {
   const t = useTable<Ad>("ads");
   const [fav, setFav] = useState(false);
-  const rows = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" : a.status !== "done")).filter((a) => !fav || a.favorite);
+  const [niche, setNiche] = useState<string | null>(null); // nicheKey, or null = all
+  const [editing, setEditing] = useState<string | null>(null);
+  const nicheOf = (a: Ad) => cleanNiche(a.settings?.niche);
+  const mine = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" : a.status !== "done"));
+  // niches in use, with how many ads each (same niche written differently counts once)
+  const niches = useMemo(() => {
+    const m = new Map<string, { label: string; n: number }>();
+    for (const a of mine) {
+      const label = nicheOf(a) || "Sin nicho";
+      const k = nicheKey(label);
+      m.set(k, { label: m.get(k)?.label ?? label, n: (m.get(k)?.n ?? 0) + 1 });
+    }
+    return [...m.entries()].sort((a, b) => (a[1].label === "Sin nicho" ? 1 : b[1].label === "Sin nicho" ? -1 : b[1].n - a[1].n));
+  }, [mine]);
+  const rows = mine.filter((a) => !fav || a.favorite).filter((a) => !niche || nicheKey(nicheOf(a) || "Sin nicho") === niche);
+  const saveNiche = (a: Ad, v: string) => { t.update(a.id, { settings: { ...(a.settings ?? {}), niche: cleanNiche(v) || null } }); setEditing(null); };
 
   return (
     <>
@@ -34,6 +50,16 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
         </div>
       </PageHead>
       {t.missing && <SetupNotice />}
+      {niches.length > 1 && (
+        <div role="group" aria-label="Filtrar por nicho" className="flex flex-wrap gap-1.5">
+          <button type="button" onClick={() => setNiche(null)} aria-pressed={!niche} className={`rounded-full border px-3 py-1 text-sm font-semibold ${!niche ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>Todos · {mine.length}</button>
+          {niches.map(([k, v]) => (
+            <button key={k} type="button" onClick={() => setNiche(niche === k ? null : k)} aria-pressed={niche === k}
+              className={`rounded-full border px-3 py-1 text-sm font-semibold ${niche === k ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>{v.label} · {v.n}</button>
+          ))}
+        </div>
+      )}
+      <datalist id="niche-list">{[...new Set([...niches.map(([, v]) => v.label).filter((l) => l !== "Sin nicho"), ...NICHES])].map((n) => <option key={n} value={n} />)}</datalist>
       {t.rows === null ? <p className="text-muted">Cargando…</p> : rows.length === 0 && !t.missing ? (
         <Empty
           title={mode === "done" ? (fav ? "Sin favoritos todavía" : "Todavía no hay anuncios terminados") : "No hay videos en producción"}
@@ -57,6 +83,16 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                     <button type="button" onClick={() => t.update(a.id, { favorite: !a.favorite })} aria-label={a.favorite ? "Quitar de favoritos" : "Agregar a favoritos"} className={a.favorite ? "text-warn" : "text-muted"}>★</button>
                   </div>
                   <span className="text-xs text-muted">{f.name} · {a.aspect ?? "9:16"} · {new Date(a.created_at).toLocaleDateString("es-CL")}</span>
+                  {editing === a.id ? (
+                    <form onSubmit={(e) => { e.preventDefault(); saveNiche(a, String(new FormData(e.currentTarget).get("n") ?? "")); }} className="flex gap-1">
+                      <input name="n" defaultValue={nicheOf(a)} list="niche-list" autoFocus aria-label="Nicho" placeholder="Nicho" className="min-w-0 flex-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-xs" />
+                      <button type="submit" className="text-xs font-semibold text-accent-text">Guardar</button>
+                    </form>
+                  ) : (
+                    <button type="button" onClick={() => setEditing(a.id)} className="self-start rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted hover:text-ink">
+                      {nicheOf(a) || "+ Agregar nicho"}
+                    </button>
+                  )}
                   <div className="mt-auto flex items-center justify-between pt-2">
                     <Link href={`/app/videos/${a.id}`} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
                     <DeleteButton onDelete={() => t.remove(a.id)} />

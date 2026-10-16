@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FORMATS, type FormatId, formatById } from "@/lib/formats";
 import { Field, PageHead, type Row, SetupNotice, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
+import { NICHES } from "@/lib/niches";
 import Escenas from "./escenas";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
@@ -41,6 +42,9 @@ export default function Crear() {
   const [cuts, setCuts] = useState<Cut[]>([]);
   const [scriptId, setScriptId] = useState<string | null>(null);
   const [saved, setSaved] = useState("");
+  const [niche, setNiche] = useState("");
+  useEffect(() => { try { const v = localStorage.getItem("creads-niche"); if (v) setNiche(v); } catch {} }, []);
+  const pickNiche = (v: string) => { setNiche(v); try { localStorage.setItem("creads-niche", v); } catch {} };
 
   const f = formatById(format);
   useEffect(() => { try { const v = localStorage.getItem("creads-fmt"); if (v && FORMATS.some((x) => x.id === v)) setFormat(v as FormatId); } catch {} }, []);
@@ -114,12 +118,18 @@ export default function Crear() {
         <form onSubmit={split} className={cardCls}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 className="font-display text-xl font-bold">1 · Guion</h2>
+            <div className="flex flex-wrap items-end gap-3">
+            <Field label="Nicho (para ordenar tus anuncios)">
+              <input value={niche} onChange={(e) => pickNiche(e.target.value)} list="niches" placeholder="Ej: Reparación de cimientos" className={`${inputCls} w-64`} />
+              <datalist id="niches">{NICHES.map((n) => <option key={n} value={n} />)}</datalist>
+            </Field>
             <Field label="Idioma del video">
               <select value={lang} onChange={(e) => setLang(e.target.value as "en" | "es-CL")} className={inputCls}>
                 <option value="en">Inglés (EE. UU.)</option>
                 <option value="es-CL">Español (Chile)</option>
               </select>
             </Field>
+            </div>
           </div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
@@ -223,7 +233,7 @@ export default function Crear() {
       )}
 
       {step >= 2 && (
-        <Escenas step={step} setStep={setStep} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} />
+        <Escenas step={step} setStep={setStep} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche} />
       )}
     </>
   );

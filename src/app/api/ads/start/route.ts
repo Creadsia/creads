@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
+import { cleanNiche } from "@/lib/niches";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
       status: "generating",
       settings: {
         lang: b?.lang === "es-CL" ? "es-CL" : "en",
+        niche: cleanNiche(b?.niche) || null,
         avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
       },

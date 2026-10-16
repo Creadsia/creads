@@ -21,8 +21,8 @@ const clp = (usd: number) => Math.round((usd * 950) / 10) * 10;
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
 
-export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId }: {
-  step: number; setStep: (n: number) => void; format: FormatId; lang: "en" | "es-CL"; title: string; cuts: Cut[]; scriptId: string | null;
+export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche }: {
+  step: number; setStep: (n: number) => void; format: FormatId; lang: "en" | "es-CL"; title: string; cuts: Cut[]; scriptId: string | null; niche: string;
 }) {
   const f = formatById(format);
   const avatars = useTable<Avatar>("avatars");
@@ -97,7 +97,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     const res = await fetch("/api/ads/start", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        title, format, lang, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
+        title, format, lang, niche, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
         avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null,
         clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i) })),
       }),
