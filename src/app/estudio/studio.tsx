@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ModelLab from "./model-lab";
+import VoiceLab from "./voice-lab";
 
 interface Cut {
   tipo: string;
@@ -137,6 +138,7 @@ export default function Studio() {
         </section>
       )}
       <ModelLab code={code} />
+      <VoiceLab code={code} />
     </div>
   );
 }

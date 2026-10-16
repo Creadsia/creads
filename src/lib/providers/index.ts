@@ -1,5 +1,6 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
+import { elevenlabs } from "./elevenlabs";
 import { falVideoProviders } from "./fal";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 
@@ -7,9 +8,6 @@ import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 // `configured()` reports whether the provider's key is present.
 const has = (name: string) => Boolean(process.env[name]);
 
-const notYet = (what: string) => () => {
-  throw new Error(`${what}: conexión pendiente (Fase 1).`);
-};
 
 export const videoProviders: VideoProvider[] = [
   veoLite,
@@ -20,14 +18,7 @@ export const videoProviders: VideoProvider[] = [
 
 export const imageProviders: ImageProvider[] = [nanoBananaPro];
 
-export const voiceProviders: VoiceProvider[] = [
-  {
-    id: "elevenlabs",
-    configured: () => has("ELEVENLABS_API_KEY"),
-    clone: notYet("ElevenLabs"),
-    speak: notYet("ElevenLabs"),
-  },
-];
+export const voiceProviders: VoiceProvider[] = [elevenlabs];
 
 export const textAI: TextAI = claude;
 

@@ -56,13 +56,25 @@ export interface ImageProvider {
   generate(req: ImageRequest): Promise<{ bytes: Uint8Array; mime: string }>;
 }
 
+export interface Voice {
+  id: string;
+  name: string;
+  category: string; // "cloned" = the customer's own; "premade"/"professional" = library voices
+  preview?: string;
+  labels?: Record<string, string>;
+}
+
 export interface VoiceProvider {
   id: string; // e.g. "elevenlabs"
   configured(): boolean;
+  /** Voices available on our account (cloned ones first). */
+  voices(): Promise<Voice[]>;
   /** Clones a voice from a consented sample; returns the provider's voice id. */
-  clone(name: string, sampleUrl: string): Promise<string>;
-  /** Reads a line with a voice; returns an audio URL. */
-  speak(voiceId: string, text: string): Promise<string>;
+  clone(name: string, sample: { bytes: Uint8Array; mime: string; filename: string }): Promise<string>;
+  /** Reads a line with a voice; returns the audio file. */
+  speak(voiceId: string, text: string, opts?: { model?: string; lang?: "en" | "es" }): Promise<{ bytes: Uint8Array; mime: string }>;
+  /** Characters used and included in the current plan period. */
+  usage?(): Promise<{ used: number; limit: number; tier: string }>;
 }
 
 export interface TextAI {
