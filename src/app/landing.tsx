@@ -359,6 +359,33 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
           {cap(L("Scheduled from Creads", "Programado desde Creads"))}
         </>
       );
+    case "story":
+      // a film strip: four shots of one story, and a line of dialogue
+      return (
+        <>
+          <span className="absolute inset-x-0 top-[14%] bottom-[24%] flex flex-col justify-between bg-black/80 py-1">
+            {[0, 1].map((r) => (
+              <span key={r} className="flex justify-around px-1">{Array.from({ length: 12 }, (_, i) => <span key={i} className="h-1 w-1.5 rounded-[1px] bg-white/35" />)}</span>
+            ))}
+          </span>
+          <span className="absolute inset-x-1.5 top-[22%] bottom-[32%] grid grid-cols-4 gap-1">
+            {[
+              [L("Office", "Oficina"), "#c98a4b"],
+              [L("Night", "Noche"), "#2b3f8f"],
+              ["Mentor", "#7a5cff"],
+              [L("Win", "Éxito"), "#2fb36b"],
+            ].map(([label, tint]) => (
+              <span key={label} className="flex flex-col items-center justify-end overflow-hidden rounded-[3px] pb-1" style={{ background: `linear-gradient(170deg, ${tint}, #0d0e11 85%)` }}>
+                <span className="mb-1 h-3 w-3 rounded-full bg-white/70" />
+                <span className="h-3 w-5 rounded-t-full bg-white/50" />
+                <span className="mt-1 text-[8px] font-semibold text-white/90">{label}</span>
+              </span>
+            ))}
+          </span>
+          <span className="absolute top-2 left-2 rounded-lg rounded-bl-none bg-white px-2 py-0.5 text-[10px] font-bold text-black shadow">{L("“Get in, I'll show you”", "«Súbete po, te enseño»")}</span>
+          {cap(L("Idea → animated short film", "Idea → mini película animada"))}
+        </>
+      );
     case "api":
       return (
         <>

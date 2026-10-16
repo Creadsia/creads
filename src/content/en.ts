@@ -22,6 +22,7 @@ export const en = {
     cta: "See plans",
     items: [
       { tag: "-50%", text: "Launch offer: 50% off your first month" },
+      { tag: "NEW", text: "Animated stories: your idea turned into a short film with characters who talk" },
       { tag: "2 FREE", text: "Yearly plans: 2 months free" },
       { tag: "NEW", text: "Seedance 2.5, Kling 3.0 and Veo 3.1 in one studio" },
       { tag: "NEW", text: "Pro subtitles: 6 fonts, exact sizes, spelled like your script" },
@@ -35,6 +36,7 @@ export const en = {
     { label: "Image", href: "#tools", badge: "" },
     { label: "Video", href: "#tools", badge: "" },
     { label: "Audio", href: "#tools", badge: "" },
+    { label: "AI Stories", href: "#tools", badge: "NEW" },
     { label: "AI Influencer", href: "#tools", badge: "" },
     { label: "Apps", href: "#studios", badge: "" },
     { label: "API", href: "#tools", badge: "" },
@@ -52,7 +54,7 @@ export const en = {
   },
   tools: {
     title: "Everything you can create",
-    lead: "19 tools on 20+ AI models: image, video, audio and growth, in one subscription.",
+    lead: "20 tools on 20+ AI models: image, video, audio and growth, in one subscription.",
     groups: { image: "Image", video: "Video", audio: "Audio", growth: "Growth" },
     new: "NEW",
     soon: "SOON",
@@ -63,6 +65,7 @@ export const en = {
       { group: "image", name: "Remove background & upscale", text: "Cut out in one click and double the quality.", models: "Bria · SeedVR", art: "cutout", badge: "new" },
       { group: "image", name: "Product photos", text: "Catalog and feed shots in 4:5.", models: "Nano Banana Pro", art: "frames", badge: "" },
       { group: "image", name: "Edit & retouch", text: "Change backgrounds, colors or details by asking.", models: "Nano Banana Pro Edit", art: "edit", badge: "" },
+      { group: "video", name: "Animated stories", text: "Your idea as a short animated film: the same characters, dialogue and music.", models: "Claude + Nano Banana Pro + Kling 3.0 + ElevenLabs", art: "story", badge: "new" },
       { group: "video", name: "Create video", text: "Text or image to video with Veo, Kling and more.", models: "Veo 3.1 · Kling 3.0 · Seedance 2.5 · Hailuo · Wan · Grok", art: "realtor", badge: "" },
       { group: "video", name: "UGC ads", text: "A person telling your story to camera.", models: "Veo 3.1 · Kling 3.0 + ElevenLabs", art: "phone", badge: "" },
       { group: "video", name: "Reels & TikToks", text: "Vertical content with reel subtitles.", models: "Kling 3.0 · Veo 3.1", art: "reel", badge: "" },
@@ -84,12 +87,12 @@ export const en = {
     title: "What's new in Creads",
     lead: "We ship every week. The latest:",
     items: [
+      ["Animated stories", "Write an idea and get a 30–60 second short film: fixed characters (even with your face and voice), dialogue, music and film cuts."],
+      ["Voices from your recordings", "Create a voice from WhatsApp audios, voice notes or videos, or record yourself right there."],
       ["Pro subtitles", "5 styles, 6 fonts, sizes in numbers and every word spelled exactly like your script."],
       ["Automatic review", "Each cut is checked against your script and for the same face. Serious errors are redone for free."],
       ["Library by niche", "Every finished ad is saved and sorted by niche, ready to download for Meta."],
       ["Copy-ready prompts", "Get the prompt of every scene to use anywhere, or generate the videos right here."],
-      ["Smarter model picks", "Creads warns you before a model that won't take your avatar's face and fits long prompts to each model."],
-      ["6 new models", "Seedance 2.5, Hailuo 2.3, Wan 3.0, Grok Video, Seedream 5 and FLUX 3."],
     ],
   },
   stats: [
