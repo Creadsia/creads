@@ -622,28 +622,63 @@ export default function Landing({ t }: { t: Content }) {
           </div>
         </section>
 
-        {/* Affiliates (program opens with payments; sign-ups now) */}
-        <section id="afiliados" aria-labelledby="afiliados-title" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-[image:var(--grad)] p-px">
-            <div className="grid gap-10 rounded-[calc(2rem-1px)] bg-surface p-6 sm:p-10 lg:grid-cols-[1.2fr_1fr]">
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-3">
-                  <span className="w-fit rounded-md bg-surface-2 px-2 py-1 text-[11px] font-bold text-muted">{t.affiliates.badge}</span>
-                  <h2 id="afiliados-title" className="text-[2rem] font-extrabold sm:text-[2.75rem]">{t.affiliates.title}</h2>
-                  <p className="max-w-[56ch] text-lg text-muted">{t.affiliates.lead}</p>
-                </div>
-                <ol className="grid gap-4 sm:grid-cols-3">
-                  {t.affiliates.steps.map(([s, d], i) => (
-                    <li key={s} className="flex flex-col gap-1.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line font-display text-sm font-semibold">{i + 1}</span>
-                      <b className="font-semibold">{s}</b>
-                      <span className="text-sm text-muted">{d}</span>
-                    </li>
-                  ))}
-                </ol>
+        {/* Affiliates (program opens with payments; sign-ups now) — dark stage, with an example of the affiliate panel */}
+        <section id="afiliados" aria-labelledby="afiliados-title" className={`stage relative scroll-mt-24 overflow-hidden py-20 sm:py-24 ${gutter}`}>
+          <div aria-hidden="true" className="pointer-events-none absolute -right-40 top-10 h-[520px] w-[520px] rounded-full opacity-25 blur-[120px]" style={{ background: "var(--grad)" }} />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
+            <div className="flex min-w-0 flex-col gap-8">
+              <div className="flex flex-col gap-4">
+                <span className="w-fit rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.affiliates.badge}</span>
+                <h2 id="afiliados-title" className="chroma font-display text-[2.3rem] leading-[1.04] font-semibold sm:text-6xl">{t.affiliates.title}</h2>
+                <p className="max-w-[54ch] text-lg text-muted">{t.affiliates.lead}</p>
               </div>
-              <div className="self-center">
+              <ol className="grid gap-5 border-y border-line py-6 sm:grid-cols-3">
+                {t.affiliates.steps.map(([st, d], i) => (
+                  <li key={st} className="flex flex-col gap-1.5">
+                    <span className="font-mono text-xs text-accent-text">0{i + 1}</span>
+                    <b className="font-semibold">{st}</b>
+                    <span className="text-sm text-muted">{d}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="max-w-xl">
                 <AffiliateForm t={t.affiliates} form={t.form} lang={t.lang} />
+              </div>
+            </div>
+
+            {/* Example of the affiliate panel, over two clips from the wall */}
+            <div className="relative mx-auto w-full max-w-[520px] min-w-0" aria-label={t.affiliates.example}>
+              <div aria-hidden="true" className="absolute -left-6 -top-10 hidden w-[38%] -rotate-6 overflow-hidden rounded-2xl opacity-80 shadow-2xl sm:block">
+                <WallTile c={WALL_COLS[0].clips[1]} />
+              </div>
+              <div aria-hidden="true" className="absolute -bottom-12 -right-4 hidden w-[34%] rotate-6 overflow-hidden rounded-2xl opacity-80 shadow-2xl sm:block">
+                <WallTile c={WALL_COLS[1].clips[0]} />
+              </div>
+              <div className="relative rounded-3xl border border-line bg-surface/90 p-5 shadow-[0_40px_120px_-40px_rgba(255,43,214,0.45)] backdrop-blur sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm font-semibold"><Mark size={18} /> {t.affiliates.panel}</span>
+                  <span className="rounded-md bg-surface-2 px-2 py-1 text-[11px] text-muted">{t.affiliates.example}</span>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5 font-mono text-[13px]">
+                  <span className="truncate text-muted">creadsia.com/?ref=<span className="text-ink">tunombre</span></span>
+                  <span className="shrink-0 rounded-md bg-ink px-2 py-1 text-[11px] font-semibold text-bg">{t.affiliates.copy}</span>
+                </div>
+                <dl className="mt-4 grid grid-cols-3 gap-2">
+                  {t.affiliates.stats.map(([k, v]) => (
+                    <div key={k} className="rounded-xl bg-surface-2 p-3">
+                      <dt className="text-[11px] text-muted">{k}</dt>
+                      <dd className="font-display text-xl font-semibold">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-5 flex flex-col gap-2">
+                  <span className="text-xs text-muted">{t.affiliates.chart}</span>
+                  <div className="flex h-28 items-end gap-1.5" aria-hidden="true">
+                    {[18, 26, 24, 35, 41, 39, 52, 58, 64, 71, 83, 96].map((h, i) => (
+                      <span key={i} className="flex-1 rounded-t-md" style={{ height: `${h}%`, background: i === 11 ? "var(--grad)" : "var(--surface-2)" }} />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
