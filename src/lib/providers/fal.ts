@@ -1,3 +1,4 @@
+import { fitPrompt, promptLimitFrom } from "../fit-prompt";
 import type { AspectRatio, ImageProvider, ImageRequest, Job, JobStatus, VideoProvider, VideoRequest } from "./types";
 
 // fal.ai queue API: one account gives us Kling, Seedance and many more. Server-only.
@@ -39,6 +40,8 @@ interface FalVideo {
   durations: number[];
   aspects?: AspectRatio[];
   silent?: boolean;
+  /** Longest prompt the model takes (characters). Longer ones are shortened, keeping the dialogue. */
+  maxPrompt?: number;
   /** Refuses starting images showing a real person's face (ByteDance's privacy filter). */
   noFaces?: boolean;
   /** fal's live price list only works for flat per-second prices; tiered models keep our static 720p price. */
@@ -108,6 +111,7 @@ const grok: Build = (req, image) => ({
 export const FAL_VIDEO: FalVideo[] = [
   {
     id: "kling-3.0",
+    maxPrompt: 2500,
     label: "Kling 3.0",
     usdPerSecond: 0.14,
     i2v: "fal-ai/kling-video/v3/standard/image-to-video",
@@ -117,6 +121,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "kling-3.0-pro",
+    maxPrompt: 2500,
     label: "Kling 3.0 Pro",
     usdPerSecond: 0.14,
     i2v: "fal-ai/kling-video/v3/pro/image-to-video",
@@ -126,6 +131,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "kling-3.0-turbo",
+    maxPrompt: 2500,
     silent: true,
     label: "Kling 3.0 Turbo",
     usdPerSecond: 0.14,
@@ -259,7 +265,15 @@ function falVideo(m: FalVideo): VideoProvider {
       const image = req.refs?.find((r) => r.role === "first_frame")?.url;
       const endpoint = image ? m.i2v : m.t2v;
       if (!endpoint) throw new Error(`${m.label} necesita una imagen de partida.`);
-      return { provider: m.id, jobId: await falSubmit(endpoint, m.build(req, image), m.label) };
+      const go = async (prompt: string) => ({ provider: m.id, jobId: await falSubmit(endpoint, m.build({ ...req, prompt }, image), m.label) });
+      try {
+        return await go(m.maxPrompt ? await fitPrompt(req.prompt, m.maxPrompt) : req.prompt);
+      } catch (err) {
+        // a model with a limit we didn't know about: shorten to it and try once more
+        const limit = promptLimitFrom(err instanceof Error ? err.message : "");
+        if (!limit) throw err;
+        return go(await fitPrompt(req.prompt, limit - 20));
+      }
     },
 
     async status(job: Job): Promise<JobStatus> {
