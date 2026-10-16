@@ -73,6 +73,8 @@ export interface VoiceProvider {
   clone(name: string, sample: { bytes: Uint8Array; mime: string; filename: string }): Promise<string>;
   /** Reads a line with a voice; returns the audio file. */
   speak(voiceId: string, text: string, opts?: { model?: string; lang?: "en" | "es" }): Promise<{ bytes: Uint8Array; mime: string }>;
+  /** Word-level transcript of a hosted audio or video file. */
+  transcribe?(url: string, lang?: "en" | "es"): Promise<{ text: string; words: { w: string; s: number; e: number }[] }>;
   /** Characters used and included in the current plan period. */
   usage?(): Promise<{ used: number; limit: number; tier: string }>;
 }

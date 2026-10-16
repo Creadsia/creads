@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { type FormatId, formatById } from "@/lib/formats";
+import AdWork from "../_parts/ad-work";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import type { Cut } from "./crear";
 
@@ -13,7 +14,6 @@ interface Product extends Row { name: string; description: string | null; image_
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
 interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[] }
-interface Clip extends Row { idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
@@ -42,13 +42,10 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [model, setModel] = useState("veo-3.1-fast");
   const [confirm, setConfirm] = useState(false);
   const [adId, setAdId] = useState<string | null>(null);
-  const [clips, setClips] = useState<Clip[]>([]);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [starting, setStarting] = useState<string>("");
 
   useEffect(() => {
     fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {});
-    const t = timers.current;
-    return () => t.forEach(clearTimeout);
   }, []);
   useEffect(() => { if (!avatarId && avatars.rows?.length && f.av !== "none") setAvatarId(avatars.rows[0].id); }, [avatars.rows, avatarId, f.av]);
 
@@ -80,22 +77,6 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     return `Photorealistic ${aspect} still frame, the first frame of a real phone video clip (not a staged photo). ${avatar ? `The person from the first reference image (same face): ${avatar.description || avatar.name}.` : ""} Setting: ${d.setting || place || "a real home, natural light"}. Shot: ${d.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product ? ` The product is visible in the scene, exactly like the product reference image: ${product.description || product.name}.` : ""}${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
   }
 
-  async function poll(id: string, tries = 0) {
-    const res = await fetch(`/api/clips/status?id=${id}`);
-    const d = await res.json().catch(() => ({}));
-    if (d.clip) setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
-    if (d.clip?.status === "generating" && tries < 80) timers.current.push(setTimeout(() => poll(id, tries + 1), 12000));
-  }
-
-  async function run(id: string) {
-    setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
-    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) { setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c))); return; }
-    setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
-    timers.current.push(setTimeout(() => poll(id), 20000));
-  }
-
   async function generate() {
     if (!scenes) return;
     setConfirm(false); setErr("");
@@ -109,13 +90,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { setErr(d.error || "No se pudo crear el anuncio."); return; }
-    setAdId(d.ad.id); setClips(d.clips); setStep(3);
-    // Start them two at a time so the providers don't throttle us.
-    const ids: string[] = d.clips.map((c: Clip) => c.id);
-    for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map(run));
+    // Start them two at a time so the providers don't throttle us; failures show up on each clip.
+    const ids: string[] = d.clips.map((c: { id: string }) => c.id);
+    for (let i = 0; i < ids.length; i += 2) {
+      setStarting(`Iniciando cortes ${i + 1}–${Math.min(i + 2, ids.length)} de ${ids.length}…`);
+      await Promise.all(ids.slice(i, i + 2).map((id) => fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null)));
+    }
+    setStarting("");
+    setAdId(d.ad.id);
   }
-
-  const done = clips.filter((c) => c.status === "done").length;
 
   return (
     <>
@@ -216,10 +199,11 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
         </form>
       )}
 
-      {step === 3 && (
+      {step === 3 && adId && <AdWork adId={adId} />}
+      {step === 3 && !adId && (
         <section className={cardCls}>
           <h2 className="font-display text-xl font-bold">4 · Videos</h2>
-          {!adId ? (
+          {starting ? <p className="rounded-lg bg-accent/10 p-3 text-sm">{starting} No cierres esta página.</p> : (
             <>
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Modelo de video">
@@ -250,38 +234,6 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 </div>
               )}
               {err && <p className="text-sm text-bad">{err}</p>}
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-muted">{done} de {clips.length} cortes listos. Cada corte tarda entre 1 y 4 minutos; puedes dejar esta página abierta o volver después desde <Link href="/app/videos" className="underline">Videos</Link>.</p>
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-                {clips.map((c) => (
-                  <li key={c.id} className="flex flex-col overflow-hidden rounded-xl border border-line">
-                    <div className={`relative grid place-items-center bg-surface-2 ${aspect === "16:9" ? "aspect-video" : aspect === "1:1" && !model.startsWith("veo") ? "aspect-square" : "aspect-[9/16]"}`}>
-                      {c.url ? <video src={c.url} controls playsInline className="h-full w-full object-cover" /> : c.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={c.image_url} alt="" className="h-full w-full object-cover opacity-60" />
-                      ) : null}
-                      {!c.url && (
-                        <span className="absolute rounded-full bg-surface px-2 py-1 text-xs font-semibold">
-                          {c.status === "failed" ? "Falló" : c.status === "pending" ? "En cola" : "Generando…"}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1 p-2">
-                      <span className="font-mono text-xs text-muted">Corte {c.idx + 1}</span>
-                      <p className="line-clamp-2 text-xs">“{c.text}”</p>
-                      {c.error && <p className="text-xs text-bad">{c.error}</p>}
-                      {(c.status === "failed" || c.status === "done") && (
-                        <button type="button" onClick={() => run(c.id)} className="self-start text-xs font-semibold text-accent-text">{c.status === "failed" ? "Reintentar" : "Rehacer este corte"}</button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              {done === clips.length && clips.length > 0 && (
-                <p className="rounded-lg bg-good/10 p-3 text-sm">Todos los cortes están listos. El armado final con voz, subtítulos y control de calidad automático es lo próximo que se conecta.</p>
-              )}
             </>
           )}
         </section>

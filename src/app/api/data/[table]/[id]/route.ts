@@ -9,6 +9,19 @@ const fail = (err: unknown) =>
 
 type Ctx = { params: Promise<{ table: string; id: string }> };
 
+export async function GET(req: Request, { params }: Ctx) {
+  const denied = await checkAccess(req);
+  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const { table, id } = await params;
+  if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
+  try {
+    const row = await db.get(table, id);
+    return row ? NextResponse.json({ row }) : NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
 export async function PATCH(req: Request, { params }: Ctx) {
   const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });

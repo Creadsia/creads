@@ -53,12 +53,12 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                 </div>
                 <div className="flex flex-1 flex-col gap-1 p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <strong className="line-clamp-2">{a.title || "Sin título"}</strong>
+                    <Link href={`/app/videos/${a.id}`} className="line-clamp-2 font-bold hover:underline">{a.title || "Sin título"}</Link>
                     <button type="button" onClick={() => t.update(a.id, { favorite: !a.favorite })} aria-label={a.favorite ? "Quitar de favoritos" : "Agregar a favoritos"} className={a.favorite ? "text-warn" : "text-muted"}>★</button>
                   </div>
                   <span className="text-xs text-muted">{f.name} · {a.aspect ?? "9:16"} · {new Date(a.created_at).toLocaleDateString("es-CL")}</span>
                   <div className="mt-auto flex items-center justify-between pt-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
+                    <Link href={`/app/videos/${a.id}`} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
                     <DeleteButton onDelete={() => t.remove(a.id)} />
                   </div>
                 </div>

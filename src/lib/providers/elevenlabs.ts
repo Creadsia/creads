@@ -74,6 +74,23 @@ export const elevenlabs: VoiceProvider = {
     return { bytes: new Uint8Array(await res.arrayBuffer()), mime: "audio/mpeg" };
   },
 
+  /** Word-level transcript of a hosted audio or video file (Scribe). Used by the automatic review and the captions. */
+  async transcribe(url: string, lang: "en" | "es" = "en") {
+    const form = new FormData();
+    form.append("model_id", "scribe_v2");
+    form.append("source_url", url);
+    form.append("timestamps_granularity", "word");
+    form.append("tag_audio_events", "false");
+    form.append("language_code", lang === "es" ? "spa" : "eng");
+    const res = await fetch(`${API}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
+    if (!res.ok) return fail(res, "ElevenLabs (transcribir)");
+    const d = await res.json();
+    const words = ((d?.words ?? []) as { text: string; start: number; end: number; type: string }[])
+      .filter((w) => w.type === "word" && w.text?.trim())
+      .map((w) => ({ w: w.text.trim(), s: Number(w.start), e: Number(w.end) }));
+    return { text: String(d?.text ?? ""), words };
+  },
+
   async usage() {
     const res = await fetch(`${API}/v1/user/subscription`, { headers: { "xi-api-key": key() }, cache: "no-store" });
     if (!res.ok) return fail(res, "ElevenLabs");
