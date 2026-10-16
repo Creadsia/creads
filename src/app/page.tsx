@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
-import { en } from "@/content/en";
+import { es } from "@/content/es";
 import Landing from "./landing";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const revalidate = 3600; // prices in pesos follow the dollar rate set in Finanzas
 
+// Launching in Chile: the home page is in Spanish; English lives at /en.
 export const metadata: Metadata = {
-  title: en.meta.title,
-  description: en.meta.description,
-  alternates: { canonical: "/", languages: { en: "/", es: "/es" } },
-  openGraph: { title: en.meta.title, description: en.meta.description, url: "/", locale: "en_US" },
+  title: es.meta.title,
+  description: es.meta.description,
+  alternates: { canonical: "/", languages: { "es-CL": "/", en: "/en" } },
+  openGraph: { title: es.meta.title, description: es.meta.description, url: "/", locale: "es_CL" },
 };
 
 export default async function Home() {
-  return <Landing t={en} rate={await usdClpRate().catch(() => 950)} />;
+  return <Landing t={es} rate={await usdClpRate().catch(() => 950)} />;
 }

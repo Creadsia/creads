@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es-CL" suppressHydrationWarning>
       <head>
         {/* Apply the saved light/dark choice before the first paint (no flash). */}
         <script

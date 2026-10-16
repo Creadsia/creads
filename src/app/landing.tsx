@@ -507,8 +507,8 @@ function CtaStrip({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate: 
 }
 
 export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }) {
-  const home = t.lang === "es" ? "/es" : "/";
-  const other = t.lang === "es" ? "/" : "/es";
+  const home = t.lang === "es" ? "/" : "/en";
+  const other = t.lang === "es" ? "/en" : "/";
   const groups = ["video", "image", "voice", "brain"] as const;
 
   return (

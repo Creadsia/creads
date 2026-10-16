@@ -74,7 +74,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate }: { i
     <div className="min-h-screen bg-bg">
       <header className="border-b border-line/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Logo href="/es" />
+          <Logo href="/" />
           <div className="flex items-center gap-3">
             <a href={loginHref} className="text-sm font-semibold text-muted hover:text-ink">Ya tengo cuenta</a>
             <ThemeToggle lang="es" />
