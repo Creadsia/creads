@@ -7,7 +7,7 @@
 -- which cannot skip those rules, and says which workspace it is acting for at
 -- the start of every request (setting `app.workspace`).
 --
--- Safe to run more than once.
+-- Safe to run more than once. The only thing to edit is the password, near the top.
 -- ============================================================================
 
 -- Workspaces: one per customer (and "main" for Creadsia itself).
@@ -56,6 +56,18 @@ begin
   end if;
 end $$;
 grant usage on schema public to creads_app;
+
+-- ============================================================================
+-- >>> LO ÚNICO QUE CAMBIAS: tu clave entre las comillas (24+ letras y números) <<<
+-- ============================================================================
+do $$
+declare pw text := 'PEGA-AQUI-TU-CLAVE-LARGA';
+begin
+  if pw like 'PEGA-AQUI%' or length(pw) < 24 or pw !~ '^[A-Za-z0-9]+$' then
+    raise exception 'Cambia la clave (arriba, entre las comillas): 24 o más letras y números, sin espacios.';
+  end if;
+  execute format('alter role creads_app with login password %L', pw);
+end $$;
 
 -- Which workspace the current request acts for ('' or null = none, so nothing is visible).
 create or replace function public.current_workspace() returns text
@@ -126,18 +138,4 @@ begin
   if not exists (select from pg_constraint where conname = 'users_workspace_fk') then
     alter table public.users add constraint users_workspace_fk foreign key (workspace) references public.workspaces(id);
   end if;
-end $$;
-
--- ----------------------------------------------------------------------------
--- LAST STEP: give the app's role a password. Replace the text between the
--- quotes with a long password of your own (at least 24 characters), run it,
--- and put the same password in Vercel as part of DATABASE_URL.
--- ----------------------------------------------------------------------------
-do $$
-declare pw text := 'PEGA-AQUI-TU-CLAVE-LARGA';
-begin
-  if pw like 'PEGA-AQUI%' or length(pw) < 24 then
-    raise exception 'Cambia la clave de la última parte (mínimo 24 caracteres) y vuelve a ejecutar.';
-  end if;
-  execute format('alter role creads_app with login password %L', pw);
 end $$;
