@@ -832,6 +832,57 @@ function Facturacion({ c, planes, reload }: { c: Cliente; planes: Plan[]; reload
   );
 }
 
+interface Pedido { id: string; ws: string; wsName: string; email: string; method: string; status: string; created: string; quote: { label: string; total: number; credits: number } }
+const METHOD_LABEL: Record<string, string> = { tarjeta: "Tarjeta", mercadopago: "Mercado Pago", transferencia: "Transferencia" };
+
+/** Orders customers placed from "Planes y créditos" (paid by hand until online payment is connected). */
+function Pedidos({ reload }: { reload: () => void }) {
+  const [list, setList] = useState<Pedido[] | null>(null);
+  const [err, setErr] = useState("");
+  const [all, setAll] = useState(false);
+  const load = useCallback(() => { fetch("/api/admin/pedidos").then((r) => r.json()).then((d) => setList(d.orders ?? [])).catch(() => setList([])); }, []);
+  useEffect(() => { load(); }, [load]);
+  async function set(o: Pedido, status: "pagado" | "cancelado") {
+    if (status === "pagado" && !window.confirm(`¿Confirmas que ${o.wsName} pagó ${fmtUsd(o.quote.total, 2)}? Se le dan ${o.quote.credits.toLocaleString("es-CL")} créditos y se anota el ingreso.`)) return;
+    setErr("");
+    const r = await fetch("/api/admin/pedidos", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: o.id, status }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return setErr(d.error || "No se pudo.");
+    load(); reload();
+  }
+  const open = (list ?? []).filter((o) => o.status === "pendiente");
+  const shown = all ? list ?? [] : open;
+  if (list && list.length === 0) return null;
+  return (
+    <section className={card}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-display text-lg font-bold">Pedidos de pago {open.length > 0 && <Pill t="warn">{open.length} por cobrar</Pill>}</h3>
+        <button type="button" onClick={() => setAll(!all)} className="text-sm text-muted hover:text-ink">{all ? "Ver solo pendientes" : "Ver todos"}</button>
+      </div>
+      <p className="text-sm text-muted">Lo que tus clientes pidieron en «Planes y créditos». Cobra por transferencia o link de pago y después márcalo como pagado: los créditos y el ingreso se anotan solos.</p>
+      {!list ? <p className="text-muted">Cargando…</p> : shown.length === 0 ? <p className="text-sm text-muted">No hay pedidos pendientes.</p> : (
+        <ul className="flex flex-col divide-y divide-line rounded-lg border border-line">
+          {shown.map((o) => (
+            <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-sm">
+              <span className="min-w-0">
+                <b className="font-mono">{o.id}</b> · <b>{o.wsName}</b> · {o.quote.label} · <span className={num}>{fmtUsd(o.quote.total, 2)}</span>
+                <span className="block text-xs text-muted">{o.email} · {METHOD_LABEL[o.method] ?? o.method} · {new Date(o.created).toLocaleString("es-CL")}</span>
+              </span>
+              {o.status === "pendiente" ? (
+                <span className="flex gap-2">
+                  <button type="button" onClick={() => set(o, "pagado")} className={btn}>Marcar pagado</button>
+                  <button type="button" onClick={() => set(o, "cancelado")} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink">Cancelar</button>
+                </span>
+              ) : <Pill t={o.status === "pagado" ? "good" : ""}>{o.status === "pagado" ? "Pagado" : "Cancelado"}</Pill>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {err && <p className="text-sm text-bad" role="alert">{err}</p>}
+    </section>
+  );
+}
+
 function ImportarWinnerLab() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -927,6 +978,7 @@ function Clientes({ planes }: { planes: Plan[] }) {
         {made && <Secret email={made.email} password={made.password} onClose={() => setMade(null)} />}
       </section>
 
+      <Pedidos reload={load} />
       <ImportarWinnerLab />
 
       {!rows && !err && <p className="text-muted">Cargando…</p>}

@@ -23,6 +23,7 @@ const I = {
   lab: "M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3M7.5 14h9",
   menu: "M4 7h16M4 12h16M4 17h16",
   team: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9a6 6 0 0 1 12 0M16.5 11a3 3 0 1 0 0-6M18 20a6 6 0 0 0-2.5-4.8",
+  card: "M3 6h18v12H3zM3 10h18M7 15h4",
   key: "M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7Zm1 2h.01",
   chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
@@ -70,7 +71,7 @@ const NAV: { group?: string; items: Item[] }[] = [
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
 function navFor(user: ShellUser) {
-  const account: Item[] = [{ href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
+  const account: Item[] = [{ href: "/app/planes", label: "Planes y créditos", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
   // giving access is the owner's alone
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
@@ -127,7 +128,7 @@ function CreditsBox() {
   const { info } = useCredits();
   const low = info && !info.unlimited && (info.balance ?? 0) < 100;
   return (
-    <Link href="/app/cuenta" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
+    <Link href="/app/planes" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold text-muted">Créditos</span>
         <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
@@ -135,7 +136,7 @@ function CreditsBox() {
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Ver movimientos"}
+        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Comprar más créditos"}
       </p>
     </Link>
   );
