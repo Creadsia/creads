@@ -58,6 +58,8 @@ export async function PATCH(req: Request) {
         const old = st.plan.characters.find((o) => o.key === c.key);
         return { ...c, image_url: old?.image_url ?? null, avatar: old?.avatar ?? null };
       });
+      // a character's voice must be one this customer may use
+      for (const c of next.characters) if (c.voiceId && !(await canUseVoice(s.user.workspace, c.voiceId))) c.voiceId = null;
       // the shot list can't grow or shrink here (rows already exist)
       if (next.shots.length !== st.plan.shots.length) return NextResponse.json({ error: "No se puede cambiar la cantidad de tomas." }, { status: 400 });
       st.plan = next;

@@ -22,6 +22,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
   const context = typeof b?.context === "string" ? b.context.slice(0, 2000) : "";
+  const all = b?.all === true;
   const found = await loadStory(s.db, adId).catch(() => null);
   if (!found) return NextResponse.json({ error: "Historia no encontrada." }, { status: 404 });
   const { st } = found;
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     }));
     const withImages = urls.map(Boolean);
     const answer = parseJSON<{ shots: { idx: number; dialogue: { speaker?: string; line?: string } | null }[] }>(
-      await textAI.complete({ prompt: dialoguePrompt({ idea: st.idea, plan: st.plan, lang: st.lang, context, withImages }), images: urls.filter((u): u is string => Boolean(u)), json: true, maxTokens: 6000 }),
+      await textAI.complete({ prompt: dialoguePrompt({ idea: st.idea, plan: st.plan, lang: st.lang, context, withImages, all }), images: urls.filter((u): u is string => Boolean(u)), json: true, maxTokens: 8000 }),
     );
     const keys = new Set(st.plan.characters.map((c) => c.key));
     const changed: number[] = [];

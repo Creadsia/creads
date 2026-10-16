@@ -52,6 +52,8 @@ export async function POST(req: Request) {
       prompt = avatarCharacterPrompt(c, st.style);
       refs = [{ url: await fetchableUrl(String(avatar.image_url), s.user.workspace), role: "face" as const }];
       c.avatar = String(avatar.id);
+      // the avatar's voice (e.g. its clone) becomes the character's voice, unless one was chosen already
+      if (!c.voiceId && typeof avatar.voice_id === "string" && avatar.voice_id) c.voiceId = avatar.voice_id;
     }
     const { bytes, mime } = await provider.generate({ prompt: prompt + extra, aspect: "16:9", refs });
     c.image_url = await saveMedia(s.user.workspace, "historias", bytes, mime);

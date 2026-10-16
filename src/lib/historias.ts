@@ -57,6 +57,7 @@ export interface StoryCharacter {
   look: string; // fixed visual description in English (age, face, hair, body, clothes)
   image_url?: string | null; // approved reference sheet
   avatar?: string | null; // id of the customer's avatar this character is based on
+  voiceId?: string | null; // the character speaks with this voice (e.g. the avatar's cloned voice)
 }
 
 export interface StoryShot {
@@ -73,6 +74,10 @@ export interface StoryShot {
 
 /** The shot has a line spoken on camera. */
 export const speaks = (s: StoryShot) => Boolean(s.dialogue?.line?.trim() && s.dialogue.speaker);
+/** Recording the line with the character's voice (ElevenLabs) + lip-syncing it (Kling Lipsync). */
+export const lipsyncUsd = (seconds: number, line: string) => +(0.014 * Math.max(5, Math.ceil(seconds / 5) * 5) + line.length * 0.00022).toFixed(3);
+/** Seconds of video a lip-synced line needs (the recorded line must fit inside the clip). */
+export const lipsyncSeconds = (line: string) => Math.min(10, Math.max(4, Math.ceil(line.trim().split(/\s+/).filter(Boolean).length / 2.2 + 1.5)));
 /** Seconds a spoken line needs (≈ 2.4 words per second, plus a breath). */
 export const lineSeconds = (line: string) => Math.ceil((line.trim().split(/\s+/).filter(Boolean).length / 2.4 + 0.8) * 2) / 2;
 
@@ -152,7 +157,7 @@ export function tidyPlan(p: StoryPlan, seconds: number): StoryPlan {
   const characters = (Array.isArray(p.characters) ? p.characters : [])
     .filter((c) => c && c.key && c.look)
     .slice(0, 4)
-    .map((c) => ({ key: String(c.key).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20) || "c", name: String(c.name || c.key).slice(0, 40), look: String(c.look).slice(0, 600), image_url: null }));
+    .map((c) => ({ key: String(c.key).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20) || "c", name: String(c.name || c.key).slice(0, 40), look: String(c.look).slice(0, 600), image_url: null, voiceId: typeof c.voiceId === "string" && /^[A-Za-z0-9]{10,40}$/.test(c.voiceId) ? c.voiceId : null }));
   const keys = new Set(characters.map((c) => c.key));
   let shots = (Array.isArray(p.shots) ? p.shots : []).filter((s) => s && s.image).slice(0, 24).map((s, i) => ({
     idx: i,
@@ -229,7 +234,7 @@ export function estimateStory(o: { characters: number; shots: number; videoSecon
 }
 
 /** Claude writes (or rewrites) the dialogue of an existing story, looking at the shot images in order. */
-export function dialoguePrompt(o: { idea: string; plan: StoryPlan; lang: StoryLang; context: string; withImages: boolean[] }) {
+export function dialoguePrompt(o: { idea: string; plan: StoryPlan; lang: StoryLang; context: string; withImages: boolean[]; all?: boolean }) {
   const chars = o.plan.characters.map((c) => `- ${c.key}: ${c.name} — ${c.look}`).join("\n");
   const shots = o.plan.shots
     .map((s, i) => `#${i + 1} (${s.seconds}s, ${s.shot}; on screen: ${s.characters.join(", ") || "nobody"}${o.withImages[i] ? `; image ${o.withImages.slice(0, i + 1).filter(Boolean).length}` : ""}): ${s.es} — ${s.image}${s.dialogue?.line ? ` [current line: ${s.dialogue.speaker}: "${s.dialogue.line}"]` : ""}`)
@@ -250,7 +255,7 @@ ${shots}
 
 Rules:
 - Language: ${langById(o.lang).spoken}.
-- Give dialogue to the key moments only (about a third to a half of the shots). Silent shots let the music and images breathe.
+${o.all ? "- This is a full movie with dialogue: EVERY shot where a character is on screen gets a line, so the conversation flows from shot to shot like a film scene. Only shots with nobody on screen stay silent (null)." : "- Give dialogue to the key moments only (about a third to a half of the shots). Silent shots let the music and images breathe."}
 - One speaker per shot, and only a character that is ON SCREEN in that shot, ideally facing camera. At most 12 words per line.
 - Lines must feel real and emotional (a short film, not an ad): the scolding, the encounter, the lesson, the first win, the return. Build an arc; the last line should land.
 - Keep any current line that already works; improve the rest.

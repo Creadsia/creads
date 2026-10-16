@@ -3,7 +3,7 @@ import path from "node:path";
 import { writeFile } from "node:fs/promises";
 import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
-import { buildStory, download, probe, workdir } from "@/lib/montage";
+import { buildStory, download, probe, trimPoints, workdir } from "@/lib/montage";
 import { compose, elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { refundJob } from "@/lib/credits";
@@ -86,8 +86,12 @@ export async function POST(req: Request) {
         await download(await fetchableUrl(c.url!, ws), file);
         const sh = st.plan.shots[c.idx];
         // shots where a character speaks keep the voice the model made (if the clip has sound)
-        const voice = Boolean(sh && speaks(sh)) && (await probe(file)).audio;
-        return { file, secs: sh?.seconds ?? 2.5, voice, text: sh?.dialogue?.line };
+        const p = await probe(file);
+        const voice = Boolean(sh && speaks(sh)) && p.audio;
+        let secs = sh?.seconds ?? 2.5;
+        // never cut a line: the shot lasts at least until the speech ends
+        if (voice) secs = Math.max(secs, Math.min(p.dur, (await trimPoints(file, p.dur)).b + 0.3));
+        return { file, secs: Math.round(secs * 10) / 10, voice, text: sh?.dialogue?.line };
       }),
     );
     const music = path.join(dir, "music.mp3");

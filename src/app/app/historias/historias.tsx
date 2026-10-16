@@ -207,6 +207,8 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [subtitles, setSubtitles] = useState(true);
   const [context, setContext] = useState("");
   const [dlgMsg, setDlgMsg] = useState("");
+  const [dlgAll, setDlgAll] = useState(true);
+  const [voices, setVoices] = useState<Voice[]>([]);
   const { price, covers } = useCredits();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -230,10 +232,11 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
       if (nb?.usd) setImgUsd(nb.usd);
     }).catch(() => {});
     fetch("/api/data/avatars").then((r) => r.json()).then((d) => setAvatars((d.rows ?? []).filter((a: Avatar) => a.image_url))).catch(() => {});
+    fetch("/api/voices").then((r) => r.json()).then((d) => setVoices(d.voices ?? [])).catch(() => {});
   }, []);
 
   // keep animating shots up to date
-  const generating = clips.filter((c) => c.status === "generating" || c.status === "starting");
+  const generating = clips.filter((c) => c.status === "generating" || c.status === "starting" || c.status === "syncing");
   useEffect(() => {
     if (!generating.length) return;
     timer.current = setTimeout(async () => {
@@ -309,11 +312,12 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           <p className="text-xs text-muted">Claude lee tu idea, mira las imágenes de las tomas que ya creaste y escribe qué dice cada personaje en los momentos clave. Dale contexto si quieres: cómo habla Pancho, qué le enseña, frases que no pueden faltar.</p>
           <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={2} className={`${inputCls} text-sm`}
             placeholder="Ej: Pancho habla relajado y seguro, como mentor. Le dice que el colegio no le enseña a ganar plata. Al final el niño le agradece frente a todos." />
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dlgAll} onChange={(e) => setDlgAll(e.target.checked)} /> Como película: diálogo en todas las tomas donde aparece alguien</label>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={busy.dlg} className={btnCls}
               onClick={() => run("dlg", async () => {
                 await saved();
-                const d = await post("/api/historias/dialogos", { adId: id, context });
+                const d = await post("/api/historias/dialogos", { adId: id, context, all: dlgAll });
                 setPlan(d.plan); setDirty(false);
                 const animated = new Set(clips.filter((c) => c.status === "done").map((c) => c.idx));
                 const redo = (d.changed as number[]).filter((i) => animated.has(i)).length;
@@ -375,6 +379,10 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           {plan.characters.map((c, i) => (
             <CharacterCard key={c.key} name={c.name} look={c.look} image={c.image_url ?? null} busy={Boolean(busy[`c:${c.key}`])} priceLabel={price(imgUsd)}
               avatars={avatars} avatarId={c.avatar ?? ""} onAvatar={(a) => fromAvatar(c.key, a)}
+              voices={voices} voiceId={c.voiceId ?? ""} onVoice={(v) => run(`c:${c.key}`, async () => {
+                const next = structuredClone(plan); next.characters[i].voiceId = v || null;
+                await post("/api/historias", { adId: id, plan: next }, "PATCH"); setDirty(false);
+              })}
               onLook={(v) => edit((p) => { p.characters[i].look = v; return p; })}
               onMake={(extra) => sheet(c.key, extra)} onUpload={(f) => ownSheet(c.key, f)} />
           ))}
@@ -454,9 +462,10 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
 // media refs ("/api/media/ws/…") are served by our own route, only to their owner
 const useMedia = (ref: string | null) => ref;
 
-function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId, onAvatar, onLook, onMake, onUpload }: {
+function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId, onAvatar, voices, voiceId, onVoice, onLook, onMake, onUpload }: {
   name: string; look: string; image: string | null; busy: boolean; priceLabel: string;
   avatars: Avatar[]; avatarId: string; onAvatar: (id: string) => void;
+  voices: Voice[]; voiceId: string; onVoice: (id: string) => void;
   onLook: (v: string) => void; onMake: (extra?: string) => void; onUpload: (f: File) => void;
 }) {
   const src = useMedia(image);
@@ -484,6 +493,15 @@ function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId,
           <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
         </label>
       </div>
+      <label className="flex flex-col gap-1 text-xs font-semibold">
+        Voz cuando habla
+        <select value={voiceId} disabled={busy} onChange={(e) => onVoice(e.target.value)} className={`${inputCls} text-sm font-normal`}>
+          <option value="">Voz automática (la crea el modelo de video)</option>
+          {voices.filter((v) => v.category === "cloned").length > 0 && <optgroup label="Tus voces">{voices.filter((v) => v.category === "cloned").map((v) => <option key={v.id} value={v.id}>★ {v.name}</option>)}</optgroup>}
+          <optgroup label="Biblioteca">{voices.filter((v) => v.category !== "cloned").map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+        </select>
+        {voiceId && <span className="font-normal text-muted">Sus diálogos se graban con esta voz y se le sincronizan los labios. Si ya animaste tomas donde habla, re-anímalas.</span>}
+      </label>
     </article>
   );
 }
@@ -496,7 +514,7 @@ function ShotCard({ n, aspect, text, line, secs, clip, busy, canFrame, framePric
   const vid = useMedia(clip.status === "done" ? clip.url : null);
   const [fix, setFix] = useState("");
   const [open, setOpen] = useState(false);
-  const animating = clip.status === "generating" || clip.status === "starting";
+  const animating = clip.status === "generating" || clip.status === "starting" || clip.status === "syncing";
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-line p-2">
       <div className={`relative overflow-hidden rounded-lg bg-surface-2 ${aspect === "16:9" ? "aspect-video" : aspect === "1:1" ? "aspect-square" : "aspect-[9/16]"}`}>
@@ -504,7 +522,7 @@ function ShotCard({ n, aspect, text, line, secs, clip, busy, canFrame, framePric
           : img ? <img src={img} alt={`Toma ${n}`} className="h-full w-full object-cover" />
           : <span className="absolute inset-0 flex items-center justify-center p-2 text-center text-xs text-muted">{busy ? "Dibujando…" : "Sin imagen"}</span>}
         <span className="absolute left-1.5 top-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[10px] text-white">#{n} · {secs}s</span>
-        {animating && <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-[11px] text-white">Animando…</span>}
+        {animating && <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-[11px] text-white">{clip.status === "syncing" || clip.error === null && clip.url ? "Poniendo la voz…" : "Animando…"}</span>}
       </div>
       <p className="line-clamp-2 text-xs text-muted">{text}</p>
       {line && <p className="line-clamp-2 text-xs font-semibold">🗣 «{line}»{clip.status === "done" ? <span className="block font-normal text-muted">Si agregaste o cambiaste el diálogo después de animar, aprieta Re-animar.</span> : null}</p>}
