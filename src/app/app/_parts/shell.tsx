@@ -133,14 +133,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen lg:grid lg:grid-cols-[248px_1fr]">
       {/* desktop menu */}
       <aside className="sticky top-0 hidden h-screen flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 lg:flex">
-        <div className="px-2"><Logo size={26} href="/app" /></div>
+        <div className="px-2"><Logo size={26} href="/app" gid="mark-aside" /></div>
         <div className="flex-1"><Nav path={path} /></div>
         {footer}
       </aside>
 
       {/* phone top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
-        <Logo size={24} href="/app" />
+        <Logo size={24} href="/app" gid="mark-top" />
         <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
           <Icon d={I.menu} />
         </button>
@@ -150,7 +150,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col gap-6 overflow-y-auto bg-surface px-3 py-5">
             <div className="flex items-center justify-between px-2">
-              <Logo size={24} href="/app" />
+              <Logo size={24} href="/app" gid="mark-drawer" />
               <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="grid h-9 w-9 place-items-center rounded-lg border border-line"><Icon d={I.close} /></button>
             </div>
             <div className="flex-1"><Nav path={path} onPick={() => setOpen(false)} /></div>
