@@ -27,7 +27,7 @@ export const claude: TextAI = {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 4096,
+        max_tokens: 8000,
         ...(system ? { system } : {}),
         messages: [{ role: "user", content }],
       }),
@@ -39,10 +39,18 @@ export const claude: TextAI = {
       console.error("claude error", res.status, msg);
       throw new Error(`Claude respondió con error (${res.status}).`);
     }
-    return (data?.content ?? [])
+    const text: string = (data?.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
       .join("");
+    const stop: string = data?.stop_reason ?? "";
+    if (stop === "refusal") throw new Error("Claude no quiso procesar este texto (filtro de seguridad).");
+    if (stop === "max_tokens") throw new Error("La respuesta de Claude quedó cortada (texto demasiado largo).");
+    if (json && !text.includes("{")) {
+      console.error("claude no-json", stop, text.slice(0, 300));
+      throw new Error(`Claude respondió sin el formato esperado: “${text.trim().slice(0, 160)}”`);
+    }
+    return text;
   },
 };
 
@@ -51,5 +59,9 @@ export function parseJSON<T>(text: string): T {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start < 0 || end < start) throw new Error("La IA no devolvió JSON.");
-  return JSON.parse(text.slice(start, end + 1)) as T;
+  try {
+    return JSON.parse(text.slice(start, end + 1)) as T;
+  } catch {
+    throw new Error("La respuesta de la IA vino incompleta. Intenta de nuevo.");
+  }
 }
