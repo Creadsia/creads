@@ -27,8 +27,14 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");
   try {
-    const clip = await db.get("clips", id);
+    let clip = await db.get("clips", id);
     if (!clip) return NextResponse.json({ error: "Corte no encontrado." }, { status: 404 });
+    // Retry with another model (e.g. when one refuses the avatar's face).
+    if (typeof b?.model === "string" && b.model && b.model !== clip.model) {
+      const other = findVideo(b.model);
+      if (!other?.configured() || other.silent) return NextResponse.json({ error: "Ese modelo no sirve para este corte." }, { status: 400 });
+      clip = (await db.update("clips", id, { model: other.id })) ?? clip;
+    }
     const ad = await db.get("ads", String(clip.ad_id));
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
     const provider = findVideo(String(clip.model));

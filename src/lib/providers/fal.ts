@@ -12,11 +12,20 @@ function key() {
 }
 const auth = () => ({ authorization: `Key ${key()}` });
 
+/** Turns a provider's refusal into something a marketer can act on. */
+export function plainError(what: string, msg: string) {
+  if (/likeness(es)? of real people|real (person|people)|private information/i.test(msg)) {
+    return `${what} no acepta fotos de personas reales (como la cara de tu avatar). Reintenta este corte con Veo 3.1 Fast o Kling 3.0.`;
+  }
+  return `${what}: ${msg.slice(0, 300)}`;
+}
+
 async function fail(res: Response, what: string): Promise<never> {
   const body = await res.json().catch(() => null);
   const detail = body?.detail;
   const msg = typeof detail === "string" ? detail : Array.isArray(detail) ? detail.map((d) => d?.msg).join("; ") : res.statusText;
-  throw new Error(`${what}: ${String(msg).slice(0, 300)} (código ${res.status})`);
+  const plain = plainError(what, String(msg));
+  throw new Error(plain.startsWith(`${what}: `) ? `${plain} (código ${res.status})` : plain);
 }
 
 type Build = (req: VideoRequest, image?: string) => Record<string, unknown>;
@@ -30,6 +39,8 @@ interface FalVideo {
   durations: number[];
   aspects?: AspectRatio[];
   silent?: boolean;
+  /** Refuses starting images showing a real person's face (ByteDance's privacy filter). */
+  noFaces?: boolean;
   /** fal's live price list only works for flat per-second prices; tiered models keep our static 720p price. */
   livePrice?: boolean;
   build: Build;
@@ -126,6 +137,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "seedance-2.0-fast",
+    noFaces: true,
     label: "Seedance 2.0 Fast",
     usdPerSecond: 0.2419,
     i2v: "bytedance/seedance-2.0/fast/image-to-video",
@@ -135,6 +147,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "seedance-2.0",
+    noFaces: true,
     label: "Seedance 2.0",
     usdPerSecond: 0.3024,
     i2v: "bytedance/seedance-2.0/image-to-video",
@@ -144,6 +157,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "seedance-2.5",
+    noFaces: true,
     label: "Seedance 2.5",
     usdPerSecond: 0.462, // $0.0214 per 1k tokens at 720p
     i2v: "bytedance/seedance-2.5/image-to-video",
@@ -224,7 +238,7 @@ export async function falPoll(
     const body = await res.json().catch(() => null);
     const d = body?.detail;
     const msg = typeof d === "string" ? d : Array.isArray(d) ? d.map((x) => x?.msg).join("; ") : `código ${res.status}`;
-    return { state: "failed", error: `${what}: ${String(msg).slice(0, 300)}` };
+    return { state: "failed", error: plainError(what, String(msg)) };
   }
   return { state: "done", out: await res.json() };
 }
@@ -239,6 +253,7 @@ function falVideo(m: FalVideo): VideoProvider {
     aspects: m.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
     needsImage: !m.t2v,
     silent: Boolean(m.silent),
+    noFaces: Boolean(m.noFaces),
 
     async submit(req) {
       const image = req.refs?.find((r) => r.role === "first_frame")?.url;

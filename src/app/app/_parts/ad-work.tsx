@@ -32,6 +32,9 @@ export default function AdWork({ adId }: { adId: string }) {
   const [preset, setPreset] = useState<1 | 2 | 3 | 4>(2);
   const [size, setSize] = useState(96);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [models, setModels] = useState<{ id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean }[]>([]);
+  const [retryModel, setRetryModel] = useState("veo-3.1-fast");
+  useEffect(() => { fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {}); }, []);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const loadAd = useCallback(async () => {
@@ -64,9 +67,9 @@ export default function AdWork({ adId }: { adId: string }) {
     return () => t.forEach(clearTimeout);
   }, [loadAd, loadClips]);
 
-  async function run(id: string) {
+  async function run(id: string, model?: string) {
     setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
-    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model }) });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c)));
     setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
@@ -121,6 +124,12 @@ export default function AdWork({ adId }: { adId: string }) {
   const all = clips.length > 0 && done === clips.length;
   const busyClips = clips.some((c) => ["generating", "starting", "pending"].includes(c.status));
   const reviewOf = (id: string) => review?.find((r) => r.clipId === id);
+  const failed = clips.filter((c) => c.status === "failed");
+  const faceRefused = failed.some((c) => /no acepta fotos de personas reales|likeness/i.test(c.error ?? ""));
+  const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces));
+  async function retryFailed() {
+    for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
+  }
   const ratio = ad.aspect === "16:9" ? "aspect-video" : ad.aspect === "1:1" ? "aspect-square" : ad.aspect === "4:5" ? "aspect-[4/5]" : "aspect-[9/16]";
 
   return (
@@ -133,6 +142,20 @@ export default function AdWork({ adId }: { adId: string }) {
           </div>
           {busyClips && <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text">Generando… cada corte tarda 1 a 4 min</span>}
         </div>
+        {failed.length > 0 && !busyClips && (
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-bad/40 bg-bad/10 p-3 text-sm">
+            <p className="basis-full">
+              {failed.length === 1 ? "1 corte falló." : `${failed.length} cortes fallaron.`}
+              {faceRefused ? " El modelo que elegiste no acepta la cara de tu avatar: reintenta con otro modelo." : " Puedes reintentarlos con el mismo modelo o con otro."}
+            </p>
+            <label className="flex flex-col gap-1 text-xs font-semibold text-muted">Modelo
+              <select value={retryModel} onChange={(e) => setRetryModel(e.target.value)} className={inputCls}>
+                {usable.map((m) => <option key={m.id} value={m.id}>{m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={retryFailed} className={btnCls}>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length}`} con este modelo</button>
+          </div>
+        )}
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
           {clips.map((c) => {
             const rv = reviewOf(c.id);

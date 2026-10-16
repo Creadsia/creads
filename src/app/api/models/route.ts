@@ -24,6 +24,7 @@ export async function GET(req: Request) {
         seconds: p.durations ?? [4, 5, 6, 8, 10],
         needsImage: Boolean(p.needsImage),
         silent: Boolean(p.silent),
+        noFaces: Boolean(p.noFaces),
       };
     }),
     image: imageProviders.map((p) => ({ id: p.id, label: p.label, configured: p.configured(), usd: p.usdPerImage })),

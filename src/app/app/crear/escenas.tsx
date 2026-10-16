@@ -13,7 +13,7 @@ interface Avatar extends Row { name: string; description: string | null; image_u
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
-interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean }
+interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
@@ -56,6 +56,9 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const takesRefs = model === "veo-3.1" || model === "veo-3.1-fast";
   const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
   const videoSecs = cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
+  // Seedance refuses a real person's face as the starting image
+  const faceRefused = (x: Model) => Boolean(x.noFaces && avatar?.image_url);
+  useEffect(() => { if (m && faceRefused(m)) setModel("veo-3.1-fast"); }); // eslint-disable-line react-hooks/exhaustive-deps
   const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) : 0;
 
   async function direct(e?: React.FormEvent) {
@@ -228,7 +231,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Modelo de video">
                   <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage || x.silent}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage || x.silent ? "sin voz: no sirve para anuncios hablados" : `US$${x.usdPerSecond.toFixed(2)}/s`}</option>)}
+                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage || x.silent || faceRefused(x)}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage || x.silent ? "sin voz: no sirve para anuncios hablados" : faceRefused(x) ? "no acepta la cara de tu avatar" : `US$${x.usdPerSecond.toFixed(2)}/s`}</option>)}
                   </select>
                 </Field>
               </div>
