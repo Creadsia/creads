@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { addOrder, hasPaidBefore, orders, updateOrder, workspaceRow } from "@/lib/billing";
+import { addOrder, hasPaidBefore, ordersOf, setOrderMp, workspaceRow } from "@/lib/billing";
 import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { DEFAULT_FINANZAS, type Finanzas } from "@/lib/finance";
 import { sendMeta, visitorFrom } from "@/lib/meta";
@@ -27,13 +27,12 @@ export async function GET(req: Request) {
   const rate = await usdClp();
   if (ws === "main") return NextResponse.json({ online: mpReady(), owner: true, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   try {
-    const [w, paid, all] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), orders()]);
-    const mine = all.filter((o) => o.ws === ws);
+    const [w, paid, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), ordersOf(ws)]);
     const sub = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
     return NextResponse.json({
       online: mpReady(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
       subscription: sub ? { id: sub.id, label: sub.quote.label } : null,
-      orders: mine.slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
+      orders: mine.filter((o) => o.status !== "reemplazado").slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
     });
   } catch {
     return NextResponse.json({ online: mpReady(), owner: false, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
@@ -69,11 +68,11 @@ export async function POST(req: Request) {
         const plan = PLANS.find((p) => p.id === q.item)!;
         const fullClp = clpFor(plan.monthly * (1 - discountPct / 100), rate);
         const sub = await createSubscription({ orderId: order.id, title, firstClp: clp, email: s.user.email });
-        await updateOrder(order.id, (o) => { o.mp = { kind: "subscription", id: sub.id, clp, fullClp }; });
+        await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp });
         redirect = sub.url;
       } else {
         const pref = await createPreference({ orderId: order.id, title, clp, email: s.user.email });
-        await updateOrder(order.id, (o) => { o.mp = { kind: "preference", id: pref.id, clp }; });
+        await setOrderMp(order.id, { kind: "preference", id: pref.id, clp });
         redirect = pref.url;
       }
     }

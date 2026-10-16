@@ -92,10 +92,37 @@ describe("free redos", () => {
 });
 
 describe("online payments", () => {
-  test("a Mercado Pago payment gives credits only once", async () => {
-    await pg.query("insert into public.credits (owner, delta, kind, note, ref) values ('cliente-b', 1000, 'plan', 'Starter', 'mp:123456')");
-    await assert.rejects(pg.query("insert into public.credits (owner, delta, kind, note, ref) values ('cliente-b', 1000, 'plan', 'Starter', 'mp:123456')"));
-    assert.equal(await balance("cliente-b"), 1000);
+  test("a payment is applied once: credits, plan date and order, all together", async () => {
+    await pg.query("insert into public.orders (id, owner, email, item, period, method, quote) values ('CR-AAAA0001', 'cliente-b', 'b@b.cl', 'starter', 'mensual', 'mercadopago', '{}')");
+    const apply = async () => (await q("select public.apply_payment('mp:999', 'CR-AAAA0001', 27990, 'CLP', 1000, 1, 'Starter', 'Plan Starter') as r"))[0].r;
+    const before = await balance("cliente-b");
+    assert.equal(await apply(), "applied");
+    assert.equal(await apply(), "already"); // repeated notification
+    assert.equal(await balance("cliente-b"), before + 1000);
+    const w = (await q("select plan, paid_until from public.workspaces where id = 'cliente-b'"))[0];
+    assert.equal(w.plan, "Starter");
+    assert.ok(w.paid_until);
+    const o = (await q("select status, payments from public.orders where id = 'CR-AAAA0001'"))[0];
+    assert.equal(o.status, "pagado");
+    assert.deepEqual(o.payments, ["mp:999"]);
+    // a renewal (another payment) adds another month
+    assert.equal((await q("select public.apply_payment('mp:1000', 'CR-AAAA0001', 55990, 'CLP', 1000, 1, 'Starter', 'Renovación') as r"))[0].r, "applied");
+    assert.equal(await balance("cliente-b"), before + 2000);
+  });
+
+  test("unknown order: nothing is applied", async () => {
+    await assert.rejects(q("select public.apply_payment('mp:5', 'CR-NOPE', 1, 'CLP', 10, 0, null, 'x')"));
+    assert.equal((await q("select count(*)::int as n from public.payments where id = 'mp:5'"))[0].n, 0);
+  });
+
+  test("customers' role can't see orders or apply payments", async () => {
+    const asApp = (sql: string) => pg.transaction(async (tx) => {
+      await tx.query("set local role creads_app");
+      await tx.query("select set_config('app.workspace', 'cliente-b', true)");
+      return tx.query(sql);
+    });
+    await assert.rejects(asApp("select * from public.orders"));
+    await assert.rejects(asApp("select public.apply_payment('x:1', 'CR-AAAA0001', 1, 'CLP', 99999, 0, null, 'hack')"));
   });
 });
 

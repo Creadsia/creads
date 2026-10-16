@@ -4,7 +4,7 @@ import type { ItemId, MethodId, Period, Quote } from "./catalog";
 import { CreditError, grant } from "./credits";
 import { DEFAULT_FINANZAS, type Finanzas } from "./finance";
 import type { Visitor } from "./meta";
-import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "./supabase";
 
 // Payments: recording a paid plan or top-up (by hand today, by Stripe / Mercado Pago later) and the
 // customers' orders waiting to be paid. Server-only.
@@ -61,7 +61,7 @@ export async function recordPlanPayment(ws: string, planId: string, months: numb
   return until;
 }
 
-// ---------- customers' orders ----------
+// ---------- customers' orders (table public.orders) ----------
 
 export interface Order {
   id: string;
@@ -72,55 +72,81 @@ export interface Order {
   period: Period | null;
   method: MethodId;
   quote: Quote;
-  status: "pendiente" | "pagado" | "cancelado";
+  status: "pendiente" | "pagado" | "cancelado" | "reemplazado";
   created: string;
-  closed?: string;
+  closed?: string | null;
   /** For Meta: consent and browser ids at checkout, so the purchase can be matched later. */
-  visitor?: Visitor;
+  visitor?: Visitor | null;
   /** Online payment with Mercado Pago. */
-  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean };
-  /** Mercado Pago payments already applied (renewals add one each month). */
+  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean } | null;
+  /** Payments already applied (a subscription adds one each month). */
   payments?: string[];
 }
 
-const FILE = "pedidos.json";
-export async function orders(): Promise<Order[]> {
-  return (await readPrivateJSON<Order[]>(FILE).catch(() => null)) ?? [];
+interface Row { id: string; owner: string; ws_name: string; email: string; item: string; period: string | null; method: string; quote: Quote; status: Order["status"]; mp: Order["mp"]; visitor: Visitor | null; payments: string[]; created_at: string; closed_at: string | null }
+const fromRow = (r: Row): Order => ({
+  id: r.id, ws: r.owner, wsName: r.ws_name, email: r.email, item: r.item as ItemId, period: (r.period as Period) ?? null, method: r.method as MethodId,
+  quote: r.quote, status: r.status, mp: r.mp, visitor: r.visitor, payments: r.payments ?? [], created: r.created_at, closed: r.closed_at,
+});
+
+export async function orders(limit = 200): Promise<Order[]> {
+  return (await sbRest<Row[]>(`orders?select=*&order=created_at.desc&limit=${limit}`)).map(fromRow);
 }
-async function saveOrders(list: Order[]) {
-  await writePrivateJSON(FILE, list.slice(0, 2000));
+export async function ordersOf(ws: string, limit = 20): Promise<Order[]> {
+  return (await sbRest<Row[]>(`orders?owner=eq.${encodeURIComponent(ws)}&select=*&order=created_at.desc&limit=${limit}`)).map(fromRow);
+}
+export async function getOrder(id: string): Promise<Order | null> {
+  if (!/^CR-[0-9A-F]{6,12}$/.test(id)) return null;
+  return (await sbRest<Row[]>(`orders?id=eq.${encodeURIComponent(id)}&select=*&limit=1`)).map(fromRow)[0] ?? null;
 }
 
-export async function addOrder(o: Omit<Order, "id" | "status" | "created">) {
-  const list = await orders();
-  const order: Order = { ...o, id: `CR-${randomBytes(3).toString("hex").toUpperCase()}`, status: "pendiente", created: new Date().toISOString() };
-  // one open order per customer and item: a new click replaces the old one
-  await saveOrders([order, ...list.filter((x) => !(x.ws === o.ws && x.item === o.item && x.status === "pendiente"))]);
-  return order;
+export async function addOrder(o: { ws: string; wsName: string; email: string; item: ItemId; period: Period | null; method: MethodId; quote: Quote; visitor?: Visitor }) {
+  const id = `CR-${randomBytes(4).toString("hex").toUpperCase()}`;
+  // an older unpaid order for the same thing is replaced (kept, so a late payment for it still counts)
+  const same = o.item.startsWith("pack-") ? `item=eq.${encodeURIComponent(o.item)}` : "item=in.(starter,plus,studio)"; // one open plan order at a time
+  await sbRest(`orders?owner=eq.${encodeURIComponent(o.ws)}&${same}&status=eq.pendiente`, {
+    method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ status: "reemplazado" }),
+  });
+  const rows = await sbRest<Row[]>("orders", {
+    method: "POST",
+    body: JSON.stringify({ id, owner: o.ws, ws_name: o.wsName, email: o.email, item: o.item, period: o.period, method: o.method, quote: o.quote, visitor: o.visitor ?? null }),
+  });
+  return fromRow(rows[0]);
 }
 
-export async function updateOrder(id: string, fn: (o: Order) => void) {
-  const list = await orders();
-  const o = list.find((x) => x.id === id);
-  if (!o) throw new CreditError("Pedido no encontrado.", 404);
-  fn(o);
-  await saveOrders(list);
-  return o;
+export async function setOrderMp(id: string, mp: NonNullable<Order["mp"]>) {
+  await sbRest(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ mp }) });
 }
 
-export async function setOrderStatus(id: string, status: "pagado" | "cancelado") {
-  const list = await orders();
-  const o = list.find((x) => x.id === id);
-  if (!o) throw new CreditError("Pedido no encontrado.", 404);
-  if (o.status !== "pendiente") throw new CreditError("Ese pedido ya estaba cerrado.", 409);
-  o.status = status;
-  o.closed = new Date().toISOString();
-  await saveOrders(list);
-  return o;
+/** Cancels an unpaid order (only if it's still waiting). */
+export async function cancelOrder(id: string) {
+  const rows = await sbRest<Row[]>(`orders?id=eq.${encodeURIComponent(id)}&status=in.(pendiente,reemplazado)`, { method: "PATCH", body: JSON.stringify({ status: "cancelado", closed_at: new Date().toISOString() }) });
+  if (!rows.length) throw new CreditError("Ese pedido ya estaba cerrado.", 409);
+  return fromRow(rows[0]);
 }
 
-/** Did this customer ever pay a plan? (the launch discount is for the first month only) */
+/**
+ * Applies a confirmed payment to an order in one database transaction (credits, plan date, order
+ * paid). Returns "already" if that payment was applied before.
+ */
+export async function applyPayment(p: { paymentId: string; orderId: string; amount: number; currency: string; credits: number; months: number; plan: string | null; note: string }) {
+  const r = await sbRpc<string>("apply_payment", {
+    p_payment: p.paymentId, p_order: p.orderId, p_amount: p.amount, p_currency: p.currency,
+    p_credits: p.credits, p_months: p.months, p_plan: p.plan, p_note: p.note.slice(0, 200),
+  });
+  if (p.months > 0) {
+    const o = await getOrder(p.orderId);
+    if (o) forgetWorkspace(o.ws);
+  }
+  return r === "already" ? "already" : "applied";
+}
+
+/** Did this customer ever pay a plan? (the launch discount is for the first month only; unsure = yes) */
 export async function hasPaidBefore(ws: string) {
-  const rows = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.plan&select=id&limit=1`).catch(() => []);
-  return rows.length > 0;
+  try {
+    const rows = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.plan&select=id&limit=1`);
+    return rows.length > 0;
+  } catch {
+    return true;
+  }
 }

@@ -28,11 +28,46 @@ create table if not exists public.credits (
 );
 create index if not exists credits_owner_idx on public.credits (owner, id desc);
 create index if not exists credits_ref_idx on public.credits (owner, ref);
--- a payment from Mercado Pago gives credits only once, however many times it is notified
-create unique index if not exists credits_payment_once on public.credits (ref) where ref like 'mp:%';
+-- a payment gives credits only once, however many times it is notified
+drop index if exists public.credits_payment_once;
+create unique index if not exists credits_paid_once on public.credits (ref) where ref like 'pay:%';
 alter table public.credits enable row level security; -- no policies: only the service role
 revoke all on table public.credits from anon, authenticated;
 grant all on table public.credits to service_role;
+
+-- Customers' orders (plans and credit top-ups) and the payments applied to them.
+create table if not exists public.orders (
+  id text primary key,
+  owner text not null references public.workspaces(id) on delete cascade,
+  ws_name text not null default '',
+  email text not null,
+  item text not null,
+  period text,
+  method text not null,
+  quote jsonb not null,
+  status text not null default 'pendiente' check (status in ('pendiente', 'pagado', 'cancelado', 'reemplazado')),
+  mp jsonb,
+  visitor jsonb,
+  payments text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  closed_at timestamptz
+);
+create index if not exists orders_owner_idx on public.orders (owner, created_at desc);
+alter table public.orders enable row level security;
+revoke all on table public.orders from anon, authenticated;
+grant all on table public.orders to service_role;
+
+create table if not exists public.payments (
+  id text primary key, -- "mp:<Mercado Pago payment id>" or "manual:<order id>"
+  order_id text not null references public.orders(id),
+  owner text not null,
+  amount numeric not null,
+  currency text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.payments enable row level security;
+revoke all on table public.payments from anon, authenticated;
+grant all on table public.payments to service_role;
 
 create table if not exists public.rate_limits (
   key text primary key,
@@ -126,6 +161,36 @@ begin
   return cid;
 end $$;
 
+-- Applies one confirmed payment to its order, all at once or not at all: credits, plan and paid-until
+-- date, order marked paid. Calling it again with the same payment does nothing ('already').
+create or replace function public.apply_payment(
+  p_payment text, p_order text, p_amount numeric, p_currency text, p_credits integer, p_months integer, p_plan text, p_note text
+) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  o record;
+begin
+  perform pg_advisory_xact_lock(hashtext('pay:' || p_payment));
+  if exists (select 1 from public.payments where id = p_payment) then return 'already'; end if;
+  select id, owner into o from public.orders where id = p_order for update;
+  if not found then raise exception 'order % not found', p_order; end if;
+  insert into public.payments (id, order_id, owner, amount, currency) values (p_payment, p_order, o.owner, p_amount, p_currency);
+  if p_credits > 0 then
+    insert into public.credits (owner, delta, kind, note, ref, by_user)
+    values (o.owner, p_credits, case when p_months > 0 then 'plan' else 'topup' end, p_note, 'pay:' || p_payment, 'pago en línea');
+  end if;
+  if p_months > 0 then
+    update public.workspaces
+    set plan = coalesce(p_plan, plan),
+        paid_until = (greatest(coalesce(paid_until, current_date), current_date) + make_interval(months => p_months))::date
+    where id = o.owner;
+  end if;
+  update public.orders
+  set status = 'pagado', closed_at = coalesce(closed_at, now()), payments = array_append(payments, p_payment)
+  where id = p_order;
+  return 'applied';
+end $$;
+
 -- Counts one attempt for p_key; true while it stays within p_max per p_window seconds.
 create or replace function public.hit_rate(p_key text, p_window integer, p_max integer) returns boolean
 language plpgsql security definer set search_path = public as $$
@@ -147,12 +212,14 @@ revoke execute on function public.spend_credits(text, integer, text, text, numer
 revoke execute on function public.refund_last(text, text, text) from public, anon, authenticated;
 revoke execute on function public.hit_rate(text, integer, integer) from public, anon, authenticated;
 revoke execute on function public.grant_free_redo(text, text, text) from public, anon, authenticated;
+revoke execute on function public.apply_payment(text, text, numeric, text, integer, integer, text, text) from public, anon, authenticated;
 revoke execute on function public.use_free_redo(text, text, text) from public, anon, authenticated;
 grant execute on function public.credit_balance(text) to service_role;
 grant execute on function public.spend_credits(text, integer, text, text, numeric, text, boolean) to service_role;
 grant execute on function public.refund_last(text, text, text) to service_role;
 grant execute on function public.hit_rate(text, integer, integer) to service_role;
 grant execute on function public.grant_free_redo(text, text, text) to service_role;
+grant execute on function public.apply_payment(text, text, numeric, text, integer, integer, text, text) to service_role;
 grant execute on function public.use_free_redo(text, text, text) to service_role;
 
 -- Ask the API to see the new functions right away.

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateOrder, orders } from "@/lib/billing";
+import { getOrder, setOrderMp } from "@/lib/billing";
 import { getAuthorizedPayment, getPayment, getPreapproval, signatureOk } from "@/lib/mercadopago";
 import { settleOrder } from "@/lib/settle";
 
@@ -39,8 +39,8 @@ export async function POST(req: Request) {
     if (type === "subscription_preapproval") {
       const pre = await getPreapproval(id);
       if (pre.status === "cancelled" && pre.external_reference) {
-        const o = (await orders()).find((x) => x.id === pre.external_reference);
-        if (o?.mp) await updateOrder(o.id, (x) => { if (x.mp) x.mp.cancelled = true; });
+        const o = await getOrder(pre.external_reference);
+        if (o?.mp && !o.mp.cancelled) await setOrderMp(o.id, { ...o.mp, cancelled: true });
       }
       return NextResponse.json({ ok: true, status: pre.status });
     }

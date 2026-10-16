@@ -1,51 +1,61 @@
-import { type Order, orders, recordIncome, recordPlanPayment, updateOrder } from "./billing";
-import { PACKS } from "./catalog";
-import { AlreadyDone, grant } from "./credits";
+import { type Order, applyPayment, getOrder, recordIncome } from "./billing";
+import { PACKS, PLANS } from "./catalog";
 import { sendMeta } from "./meta";
-import { setSubscriptionAmount } from "./mercadopago";
+import { getPreapproval, setSubscriptionAmount } from "./mercadopago";
 
-// Applies a payment confirmed by Mercado Pago to its order: credits, plan date, income in the book and
-// the Meta "Purchase". Safe to call many times for the same payment (it counts once, enforced by the
-// database), which matters because Mercado Pago repeats notifications.
+// Applies a payment confirmed by Mercado Pago (or by the owner) to its order. The money part
+// (credits, plan date, order paid) happens in one database transaction and only once per payment, so
+// repeated notifications, the return page and the webhook racing each other can't double anything.
+// The rest (income in the book, Meta, raising the subscription to its regular price) is best-effort
+// and retried on the next notification.
 
 export interface Paid { id: string; amount: number; currency: string }
 
-export async function settleOrder(orderId: string, pay: Paid): Promise<{ ok: boolean; already?: boolean; reason?: string }> {
-  const order: Order | undefined = (await orders()).find((o) => o.id === orderId);
-  if (!order) return { ok: false, reason: "pedido no encontrado" };
-  if (pay.currency !== "CLP") return { ok: false, reason: `moneda inesperada ${pay.currency}` };
-  // the amount must be what we asked for (first month may carry the launch offer)
-  const expected = order.status === "pendiente" ? order.mp?.clp ?? 0 : order.mp?.fullClp ?? order.mp?.clp ?? 0;
-  if (expected && pay.amount < expected * 0.99) {
-    console.error("payment below expected", orderId, pay.id, pay.amount, expected);
-    return { ok: false, reason: "monto menor al esperado" };
-  }
+/** What an order gives: credits and months of plan (0 for a top-up). */
+export function orderGrant(o: Order) {
+  const pack = PACKS.find((p) => p.id === o.item);
+  if (pack) return { credits: pack.credits, months: 0, plan: null as string | null };
+  const plan = PLANS.find((p) => p.id === o.item);
+  if (!plan) throw new Error(`plan desconocido: ${o.item}`);
+  const months = o.period === "anual" ? 12 : 1;
+  return { credits: plan.credits * months, months, plan: plan.name };
+}
 
-  const ref = `mp:${pay.id}`;
-  const pack = PACKS.find((p) => p.id === order.item);
+/** Keeps a monthly subscription at its regular price once the launch month is paid. */
+async function ensureRegularPrice(o: Order) {
+  if (o.mp?.kind !== "subscription" || !o.mp.fullClp || o.mp.fullClp <= o.mp.clp) return;
   try {
-    if (pack) {
-      await grant(order.ws, pack.credits, "topup", `Compra ${pack.credits.toLocaleString("es-CL")} créditos · ${order.id}`, "mercadopago", ref);
-      await recordIncome(order.wsName, `${pack.credits.toLocaleString("es-CL")} créditos extra · ${order.id}`, pay.amount, "CLP");
-    } else {
-      await recordPlanPayment(order.ws, order.item, order.period === "anual" ? 12 : 1, { note: order.id, amount: pay.amount, currency: "CLP", by: "mercadopago", ref });
-    }
-  } catch (err) {
-    if (err instanceof AlreadyDone) return { ok: true, already: true };
-    throw err;
+    const sub = await getPreapproval(o.mp.id);
+    if ((sub.auto_recurring?.transaction_amount ?? 0) < o.mp.fullClp && sub.status !== "cancelled") await setSubscriptionAmount(o.mp.id, o.mp.fullClp);
+  } catch (e) {
+    console.error("subscription price", o.id, e instanceof Error ? e.message : e);
   }
+}
 
-  const first = order.status === "pendiente";
-  await updateOrder(order.id, (o) => {
-    o.payments = [...(o.payments ?? []), pay.id];
-    if (o.status === "pendiente") { o.status = "pagado"; o.closed = new Date().toISOString(); }
-  });
-  // launch offer done: from the second month the subscription charges the regular price
-  if (first && order.mp?.kind === "subscription" && order.mp.fullClp && order.mp.fullClp !== order.mp.clp) {
-    await setSubscriptionAmount(order.mp.id, order.mp.fullClp).catch((e) => console.error("raise subscription amount", order.id, e instanceof Error ? e.message : e));
+/** Throws when it should be retried (unknown order, database down); returns ok:false when it must not count. */
+export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "manual" = "mp"): Promise<{ ok: boolean; already?: boolean; reason?: string }> {
+  const order = await getOrder(orderId);
+  if (!order) throw new Error(`pedido ${orderId} no encontrado`);
+  if (source === "mp") {
+    if (pay.currency !== "CLP") return { ok: false, reason: `moneda inesperada ${pay.currency}` };
+    // never below the first price we asked for (renewals are at the regular price, which is higher)
+    const floor = order.mp?.clp ?? 0;
+    if (!floor || pay.amount < floor * 0.99) {
+      console.error("payment below expected", orderId, pay.id, pay.amount, floor);
+      return { ok: false, reason: "monto menor al esperado" };
+    }
   }
+  const g = orderGrant(order);
+  const r = await applyPayment({
+    paymentId: `${source}:${pay.id}`, orderId: order.id, amount: pay.amount, currency: pay.currency,
+    credits: g.credits, months: g.months, plan: g.plan, note: `${order.quote.label} · ${order.id}`,
+  });
+  await ensureRegularPrice(order);
+  if (r === "already") return { ok: true, already: true };
+
+  await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));
   if (order.visitor) {
-    await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: "CLP", content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
+    await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
   }
   return { ok: true };
 }

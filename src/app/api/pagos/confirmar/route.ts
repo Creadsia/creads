@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { orders } from "@/lib/billing";
+import { getOrder } from "@/lib/billing";
 import { getPayment, getPreapproval } from "@/lib/mercadopago";
 import { settleOrder } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
@@ -15,7 +15,8 @@ export async function POST(req: Request) {
   const limited = await tooMany("heavy", s.user.id);
   if (limited) return limited;
   const b = await req.json().catch(() => null);
-  const order = (await orders()).find((o) => o.id === String(b?.pedido ?? "") && o.ws === s.user.workspace);
+  const found = await getOrder(String(b?.pedido ?? "")).catch(() => null);
+  const order = found && found.ws === s.user.workspace ? found : null;
   if (!order) return NextResponse.json({ error: "No encontré ese pedido." }, { status: 404 });
   try {
     if (order.status === "pagado") return NextResponse.json({ state: "pagado" });
