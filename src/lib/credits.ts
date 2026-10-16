@@ -80,14 +80,14 @@ export async function chargeJob(user: User, usd: number, note: string, ref: stri
   }
   try {
     const [rate, b] = await Promise.all([usdPerCredit(), billingOf(ws)]);
-    if (expired(b)) throw new CreditError("Tu plan venció. Escríbenos a hola@creadsia.com para renovarlo.");
+    if (expired(b)) throw new CreditError("Tu plan venció. Renuévalo en «Planes y créditos» y sigues al tiro.");
     const credits = creditsFor(usd, rate, b.discount);
     const rows = await sbRpc<{ ok: boolean; balance: number }[]>("spend_credits", {
       p_owner: ws, p_amount: credits, p_note: note.slice(0, 200), p_ref: ref, p_usd: +usd.toFixed(4), p_by: user.email, p_free: false,
     });
     const r = rows[0];
     if (!r?.ok) {
-      throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. Pide más en hola@creadsia.com.`);
+      throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes y créditos» (primer mes con 50% de descuento)." : "Suma créditos en «Planes y créditos»."}`);
     }
     return { credits, ref, free: false };
   } catch (err) {

@@ -6,6 +6,8 @@ import Composer from "./composer";
 import Pricing from "./pricing";
 import LoopVideo from "./loop-video";
 import ThemeToggle from "./theme-toggle";
+import FunnelNudges from "./funnel-nudges";
+import { LAUNCH_PCT, PLANS, clpFor } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -484,13 +486,34 @@ function AppPreview({ t }: { t: Content["preview"] }) {
   );
 }
 
-export default function Landing({ t }: { t: Content }) {
+/** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
+function fromPrice(lang: string, rate: number) {
+  const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100);
+  return lang === "es" ? `$${clpFor(usd, rate).toLocaleString("es-CL")}` : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
+}
+
+/** A thin reminder between sections: the price and one button to the plans. */
+function CtaStrip({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate: number }) {
+  return (
+    <div className={gutter}>
+      <a href="#pricing" className="group mx-auto flex max-w-7xl flex-col items-start gap-3 rounded-2xl border border-line bg-surface px-5 py-4 transition-colors hover:border-accent-text sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-[17px]">
+          {t.strip} <b className="font-display font-semibold">{fromPrice(lang, rate)}</b> <span className="text-muted">{lang === "es" ? "el primer mes" : "your first month"}</span>
+        </span>
+        <span className="shrink-0 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-bg">{t.stripCta}</span>
+      </a>
+    </div>
+  );
+}
+
+export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }) {
   const home = t.lang === "es" ? "/es" : "/";
   const other = t.lang === "es" ? "/" : "/es";
   const groups = ["video", "image", "voice", "brain"] as const;
 
   return (
-    <div className="overflow-x-clip">
+    <div className="overflow-x-clip pb-20 lg:pb-0">
+      <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} />
       {/* Offer bar: offers, news and models sliding sideways */}
       <Ticker t={t.bar} />
 
@@ -566,7 +589,7 @@ export default function Landing({ t }: { t: Content }) {
       <main className="flex flex-col gap-20 pb-20 sm:gap-24">
         {/* Hero: a dark stage. Pitch + composer on the left, a moving wall of AI clips tagged with their model on the right. */}
         <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 py-12 sm:py-16 lg:min-h-[min(820px,calc(100svh-120px))] lg:grid-cols-[1fr_1.08fr] lg:py-0">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 py-12 sm:py-16 lg:min-h-[min(820px,calc(100svh-120px))] lg:grid-cols-[1fr_1.08fr] lg:py-12">
             <div className="relative z-10 flex min-w-0 flex-col gap-7">
               <h1 className="chroma font-display text-[2.55rem] leading-[1.02] font-semibold sm:text-6xl lg:text-[4.1rem]">
                 {t.hero.title.split(/(?<=\.) /).map((part) => (
@@ -575,6 +598,20 @@ export default function Landing({ t }: { t: Content }) {
               </h1>
               <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
               <Composer t={t.composer} />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+                <a href="#pricing" className="flex shrink-0 flex-col items-center whitespace-nowrap rounded-xl bg-[image:var(--grad)] px-6 py-3.5 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">
+                  <span className="text-[17px]">{t.hero.cta}</span>
+                  <span className="text-xs font-normal text-white/85">{t.hero.from} {fromPrice(t.lang, rate)} {t.hero.firstMonth}</span>
+                </a>
+                <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+                  {t.hero.trust.map((x) => (
+                    <li key={x} className="flex items-center gap-1.5">
+                      <svg viewBox="0 0 20 20" className="h-4 w-4 text-good" aria-hidden="true"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                 <span>{t.hero.poweredBy}</span>
                 {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
@@ -626,6 +663,14 @@ export default function Landing({ t }: { t: Content }) {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="pricing" aria-labelledby="pricing-title" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-10">
+            <SectionHead id="pricing-title" title={t.pricing.title} lead={t.pricing.lead} />
+            <Pricing t={t.pricing} lang={t.lang} rate={rate} />
+          </div>
+        </section>
+
         {/* Tools: every tool with a picture of what it does and the models behind it */}
         <section aria-labelledby="tools" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-6">
@@ -660,6 +705,8 @@ export default function Landing({ t }: { t: Content }) {
           </div>
         </section>
 
+
+        <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
 
         {/* App preview */}
         <section aria-labelledby="preview" className={gutter}>
@@ -726,6 +773,8 @@ export default function Landing({ t }: { t: Content }) {
             </div>
           </div>
         </section>
+
+        <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
 
         {/* Difference */}
         <section aria-labelledby="how" className={`scroll-mt-24 ${gutter}`}>
@@ -798,14 +847,6 @@ export default function Landing({ t }: { t: Content }) {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section id="pricing" aria-labelledby="pricing-title" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-10">
-            <SectionHead id="pricing-title" title={t.pricing.title} lead={t.pricing.lead} />
-            <Pricing t={t.pricing} form={t.form} lang={t.lang} />
           </div>
         </section>
 
@@ -919,9 +960,12 @@ export default function Landing({ t }: { t: Content }) {
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30 blur-[90px]" style={{ background: "var(--grad)" }} />
             <h2 className="relative max-w-3xl text-[2.2rem] font-black [font-stretch:118%] sm:text-6xl">{t.start.title}</h2>
             <p className="relative max-w-[52ch] text-lg text-muted">{t.start.lead}</p>
-            <a href="#pricing" className="relative rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white">
-              {t.nav.cta}
-            </a>
+            <div className="relative flex flex-col items-center gap-3 sm:flex-row">
+              <a href="/empezar?plan=plus&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">
+                {t.start.cta}
+              </a>
+              <a href="#pricing" className="rounded-xl border border-line px-6 py-3.5 font-semibold hover:bg-surface-2">{t.start.see}</a>
+            </div>
           </div>
         </section>
       </main>

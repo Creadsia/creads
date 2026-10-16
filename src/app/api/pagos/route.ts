@@ -2,23 +2,19 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { addOrder, hasPaidBefore, ordersOf, setOrderMp, workspaceRow } from "@/lib/billing";
 import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
-import { DEFAULT_FINANZAS, type Finanzas } from "@/lib/finance";
+import { usdClpRate } from "@/lib/usd-clp";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { createPreference, createSubscription, mpReady } from "@/lib/mercadopago";
 import { tooMany } from "@/lib/rate";
-import { readPrivateJSON } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 // The customer's side of payments. With Mercado Pago connected (MP_ACCESS_TOKEN), "Tarjeta o Mercado
 // Pago" sends the customer to pay online: monthly plans become a monthly subscription, yearly plans
-// and credit top-ups a one-time payment. Transfers are completed by hand from the owner's panel.
+// and credit top-ups a one-time payment. Without it, orders wait in the owner's panel.
 // The amount is always computed here, never taken from the browser.
 
-const usdClp = async () => {
-  const book = await readPrivateJSON<Finanzas>("finanzas.json").catch(() => null);
-  return Number(book?.config?.usdClp) > 0 ? Number(book!.config.usdClp) : DEFAULT_FINANZAS.config.usdClp;
-};
+const usdClp = usdClpRate;
 
 export async function GET(req: Request) {
   const s = await session(req);
@@ -46,7 +42,7 @@ export async function POST(req: Request) {
   if (limited) return limited;
   const b = await req.json().catch(() => null);
   const period: Period = b?.period === "anual" ? "anual" : "mensual";
-  const method = METHODS.find((m) => m.id === b?.method)?.id as MethodId | undefined;
+  const method = METHODS.find((m) => m.id === (b?.method ?? "mercadopago"))?.id as MethodId | undefined;
   if (!method) return NextResponse.json({ error: "Elige cómo quieres pagar." }, { status: 400 });
   const ws = s.user.workspace;
   if (ws === "main") return NextResponse.json({ error: "Esta es la vista de cliente: tu cuenta no paga." }, { status: 400 });

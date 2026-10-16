@@ -352,7 +352,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
             {busy ? "Iniciando…" : `${t.name} · ${money(usd)}`}
           </button>
           {missing && <p className="text-xs text-muted">{missing}</p>}
-          {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. Pide más en hola@creadsia.com.</p>}
+          {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. <a href="/app/planes" className="font-semibold underline">Suma créditos</a>.</p>}
           {err && <p className="text-sm text-bad">{err}</p>}
         </div>
       </section>

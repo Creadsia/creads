@@ -798,7 +798,7 @@ function Facturacion({ c, planes, reload }: { c: Cliente; planes: Plan[]; reload
               {[1, 2, 3, 6, 12].map((m) => <option key={m} value={m}>{m === 12 ? "12 (anual)" : m}</option>)}
             </select>
           </Field>
-          <Field label="Nota (opcional)"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej: transferencia 16/10" className={input} /></Field>
+          <Field label="Nota (opcional)"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej: pago acordado 16/10" className={input} /></Field>
           <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" checked={ingreso} onChange={(e) => setIngreso(e.target.checked)} /> Anotar US${price.toFixed(0)} como ingreso</label>
           <button type="submit" disabled={busy || !p} className={btn}>{busy ? "Guardando…" : `Dar ${p ? (p.creditos * months).toLocaleString("es-CL") : 0} créditos`}</button>
         </form>
@@ -859,7 +859,7 @@ function Pedidos({ reload }: { reload: () => void }) {
         <h3 className="font-display text-lg font-bold">Pedidos de pago {open.length > 0 && <Pill t="warn">{open.length} por cobrar</Pill>}</h3>
         <button type="button" onClick={() => setAll(!all)} className="text-sm text-muted hover:text-ink">{all ? "Ver solo pendientes" : "Ver todos"}</button>
       </div>
-      <p className="text-sm text-muted">Lo que tus clientes pidieron en «Planes y créditos». Cobra por transferencia o link de pago y después márcalo como pagado: los créditos y el ingreso se anotan solos.</p>
+      <p className="text-sm text-muted">Lo que tus clientes pidieron en «Planes y créditos». Con Mercado Pago conectado se pagan y activan solos; si alguno queda pendiente, puedes marcarlo como pagado a mano: los créditos y el ingreso se anotan solos.</p>
       {!list ? <p className="text-muted">Cargando…</p> : shown.length === 0 ? <p className="text-sm text-muted">No hay pedidos pendientes.</p> : (
         <ul className="flex flex-col divide-y divide-line rounded-lg border border-line">
           {shown.map((o) => (

@@ -142,6 +142,27 @@ function CreditsBox() {
   );
 }
 
+/** Customers without a plan or credits: what to do next, on every screen but the plans page. */
+function ActivatePlan() {
+  const { info } = useCredits();
+  if (!info || info.unlimited) return null;
+  const empty = (info.balance ?? 0) <= 0;
+  if (!empty && !info.expired) return null;
+  const never = !info.plan && !info.paidUntil;
+  return (
+    <Link href="/app/planes" className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <span aria-hidden="true" className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full opacity-40 blur-[60px]" style={{ background: "var(--grad)" }} />
+      <span className="relative flex flex-col gap-0.5">
+        <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
+        <span className="text-sm text-muted">
+          {never ? "Puedes recorrer todo el estudio. Para generar videos, imágenes y voces, elige un plan: el primer mes va con 50% de descuento." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
+        </span>
+      </span>
+      <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes con −50%" : info.expired ? "Renovar plan" : "Comprar créditos"}</span>
+    </Link>
+  );
+}
+
 /** Owner only: a thin warning when a service is running out of money. */
 function MoneyAlerts() {
   const [alerts, setAlerts] = useState<{ service: string; name: string; text: string }[]>([]);
@@ -213,7 +234,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       )}
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6">{user.owner && <MoneyAlerts />}{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
     </div>
   );

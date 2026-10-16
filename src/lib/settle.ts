@@ -15,6 +15,8 @@ export interface Paid { id: string; amount: number; currency: string }
 export function orderGrant(o: Order) {
   const pack = PACKS.find((p) => p.id === o.item);
   if (pack) return { credits: pack.credits, months: 0, plan: null as string | null };
+  // a pack that's no longer sold: the credits stored in the order when it was placed
+  if (o.item.startsWith("pack-") && Number(o.quote?.credits) > 0) return { credits: Number(o.quote.credits), months: 0, plan: null as string | null };
   const plan = PLANS.find((p) => p.id === o.item);
   if (!plan) throw new Error(`plan desconocido: ${o.item}`);
   const months = o.period === "anual" ? 12 : 1;

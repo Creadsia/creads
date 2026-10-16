@@ -14,6 +14,7 @@ const BUCKETS = {
   gen: [10 * 60, 60], // paid generations per person in 10 min
   heavy: [10 * 60, 15], // montage and voice cloning per person in 10 min
   upload: [10 * 60, 120],
+  signup: [60 * 60, 5], // new accounts per connection per hour
 } as const;
 export type Bucket = keyof typeof BUCKETS;
 
@@ -42,6 +43,7 @@ const MSG: Record<Bucket, string> = {
   gen: "Vas muy rápido: espera unos minutos y sigue.",
   heavy: "Vas muy rápido: espera unos minutos y sigue.",
   upload: "Demasiadas subidas seguidas: espera unos minutos.",
+  signup: "Ya se crearon varias cuentas desde esta conexión. Espera una hora o escríbenos a hola@creadsia.com.",
 };
 
 /** A 429 response when over the limit, otherwise null. */

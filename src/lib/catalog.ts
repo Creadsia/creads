@@ -4,7 +4,7 @@ import { es } from "@/content/es";
 // (to show prices) and the server (to compute the amount of an order), so both always agree.
 
 export type Period = "mensual" | "anual";
-export type ItemId = "starter" | "plus" | "studio" | "pack-500" | "pack-1500" | "pack-5000";
+export type ItemId = "starter" | "plus" | "studio" | "pack-500" | "pack-2000" | "pack-5000";
 
 export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,
@@ -16,10 +16,11 @@ export const PLANS = es.pricing.plans.map((p) => ({
   features: p.features,
 }));
 
+// Same packs and prices as the website (content/*.ts → pricing.topups).
 export const PACKS = [
-  { id: "pack-500" as ItemId, credits: 500, usd: 29, note: "Para terminar el mes" },
-  { id: "pack-1500" as ItemId, credits: 1500, usd: 79, note: "El más pedido" },
-  { id: "pack-5000" as ItemId, credits: 5000, usd: 229, note: "Para agencias" },
+  { id: "pack-500" as ItemId, credits: 500, usd: 25, note: "Para terminar el mes" },
+  { id: "pack-2000" as ItemId, credits: 2000, usd: 89, note: "El más pedido" },
+  { id: "pack-5000" as ItemId, credits: 5000, usd: 209, note: "Para agencias" },
 ];
 
 /** Launch offer: 50% off the first month of a monthly plan. */
@@ -64,6 +65,5 @@ export function clpFor(usd: number, usdClp = 950) {
 
 export const METHODS = [
   { id: "mercadopago", name: "Tarjeta o Mercado Pago", hint: "Crédito, débito o saldo de Mercado Pago, en pesos chilenos. Pagas en la ventana segura de Mercado Pago: Creads nunca ve tu tarjeta." },
-  { id: "transferencia", name: "Transferencia bancaria", hint: "Te enviamos los datos por correo y activamos tu plan apenas llegue el pago." },
 ] as const;
 export type MethodId = (typeof METHODS)[number]["id"];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, METHODS, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { type ItemId, LAUNCH_PCT, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { newEventId, track } from "@/lib/track";
@@ -34,7 +34,7 @@ export default function Planes() {
   const [tab, setTab] = useState<"planes" | "creditos">("planes");
   const [period, setPeriod] = useState<Period>("mensual");
   const [item, setItem] = useState<ItemId | null>(null);
-  const [method, setMethod] = useState<MethodId>("mercadopago");
+  const method: MethodId = "mercadopago";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState<{ id: string; label: string; total: number; method: MethodId } | null>(null);
@@ -46,6 +46,15 @@ export default function Planes() {
     // back from Mercado Pago: check the payment right away
     const sp = new URLSearchParams(window.location.search);
     const pedido = sp.get("pedido");
+    // arriving from the website with a plan already chosen (/app/planes?plan=plus&periodo=anual)
+    const want = sp.get("plan") as ItemId | null;
+    if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
+      if (PACKS.some((x) => x.id === want)) setTab("creditos");
+      if (sp.get("periodo") === "anual") setPeriod("anual");
+      setItem(want);
+      requestAnimationFrame(() => setTimeout(() => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300));
+      window.history.replaceState(null, "", "/app/planes");
+    }
     if (sp.get("pago") === "volver" && pedido) {
       setBack({ state: "revisando", id: pedido });
       fetch("/api/pagos/confirmar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pedido, payment_id: sp.get("payment_id") ?? sp.get("collection_id"), preapproval_id: sp.get("preapproval_id") }) })
@@ -144,9 +153,7 @@ export default function Planes() {
           <p className="text-sm">
             {pay?.online
               ? "Te llevamos a la ventana de pago."
-              : done.method === "transferencia"
-                ? "Te enviaremos los datos para transferir a tu correo. Apenas llegue el pago, tus créditos aparecen aquí."
-                : "El pago en línea se activa muy pronto. Te escribimos a tu correo con un link de pago seguro; apenas pagues, tus créditos aparecen aquí."}
+              : "El pago en línea se activa muy pronto. Te escribimos a tu correo con un link de pago seguro; apenas pagues, tus créditos aparecen aquí."}
           </p>
           <p className="text-xs text-muted">¿Dudas? Escríbenos a hola@creadsia.com con tu número de pedido.</p>
         </section>
@@ -220,18 +227,19 @@ export default function Planes() {
       {q && (
         <form id="checkout" onSubmit={checkout} className="grid scroll-mt-20 gap-4 lg:grid-cols-[1fr_minmax(0,380px)]">
           <section className={`${cardCls} lg:self-start`} aria-labelledby="pm">
-            <h2 id="pm" className="font-display text-lg font-bold">¿Cómo quieres pagar?</h2>
-            <div role="radiogroup" aria-labelledby="pm" className="flex flex-col gap-2">
-              {METHODS.map((m) => (
-                <label key={m.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 ${method === m.id ? "border-accent-text/70 bg-accent/10" : "border-line"}`}>
-                  <input type="radio" name="method" value={m.id} checked={method === m.id} onChange={() => setMethod(m.id)} className="mt-1" />
-                  <span className="flex flex-col gap-0.5">
-                    <b className="text-sm">{m.name}</b>
-                    <span className="text-xs text-muted">{m.hint}</span>
-                  </span>
-                </label>
-              ))}
+            <h2 id="pm" className="font-display text-lg font-bold">Pagas con Mercado Pago</h2>
+            <div className="flex flex-col gap-2 rounded-xl border border-accent-text/50 bg-accent/10 p-4">
+              <b className="text-sm">Tarjeta de crédito, débito o saldo Mercado Pago</b>
+              <span className="text-sm text-muted">Pagas en pesos chilenos en la ventana segura de Mercado Pago y vuelves aquí con tus créditos ya cargados.</span>
+              <ul className="mt-1 flex flex-wrap gap-1.5 text-xs font-semibold">
+                {["Visa", "Mastercard", "American Express", "Redcompra", "Saldo Mercado Pago"].map((x) => <li key={x} className="rounded-md border border-line bg-surface px-2 py-1">{x}</li>)}
+              </ul>
             </div>
+            <ul className="flex flex-col gap-1.5 text-sm">
+              <li className="flex gap-2"><Check />Créditos cargados al instante, apenas se aprueba el pago.</li>
+              <li className="flex gap-2"><Check />Cancelas la renovación con un clic, sin llamar a nadie.</li>
+              <li className="flex gap-2"><Check />Comprobante de Mercado Pago a tu correo.</li>
+            </ul>
             <p className="flex items-center gap-2 text-xs text-muted">
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>
               Pago cifrado. Creads nunca ve ni guarda los datos de tu tarjeta.
@@ -245,14 +253,14 @@ export default function Planes() {
               {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{usd(q.launch)}</dd></div>}
               {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{usd(q.discount)}</dd></div>}
               <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{usd(q.total)}</dd></div>
-              <div className="flex justify-between gap-3 text-sm"><dt>{method === "mercadopago" ? "Pagas en pesos chilenos" : "En pesos chilenos"}</dt><dd className="font-mono font-semibold">{pesos(clpFor(q.total, rate))}</dd></div>
+              <div className="flex justify-between gap-3 text-sm"><dt>Pagas en pesos chilenos</dt><dd className="font-mono font-semibold">{pesos(clpFor(q.total, rate))}</dd></div>
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{method === "mercadopago" ? `Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). ` : `Desde el segundo mes: ${usd(m)}/mes. `}Cancela cuando quieras.</p>; })()}
-            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : method === "mercadopago" && pay?.online ? `Pagar ${pesos(clpFor(q.total, rate))} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
-            {pay?.online && method === "mercadopago" && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{`Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). `}Cancela cuando quieras.</p>; })()}
+            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${pesos(clpFor(q.total, rate))} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
+            {pay?.online && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
-            {!pay?.online && !pay?.owner && method === "mercadopago" && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
+            {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
             <button type="button" onClick={() => setItem(null)} className="text-xs text-muted underline">Cancelar</button>
             {err && <p className="text-sm text-bad" role="alert">{err}</p>}
           </aside>

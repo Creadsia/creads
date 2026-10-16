@@ -248,7 +248,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
                   <button type="button" disabled={!scenes || !m?.configured || !covers(usd)} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
-                  {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o pide más en hola@creadsia.com.</span>}
+                  {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o <a href="/app/planes" className="font-semibold underline">suma créditos</a>.</span>}
                 </div>
               ) : (
                 <div className="flex flex-col gap-3 rounded-xl border border-warn/50 bg-warn/10 p-4 text-sm">

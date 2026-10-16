@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { es } from "@/content/es";
 import Landing from "../landing";
+import { usdClpRate } from "@/lib/usd-clp";
+
+export const revalidate = 3600; // prices in pesos follow the dollar rate set in Finanzas
 
 export const metadata: Metadata = {
   title: es.meta.title,
@@ -9,10 +12,11 @@ export const metadata: Metadata = {
   openGraph: { title: es.meta.title, description: es.meta.description, url: "/es", locale: "es_CL" },
 };
 
-export default function HomeEs() {
+export default async function HomeEs() {
+  const rate = await usdClpRate().catch(() => 950);
   return (
     <div lang="es">
-      <Landing t={es} />
+      <Landing t={es} rate={rate} />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
       body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password, code: need2fa ? otp : undefined }),
     });
     const d = await res.json().catch(() => ({}));
-    if (res.ok) { window.location.href = "/app"; return; }
+    if (res.ok) { window.location.reload(); return; } // same page: keeps a plan chosen on the website
     if (d.need2fa) setNeed2fa(true);
     setError(d.error || "No se pudo entrar.");
     setBusy(false);
@@ -107,12 +107,18 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
           {error && <p className="text-sm text-bad">{error}</p>}
           {mode === "login" && (
             <p className="text-xs text-muted">
-              ¿Olvidaste tu clave? Si eres parte de un equipo, pídele una nueva al dueño.{" "}
+              ¿Olvidaste tu clave? Escríbenos a hola@creadsia.com desde el correo de tu cuenta.{" "}
               <button type="button" onClick={() => { setMode("recover"); setError(""); }} className="font-semibold text-accent-text underline">Soy el dueño</button>
             </p>
           )}
           {mode === "recover" && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
         </form>
+      )}
+      {mode === "login" && (
+        <a href="/empezar" className="flex w-full max-w-sm items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-5 py-4 text-sm hover:border-accent-text">
+          <span><b className="block">¿Todavía no tienes cuenta?</b><span className="text-muted">Elige un plan con 50% de descuento el primer mes.</span></span>
+          <span className="shrink-0 rounded-lg bg-[image:var(--grad)] px-3 py-2 font-semibold text-white">Crear cuenta</span>
+        </a>
       )}
     </main>
   );
