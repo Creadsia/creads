@@ -26,10 +26,10 @@ export const es: Content = {
     { label: "Imagen", href: "#tools", badge: "" },
     { label: "Video", href: "#tools", badge: "" },
     { label: "Audio", href: "#tools", badge: "" },
-    { label: "Influencer IA", href: "#tools", badge: "NUEVO" },
+    { label: "Influencer IA", href: "#tools", badge: "" },
     { label: "Apps", href: "#studios", badge: "" },
-    { label: "API", href: "#tools", badge: "PRONTO" },
-    { label: "Afiliados", href: "#afiliados", badge: "PRONTO" },
+    { label: "API", href: "#tools", badge: "" },
+    { label: "Afiliados", href: "#afiliados", badge: "" },
     { label: "Precios", href: "#pricing", badge: "-50%" },
   ],
   featured: {
@@ -279,7 +279,7 @@ export const es: Content = {
     langText: "Crea en inglés para vender en Estados Unidos o en español para Latinoamérica. La plataforma, los guiones y el soporte funcionan en los dos idiomas.",
   },
   affiliates: {
-    badge: "PRONTO",
+    badge: "",
     title: "Gana dinero recomendando Creads IA",
     lead: "Si tienes audiencia, una agencia o compras tráfico, corre Creads IA como oferta y cobra una comisión cada mes por cada cliente que traigas, mientras siga suscrito.",
     steps: [

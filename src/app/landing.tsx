@@ -231,9 +231,9 @@ export default function Landing({ t }: { t: Content }) {
       <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
         <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
           <Logo href={home} />
-          <nav aria-label="Main" className="hidden items-center gap-1 text-[15px] lg:flex">
+          <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] xl:flex">
             {t.menu.map((m) => (
-              <a key={m.label} href={m.href} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-muted transition-colors hover:bg-surface hover:text-ink">
+              <a key={m.label} href={m.href} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted transition-colors hover:bg-surface hover:text-ink">
                 {m.label}
                 {m.badge && (
                   <span
@@ -281,7 +281,7 @@ export default function Landing({ t }: { t: Content }) {
           </div>
         </div>
         {/* phone: the same menu as a scrollable row */}
-        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm lg:hidden ${gutter}`}>
+        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm xl:hidden ${gutter}`}>
           {t.menu.map((m) => (
             <a key={m.label} href={m.href} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted">
               {m.label}
@@ -628,7 +628,7 @@ export default function Landing({ t }: { t: Content }) {
           <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
             <div className="flex min-w-0 flex-col gap-8">
               <div className="flex flex-col gap-4">
-                <span className="w-fit rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.affiliates.badge}</span>
+                {t.affiliates.badge && <span className="w-fit rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.affiliates.badge}</span>}
                 <h2 id="afiliados-title" className="chroma font-display text-[2.3rem] leading-[1.04] font-semibold sm:text-6xl">{t.affiliates.title}</h2>
                 <p className="max-w-[54ch] text-lg text-muted">{t.affiliates.lead}</p>
               </div>

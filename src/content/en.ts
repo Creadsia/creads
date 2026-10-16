@@ -25,10 +25,10 @@ export const en = {
     { label: "Image", href: "#tools", badge: "" },
     { label: "Video", href: "#tools", badge: "" },
     { label: "Audio", href: "#tools", badge: "" },
-    { label: "AI Influencer", href: "#tools", badge: "NEW" },
+    { label: "AI Influencer", href: "#tools", badge: "" },
     { label: "Apps", href: "#studios", badge: "" },
-    { label: "API", href: "#tools", badge: "SOON" },
-    { label: "Affiliates", href: "#afiliados", badge: "SOON" },
+    { label: "API", href: "#tools", badge: "" },
+    { label: "Affiliates", href: "#afiliados", badge: "" },
     { label: "Pricing", href: "#pricing", badge: "-50%" },
   ],
   featured: {
@@ -278,7 +278,7 @@ export const en = {
     langText: "Create in English for the US market or in Spanish for Latin America. The whole platform, scripts and support work in both languages.",
   },
   affiliates: {
-    badge: "SOON",
+    badge: "",
     title: "Earn money recommending Creads IA",
     lead: "Got an audience, an agency or buy traffic? Run Creads IA as an offer and earn a commission every month for each customer you bring, for as long as they stay subscribed.",
     steps: [
