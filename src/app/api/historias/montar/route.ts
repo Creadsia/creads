@@ -17,7 +17,7 @@ export const maxDuration = 300;
 const USD_PER_CHAR = 0.00022; // same as "Voz IA"
 const musicUsd = (secs: number) => +((0.15 * Math.max(secs, 15)) / 60).toFixed(3);
 
-// POST {adId, newMusic?, music?, subtitles?}: makes the soundtrack (once; again with newMusic), the narrator's lines
+// POST {adId, newMusic?, music?, subtitles?, partial?}: (partial: leave out the shots that aren't ready) makes the soundtrack (once; again with newMusic), the narrator's lines
 // if the story has a narrator, and cuts the film. The finished film goes to "Anuncios terminados".
 export async function POST(req: Request) {
   const s = await fullSession(req);
@@ -30,9 +30,11 @@ export async function POST(req: Request) {
   if (!found) return NextResponse.json({ error: "Historia no encontrada." }, { status: 404 });
   const { ad, st } = found;
   const ws = s.user.workspace;
-  const clips = (await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as { idx: number; url: string | null; status: string }[];
-  if (!clips.length || clips.some((c) => c.status !== "done" || !c.url)) return NextResponse.json({ error: "Espera a que todas las tomas estén animadas." }, { status: 400 });
-  const total = st.plan.shots.reduce((a, x) => a + x.seconds, 0);
+  const all = (await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as { idx: number; url: string | null; status: string }[];
+  const ready = all.filter((c) => c.status === "done" && c.url);
+  const clips = b?.partial === true ? ready : all;
+  if (ready.length < 2 || clips.some((c) => c.status !== "done" || !c.url)) return NextResponse.json({ error: "Faltan tomas por animar. Anímalas o arma la película solo con las listas." }, { status: 400 });
+  const total = clips.reduce((a, c) => a + (st.plan.shots[c.idx]?.seconds ?? 2.5), 0);
 
   // 1. music (paid once; "otra música" makes a new one)
   if (typeof b?.music === "string" && b.music.trim().length > 5) st.plan.music = b.music.trim().slice(0, 600);

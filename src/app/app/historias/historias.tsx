@@ -284,7 +284,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const missingSheets = plan.characters.filter((c) => !c.image_url);
   const missingFrames = clips.filter((c) => !c.image_url);
   const toAnimate = clips.filter((c) => c.image_url && (c.status === "pending" || c.status === "failed"));
-  const montar = (newMusic = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music, subtitles }));
+  const montar = (newMusic = false, partial = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial }));
   const est = m ? estimateStory({ characters: plan.characters.length, shots: plan.shots.length, videoSecondsPerShot: shotSecs(st.seconds / plan.shots.length), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds: st.seconds }) : null;
 
   return (
@@ -443,7 +443,21 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             {busy.film ? "Armando la película… (≈ 1 min)" : ad.final_url ? "Volver a armar" : "Armar la película"}
           </button>
           {st.music_url && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>Otra música</button>}
-          {!allDone && <span className="text-sm text-muted">Se habilita cuando todas las tomas estén animadas.</span>}
+          {!allDone && clips.filter((c) => c.status === "done" && c.url).length >= 2 && (
+            <button type="button" disabled={busy.film} onClick={() => montar(false, true)} className={ghostCls}>Armar solo con las {clips.filter((c) => c.status === "done" && c.url).length} tomas listas</button>
+          )}
+        </div>
+        {!allDone && (
+          <div className="rounded-xl bg-surface-2 px-4 py-3 text-sm">
+            <b>Faltan {clips.filter((c) => !(c.status === "done" && c.url)).length} tomas para la película completa:</b>
+            <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-muted">
+              {clips.filter((c) => !(c.status === "done" && c.url)).map((c) => (
+                <li key={c.id}>#{c.idx + 1}: {!c.image_url ? "falta la imagen" : c.status === "failed" ? "error, aprieta Animar de nuevo" : c.status === "generating" || c.status === "starting" || c.status === "syncing" ? "animándose" : "falta animar"}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="hidden">
         </div>
         {ad.final_url && <FinalFilm refUrl={ad.final_url} aspect={ad.aspect} />}
       </section>
