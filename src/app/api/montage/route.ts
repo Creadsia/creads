@@ -3,7 +3,7 @@ import path from "node:path";
 import { checkAccess } from "@/lib/access";
 import { db } from "@/lib/db";
 import { formatById } from "@/lib/formats";
-import { type BuildClip, build, captions, download, frameSize, probe, selfCheck, trimPoints, workdir } from "@/lib/montage";
+import { type BuildClip, build, captions, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { uploadMedia } from "@/lib/supabase";
 import type { Word } from "@/lib/textmatch";
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const timeline: Word[] = [];
     for (const p of prepared) {
       for (const w of p.words) if (w.s >= p.clip.a - 0.05 && w.e <= p.clip.b + 0.3) timeline.push({ w: w.w, s: Math.max(0, w.s - p.clip.a) + offset, e: Math.max(0, Math.min(w.e, p.clip.b) - p.clip.a) + offset });
-      offset += p.clip.b - p.clip.a;
+      offset += segLen(p.clip);
     }
     const [W, H] = frameSize(aspect);
     const cap = withCaptions && timeline.length ? captions(timeline, W, H, aspect, { preset, size }) : null;

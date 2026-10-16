@@ -138,23 +138,40 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
 export const frameSize = (aspect: string): [number, number] =>
   aspect === "1:1" ? [720, 720] : aspect === "16:9" ? [1280, 720] : aspect === "4:5" ? [720, 900] : [720, 1280];
 
-export interface BuildClip { file: string; a: number; b: number; audio: boolean }
+export interface BuildClip {
+  file: string;
+  a: number; // where speech starts in the clip
+  b: number; // where it ends
+  audio: boolean;
+  /** Voice-over formats: a separate narration track that sets the length of this segment. */
+  voice?: { file: string; a: number; b: number };
+}
+
+/** How long a clip lasts in the final ad. */
+export const segLen = (c: BuildClip) => (c.voice ? c.voice.b - c.voice.a : c.b - c.a);
 
 /** Joins the trimmed clips and burns the captions in one encode. Returns the mp4 bytes. */
 export async function build(dir: string, clips: BuildClip[], aspect: string, assText: string | null) {
   const [W, H] = frameSize(aspect);
   const args: string[] = ["-y", "-v", "error"];
-  clips.forEach((c) => args.push("-ss", c.a.toFixed(3), "-to", c.b.toFixed(3), "-i", c.file));
-  const silent: number[] = [];
-  clips.forEach((c, i) => {
-    if (!c.audio) { silent[i] = clips.length + silent.filter((x) => x !== undefined).length; args.push("-f", "lavfi", "-t", (c.b - c.a).toFixed(3), "-i", "anullsrc=r=44100:cl=stereo"); }
-  });
   const VF = `fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1`;
   const parts: string[] = [];
+  let n = 0;
   clips.forEach((c, i) => {
-    parts.push(`[${i}:v]${VF},setpts=PTS-STARTPTS[v${i}]`);
-    const src = c.audio ? `${i}:a` : `${silent[i]}:a`;
-    parts.push(`[${src}]aresample=44100,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a${i}]`);
+    const L = segLen(c).toFixed(3);
+    if (c.voice) {
+      // the picture runs from the start of the clip and holds its last frame if the narration is longer
+      const vi = n++; args.push("-i", c.file);
+      const ai = n++; args.push("-ss", c.voice.a.toFixed(3), "-to", c.voice.b.toFixed(3), "-i", c.voice.file);
+      parts.push(`[${vi}:v]${VF},tpad=stop_mode=clone:stop_duration=30,trim=duration=${L},setpts=PTS-STARTPTS[v${i}]`);
+      parts.push(`[${ai}:a]aresample=44100,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a${i}]`);
+      return;
+    }
+    const vi = n++; args.push("-ss", c.a.toFixed(3), "-to", c.b.toFixed(3), "-i", c.file);
+    let ai = vi;
+    if (!c.audio) { ai = n++; args.push("-f", "lavfi", "-t", L, "-i", "anullsrc=r=44100:cl=stereo"); }
+    parts.push(`[${vi}:v]${VF},setpts=PTS-STARTPTS[v${i}]`);
+    parts.push(`[${ai}:a]aresample=44100,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a${i}]`);
   });
   parts.push(`${clips.map((_, i) => `[v${i}][a${i}]`).join("")}concat=n=${clips.length}:v=1:a=1[vc][ac]`);
   if (assText) {
