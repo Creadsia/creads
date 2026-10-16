@@ -14,6 +14,7 @@ export const es: Content = {
     pricing: "Precios",
     faq: "Preguntas",
     cta: "Empezar",
+    login: "Entrar",
     switchTo: "EN",
     switchLabel: "View in English",
   },

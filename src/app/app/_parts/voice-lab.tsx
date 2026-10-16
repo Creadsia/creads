@@ -89,8 +89,7 @@ export default function VoiceLab({ code }: { code: string }) {
         )}
       </div>
 
-      {!code && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">👆 Escribe tu código de acceso arriba para cargar las voces.</p>}
-      {loadErr && <p className="text-sm text-bad">{loadErr}</p>}
+            {loadErr && <p className="text-sm text-bad">{loadErr}</p>}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">

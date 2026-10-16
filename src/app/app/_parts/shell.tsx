@@ -1,0 +1,167 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Logo } from "../../brand";
+import ThemeToggle from "../../theme-toggle";
+
+// The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
+
+const I = {
+  home: "M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10",
+  spy: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9.5 16.5L16 16",
+  create: "M12 5v14M5 12h14",
+  film: "M4 5h16v14H4zM8 5v14M16 5v14M4 9.5h4M16 9.5h4M4 14.5h4M16 14.5h4",
+  image: "M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15.5 9.5h.01",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0",
+  box: "M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8",
+  mic: "M12 4a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V7a3 3 0 0 0-3-3Zm-6 8a6 6 0 0 0 12 0M12 18v3",
+  lib: "M5 4h4v16H5zM10 4h4v16h-4zM15.5 4.5l3.8 1-3.6 15-3.8-1",
+  brain: "M12 5a3 3 0 0 0-5.6 1.5A3 3 0 0 0 5 12a3 3 0 0 0 2 5.5A3 3 0 0 0 12 19M12 5a3 3 0 0 1 5.6 1.5A3 3 0 0 1 19 12a3 3 0 0 1-2 5.5A3 3 0 0 1 12 19M12 5v14",
+  lab: "M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3M7.5 14h9",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  close: "M6 6l12 12M18 6 6 18",
+};
+
+function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
+const NAV: { group?: string; items: { href: string; label: string; icon: string; soon?: boolean }[] }[] = [
+  { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
+  { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true }] },
+  {
+    group: "Producir",
+    items: [
+      { href: "/app/crear", label: "Crear anuncio", icon: I.create },
+      { href: "/app/videos", label: "Videos", icon: I.film },
+      { href: "/app/laboratorio", label: "Probar modelos", icon: I.lab },
+    ],
+  },
+  {
+    group: "Tu marca",
+    items: [
+      { href: "/app/avatares", label: "Avatares", icon: I.user },
+      { href: "/app/productos", label: "Productos", icon: I.box },
+      { href: "/app/voces", label: "Voces", icon: I.mic },
+    ],
+  },
+  {
+    group: "Biblioteca",
+    items: [
+      { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
+      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain },
+    ],
+  },
+];
+
+function Nav({ path, onPick }: { path: string; onPick?: () => void }) {
+  return (
+    <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
+      {NAV.map((g, i) => (
+        <div key={i} className="flex flex-col gap-0.5">
+          {g.group && <span className="px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}</span>}
+          {g.items.map((it) => {
+            const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
+            return (
+              <Link key={it.href} href={it.href} onClick={onPick} aria-current={on ? "page" : undefined}
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
+                <Icon d={it.icon} />
+                <span className="flex-1">{it.label}</span>
+                {it.soon && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted">PRONTO</span>}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function Status() {
+  const [h, setH] = useState<{ providers: { claude: boolean; database: boolean; video: Record<string, boolean>; image: Record<string, boolean>; voice: Record<string, boolean> } } | null>(null);
+  useEffect(() => { fetch("/api/health").then((r) => r.json()).then(setH).catch(() => {}); }, []);
+  if (!h) return null;
+  const p = h.providers;
+  const any = (o: Record<string, boolean>) => Object.values(o).some(Boolean);
+  const items: [string, boolean][] = [["Base de datos", p.database], ["Claude", p.claude], ["Video", any(p.video)], ["Imagen", any(p.image)], ["Voz", any(p.voice)]];
+  return (
+    <ul className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted" aria-label="Estado de los servicios">
+      {items.map(([k, ok]) => (
+        <li key={k} className="flex items-center gap-1.5">
+          <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-good" : "bg-warn"}`} aria-hidden="true" />
+          {k}<span className="sr-only">{ok ? " conectado" : " sin conectar"}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+async function logout() {
+  await fetch("/api/access", { method: "DELETE" });
+  window.location.href = "/app";
+}
+
+export default function Shell({ children }: { children: React.ReactNode }) {
+  const path = usePathname() ?? "/app";
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [path]);
+
+  const footer = (
+    <div className="flex flex-col gap-3 border-t border-line pt-4">
+      <div className="rounded-xl bg-surface-2 p-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs font-semibold text-muted">Créditos</span>
+          <span className="font-mono text-sm font-bold">Beta</span>
+        </div>
+        <p className="mt-1 text-xs text-muted">Durante la beta no se descuentan créditos.</p>
+      </div>
+      <Status />
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={logout} className="text-xs text-muted hover:text-ink">Salir</button>
+        <ThemeToggle lang="es" />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen lg:grid lg:grid-cols-[248px_1fr]">
+      {/* desktop menu */}
+      <aside className="sticky top-0 hidden h-screen flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 lg:flex">
+        <div className="px-2"><Logo size={26} href="/app" /></div>
+        <div className="flex-1"><Nav path={path} /></div>
+        {footer}
+      </aside>
+
+      {/* phone top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
+        <Logo size={24} href="/app" />
+        <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
+          <Icon d={I.menu} />
+        </button>
+      </header>
+      {open && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
+          <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-y-0 left-0 flex w-[min(300px,85vw)] flex-col gap-6 overflow-y-auto bg-surface px-3 py-5">
+            <div className="flex items-center justify-between px-2">
+              <Logo size={24} href="/app" />
+              <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="grid h-9 w-9 place-items-center rounded-lg border border-line"><Icon d={I.close} /></button>
+            </div>
+            <div className="flex-1"><Nav path={path} onPick={() => setOpen(false)} /></div>
+            {footer}
+          </div>
+        </div>
+      )}
+
+      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">{children}</div>
+      </main>
+    </div>
+  );
+}

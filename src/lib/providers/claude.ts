@@ -54,10 +54,12 @@ export const claude: TextAI = {
   },
 };
 
-/** Pulls the first JSON object out of a model answer (tolerates stray text or code fences). */
+/** Pulls the first JSON object or array out of a model answer (tolerates stray text or code fences). */
 export function parseJSON<T>(text: string): T {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+  const o = text.indexOf("{"), a = text.indexOf("[");
+  const isArray = a >= 0 && (o < 0 || a < o);
+  const start = isArray ? a : o;
+  const end = text.lastIndexOf(isArray ? "]" : "}");
   if (start < 0 || end < start) throw new Error("La IA no devolvió JSON.");
   try {
     return JSON.parse(text.slice(start, end + 1)) as T;

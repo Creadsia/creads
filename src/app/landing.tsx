@@ -187,6 +187,7 @@ export default function Landing({ t }: { t: Content }) {
               )}
             </nav>
             <ThemeToggle lang={t.lang} />
+            <a href="/app" className="hidden whitespace-nowrap px-2 text-sm font-semibold text-muted hover:text-ink sm:block">{t.nav.login}</a>
             <a href="#pricing" className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 sm:px-4">
               {t.nav.cta}
             </a>

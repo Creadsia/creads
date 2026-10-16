@@ -13,6 +13,7 @@ export const en = {
     pricing: "Pricing",
     faq: "FAQ",
     cta: "Get started",
+    login: "Log in",
     switchTo: "ES",
     switchLabel: "Ver en español",
   },
