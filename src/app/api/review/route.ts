@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { needsCredits } from "@/lib/credits";
 import { freeRedoAvailable, grantFreeRedo } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import path from "node:path";
@@ -25,9 +24,7 @@ export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const limited = await tooMany("ai", s.user.id);
-  if (limited) return limited;
-  const broke = await needsCredits(s.user);
-  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
+  if (limited) return limited;  // (no credit check: the quality review and its free redos are part of what was already paid)
   const { db } = s;
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");

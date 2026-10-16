@@ -6,7 +6,7 @@ import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
-import { chargedSince, refundJob } from "@/lib/credits";
+import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { type StorySettings, billedSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
@@ -40,15 +40,9 @@ export async function POST(req: Request) {
     // Claim the clip atomically: a double click, a second tab or two parallel requests can't
     // start (and charge) the same clip twice.
     let clip = await db.claim("clips", id, { notIn: ["generating", "starting", "syncing"] }, { status: "starting" });
-    // a start that died halfway (e.g. the server timed out) leaves "starting": take it over after 3 minutes,
-    // giving back what that attempt charged first (a stuck voice step is cleared by the status check)
-    const startedAt = Date.parse(String(found.updated_at ?? found.created_at));
-    const stale = found.status === "starting" && Date.now() - startedAt > 3 * 60_000;
-    if (!clip && stale) {
-      clip = await db.claim("clips", id, { in: ["starting"] }, { status: "starting" });
-      if (clip && (await chargedSince(s.user.workspace, id, new Date(startedAt - 60_000).toISOString()).catch(() => false))) await refundJob(s.user.workspace, id);
-    }
-    if (!clip) return NextResponse.json({ error: found.status === "syncing" ? "Esta toma está poniendo la voz. Espera un momento." : "Este corte ya se está generando." }, { status: 409 });
+    // a start that died halfway stays "starting" until the status check clears it (after 5 minutes,
+    // giving the credits back); only then can it start again
+    if (!clip) return NextResponse.json({ error: found.status === "syncing" ? "Esta toma está poniendo la voz. Espera un momento." : found.status === "starting" ? "Este corte se está iniciando. Si en 5 minutos no avanza, se libera solo y puedes reintentarlo." : "Este corte ya se está generando." }, { status: 409 });
     before = found.status === "starting" || found.status === "syncing" ? "failed" : String(found.status ?? "pending");
     const giveBack = async (res: NextResponse) => { await db.update("clips", id, { status: before }).catch(() => {}); return res; };
     // Retry with another model (e.g. when one refuses the avatar's face).

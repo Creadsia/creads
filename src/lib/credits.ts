@@ -148,7 +148,7 @@ export async function freeRedoAvailable(ws: string, adId: string, clipId: string
 /** True if a charge for `ref` made since `since` (ISO time) hasn't been refunded yet. */
 export async function chargedSince(ws: string, ref: string, since: string) {
   if (unlimited(ws)) return false;
-  const rows = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&ref=eq.${encodeURIComponent(ref)}&created_at=gte.${encodeURIComponent(since)}&delta=lt.0&select=id`);
+  const rows = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&ref=eq.${encodeURIComponent(ref)}&created_at=gte.${encodeURIComponent(since)}&delta=lte.0&select=id`); // a free redo is a 0 charge (its refund gives the voucher back)
   if (!rows.length) return false;
   const back = await sbRest<{ ref: string }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.refund&ref=in.(${rows.map((r) => `charge:${r.id}`).join(",")})&select=ref`);
   return back.length < rows.length;

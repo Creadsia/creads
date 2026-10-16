@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sbRpc } from "./supabase";
+import { SbError, sbRpc } from "./supabase";
 
 // Limits how often anyone can try something (sign in, generate, ask Claude), counted in the database
 // so it holds across every server instance. If the counter can't be reached, requests go through
@@ -30,6 +30,11 @@ export async function allow(bucket: Bucket, key: string): Promise<boolean> {
   try {
     return Boolean(await sbRpc<boolean>("hit_rate", { p_key: `${bucket}:${key}`.slice(0, 200), p_window: win, p_max: max }));
   } catch (err) {
+    // the counter isn't installed yet (supabase/billing.sql not run): never lock everyone out
+    if (err instanceof SbError && err.missing) {
+      console.error("rate limit NOT INSTALLED: run supabase/billing.sql", bucket);
+      return true;
+    }
     console.error("rate limit unavailable", bucket, err instanceof Error ? err.message : err);
     return !STRICT.includes(bucket);
   }
