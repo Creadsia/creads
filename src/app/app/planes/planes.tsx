@@ -10,7 +10,7 @@ import { newEventId, track } from "@/lib/track";
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
 
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
-interface PayInfo { online: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string } | null }
+interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string } | null }
 
 const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
@@ -256,9 +256,9 @@ export default function Planes() {
               <div className="flex justify-between gap-3 text-sm"><dt>Pagas en pesos chilenos</dt><dd className="font-mono font-semibold">{pesos(clpFor(q.total, rate))}</dd></div>
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{`Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). `}Cancela cuando quieras.</p>; })()}
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${usd(m)} (${pesos(clpFor(m, rate))}).` : `Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). Cancela cuando quieras.`}</p>; })()}
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${pesos(clpFor(q.total, rate))} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
-            {pay?.online && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
+            {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
             <button type="button" onClick={() => setItem(null)} className="text-xs text-muted underline">Cancelar</button>

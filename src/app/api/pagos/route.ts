@@ -4,7 +4,7 @@ import { addOrder, hasPaidBefore, ordersOf, setOrderMp, workspaceRow } from "@/l
 import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import { sendMeta, visitorFrom } from "@/lib/meta";
-import { createPreference, createSubscription, mpReady } from "@/lib/mercadopago";
+import { createPreference, createSubscription, mpReady, oneTimeOnly } from "@/lib/mercadopago";
 import { tooMany } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
@@ -21,17 +21,17 @@ export async function GET(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const ws = s.user.workspace;
   const rate = await usdClp();
-  if (ws === "main") return NextResponse.json({ online: mpReady(), owner: true, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
+  if (ws === "main") return NextResponse.json({ online: mpReady(), renews: !oneTimeOnly(), owner: true, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   try {
     const [w, paid, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), ordersOf(ws)]);
     const sub = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
     return NextResponse.json({
-      online: mpReady(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
+      online: mpReady(), renews: !oneTimeOnly(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
       subscription: sub ? { id: sub.id, label: sub.quote.label } : null,
       orders: mine.filter((o) => o.status !== "reemplazado").slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
     });
   } catch {
-    return NextResponse.json({ online: mpReady(), owner: false, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
+    return NextResponse.json({ online: mpReady(), renews: !oneTimeOnly(), owner: false, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   }
 }
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     if (method === "mercadopago" && mpReady()) {
       const clp = clpFor(q.total, rate);
       const title = `Creads IA · ${q.label}`;
-      if (q.period === "mensual") {
+      if (q.period === "mensual" && !oneTimeOnly()) {
         // monthly plan: subscription; the first charge may carry the launch offer
         const plan = PLANS.find((p) => p.id === q.item)!;
         const fullClp = clpFor(plan.monthly * (1 - discountPct / 100), rate);

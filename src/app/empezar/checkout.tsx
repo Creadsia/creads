@@ -23,7 +23,7 @@ function Check({ className = "text-good" }: { className?: string }) {
   );
 }
 
-export default function Checkout({ item: first, period: firstPeriod, rate }: { item: ItemId; period: Period; rate: number }) {
+export default function Checkout({ item: first, period: firstPeriod, rate, renews = true }: { item: ItemId; period: Period; rate: number; renews?: boolean }) {
   const [item, setItem] = useState<ItemId>(first);
   const [period, setPeriod] = useState<Period>(firstPeriod);
   const isPack = item.startsWith("pack-");
@@ -175,7 +175,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate }: { i
           <details className="rounded-2xl border border-line p-4 text-sm">
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
-              <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? pesos(totalClp) : "el precio con descuento"} y desde el segundo mes {plan ? pesos(regularClp) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+              {renews ? (
+                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? pesos(totalClp) : "el precio con descuento"} y desde el segundo mes {plan ? pesos(regularClp) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+              ) : (
+                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? pesos(totalClp) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? pesos(regularClp) : "precio normal"}/mes).</p>
+              )}
               <p>El plan anual y las recargas se pagan una sola vez. Todo se cobra en pesos chilenos y recibes el comprobante de Mercado Pago en tu correo.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
@@ -195,7 +199,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate }: { i
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">
-                {q.period === "mensual" ? `Luego ${pesos(regularClp)}/mes. Cancela cuando quieras.` : q.period === "anual" ? `${q.credits.toLocaleString("es-CL")} créditos para todo el año.` : `${pack?.credits.toLocaleString("es-CL")} créditos que no vencen.`}
+                {q.period === "mensual" ? (renews ? `Luego ${pesos(regularClp)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${pesos(regularClp)}/mes si renuevas.`) : q.period === "anual" ? `${q.credits.toLocaleString("es-CL")} créditos para todo el año.` : `${pack?.credits.toLocaleString("es-CL")} créditos que no vencen.`}
               </span>
             </div>
 

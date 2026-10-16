@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/admin";
 import { PACKS, PLANS, type ItemId } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import Checkout from "./checkout";
+import { oneTimeOnly } from "@/lib/mercadopago";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
@@ -24,7 +25,7 @@ export default async function Empezar({ searchParams }: { searchParams: Promise<
   const rate = await usdClpRate().catch(() => 950);
   return (
     <div lang="es">
-      <Checkout item={item} period={period} rate={rate} />
+      <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} />
     </div>
   );
 }

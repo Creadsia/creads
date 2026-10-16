@@ -8,6 +8,11 @@ const API = "https://api.mercadopago.com";
 export const SITE = process.env.SITE_URL || "https://www.creadsia.com";
 
 export const mpReady = () => Boolean(process.env.MP_ACCESS_TOKEN);
+/**
+ * MP_ONE_TIME=1: monthly plans are charged once (one month, no automatic renewal). Used while selling
+ * from a temporary Mercado Pago account: subscriptions would keep charging that account after the switch.
+ */
+export const oneTimeOnly = () => process.env.MP_ONE_TIME === "1";
 const testMode = () => (process.env.MP_ACCESS_TOKEN ?? "").startsWith("TEST-");
 
 async function mp<T>(path: string, init: RequestInit = {}): Promise<T> {
