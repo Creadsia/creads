@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { canManageTeam, deleteUser, listUsers, updateUser, userFromRequest } from "@/lib/auth";
+import { canManageTeam, deleteUser, getUserIn, updateUser, userFromRequest } from "@/lib/auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 const tempPassword = () => randomBytes(9).toString("base64url").replace(/[-_]/g, "x") + "-" + randomBytes(2).toString("hex");
@@ -10,7 +10,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const me = await userFromRequest(req);
   if (!canManageTeam(me)) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   const { id } = await params;
-  const target = (await listUsers()).find((u) => u.id === id);
+  const target = await getUserIn(me!.workspace, id);
   if (!target) return NextResponse.json({ error: "Cuenta no encontrada." }, { status: 404 });
   if (target.role === "owner" && me!.id !== target.id) return NextResponse.json({ error: "La cuenta del dueño solo la cambia el dueño." }, { status: 403 });
   const b = await req.json().catch(() => null);
@@ -35,7 +35,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
   const me = await userFromRequest(req);
   if (!canManageTeam(me)) return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   const { id } = await params;
-  const target = (await listUsers()).find((u) => u.id === id);
+  const target = await getUserIn(me!.workspace, id);
   if (!target) return NextResponse.json({ ok: true });
   if (target.role === "owner") return NextResponse.json({ error: "La cuenta del dueño no se puede borrar." }, { status: 400 });
   if (target.role === "admin" && me!.role !== "owner") return NextResponse.json({ error: "Solo el dueño borra administradores." }, { status: 403 });

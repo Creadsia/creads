@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
 import { type BuildClip, build, captions, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
-import { uploadMedia } from "@/lib/supabase";
+import { fetchableUrl, saveMedia } from "@/lib/media";
 import type { Word } from "@/lib/textmatch";
 
 export const maxDuration = 300;
@@ -19,8 +18,9 @@ export async function GET() {
 
 // Builds the finished ad: trims, joins and captions every clip, then saves it to the library.
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
   const withCaptions = b?.captions !== false;
@@ -39,13 +39,14 @@ export async function POST(req: Request) {
     const prepared = await Promise.all(
       clips.map(async (c) => {
         const file = path.join(dir, `c${c.idx}.mp4`);
-        await download(c.url!, file);
+        const src = await fetchableUrl(c.url!, s.user.workspace);
+        await download(src, file);
         const p = await probe(file);
         const t = p.audio ? await trimPoints(file, p.dur) : { a: 0, b: p.dur };
         // reuse the review's transcript only if the clip wasn't redone since
         let words = settings.review?.find((r) => r.clipId === c.id && r.url === c.url)?.words;
         if (!words?.length && withCaptions && elevenlabs.configured() && !formatById(String(ad.format)).narr) {
-          words = (await elevenlabs.transcribe!(c.url!, lang).catch(() => null))?.words;
+          words = (await elevenlabs.transcribe!(src, lang).catch(() => null))?.words;
         }
         return { clip: { file, a: t.a, b: t.b, audio: p.audio } as BuildClip, words: words ?? [] };
       }),
@@ -63,8 +64,9 @@ export async function POST(req: Request) {
     const bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
 
     const stamp = Date.now();
-    const url = await uploadMedia(`finals/${adId}-${stamp}.mp4`, bytes, "video/mp4");
-    const srtUrl = cap ? await uploadMedia(`finals/${adId}-${stamp}.srt`, new TextEncoder().encode(cap.srt), "text/plain") : null;
+    const ws = s.user.workspace;
+    const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
+    const srtUrl = cap ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
     const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap ? { preset, size } : null } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration: offset });
   } catch (err) {

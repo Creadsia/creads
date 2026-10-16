@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db, DbError } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const b = await req.json().catch(() => null);
   const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 8) : [];
   const model = findVideo(String(b?.model ?? ""));

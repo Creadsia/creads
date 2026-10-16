@@ -89,7 +89,20 @@ export async function findUserByEmail(email: string): Promise<(User & { password
   return rows[0] ?? null;
 }
 
-export async function listUsers(): Promise<User[]> {
+/** Accounts of one workspace (customers never see each other's people). */
+export async function listUsers(workspace: string): Promise<User[]> {
+  return (await rest(`users?workspace=eq.${encodeURIComponent(workspace)}&select=${PUBLIC}&order=created_at.asc`)) as User[];
+}
+
+/** One account, only if it belongs to that workspace. */
+export async function getUserIn(workspace: string, id: string): Promise<User | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const rows = (await rest(`users?id=eq.${id}&workspace=eq.${encodeURIComponent(workspace)}&select=${PUBLIC}&limit=1`)) as User[];
+  return rows[0] ?? null;
+}
+
+/** Every account of every workspace (Creadsia's owner panel only). */
+export async function listAllUsers(): Promise<User[]> {
   return (await rest(`users?select=${PUBLIC}&order=created_at.asc`)) as User[];
 }
 
@@ -130,13 +143,31 @@ export async function endSession(token: string) {
   await rest(`sessions?id=eq.${sha(token)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }).catch(() => {});
 }
 
+// Whether a workspace (customer) is active; cached for a minute. Until the workspaces table exists
+// (supabase/tenancy.sql) every workspace counts as active.
+const wsCache = new Map<string, { ok: boolean; at: number }>();
+async function workspaceActive(id: string) {
+  const hit = wsCache.get(id);
+  if (hit && Date.now() - hit.at < 60_000) return hit.ok;
+  let ok = true;
+  try {
+    const rows = (await rest(`workspaces?id=eq.${encodeURIComponent(id)}&select=active&limit=1`)) as { active: boolean }[];
+    ok = rows.length ? rows[0].active !== false : id === "main";
+  } catch (err) {
+    ok = Boolean((err as { missing?: boolean }).missing); // table not created yet: don't lock anyone out
+  }
+  wsCache.set(id, { ok, at: Date.now() });
+  return ok;
+}
+export const forgetWorkspace = (id: string) => wsCache.delete(id);
+
 /** The signed-in user for a session token, or null. */
 export async function userFromToken(token: string | undefined | null): Promise<User | null> {
   if (!token || token.length < 20 || token.length > 100) return null;
   try {
     const rows = (await rest(`sessions?id=eq.${sha(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user:users(${PUBLIC})&limit=1`)) as { user: User | null }[];
     const u = rows[0]?.user;
-    return u && u.active ? u : null;
+    return u && u.active && (await workspaceActive(u.workspace)) ? u : null;
   } catch {
     return null;
   }
@@ -153,4 +184,5 @@ export const userFromRequest = (req: Request) => userFromToken(tokenFromCookieHe
 export const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: SESSION_DAYS * 86400 };
 
 export const canManageTeam = (u: User | null) => u?.role === "owner" || u?.role === "admin";
-export const isOwner = (u: User | null) => u?.role === "owner";
+/** Creadsia's owner: the only one who sees finances, every customer and the shared rules. */
+export const isOwner = (u: User | null) => u?.role === "owner" && u.workspace === "main";

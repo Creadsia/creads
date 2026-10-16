@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { probe } from "@/lib/montage";
 import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/providers/tools";
-import { isOurMedia, uploadMedia } from "@/lib/supabase";
+import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
 
 export const maxDuration = 120;
@@ -25,15 +24,17 @@ async function lengthOf(url: string) {
   }
 }
 
-async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ input: ToolInput; seconds: number } | string> {
+async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Promise<{ input: ToolInput; seconds: number } | string> {
   const input: ToolInput = {};
+  const mine = (u: unknown): u is string => ownsMedia(u, ws);
+  const open = (u: string) => fetchableUrl(u, ws);
   const need = t.inputs;
   if (need.image) {
-    if (!isOurMedia(b.image)) return "Sube una foto.";
+    if (!mine(b.image)) return "Sube una foto.";
     input.image = b.image;
   }
   if (need.images) {
-    const list = Array.isArray(b.images) ? b.images.filter(isOurMedia).slice(0, need.images) : [];
+    const list = Array.isArray(b.images) ? b.images.filter(mine).slice(0, need.images) : [];
     if (!list.length) return "Sube al menos una foto.";
     input.images = list;
   }
@@ -59,17 +60,17 @@ async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ inpu
   const clientSecs = Math.max(0, Number(b.seconds) || 0);
   let seconds = 0;
   if (need.video) {
-    if (!isOurMedia(b.video)) return "Sube un video.";
+    if (!mine(b.video)) return "Sube un video.";
     input.video = b.video;
-    const d = (await lengthOf(b.video)) || clientSecs;
+    const d = (await lengthOf(await open(b.video))) || clientSecs;
     if (!d) return "No pude medir el largo del video. Prueba con un MP4.";
     if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
   }
   if (need.audio) {
-    if (!isOurMedia(b.audio)) return "Sube un audio o genera la voz.";
+    if (!mine(b.audio)) return "Sube un audio o genera la voz.";
     input.audio = b.audio;
-    const d = (await lengthOf(b.audio)) || (need.video ? 0 : clientSecs);
+    const d = (await lengthOf(await open(b.audio))) || (need.video ? 0 : clientSecs);
     if (!d) return "No pude medir el largo del audio. Prueba con un MP3.";
     if ((d < need.audio.min - 0.3 || d > need.audio.max + 0.5)) return `El audio debe durar entre ${need.audio.min} y ${need.audio.max} segundos (este dura ${secs(d)}).`;
     if (t.id === "avatar-habla") seconds = d; // billed by the audio
@@ -78,15 +79,16 @@ async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ inpu
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ tool: string }> }) {
-  const denied = await checkAccess(req);
-  if (denied) return bad(denied, 401);
+  const s = await session(req);
+  if (!s) return bad(SESSION_ENDED, 401);
+  const { db } = s;
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);
   if (!toolConfigured(t)) return bad(`${t.name}: falta la clave del proveedor en Vercel.`, 503);
 
   const b = (await req.json().catch(() => null)) ?? {};
   if (t.consent && b.consent !== true) return bad("Confirma que tienes permiso de la persona que aparece o habla.");
-  const read = await readInput(t, b);
+  const read = await readInput(t, b, s.user.workspace);
   if (typeof read === "string") return bad(read);
   const usd = t.estimate(read.seconds);
 
@@ -107,7 +109,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   }
   const id = String(row.id);
   try {
-    const job = await startTool(t, read.input);
+    // outside services get short-lived links to the customer's files
+    const ws = s.user.workspace;
+    const open = async (u?: string) => (u ? fetchableUrl(u, ws) : undefined);
+    const input: ToolInput = {
+      ...read.input,
+      image: await open(read.input.image),
+      video: await open(read.input.video),
+      audio: await open(read.input.audio),
+      images: read.input.images ? await Promise.all(read.input.images.map((u) => fetchableUrl(u, ws))) : undefined,
+    };
+    const job = await startTool(t, input, ws);
     await db.update("clips", id, { provider_job: job });
     return NextResponse.json({ id, usd });
   } catch (err) {
@@ -119,8 +131,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ tool: string }> }) {
-  const denied = await checkAccess(req);
-  if (denied) return bad(denied, 401);
+  const s = await session(req);
+  if (!s) return bad(SESSION_ENDED, 401);
+  const { db } = s;
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);
   const id = new URL(req.url).searchParams.get("id") ?? "";
@@ -140,7 +153,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     }
     if (st.state !== "done") return NextResponse.json(st);
 
-    const url = "url" in st ? st.url : await uploadMedia(`tools/${t.id}/${id}.${st.ext}`, await st.fetch(), st.mime);
+    const url = "url" in st ? st.url : await saveMedia(s.user.workspace, `tools/${t.id}`, await st.fetch(), st.mime, `${id}.${st.ext}`);
     await db.update("clips", id, { status: "done", url });
     if (t.output === "image") await db.insert("images", { prompt: `${t.name}${row.prompt ? `: ${row.prompt}` : ""}`, url, model: t.model }).catch(() => null);
     return NextResponse.json({ state: "done", url });

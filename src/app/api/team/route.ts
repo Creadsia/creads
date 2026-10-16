@@ -10,7 +10,7 @@ const tempPassword = () => randomBytes(9).toString("base64url").replace(/[-_]/g,
 export async function GET(req: Request) {
   const me = await userFromRequest(req);
   if (!canManageTeam(me)) return NextResponse.json({ error: "Solo el dueño o un administrador puede ver el equipo." }, { status: 403 });
-  return NextResponse.json({ users: await listUsers(), me: me!.id });
+  return NextResponse.json({ users: await listUsers(me!.workspace), me: me!.id });
 }
 
 // POST {email, name, role} creates an account with a temporary password (returned once).

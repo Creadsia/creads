@@ -1,6 +1,5 @@
 import type { ToolDef, ToolId } from "../tools";
-import { randomUUID } from "node:crypto";
-import { uploadMedia } from "../supabase";
+import { saveMedia } from "../media";
 import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
@@ -80,12 +79,13 @@ const ELEVEN: ToolId[] = ["doblaje", "musica", "efectos"];
 export const toolConfigured = (t: ToolDef) => Boolean(ELEVEN.includes(t.id) ? process.env.ELEVENLABS_API_KEY : process.env.FAL_KEY);
 
 /** Starts the tool. The job id says who runs it: a fal result link, or "el:<dub id>:<lang>". */
-export async function startTool(t: ToolDef, input: ToolInput): Promise<string> {
+/** `ws`: the customer workspace (results that come back at once are saved in its private folder). */
+export async function startTool(t: ToolDef, input: ToolInput, ws: string): Promise<string> {
   // Music and sound effects come back in one call: store the file now; the job id is its link.
   if (t.id === "musica" || t.id === "efectos") {
     const secs = input.seconds ?? 15;
     const bytes = t.id === "musica" ? await compose(input.prompt!, secs, Boolean(input.instrumental)) : await soundEffect(input.prompt!, secs);
-    return `url:${await uploadMedia(`tools/${t.id}/${randomUUID()}.mp3`, bytes, "audio/mpeg")}`;
+    return `url:${await saveMedia(ws, `tools/${t.id}`, bytes, "audio/mpeg")}`;
   }
   if (t.id === "doblaje") {
     const lang = input.target ?? "es";

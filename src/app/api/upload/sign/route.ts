@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
-import { checkAccess } from "@/lib/access";
-import { signedUpload } from "@/lib/supabase";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { signedUploadFor } from "@/lib/media";
 
 // Prepares a direct browser → storage upload for files too big to pass through our server (up to 50 MB).
 const KINDS: Record<string, string> = {
@@ -12,8 +11,8 @@ const KINDS: Record<string, string> = {
 const MAX = 50 * 1024 * 1024;
 
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const b = await req.json().catch(() => null);
   const type = String(b?.type ?? "");
   const size = Number(b?.size ?? 0);
@@ -22,7 +21,7 @@ export async function POST(req: Request) {
   if (!(size > 0) || size > MAX) return NextResponse.json({ error: "El archivo pesa más de 50 MB." }, { status: 413 });
   const folder = type.startsWith("image/") ? "uploads/images" : type.startsWith("audio/") ? "uploads/audio" : "uploads/video";
   try {
-    return NextResponse.json(await signedUpload(`${folder}/${randomUUID()}.${ext}`));
+    return NextResponse.json(await signedUploadFor(s.user.workspace, folder, ext));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo preparar la subida." }, { status: 502 });
   }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Logo } from "../brand";
 import { currentUser } from "@/lib/admin";
+import { isOwner } from "@/lib/auth";
 import AdminPanel from "./panel";
 import ThemeToggle from "../theme-toggle";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const user = await currentUser();
-  const ok = user?.role === "owner";
+  const ok = isOwner(user);
   return (
     <main lang="es" className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">

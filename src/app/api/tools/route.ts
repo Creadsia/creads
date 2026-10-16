@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db, DbError } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { DbError } from "@/lib/db";
 
 // The latest "Crear" tool jobs (any tool), newest first.
 export async function GET(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   try {
     const rows = await db.list("clips", "or=(kind.like.tool:*,kind.like.gen:*)&order=created_at.desc&limit=60");
     return NextResponse.json({ rows });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { checkAccess } from "@/lib/access";
-import { uploadMedia } from "@/lib/supabase";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { saveMedia } from "@/lib/media";
 
 export const maxDuration = 30;
 
@@ -13,8 +13,8 @@ const KINDS: Record<string, string> = {
 
 // Uploads a face photo, product photo or audio sample to our storage and returns its link.
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (file.size > 4 * 1024 * 1024) return NextResponse.json({ error: "El archivo pesa más de 4 MB." }, { status: 413 });
   const folder = file.type.startsWith("image/") ? "uploads/images" : file.type.startsWith("audio/") ? "uploads/audio" : "uploads/video";
   try {
-    const url = await uploadMedia(`${folder}/${randomUUID()}.${ext}`, new Uint8Array(await file.arrayBuffer()), file.type);
+    const url = await saveMedia(s.user.workspace, folder, new Uint8Array(await file.arrayBuffer()), file.type, `${randomUUID()}.${ext}`);
     return NextResponse.json({ url });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo subir." }, { status: 502 });

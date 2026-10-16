@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
 import { learnFrom } from "@/lib/learn";
 import { download, probe, still, workdir } from "@/lib/montage";
@@ -11,7 +9,7 @@ import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { compare, type Word } from "@/lib/textmatch";
-import { uploadMedia } from "@/lib/supabase";
+import { fetchableUrl, saveMedia } from "@/lib/media";
 
 export const maxDuration = 300;
 
@@ -21,8 +19,9 @@ export interface Review { clipId: string; url: string; idx: number; sim: number;
 // Automatic review of every finished clip: listens to it (did it say the script?) and looks at it
 // (same person, clothes and place as the others?). Severe problems are worth an automatic redo.
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
   try {
@@ -39,10 +38,11 @@ export async function POST(req: Request) {
     const results: Review[] = await Promise.all(
       clips.map(async (c) => {
         const file = path.join(dir, `c${c.idx}.mp4`);
-        await download(c.url!, file);
+        const src = await fetchableUrl(c.url!, s.user.workspace);
+        await download(src, file);
         const { dur } = await probe(file);
         await still(file, Math.max(0.3, dur * 0.5), path.join(dir, `s${c.idx}.jpg`)).catch(() => {});
-        const t = elevenlabs.configured() ? await elevenlabs.transcribe!(c.url!, lang).catch(() => null) : null;
+        const t = elevenlabs.configured() ? await elevenlabs.transcribe!(src, lang).catch(() => null) : null;
         const narr = formatById(format).narr;
         const q = t ? compare(c.text, t.words, lang, dur) : { sim: 0, heard: "", issues: ["no se pudo escuchar el corte"], severe: false };
         // voice-over formats: nobody should speak on camera, so the words don't have to match
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       for (const c of clips) {
         const f = path.join(dir, `s${c.idx}.jpg`);
         const bytes = await readFile(f).catch(() => null);
-        if (bytes) urls.push(await uploadMedia(`review/${randomUUID()}.jpg`, bytes, "image/jpeg"));
+        if (bytes) urls.push(await fetchableUrl(await saveMedia(s.user.workspace, "review", bytes, "image/jpeg"), s.user.workspace, 900));
       }
       const f = formatById(format);
       try {

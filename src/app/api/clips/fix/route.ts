@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { sharedRules } from "@/lib/db";
 import { formatById } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
@@ -9,8 +9,9 @@ export const maxDuration = 60;
 
 // Rewrites one clip's prompt to fix a problem, keeping the spoken words locked (prototype: aiFixPrompt).
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");
   const what = String(b?.problem ?? "").slice(0, 800);
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
     if (!clip) return NextResponse.json({ error: "Corte no encontrado." }, { status: 404 });
     const ad = await db.get("ads", String(clip.ad_id));
     const f = formatById(String(ad?.format || "ugc"));
-    const rules = ((await db.list("rules", "active=eq.true&order=hits.desc&limit=10").catch(() => [])) as { rule_en: string }[]).map((r) => r.rule_en);
+    const rules = ((await sharedRules.list("active=eq.true&order=hits.desc&limit=10").catch(() => [])) as { rule_en: string }[]).map((r) => r.rule_en);
     const r = parseJSON<{ prompt: string; cambios: string }>(
       await textAI.complete({
         json: true,

@@ -1,11 +1,11 @@
-import { db } from "./db";
+import { sharedRules } from "./db";
 import { textAI } from "./providers";
 import { parseJSON } from "./providers/claude";
 
 // Turns problems found by the review into short rules that every future prompt carries (prototype: learnFrom).
 export async function learnFrom(issues: string[], format: string): Promise<number> {
   if (!issues.length || !textAI.configured()) return 0;
-  const current = (await db.list("rules", "order=hits.desc&limit=60").catch(() => [])) as { id: string; rule_en: string; formats: string[] | null; hits: number }[];
+  const current = (await sharedRules.list("order=hits.desc&limit=60").catch(() => [])) as { id: string; rule_en: string; formats: string[] | null; hits: number }[];
   const r = parseJSON<{ nuevas?: { rule_en: string; es: string; formats: string[] }[]; repetidas?: number[] }>(
     await textAI.complete({
       json: true,
@@ -20,11 +20,11 @@ Responde SOLO JSON: {"nuevas":[{"rule_en":"","es":"en español, corta","formats"
   );
   for (const n of r.repetidas ?? []) {
     const x = current[n - 1];
-    if (x) await db.update("rules", x.id, { hits: (x.hits ?? 0) + 1 }).catch(() => {});
+    if (x) await sharedRules.update(x.id, { hits: (x.hits ?? 0) + 1 }).catch(() => {});
   }
   let added = 0;
   for (const x of (r.nuevas ?? []).filter((y) => y?.rule_en).slice(0, 5)) {
-    await db.insert("rules", { rule_en: x.rule_en, rule_es: x.es, formats: x.formats?.length ? x.formats : ["all"], hits: 1, active: true }).catch(() => {});
+    await sharedRules.add({ rule_en: x.rule_en, rule_es: x.es, formats: x.formats?.length ? x.formats : ["all"], hits: 1, active: true }).catch(() => {});
     added++;
   }
   return added;

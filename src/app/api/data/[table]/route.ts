@@ -1,39 +1,41 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db, DbError, isTable } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { canEditRules, failJson } from "@/lib/data-api";
+import { isTable, sharedRules } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-const fail = (err: unknown) =>
-  err instanceof DbError
-    ? NextResponse.json({ error: err.message, missingTable: err.missingTable }, { status: err.missingTable ? 503 : 502 })
-    : NextResponse.json({ error: err instanceof Error ? err.message : "Error inesperado." }, { status: 500 });
-
-// GET lists the rows of a platform table; POST adds one.
+// GET lists the rows of a studio table (only the signed-in customer's); POST adds one.
 export async function GET(req: Request, { params }: { params: Promise<{ table: string }> }) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const { table } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
   const q = new URL(req.url).searchParams;
-  const filter = q.get("ad_id") ? `ad_id=eq.${encodeURIComponent(q.get("ad_id")!)}&order=idx.asc` : "order=created_at.desc&limit=500";
+  const adId = q.get("ad_id");
+  const filter = adId ? `ad_id=eq.${encodeURIComponent(adId)}&order=idx.asc` : "order=created_at.desc&limit=500";
   try {
-    return NextResponse.json({ rows: await db.list(table, filter) });
+    if (table === "rules") return NextResponse.json({ rows: await sharedRules.list("order=hits.desc&limit=500"), canEdit: canEditRules(s.user) });
+    return NextResponse.json({ rows: await s.db.list(table, filter) });
   } catch (err) {
-    return fail(err);
+    return failJson(err);
   }
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ table: string }> }) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const { table } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   try {
-    return NextResponse.json({ row: await db.insert(table, body) });
+    if (table === "rules") {
+      if (!canEditRules(s.user)) return NextResponse.json({ error: "Las reglas aprendidas las administra Creadsia." }, { status: 403 });
+      return NextResponse.json({ row: await sharedRules.add(body) });
+    }
+    return NextResponse.json({ row: await s.db.insert(table, body) });
   } catch (err) {
-    return fail(err);
+    return failJson(err);
   }
 }

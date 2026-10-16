@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
-import { uploadMedia } from "@/lib/supabase";
+import { fetchableUrl, saveMedia } from "@/lib/media";
 
 export const maxDuration = 120;
 
@@ -21,8 +19,9 @@ interface Settings {
 
 /** Starts (or restarts) the generation of one clip. Spends money: the studio asks before calling it. */
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");
   try {
@@ -33,9 +32,11 @@ export async function POST(req: Request) {
     const provider = findVideo(String(clip.model));
     if (!provider?.configured()) return NextResponse.json({ error: "Ese modelo no está conectado." }, { status: 503 });
 
-    const s = (ad.settings ?? {}) as Settings;
-    const face = s.avatar?.image_url || "";
-    const prod = s.product?.image_url || "";
+    const st = (ad.settings ?? {}) as Settings;
+    const ws = s.user.workspace;
+    // the photos must be this customer's own files; outside services get a short-lived link
+    const face = st.avatar?.image_url ? await fetchableUrl(st.avatar.image_url, ws) : "";
+    const prod = st.product?.image_url ? await fetchableUrl(st.product.image_url, ws) : "";
     let aspect = String(ad.aspect || "9:16") as AspectRatio;
     if (provider.id.startsWith("veo") && aspect !== "16:9") aspect = "9:16";
     const words = String(clip.text || "").split(/\s+/).filter(Boolean).length;
@@ -47,15 +48,15 @@ export async function POST(req: Request) {
       refs = [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])];
     } else if ((face || prod) && !image) {
       // Models that animate a still: first draw the opening frame with Nano Banana Pro from the photos.
-      const framePrompt = s.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
+      const framePrompt = st.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
       const ff = await nanoBananaPro.generate({
         prompt: framePrompt,
         aspect,
         refs: [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])],
       });
-      image = await uploadMedia(`frames/${randomUUID()}.${ff.mime.includes("jpeg") ? "jpg" : "png"}`, ff.bytes, ff.mime);
+      image = await saveMedia(ws, "frames", ff.bytes, ff.mime);
     }
-    if (image && !refs.length) refs = [{ url: image, role: "first_frame" }];
+    if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
 
     const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: true, refs });
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);

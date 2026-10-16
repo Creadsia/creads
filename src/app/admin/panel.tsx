@@ -15,9 +15,10 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "resumen" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "resumen" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["resumen", "Resumen"],
+  ["clientes", "Clientes"],
   ["planes", "Planes y afiliados"],
   ["movs", "Movimientos"],
   ["fijos", "Costos fijos"],
@@ -152,7 +153,7 @@ export default function AdminPanel() {
       </nav>
 
       {!data ? (
-        tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : <div className={card}><p className="text-muted">{status}</p></div>
+        tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -161,6 +162,7 @@ export default function AdminPanel() {
           {tab === "fijos" && <Fijos d={data} change={change} />}
           {tab === "modelos" && <Modelos d={data} change={change} />}
           {tab === "cuentas" && <Cuentas d={data} />}
+          {tab === "clientes" && <Clientes />}
           {tab === "registros" && <Registros />}
           {tab === "estado" && <Estado />}
         </>
@@ -612,6 +614,100 @@ function Registros() {
         </>
       )}
     </section>
+  );
+}
+
+// ---------- Clientes ----------
+interface Cliente {
+  id: string; name: string; kind: string; plan: string | null; active: boolean; created_at: string; usdMonth: number;
+  people: { email: string; name: string | null; role: string; last_login: string | null }[];
+}
+function Clientes() {
+  const [rows, setRows] = useState<Cliente[] | null>(null);
+  const [err, setErr] = useState("");
+  const [missing, setMissing] = useState(false);
+  const [f, setF] = useState({ name: "", email: "", contact: "", plan: "" });
+  const [busy, setBusy] = useState(false);
+  const [made, setMade] = useState<{ email: string; password: string; workspace: string } | null>(null);
+  const load = useCallback(() => {
+    fetch("/api/admin/clientes").then(async (r) => {
+      const d = await r.json();
+      if (!r.ok) { setMissing(Boolean(d.missing)); throw new Error(d.error); }
+      setRows(d.clientes);
+    }).catch((e) => setErr(e.message || "No se pudo cargar."));
+  }, []);
+  useEffect(load, [load]);
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch("/api/admin/clientes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(f) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setMade({ email: f.email, password: d.password, workspace: d.workspace });
+      setF({ name: "", email: "", contact: "", plan: "" });
+      load();
+    } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo crear."); } finally { setBusy(false); }
+  }
+  async function toggle(c: Cliente) {
+    const r = await fetch("/api/admin/clientes", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: c.id, active: !c.active }) });
+    if (r.ok) load();
+  }
+  const total = (rows ?? []).reduce((a, c) => a + c.usdMonth, 0);
+  return (
+    <div className="flex flex-col gap-4">
+      <section className={card}>
+        <div>
+          <h2 className="font-display text-xl font-bold">Clientes</h2>
+          <p className="text-sm text-muted">Cada cliente tiene su propio espacio: solo ve sus avatares, productos, guiones y videos. Aquí ves quién usa Creads y cuánto gastó en modelos este mes.</p>
+        </div>
+        {missing && <p className="rounded-lg bg-warn/12 p-3 text-sm">Falta activar las cuentas separadas en Supabase (el archivo tenancy.sql). Te dejé los pasos en el chat.</p>}
+        {err && !missing && <p className="text-sm text-bad">{err}</p>}
+        {!rows && !err && <p className="text-muted">Cargando…</p>}
+        {rows && (
+          <>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+              <Stat label="Clientes" value={String(rows.filter((c) => c.kind === "client").length)} />
+              <Stat label="Activos" value={String(rows.filter((c) => c.kind === "client" && c.active).length)} />
+              <Stat label="Gasto en modelos (mes)" value={fmtUsd(total, 2)} />
+            </div>
+            <div className="min-w-0 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr>{["Cliente", "Personas", "Plan", "Gasto del mes", "Estado", ""].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {rows.map((c) => (
+                    <tr key={c.id}>
+                      <td className={td}><b>{c.name}</b><span className="block font-mono text-xs text-muted">{c.id}</span></td>
+                      <td className={td}>{c.people.length ? c.people.map((p) => <span key={p.email} className="block">{p.email} <span className="text-xs text-muted">({p.role === "owner" ? "dueño" : p.role === "admin" ? "admin" : "miembro"})</span></span>) : <span className="text-muted">—</span>}</td>
+                      <td className={td}>{c.plan || <span className="text-muted">—</span>}</td>
+                      <td className={`${td} ${num}`}>{fmtUsd(c.usdMonth, 2)}</td>
+                      <td className={td}><Pill t={c.active ? "good" : "warn"}>{c.kind === "owner" ? "Creadsia" : c.active ? "Activo" : "Pausado"}</Pill></td>
+                      <td className={td}>{c.kind === "client" && <button type="button" onClick={() => toggle(c)} className="text-xs text-muted hover:text-ink">{c.active ? "Pausar" : "Reactivar"}</button>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
+      <section className={card}>
+        <h3 className="font-display text-lg font-bold">Crear cliente</h3>
+        <p className="text-sm text-muted">Crea su espacio y su primera cuenta (administrador de su espacio). La clave temporal aparece una sola vez: mándasela y que la cambie en «Mi cuenta».</p>
+        <form onSubmit={create} className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nombre del cliente o empresa"><input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={input} /></Field>
+          <Field label="Correo de acceso"><input required type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={input} /></Field>
+          <Field label="Nombre de la persona (opcional)"><input value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} className={input} /></Field>
+          <Field label="Plan (opcional)"><input value={f.plan} onChange={(e) => setF({ ...f, plan: e.target.value })} placeholder="fundador, pro…" className={input} /></Field>
+          <div className="sm:col-span-2"><button type="submit" disabled={busy} className={btn}>{busy ? "Creando…" : "Crear cliente"}</button></div>
+        </form>
+        {made && (
+          <div className="rounded-lg bg-good/12 p-3 text-sm" role="status">
+            Listo: <b>{made.email}</b> entra en creadsia.com/app con la clave temporal <b className="font-mono select-all">{made.password}</b> (espacio <span className="font-mono">{made.workspace}</span>).
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

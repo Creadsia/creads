@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
+import { sharedRules } from "@/lib/db";
 import { type CutIn, type Direction, type SceneContext, directorPrompt, scenePrompt } from "@/lib/director";
 import { FORMATS, type FormatId } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
@@ -10,8 +10,9 @@ export const maxDuration = 120;
 
 // Step 3 of "Crear anuncio": Claude directs every cut, then each cut gets its video prompt.
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   if (!textAI.configured()) return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY en Vercel." }, { status: 503 });
 
   const b = await req.json().catch(() => null);
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     const [avatar, product, rules] = await Promise.all([
       b?.avatarId ? db.get("avatars", String(b.avatarId)).catch(() => null) : null,
       b?.productId ? db.get("products", String(b.productId)).catch(() => null) : null,
-      db.list("rules", "active=eq.true&order=hits.desc&limit=40").catch(() => []),
+      sharedRules.list("active=eq.true&order=hits.desc&limit=40").catch(() => []),
     ]);
     const ctx: SceneContext = {
       format,

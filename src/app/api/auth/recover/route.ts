@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const bad = passwordProblem(password);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
   try {
-    const owner = (await listUsers()).find((u) => u.role === "owner");
+    const owner = (await listUsers("main")).find((u) => u.role === "owner");
     if (!owner) return NextResponse.json({ error: "Todavía no hay cuenta de dueño. Recarga la página para crearla." }, { status: 404 });
     await updateUser(owner.id, { password, active: true });
     const res = NextResponse.json({ ok: true, email: owner.email });

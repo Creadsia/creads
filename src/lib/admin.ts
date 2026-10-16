@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, type User, userFromToken } from "./auth";
+import { SESSION_COOKIE, type User, isOwner, userFromToken } from "./auth";
 
 // Server-side helpers for pages: who is signed in, and whether they may open the owner's panel.
 
@@ -10,5 +10,5 @@ export async function currentUser(): Promise<User | null> {
 
 /** Finance and accounts are owner-only. */
 export async function isAdmin(): Promise<boolean> {
-  return (await currentUser())?.role === "owner";
+  return isOwner(await currentUser());
 }

@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { checkAccess } from "@/lib/access";
-import { db } from "@/lib/db";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
-import { mediaExists, publicUrl, uploadMedia } from "@/lib/supabase";
+import { mediaRefOf, mediaSaved, saveMedia } from "@/lib/media";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 /** Checks one clip with its provider; when it's ready, copies the video to our storage. */
 export async function GET(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const { db } = s;
   const id = new URL(req.url).searchParams.get("id") ?? "";
   try {
     const clip = await db.get("clips", id);
@@ -26,12 +26,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ clip: row });
     }
     if (st.state !== "done") return NextResponse.json({ clip });
-    const path = `videos/${createHash("sha256").update(String(clip.provider_job)).digest("hex").slice(0, 32)}.mp4`;
-    if (!(await mediaExists(path))) {
+    const ws = s.user.workspace;
+    const name = `${createHash("sha256").update(String(clip.provider_job)).digest("hex").slice(0, 32)}.mp4`;
+    let url = mediaRefOf(ws, "videos", name);
+    if (!(await mediaSaved(ws, "videos", name))) {
       const bytes = provider.download ? await provider.download(st.url) : await (await fetch(st.url)).arrayBuffer();
-      await uploadMedia(path, bytes, "video/mp4");
+      url = await saveMedia(ws, "videos", bytes, "video/mp4", name);
     }
-    const row = await db.update("clips", id, { status: "done", url: publicUrl(path), error: null });
+    const row = await db.update("clips", id, { status: "done", url, error: null });
 
     // When every clip of the ad is finished, the ad moves to review.
     const all = await db.list("clips", `ad_id=eq.${clip.ad_id}&select=status`);
