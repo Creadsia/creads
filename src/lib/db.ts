@@ -41,7 +41,8 @@ async function call(path: string, init: RequestInit = {}) {
     const missing = res.status === 404 || body?.code === "42P01" || body?.code === "PGRST205";
     throw new DbError(missing ? "Faltan las tablas de la plataforma en Supabase (hay que ejecutar el SQL)." : `Base de datos: ${body?.message ?? res.statusText}`, res.status, missing);
   }
-  return res.status === 204 ? null : res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 /** Keeps only the writable columns of a table. */

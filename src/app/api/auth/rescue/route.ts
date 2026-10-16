@@ -19,10 +19,14 @@ export async function POST(req: Request) {
   }
   const bad = passwordProblem(password);
   if (bad) return NextResponse.json({ error: bad }, { status: 400 });
-  const owner = (await listUsers()).find((u) => u.role === "owner");
-  if (!owner) return NextResponse.json({ error: "No hay cuenta de dueño todavía." }, { status: 404 });
-  await updateUser(owner.id, { password, active: true });
-  const res = NextResponse.json({ ok: true, email: owner.email });
-  res.cookies.set(SESSION_COOKIE, await createSession(owner.id, req.headers.get("user-agent") ?? ""), cookieOptions);
-  return res;
+  try {
+    const owner = (await listUsers()).find((u) => u.role === "owner");
+    if (!owner) return NextResponse.json({ error: "No hay cuenta de dueño todavía." }, { status: 404 });
+    await updateUser(owner.id, { password, active: true });
+    const res = NextResponse.json({ ok: true, email: owner.email });
+    res.cookies.set(SESSION_COOKIE, await createSession(owner.id, req.headers.get("user-agent") ?? ""), cookieOptions);
+    return res;
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo cambiar la clave." }, { status: 502 });
+  }
 }

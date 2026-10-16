@@ -44,7 +44,9 @@ async function rest(path: string, init: RequestInit = {}) {
     (err as Error & { missing?: boolean }).missing = missing;
     throw err;
   }
-  return res.status === 204 ? null : res.json();
+  // "return=minimal" answers 201/204 with an empty body
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 const PUBLIC = "id,email,name,role,workspace,active,created_at,last_login";
