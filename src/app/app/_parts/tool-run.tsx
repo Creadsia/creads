@@ -184,7 +184,7 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 function Result({ job, output }: { job: Job; output: "image" | "video" | "audio" }) {
   if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "Falló."}</p>;
   if (job.status !== "done" || !job.url) return <p className="text-sm text-muted">Trabajando… puedes cerrar esta página: queda en «Tus creaciones».</p>;
-  const next = output === "audio" ? [] : TOOLS.filter((x) => (output === "image" ? x.inputs.image || x.inputs.images : x.inputs.video) && `tool:${x.id}` !== job.kind);
+  const next = output === "audio" ? [] : TOOLS.filter((x) => (output === "image" ? (x.inputs.image || x.inputs.images) && !x.inputs.video : x.inputs.video) && `tool:${x.id}` !== job.kind);
   return (
     <div className="flex flex-col gap-3">
       {output === "image" ? (
@@ -265,7 +265,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   const { price: money, covers, info } = useCredits();
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :
-    (n.images && images.length === 0) ? "Sube o elige al menos una foto." :
+    (n.images && !n.imagesOptional && images.length === 0) ? "Sube o elige al menos una foto." :
     (n.video && !video) ? "Sube un video." :
     (n.audio && !audio) ? "Agrega el audio: súbelo o escríbelo y genera la voz." :
     (n.prompt === "required" && prompt.trim().length < 4) ? "Escribe qué quieres que haga." :
@@ -300,7 +300,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
       <section className={cardCls} aria-label="Lo que necesitas">
         {n.image && <Group label="Foto"><ImageInput value={image} onChange={setImage} library={imgs} /></Group>}
         {n.images && (
-          <Group label={`Fotos (hasta ${n.images})`} hint="La primera es la principal.">
+          <Group label={n.imagesOptional ? `Fotos de referencia (opcional, hasta ${n.images})` : `Fotos (hasta ${n.images})`} hint={n.imagesOptional ? "Una cara nueva, un producto o un lugar. Nómbralas en tu instrucción como «foto 1», «foto 2»." : "La primera es la principal."}>
             <div className="flex flex-col gap-3">
               {images.map((u, i) => (
                 <ImageInput key={i} value={u} library={imgs} onChange={(v) => setImages((l) => (v ? l.map((x, j) => (j === i ? v : x)) : l.filter((_, j) => j !== i)))} />

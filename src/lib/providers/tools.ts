@@ -57,6 +57,11 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
     build: (i) => ({ video_url: i.video, upscale_mode: "target", target_resolution: "1080p", output_format: "X264 (.mp4)", output_quality: "high" }),
     pick: vid,
   },
+  "editar-video": {
+    endpoint: "fal-ai/kling-video/o1/video-to-video/edit",
+    build: (i) => ({ prompt: videoEditPrompt(i.prompt ?? "", i.images?.length ?? 0), video_url: i.video, keep_audio: true, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}) }),
+    pick: vid,
+  },
   "avatar-habla": {
     endpoint: "bytedance/omnihuman/v2",
     build: (i) => ({ image_url: i.image, audio_url: i.audio, ...(i.prompt ? { prompt: i.prompt } : {}) }),
@@ -68,6 +73,16 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
     pick: vid,
   },
 };
+
+/**
+ * Kling refers to reference photos as @Image1, @Image2…; customers write «foto 1». Translate, and if
+ * they uploaded photos without naming them, point at them so they're not ignored.
+ */
+export function videoEditPrompt(p: string, photos: number) {
+  let out = p.replace(/\b(?:foto|imagen|image|photo)\s*#?\s*([1-4])\b/gi, (_m, n) => `@Image${n}`).trim();
+  if (photos && !/@Image\d/.test(out)) out += ` (${Array.from({ length: photos }, (_, i) => `@Image${i + 1}`).join(", ")})`;
+  return out.slice(0, 2500);
+}
 
 /** The exact request each tool sends (exported for tests). */
 export const toolRequest = (id: ToolId, i: ToolInput) => {

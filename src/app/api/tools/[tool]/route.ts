@@ -40,8 +40,8 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
   }
   if (need.images) {
     const list = Array.isArray(b.images) ? b.images.filter(mine).slice(0, need.images) : [];
-    if (!list.length) return "Sube al menos una foto.";
-    input.images = list;
+    if (!list.length && !need.imagesOptional) return "Sube al menos una foto.";
+    if (list.length) input.images = list;
   }
   if (need.prompt) {
     const p = typeof b.prompt === "string" ? b.prompt.trim().slice(0, 2000) : "";

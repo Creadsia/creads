@@ -7,6 +7,7 @@ export type ToolId =
   | "editar-imagen"
   | "mejorar-imagen"
   | "mejorar-video"
+  | "editar-video"
   | "avatar-habla"
   | "sincronizar-labios"
   | "doblaje"
@@ -26,6 +27,7 @@ export interface ToolDef {
   inputs: {
     image?: boolean; // one photo
     images?: number; // several photos (max)
+    imagesOptional?: boolean; // the photos are optional references
     video?: { min: number; max: number }; // seconds
     audio?: { min: number; max: number }; // seconds; can also be written and read by a voice
     prompt?: "required" | "optional";
@@ -91,6 +93,25 @@ export const TOOLS: ToolDef[] = [
     // US$0.001 per megapixel-frame: 1080×1920 × 30 fps ≈ US$0.062 per second.
     estimate: (s) => +(0.062 * Math.max(1, s)).toFixed(2),
     priceNote: "≈ US$0,06 por segundo",
+  },
+  {
+    id: "editar-video",
+    name: "Editar video",
+    short: "Cambia la cara, el lugar o lo que quieras de un video, escribiéndolo.",
+    lead: "Sube un video de 3 a 10 segundos (por ejemplo un UGC) y escribe el cambio: «cambia el fondo por una cocina moderna», «ponle una polera roja», «reemplaza a la persona por la de la foto 1», «que tenga en la mano el producto de la foto 2». Se mantienen el movimiento y el audio originales.",
+    output: "video",
+    model: "Kling O1 Edit",
+    inputs: {
+      video: { min: 3, max: 10 },
+      images: 4,
+      imagesOptional: true,
+      prompt: "required",
+      promptHint: "Describe el cambio. Si subes fotos, nómbralas: «foto 1», «foto 2». Ej: «cambia la cara de la mujer por la de la foto 1 y el lugar por una playa al atardecer».",
+    },
+    estimate: (s) => +(0.168 * Math.max(3, Math.ceil(s))).toFixed(2),
+    priceNote: "≈ US$0,17 por segundo de video",
+    approx: true,
+    consent: true,
   },
   {
     id: "avatar-habla",

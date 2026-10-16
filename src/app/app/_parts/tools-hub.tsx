@@ -22,6 +22,7 @@ const ICON: Record<string, string> = {
   "editar-imagen": "M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4",
   "mejorar-imagen": "M4 4h7v7H4zM13 13h7v7h-7zM14 4h6v6M10 20H4v-6",
   "mejorar-video": "M4 6h12v12H4zM16 10l4-2v8l-4-2M7 9h3M7 12h6",
+  "editar-video": "M3 6h12v12H3zM15 10l4-2v8l-4-2M6 15l5-5 2 2",
   "avatar-habla": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 9-6.7M17 15v5M20 16.5v2M14 16.5v2",
   "sincronizar-labios": "M4 12c2.5-3 5-4.5 8-4.5s5.5 1.5 8 4.5c-2.5 3-5 4.5-8 4.5S6.5 15 4 12ZM4 12h16",
   doblaje: "M4 5h9v6H8l-4 3V5ZM11 13v2h5l4 3v-9h-4",
