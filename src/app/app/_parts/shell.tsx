@@ -107,7 +107,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
 function Status() {
   const [h, setH] = useState<{ providers: { claude: boolean; database: boolean; video: Record<string, boolean>; image: Record<string, boolean>; voice: Record<string, boolean> } } | null>(null);
   useEffect(() => { fetch("/api/health").then((r) => r.json()).then(setH).catch(() => {}); }, []);
-  if (!h) return null;
+  if (!h?.providers) return null;
   const p = h.providers;
   const any = (o: Record<string, boolean>) => Object.values(o).some(Boolean);
   const items: [string, boolean][] = [["Base de datos", p.database], ["Claude", p.claude], ["Video", any(p.video)], ["Imagen", any(p.image)], ["Voz", any(p.voice)]];
@@ -192,7 +192,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
   const footer = (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
       <CreditsBox />
-      <Status />
+      {user.owner && <Status />}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-semibold">{user.name || user.email}</span>

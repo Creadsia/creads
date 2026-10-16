@@ -120,8 +120,11 @@ async function pgExec(workspace: string | null, sql: string, params: unknown[]):
       if (r.rows[0]?.u !== "creads_app" || r.rows[0]?.bypass) throw new DbError("DATABASE_URL debe usar el usuario creads_app.", 500);
       checkedRole = true;
     }
-    await client.query("begin");
-    await client.query("select set_config('app.workspace', $1, true)", [workspace ?? ""]);
+    // one round trip instead of two: open the transaction and set the workspace together
+    // (the id is checked against WORKSPACE_RE, so it is safe as a quoted literal)
+    const ws = workspace ?? "";
+    if (ws && !WORKSPACE_RE.test(ws)) throw new DbError("Espacio de trabajo inválido.", 400);
+    await client.query(`begin; select set_config('app.workspace', '${ws}', true)`);
     const res = await client.query(sql, params);
     await client.query("commit");
     return res.rows;

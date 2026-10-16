@@ -13,9 +13,9 @@ export default function Home({ full = true }: { full?: boolean }) {
 
   useEffect(() => {
     const tables = ["avatars", "products", "scripts", "ads"] as const;
-    Promise.all(tables.map((t) => fetch(`/api/data/${t}`).then(async (r) => ({ t, ok: r.ok, d: await r.json().catch(() => ({})) })))).then((all) => {
+    Promise.all(tables.map((t) => fetch(`/api/data/${t}?count=1`).then(async (r) => ({ t, ok: r.ok, d: await r.json().catch(() => ({})) })))).then((all) => {
       if (all.some((x) => x.d?.missingTable)) setMissing(true);
-      setC(Object.fromEntries(all.map((x) => [x.t, x.ok ? (x.d.rows?.length ?? 0) : null])) as Counts);
+      setC(Object.fromEntries(all.map((x) => [x.t, x.ok ? Number(x.d.count ?? 0) : null])) as Counts);
     });
   }, []);
 

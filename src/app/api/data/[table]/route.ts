@@ -14,7 +14,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ table: s
   try {
     if (table === "rules") return NextResponse.json({ rows: await sharedRules.list("order=hits.desc&limit=500"), canEdit: canEditRules(s.user) });
     if (!canRead(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
-    const adId = new URL(req.url).searchParams.get("ad_id");
+    const sp = new URL(req.url).searchParams;
+    // just how many (the home screen): no need to send every row
+    if (sp.get("count") === "1") return NextResponse.json({ count: await s.db.count(table) });
+    const adId = sp.get("ad_id");
     const filter = adId ? `ad_id=eq.${encodeURIComponent(adId)}&order=idx.asc` : "order=created_at.desc&limit=500";
     return NextResponse.json({ rows: await s.db.list(table, filter) });
   } catch (err) {

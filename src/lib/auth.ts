@@ -118,6 +118,7 @@ export async function createUser(u: { email: string; name?: string; password: st
 }
 
 export async function updateUser(id: string, patch: Partial<Pick<User, "name" | "role" | "active">> & { password?: string }): Promise<User> {
+  forgetUserSessions(id);
   const body: Record<string, unknown> = {};
   if (patch.name !== undefined) body.name = patch.name;
   if (patch.role !== undefined) body.role = patch.role;
@@ -144,7 +145,15 @@ export async function setTwoFactor(userId: string, secret: string | null, on: bo
   await rest(`users?id=eq.${encodeURIComponent(userId)}`, { method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ totp_secret: secret, totp_on: on }) });
 }
 
+/** Moves an account to another workspace (e.g. someone added to the owner's team who is really a customer). */
+export async function moveUser(id: string, workspace: string) {
+  forgetUserSessions(id);
+  await rest(`users?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ workspace, role: "member" }) });
+  forgetUserSessions(id);
+}
+
 export async function deleteUser(id: string) {
+  forgetUserSessions(id);
   await rest(`users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: { prefer: "return=minimal" } });
 }
 
@@ -159,6 +168,7 @@ export async function createSession(userId: string, userAgent = ""): Promise<str
 
 export async function endSession(token: string) {
   if (!token) return;
+  sessionCache.delete(sha(token));
   await rest(`sessions?id=eq.${sha(token)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }).catch(() => {});
 }
 
@@ -187,13 +197,38 @@ async function workspaceInfo(id: string): Promise<{ ok: boolean; access: Access 
   wsCache.set(id, { ...info, at: Date.now() });
   return info;
 }
-export const forgetWorkspace = (id: string) => wsCache.delete(id);
+export const forgetWorkspace = (id: string) => {
+  wsCache.delete(id);
+  for (const [k, v] of sessionCache) if (v.user.workspace === id) sessionCache.delete(k);
+};
 /** Whether people of this workspace may sign in right now. */
 export const workspaceOpen = async (id: string) => (await workspaceInfo(id)).ok;
+
+// Every screen and every API call checks the session. Remembering the answer for a few seconds on
+// each server saves a database round trip per request (the main cause of a slow-feeling studio).
+// Short on purpose: signing out, pausing a customer or deleting an account takes effect within 20 s
+// everywhere (immediately on the server that handled it).
+const SESSION_TTL = 20_000;
+const sessionCache = new Map<string, { user: User; at: number }>();
+export const forgetUserSessions = (userId: string) => {
+  for (const [k, v] of sessionCache) if (v.user.id === userId) sessionCache.delete(k);
+};
 
 /** The signed-in user for a session token, or null. */
 export async function userFromToken(token: string | undefined | null): Promise<User | null> {
   if (!token || token.length < 20 || token.length > 100) return null;
+  const key = sha(token);
+  const hit = sessionCache.get(key);
+  if (hit && Date.now() - hit.at < SESSION_TTL) return hit.user;
+  const user = await lookupSession(token);
+  if (user) {
+    if (sessionCache.size > 2000) sessionCache.clear();
+    sessionCache.set(key, { user, at: Date.now() });
+  } else sessionCache.delete(key);
+  return user;
+}
+
+async function lookupSession(token: string): Promise<User | null> {
   try {
     const rows = (await rest(`sessions?id=eq.${sha(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user:users(${PUBLIC})&limit=1`)) as { user: User | null }[];
     const u = rows[0]?.user;

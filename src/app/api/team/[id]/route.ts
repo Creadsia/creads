@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { canManageTeam, deleteUser, getUserIn, updateUser, userFromRequest } from "@/lib/auth";
+import { canManageTeam, deleteUser, getUserIn, isOwner, moveUser, updateUser, userFromRequest } from "@/lib/auth";
+import { createClientWorkspace } from "@/lib/signup";
 
 type Ctx = { params: Promise<{ id: string }> };
 const tempPassword = () => randomBytes(9).toString("base64url").replace(/[-_]/g, "x") + "-" + randomBytes(2).toString("hex");
@@ -14,6 +15,18 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!target) return NextResponse.json({ error: "Cuenta no encontrada." }, { status: 404 });
   if (target.role === "owner" && me!.id !== target.id) return NextResponse.json({ error: "La cuenta del dueño solo la cambia el dueño." }, { status: 403 });
   const b = await req.json().catch(() => null);
+  // "Pasar a cuenta de cliente": the person gets their own workspace (own avatars, ads and credits)
+  // and stops seeing the owner's. Only Creadsia's owner, only for people of the owner's team.
+  if (b?.toClient === true) {
+    if (!isOwner(me) || target.role === "owner") return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+    try {
+      const ws = await createClientWorkspace(target.name || target.email.split("@")[0]);
+      await moveUser(target.id, ws);
+      return NextResponse.json({ moved: true, workspace: ws });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo mover." }, { status: 502 });
+    }
+  }
   const patch: Parameters<typeof updateUser>[1] = {};
   if (typeof b?.name === "string") patch.name = b.name.slice(0, 60);
   if (b?.role === "admin" || b?.role === "member") {

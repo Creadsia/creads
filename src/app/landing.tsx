@@ -89,7 +89,7 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
 function WallTile({ c }: { c: WallClip }) {
   return (
     <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2">
-      <LoopVideo src={c.id} poster={c.still} className="absolute inset-0 h-full w-full object-cover" />
+      <LoopVideo src={c.id} poster={`/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60`} className="absolute inset-0 h-full w-full object-cover" />
       <figcaption className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 font-mono text-[10.5px] leading-none text-white backdrop-blur-sm">
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: MAKER_DOT[c.maker] }} />
         {c.model}

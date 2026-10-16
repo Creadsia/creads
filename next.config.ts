@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     // Showcase images generated for the site (to be moved to Creads' own storage in Phase 1).
-    remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net" }],
+    remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net" }, { protocol: "https", hostname: "d2ol7oe51mr4n9.cloudfront.net" }],
     formats: ["image/avif", "image/webp"],
   },
   // The montage runs FFmpeg inside the serverless function: ship the binary and the caption font with it.
