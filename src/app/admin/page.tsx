@@ -3,6 +3,7 @@ import { Logo } from "../brand";
 import { adminConfigured, isAdmin } from "@/lib/admin";
 import AdminLogin from "./login";
 import AdminPanel from "./panel";
+import ThemeToggle from "../theme-toggle";
 
 export const metadata: Metadata = {
   title: "Panel · Creads",
@@ -19,6 +20,7 @@ export default async function AdminPage() {
           <Logo size={26} href="/" />
           <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-bold tracking-wide text-muted uppercase">Panel interno</span>
         </div>
+        <ThemeToggle lang="es" />
       </header>
       {ok ? <AdminPanel /> : <AdminLogin configured={adminConfigured()} />}
     </main>

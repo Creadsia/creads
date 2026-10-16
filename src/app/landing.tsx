@@ -4,6 +4,7 @@ import { Logo, Mark } from "./brand";
 import Composer from "./composer";
 import Pricing from "./pricing";
 import LoopVideo from "./loop-video";
+import ThemeToggle from "./theme-toggle";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -185,6 +186,7 @@ export default function Landing({ t }: { t: Content }) {
                 ),
               )}
             </nav>
+            <ThemeToggle lang={t.lang} />
             <a href="#pricing" className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90">
               {t.nav.cta}
             </a>

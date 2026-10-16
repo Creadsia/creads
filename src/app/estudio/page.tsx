@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Studio from "./studio";
+import ThemeToggle from "../theme-toggle";
 
 export const metadata: Metadata = {
   title: "Estudio · Creads",
@@ -14,6 +15,9 @@ export default function EstudioPage() {
         <Image src="/logo.svg" alt="" width={28} height={28} />
         <span className="font-semibold tracking-tight">
           Cre<span className="grad-text">ads</span> <span className="font-normal text-muted">· Estudio</span>
+        </span>
+        <span className="ml-auto">
+          <ThemeToggle lang="es" />
         </span>
       </header>
       <Studio />
