@@ -3,7 +3,7 @@ import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
 import { textAI, findVideo } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
-import { LENGTHS, type StoryPlan, type StorySettings, STYLES, motionPrompt, planPrompt, tidyPlan } from "@/lib/historias";
+import { LANGS, LENGTHS, type StoryPlan, type StorySettings, STYLES, motionPrompt, planPrompt, tidyPlan } from "@/lib/historias";
 import { loadStory } from "@/lib/historia-db";
 import { canUseVoice } from "@/lib/voices";
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   if (idea.length < 15) return NextResponse.json({ error: "Cuenta un poco más la idea (quién, qué le pasa, cómo termina)." }, { status: 400 });
   const style = STYLES.find((x) => x.id === b?.style)?.id ?? "cine3d";
   const seconds = LENGTHS.includes(Number(b?.seconds)) ? Number(b.seconds) : 30;
-  const lang = b?.lang === "en" ? "en" : "es";
+  const lang = LANGS.find((l) => l.id === b?.lang)?.id ?? "es-CL";
   const narrator = b?.narrator === true;
   const aspect = ASPECTS.includes(b?.aspect) ? String(b.aspect) : "9:16";
   const model = findVideo(String(b?.model ?? ""))?.configured() ? String(b.model) : "kling-3.0";
@@ -53,7 +53,10 @@ export async function PATCH(req: Request) {
     if (b?.plan) {
       // keep the approved sheets: only text fields come from the browser
       const next = tidyPlan(b.plan as StoryPlan, st.seconds);
-      next.characters = next.characters.map((c) => ({ ...c, image_url: st.plan.characters.find((o) => o.key === c.key)?.image_url ?? null }));
+      next.characters = next.characters.map((c) => {
+        const old = st.plan.characters.find((o) => o.key === c.key);
+        return { ...c, image_url: old?.image_url ?? null, avatar: old?.avatar ?? null };
+      });
       // the shot list can't grow or shrink here (rows already exist)
       if (next.shots.length !== st.plan.shots.length) return NextResponse.json({ error: "No se puede cambiar la cantidad de tomas." }, { status: 400 });
       st.plan = next;

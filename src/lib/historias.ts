@@ -56,6 +56,7 @@ export interface StoryCharacter {
   name: string;
   look: string; // fixed visual description in English (age, face, hair, body, clothes)
   image_url?: string | null; // approved reference sheet
+  avatar?: string | null; // id of the customer's avatar this character is based on
 }
 
 export interface StoryShot {
@@ -82,7 +83,7 @@ export interface StorySettings {
   idea: string;
   style: StyleId;
   seconds: number; // target length
-  lang: "es" | "en";
+  lang: StoryLang;
   narrator: boolean;
   voiceId?: string | null;
   plan: StoryPlan;
@@ -93,13 +94,23 @@ export interface StorySettings {
 
 export const LENGTHS = [30, 45, 60];
 
+export type StoryLang = "es-CL" | "es" | "en";
+export const LANGS: { id: StoryLang; name: string; spoken: string }[] = [
+  { id: "es-CL", name: "Español de Chile", spoken: "Chilean Spanish as people really talk in Chile: natural Chilean expressions and rhythm (\"po\", \"cachai\", \"al tiro\", \"bacán\" only where they sound natural, never forced), tuteo, no Spain or Mexico slang" },
+  { id: "es", name: "Español latino neutro", spoken: "neutral Latin American Spanish, no regional slang" },
+  { id: "en", name: "Inglés (EE. UU.)", spoken: "natural US English" },
+];
+export const langById = (id: string) => LANGS.find((l) => l.id === id) ?? LANGS[0];
+/** ElevenLabs language code for the narrator. */
+export const voiceLang = (l: StoryLang) => (l === "en" ? "en" : "es");
+
 /** How many shots for a film of this length (the reference films cut every 2–3 s). */
 export const shotsFor = (seconds: number) => Math.max(8, Math.min(24, Math.round(seconds / 2.6)));
 
-export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: "es" | "en"; narrator: boolean; aspect: string }) {
+export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: StoryLang; narrator: boolean; aspect: string }) {
   const st = styleById(o.style);
   const n = shotsFor(o.seconds);
-  const spoken = o.lang === "es" ? "Spanish from Chile (natural, neutral, not exaggerated slang)" : "natural US English";
+  const spoken = langById(o.lang).spoken;
   return `You are a film director and storyboard artist. Turn this idea into a short animated film for social media (Reels/TikTok, ${o.aspect}).
 
 IDEA (from the customer, may be in Spanish):
@@ -120,7 +131,7 @@ Rules:
 - Avoid violence, weapons, real brands and anything unsafe for a general audience.
 - "es" is one short line in Spanish describing the shot for the customer.
 - "music" is a music prompt in English for the soundtrack (genre, mood, tempo, instruments, how it builds), instrumental.
-- "title" and "logline" in Spanish.
+- "title" and "logline" in Spanish${o.lang === "es-CL" ? " from Chile" : ""}.${o.lang === "es-CL" ? "\n- The story happens in Chile unless the idea says otherwise: Chilean places, streets, schools, homes and faces, so a Chilean audience feels it is theirs." : ""}
 
 JSON shape:
 {"title":"","logline":"","music":"","characters":[{"key":"boy","name":"","look":""}],"shots":[{"idx":0,"seconds":2.5,"shot":"","characters":["boy"],"image":"","motion":"","narration":"","es":""}]}`;
@@ -157,6 +168,12 @@ export function characterPrompt(c: StoryCharacter, style: StyleId) {
   return `Character reference sheet for an animated film. Style: ${st.prompt}.
 Character "${c.name}": ${c.look}
 Show the SAME character three times side by side on a plain light grey background: full body front view, three-quarter view, and a large close-up portrait of the face with a neutral expression. Consistent proportions, clothes and colors in all three. No text, no labels, no watermark.`;
+}
+
+/** A character sheet that turns one of the customer's avatars (a real photo) into the film's style. */
+export function avatarCharacterPrompt(c: StoryCharacter, style: StyleId) {
+  return `${characterPrompt(c, style)}
+IMPORTANT: this character is the person in the reference photo. Keep their likeness (face shape, skin tone, eyes, nose, hairline, age) clearly recognizable, translated into the film's style. Clothes and hair as described above unless the description says to keep them from the photo.`;
 }
 
 export function keyframePrompt(shot: StoryShot, plan: StoryPlan, style: StyleId, aspect: string) {

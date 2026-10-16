@@ -9,6 +9,7 @@ import { fetchableUrl, saveMedia } from "@/lib/media";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { loadStory, saveSettings } from "@/lib/historia-db";
+import { voiceLang } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 300;
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     try {
       ref = (await payFor(s.user, chars * USD_PER_CHAR, "Historia · narrador", "eleven", { chars })).ref;
       for (const [i, l] of narr.entries()) {
-        const { bytes } = await elevenlabs.speak(st.voiceId!, l.text, { model: "eleven_multilingual_v2", lang: st.lang });
+        const { bytes } = await elevenlabs.speak(st.voiceId!, l.text, { model: "eleven_multilingual_v2", lang: voiceLang(st.lang) });
         const file = path.join(dir, `n${i}.mp3`);
         await writeFile(file, Buffer.from(bytes));
         narrFiles.push({ file, at: l.at });

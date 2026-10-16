@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LENGTHS, STYLES, type StoryPlan, type StorySettings, estimateStory } from "@/lib/historias";
+import { LANGS, LENGTHS, STYLES, type StoryLang, type StoryPlan, type StorySettings, estimateStory } from "@/lib/historias";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
@@ -12,6 +12,7 @@ import { refreshCredits, useCredits } from "../_parts/use-credits";
 interface VideoModel { id: string; label: string; configured: boolean; usdPerSecond: number; seconds: number[] }
 interface Voice { id: string; name: string; category: string }
 interface Ad { id: string; title: string; aspect: string; model: string; status: string; final_url: string | null; settings: StorySettings; created_at: string }
+interface Avatar { id: string; name: string; image_url: string | null }
 interface Clip { id: string; idx: number; status: string; url: string | null; image_url: string | null; error: string | null }
 
 const post = async (url: string, body: unknown, method = "POST") => {
@@ -48,7 +49,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
   const [style, setStyle] = useState("cine3d");
   const [seconds, setSeconds] = useState(30);
   const [aspect, setAspect] = useState("9:16");
-  const [lang, setLang] = useState<"es" | "en">("es");
+  const [lang, setLang] = useState<StoryLang>("es-CL");
   const [narrator, setNarrator] = useState(false);
   const [voiceId, setVoiceId] = useState("");
   const [niche, setNiche] = useState("");
@@ -124,9 +125,8 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
             </select>
           </Field>
           <Field label="Idioma">
-            <select value={lang} onChange={(e) => setLang(e.target.value as "es" | "en")} className={inputCls}>
-              <option value="es">Español</option>
-              <option value="en">Inglés</option>
+            <select value={lang} onChange={(e) => setLang(e.target.value as StoryLang)} className={inputCls}>
+              {LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </Field>
           <Field label="Nicho (para ordenar)">
@@ -201,6 +201,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [err, setErr] = useState("");
   const [tech, setTech] = useState(false);
   const [music, setMusic] = useState("");
+  const [avatars, setAvatars] = useState<Avatar[]>([]);
   const { price, covers } = useCredits();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -223,6 +224,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
       const nb = (d.image ?? []).find((m: { id: string }) => m.id === "nano-banana-pro");
       if (nb?.usd) setImgUsd(nb.usd);
     }).catch(() => {});
+    fetch("/api/data/avatars").then((r) => r.json()).then((d) => setAvatars((d.rows ?? []).filter((a: Avatar) => a.image_url))).catch(() => {});
   }, []);
 
   // keep animating shots up to date
@@ -252,6 +254,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const changeModel = (model: string) => run("model", () => post("/api/historias", { adId: id, model }, "PATCH"));
 
   const sheet = (key: string, extra?: string) => run(`c:${key}`, () => post("/api/historias/personaje", { adId: id, key, extra }));
+  const fromAvatar = (key: string, avatarId: string) => run(`c:${key}`, () => post("/api/historias/personaje", { adId: id, key, avatarId }));
   const ownSheet = (key: string, f: File) => run(`c:${key}`, async () => post("/api/historias/personaje", { adId: id, key, image: await uploadFile(f) }));
   const frame = (idx: number, extra?: string) => run(`f:${idx}`, () => post("/api/historias/toma", { adId: id, idx, extra }));
   const animate = (clipId: string, idx: number) => run(`v:${idx}`, () => post("/api/clips/run", { id: clipId }));
@@ -332,6 +335,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         <div className="grid gap-4 md:grid-cols-2">
           {plan.characters.map((c, i) => (
             <CharacterCard key={c.key} name={c.name} look={c.look} image={c.image_url ?? null} busy={Boolean(busy[`c:${c.key}`]) || dirty} priceLabel={price(imgUsd)}
+              avatars={avatars} avatarId={c.avatar ?? ""} onAvatar={(a) => fromAvatar(c.key, a)}
               onLook={(v) => edit((p) => { p.characters[i].look = v; return p; })}
               onMake={(extra) => sheet(c.key, extra)} onUpload={(f) => ownSheet(c.key, f)} />
           ))}
@@ -401,8 +405,9 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
 // media refs ("/api/media/ws/…") are served by our own route, only to their owner
 const useMedia = (ref: string | null) => ref;
 
-function CharacterCard({ name, look, image, busy, priceLabel, onLook, onMake, onUpload }: {
+function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId, onAvatar, onLook, onMake, onUpload }: {
   name: string; look: string; image: string | null; busy: boolean; priceLabel: string;
+  avatars: Avatar[]; avatarId: string; onAvatar: (id: string) => void;
   onLook: (v: string) => void; onMake: (extra?: string) => void; onUpload: (f: File) => void;
 }) {
   const src = useMedia(image);
@@ -417,6 +422,12 @@ function CharacterCard({ name, look, image, busy, priceLabel, onLook, onMake, on
       {image && <input value={fix} onChange={(e) => setFix(e.target.value)} placeholder="Corrección (opcional): «más joven», «pelo más corto»…" className={`${inputCls} text-xs`} />}
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => { onMake(fix || undefined); setFix(""); }} className={image ? ghostCls : btnCls}>{busy ? "Dibujando…" : image ? `Rehacer · ${priceLabel}` : `Crear · ${priceLabel}`}</button>
+        {avatars.length > 0 && (
+          <select value="" disabled={busy} onChange={(e) => e.target.value && onAvatar(e.target.value)} className={`${inputCls} max-w-[13rem]`} aria-label={`Usar un avatar para ${name}`}>
+            <option value="">{avatarId ? `Avatar: ${avatars.find((a) => a.id === avatarId)?.name ?? "elegido"} · cambiar` : `Usar un avatar · ${priceLabel}`}</option>
+            {avatars.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        )}
         <label className={`${ghostCls} cursor-pointer`}>
           Subir mi imagen
           <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
