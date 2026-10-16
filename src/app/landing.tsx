@@ -273,7 +273,7 @@ export default function Landing({ t }: { t: Content }) {
                 ),
               )}
             </nav>
-            <ThemeToggle lang={t.lang} />
+            <span className="hidden min-[420px]:contents"><ThemeToggle lang={t.lang} /></span>
             <a href="/app" className="hidden whitespace-nowrap px-2 text-sm font-semibold text-muted hover:text-ink sm:block">{t.nav.login}</a>
             <a href="#pricing" className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 sm:px-4">
               {t.nav.cta}
@@ -282,6 +282,7 @@ export default function Landing({ t }: { t: Content }) {
         </div>
         {/* phone: the same menu as a scrollable row */}
         <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm xl:hidden ${gutter}`}>
+          <span className="shrink-0 min-[420px]:hidden"><ThemeToggle lang={t.lang} /></span>
           {t.menu.map((m) => (
             <a key={m.label} href={m.href} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted">
               {m.label}
