@@ -174,8 +174,21 @@ function sqlDb(ws: string | null) {
     },
     remove: async (table: Table, id: string) => { if (UUID.test(id)) await q(`delete from public."${table}" where id = $1`, [id]); },
     count: async (table: Table) => Number((await q(`select count(*)::int as n from public."${table}"`))[0]?.n ?? 0),
+    claim: async (table: Table, id: string, from: Claim, data: Row) => {
+      if (!UUID.test(id)) return null;
+      const d = clean(table, data);
+      const params: unknown[] = [];
+      const vals = values(table, d, params);
+      const sets = Object.keys(d).map((c, i) => `"${c}" = ${vals[i]}`);
+      params.push(id, from.in ?? from.notIn ?? []);
+      const cond = from.in ? `status = any($${params.length})` : `(status is null or status <> all($${params.length}))`;
+      return (await q(`update public."${table}" set ${[...sets, "updated_at = now()"].join(", ")} where id = $${params.length - 1} and ${cond} returning *`, params))[0] ?? null;
+    },
   };
 }
+
+/** Which statuses a row must (not) have for a claim to win. */
+export interface Claim { in?: string[]; notIn?: string[] }
 
 // ---------- REST way in (service key + explicit owner filter) ----------
 
@@ -216,6 +229,11 @@ function restDb(owner: string | null) {
     update: async (table: Table, id: string, data: Row) =>
       ((await call(`${table}?${scope}id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ ...clean(table, data), updated_at: new Date().toISOString() }) })) as Row[])[0],
     remove: async (table: Table, id: string) => { await call(`${table}?${scope}id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }); },
+    claim: async (table: Table, id: string, from: Claim, data: Row) => {
+      const list = (from.in ?? from.notIn ?? []).map((x) => encodeURIComponent(x)).join(",");
+      const cond = from.in ? `status=in.(${list})` : `or=(status.is.null,status.not.in.(${list}))`;
+      return ((await call(`${table}?${scope}id=eq.${encodeURIComponent(id)}&${cond}`, { method: "PATCH", body: JSON.stringify({ ...clean(table, data), updated_at: new Date().toISOString() }) })) as Row[])[0] ?? null;
+    },
     count: async (table: Table) => {
       const { url, key } = env();
       const res = await fetch(`${url}/rest/v1/${table}?${scope}select=id&limit=1`, { headers: { ...sbHeaders(key), prefer: "count=exact" }, cache: "no-store" });
@@ -243,6 +261,8 @@ export function dbFor(workspace: string) {
     update: (t: TenantTable, id: string, data: Row) => inner.update(guard(t), id, data),
     remove: (t: TenantTable, id: string) => inner.remove(guard(t), id),
     count: (t: TenantTable) => inner.count(guard(t)),
+    /** Updates a row only if its status matches, atomically: the one caller that wins gets the row. */
+    claim: (t: TenantTable, id: string, from: Claim, data: Row) => inner.claim(guard(t), id, from, data),
   };
 }
 export type Db = ReturnType<typeof dbFor>;

@@ -100,6 +100,22 @@ describe("the database keeps customers apart", () => {
     assert.equal(m.rows.length, 0);
   });
 
+  test("a clip can be claimed only once (no double start, no double refund)", async () => {
+    const ad = await A().insert("ads", { title: "claim" });
+    const clip = await A().insert("clips", { ad_id: ad.id, idx: 0, status: "done" });
+    const id = String(clip.id);
+    const [one, two] = await Promise.all([
+      A().claim("clips", id, { notIn: ["generating", "starting"] }, { status: "starting" }),
+      A().claim("clips", id, { notIn: ["generating", "starting"] }, { status: "starting" }),
+    ]);
+    assert.equal([one, two].filter(Boolean).length, 1);
+    await A().update("clips", id, { status: "generating" });
+    assert.ok(await A().claim("clips", id, { in: ["generating"] }, { status: "failed" }));
+    assert.equal(await A().claim("clips", id, { in: ["generating"] }, { status: "failed" }), null);
+    // another workspace can't claim it at all
+    assert.equal(await B().claim("clips", id, { notIn: [] }, { status: "done" }), null);
+  });
+
   test("bad workspace names are refused", () => {
     assert.throws(() => dbFor("x' or '1'='1"));
     assert.throws(() => dbFor(""));

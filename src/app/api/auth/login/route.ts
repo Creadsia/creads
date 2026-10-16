@@ -3,6 +3,9 @@ import { SESSION_COOKIE, cookieOptions, createSession, findUserByEmail, normEmai
 import { clientIp, tooMany } from "@/lib/rate";
 import { verifyCode } from "@/lib/totp";
 
+// a valid scrypt hash of a random string: used when the email has no account
+const DUMMY_HASH = "scrypt$8b3f0c0e8f6b4f7c2d1a9e5b7c3d2f10$" + "a1".repeat(64);
+
 const fail = async () => {
   await new Promise((r) => setTimeout(r, 900)); // slow down guessing
   return NextResponse.json({ error: "Correo o clave incorrectos." }, { status: 401 });
@@ -19,7 +22,9 @@ export async function POST(req: Request) {
   if (limited) return limited;
   try {
     const user = await findUserByEmail(email);
-    if (!user || !user.active || !(await verifyPassword(password, user.password_hash))) return fail();
+    // check a password even when the account doesn't exist, so the answer takes the same time
+    const ok = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
+    if (!user || !user.active || !ok) return fail();
     if (!(await workspaceOpen(user.workspace))) return NextResponse.json({ error: "Esta cuenta está pausada. Escríbenos a hola@creadsia.com." }, { status: 403 });
     const tf = await twoFactorOf(user.id);
     if (tf?.on && tf.secret) {

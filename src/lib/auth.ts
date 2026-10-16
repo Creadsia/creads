@@ -132,9 +132,11 @@ export async function updateUser(id: string, patch: Partial<Pick<User, "name" | 
 export async function twoFactorOf(userId: string): Promise<{ secret: string | null; on: boolean } | null> {
   try {
     const rows = (await rest(`users?id=eq.${encodeURIComponent(userId)}&select=totp_secret,totp_on&limit=1`)) as { totp_secret: string | null; totp_on: boolean }[];
-    return rows[0] ? { secret: rows[0].totp_secret, on: Boolean(rows[0].totp_on) } : null;
-  } catch {
-    return null;
+    return { secret: rows[0]?.totp_secret ?? null, on: Boolean(rows[0]?.totp_on) };
+  } catch (err) {
+    // only "the columns don't exist yet" means two-step isn't set up; any other error must not let anyone in
+    if (/totp_\w+.*does not exist|column .*totp/i.test(err instanceof Error ? err.message : "")) return null;
+    throw err;
   }
 }
 

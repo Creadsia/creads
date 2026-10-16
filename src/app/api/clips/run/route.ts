@@ -6,7 +6,7 @@ import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
-import { freeRedosUsed, refundJob } from "@/lib/credits";
+import { CreditError, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 
 export const maxDuration = 120;
@@ -31,11 +31,15 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");
   let charged = false;
+  let before: string | null = null; // the clip's status before this attempt (put back if nothing was spent)
   try {
-    let clip = await db.get("clips", id);
-    if (!clip) return NextResponse.json({ error: "Corte no encontrado." }, { status: 404 });
-    // a double click must not start (and charge) the same clip twice
-    if (clip.status === "generating") return NextResponse.json({ error: "Este corte ya se está generando." }, { status: 409 });
+    const found = await db.get("clips", id);
+    if (!found) return NextResponse.json({ error: "Corte no encontrado." }, { status: 404 });
+    // Claim the clip atomically: a double click, a second tab or two parallel requests can't
+    // start (and charge) the same clip twice.
+    let clip = await db.claim("clips", id, { notIn: ["generating", "starting"] }, { status: "starting" });
+    if (!clip) return NextResponse.json({ error: "Este corte ya se está generando." }, { status: 409 });
+    before = String(found.status ?? "pending");
     // Retry with another model (e.g. when one refuses the avatar's face).
     if (typeof b?.model === "string" && b.model && b.model !== clip.model) {
       const other = findVideo(b.model);
@@ -61,16 +65,10 @@ export async function POST(req: Request) {
     const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
     const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? nanoBananaPro.usdPerImage : 0);
-    // Free automatic redo of a severe error found by the review: at most 1 per clip and 2 per ad,
-    // counted in the credits ledger (which the customer can't touch).
-    let free = false;
-    if (b?.free === true && clip.status === "done") {
-      const review = ((ad.settings as { review?: { clipId: string; severe?: boolean }[] } | null)?.review ?? []).find((r) => r.clipId === id);
-      const used = await freeRedosUsed(ws, String(ad.id), [id]);
-      free = Boolean(review?.severe) && (used.perClip[id] ?? 0) < 1 && used.perAd < 2;
-    }
-    await payFor(s.user, estimate, free ? `Rehecho gratis · ${ad.id}` : `Corte ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, free });
-    charged = !free;
+    // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
+    const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
+    await payFor(s.user, estimate, `Corte ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
+    charged = true; // paid or free, a failure below gives it back (a free redo gets its voucher back)
 
     let refs: MediaRef[] = [];
     let image = (clip.image_url as string | null) || "";
@@ -95,7 +93,12 @@ export async function POST(req: Request) {
   } catch (err) {
     if (charged) await refundJob(s.user.workspace, id);
     const msg = await failMessage(err, s.user);
-    await db.update("clips", id, { status: "failed", error: msg.slice(0, 500) }).catch(() => {});
+    if (!charged && err instanceof CreditError && before) {
+      // nothing was spent (no credits / plan expired): leave the clip as it was
+      await db.update("clips", id, { status: before }).catch(() => {});
+    } else if (before !== null) {
+      await db.update("clips", id, { status: "failed", error: msg.slice(0, 500) }).catch(() => {});
+    }
     return NextResponse.json({ error: msg }, { status: failStatus(err) });
   }
 }

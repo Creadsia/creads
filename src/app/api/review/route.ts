@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { grantFreeRedo } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
@@ -92,6 +93,8 @@ Responde SOLO JSON: {"cortes":[{"corte":número,"problema":"en español, corto",
     const learned = await learnFrom(severeIssues, format).catch(() => 0);
 
     await db.update("ads", adId, { settings: { ...settings, review: results, reviewedAt: new Date().toISOString() } });
+    // severe errors earn a free automatic redo (granted here, server-side: max 1 per clip, 2 per ad)
+    for (const r of results) if (r.severe) await grantFreeRedo(s.user.workspace, adId, r.clipId);
     for (const r of results) await db.update("clips", r.clipId, { error: r.issues.length ? r.issues.join(" · ").slice(0, 500) : null }).catch(() => {});
     return NextResponse.json({ results: results.map(({ words, ...r }) => ({ ...r, words: words.length })), learned });
   } catch (err) {

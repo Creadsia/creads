@@ -68,21 +68,28 @@ export interface Charge { credits: number; ref: string; free: boolean }
  * Charges a job before it starts. Throws CreditError (shown to the customer as is) when the plan
  * expired or the credits don't cover it. `ref` ties the charge to the job so a failure can refund it.
  */
-export async function chargeJob(user: User, usd: number, note: string, ref: string = randomUUID(), opts: { free?: boolean } = {}): Promise<Charge> {
+export async function chargeJob(user: User, usd: number, note: string, ref: string = randomUUID(), opts: { freeRedoOf?: string } = {}): Promise<Charge> {
   const ws = user.workspace;
   if (unlimited(ws)) return { credits: 0, ref, free: true };
+  // A free automatic redo uses the voucher the review granted (if there is one left); otherwise it's paid.
+  if (opts.freeRedoOf) {
+    const id = await sbRpc<number | null>("use_free_redo", { p_owner: ws, p_ad: opts.freeRedoOf, p_clip: ref }).catch(() => null);
+    if (id) return { credits: 0, ref, free: true };
+    // asked for free but there's no voucher left: don't charge behind the customer's back
+    throw new CreditError("Este corte ya usó su rehecho gratis. Si quieres rehacerlo otra vez, usa «Rehacer este corte» (gasta créditos).", 409);
+  }
   try {
     const [rate, b] = await Promise.all([usdPerCredit(), billingOf(ws)]);
     if (expired(b)) throw new CreditError("Tu plan venció. Escríbenos a hola@creadsia.com para renovarlo.");
     const credits = creditsFor(usd, rate, b.discount);
     const rows = await sbRpc<{ ok: boolean; balance: number }[]>("spend_credits", {
-      p_owner: ws, p_amount: credits, p_note: note.slice(0, 200), p_ref: ref, p_usd: +usd.toFixed(4), p_by: user.email, p_free: Boolean(opts.free),
+      p_owner: ws, p_amount: credits, p_note: note.slice(0, 200), p_ref: ref, p_usd: +usd.toFixed(4), p_by: user.email, p_free: false,
     });
     const r = rows[0];
     if (!r?.ok) {
       throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. Pide más en hola@creadsia.com.`);
     }
-    return { credits: opts.free ? 0 : credits, ref, free: Boolean(opts.free) };
+    return { credits, ref, free: false };
   } catch (err) {
     if (err instanceof CreditError) throw err;
     // the credits system isn't set up yet: customers can't spend (fail closed)
@@ -102,15 +109,10 @@ export async function refundJob(ws: string, ref: string, note = "Devuelto: el tr
   }
 }
 
-/** Free automatic redos already used, from the ledger (the customer can't change it). */
-export async function freeRedosUsed(ws: string, adId: string, clipIds: string[]) {
-  if (unlimited(ws) || !clipIds.length) return { perAd: 0, perClip: {} as Record<string, number> };
-  const rows = await sbRest<{ ref: string }[]>(
-    `credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&delta=eq.0&note=eq.${encodeURIComponent(`Rehecho gratis · ${adId}`)}&select=ref&limit=100`,
-  ).catch(() => []);
-  const perClip: Record<string, number> = {};
-  for (const r of rows) perClip[r.ref] = (perClip[r.ref] ?? 0) + 1;
-  return { perAd: rows.length, perClip };
+/** The review found a severe error in a clip: grant one free redo (max 1 per clip, 2 per ad). */
+export async function grantFreeRedo(ws: string, adId: string, clipId: string) {
+  if (unlimited(ws)) return true;
+  return Boolean(await sbRpc<boolean>("grant_free_redo", { p_owner: ws, p_ad: adId, p_clip: clipId }).catch(() => false));
 }
 
 // ---------- owner tools (panel) ----------
@@ -118,7 +120,8 @@ export async function freeRedosUsed(ws: string, adId: string, clipIds: string[])
 export interface Movement { id: number; delta: number; kind: string; note: string | null; usd: number | null; by_user: string | null; created_at: string }
 
 export async function history(ws: string, limit = 30) {
-  return sbRest<Movement[]>(`credits?owner=eq.${encodeURIComponent(ws)}&select=id,delta,kind,note,usd,by_user,created_at&order=id.desc&limit=${limit}`);
+  // free-redo vouchers (0 credits, bookkeeping only) are left out
+  return sbRest<Movement[]>(`credits?owner=eq.${encodeURIComponent(ws)}&or=(kind.neq.adjust,delta.neq.0)&select=id,delta,kind,note,usd,by_user,created_at&order=id.desc&limit=${limit}`);
 }
 
 /** Adds (or takes away) credits by hand. */

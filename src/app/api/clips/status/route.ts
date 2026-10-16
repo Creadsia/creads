@@ -26,9 +26,11 @@ export async function GET(req: Request) {
     const st = await provider.status({ provider: provider.id, jobId: String(clip.provider_job) });
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOfModel(provider.id));
-      const row = await db.update("clips", id, { status: "failed", error: error.slice(0, 500) });
-      await refundJob(s.user.workspace, id); // the provider didn't deliver: credits go back
-      return NextResponse.json({ clip: row });
+      // Only the request that flips the clip from "generating" to "failed" refunds (two tabs polling at
+      // once can't refund twice, nor refund an earlier run that worked).
+      const row = await db.claim("clips", id, { in: ["generating"] }, { status: "failed", error: error.slice(0, 500) });
+      if (row) await refundJob(s.user.workspace, id); // the provider didn't deliver: credits go back
+      return NextResponse.json({ clip: row ?? (await db.get("clips", id)) });
     }
     if (st.state !== "done") return NextResponse.json({ clip });
     const ws = s.user.workspace;

@@ -64,6 +64,33 @@ describe("credits", () => {
   });
 });
 
+describe("free redos", () => {
+  const AD = "11111111-1111-1111-1111-111111111111";
+  const grantV = async (clip: string) => (await q("select public.grant_free_redo('cliente-a', $1, $2) as ok", [AD, clip]))[0].ok;
+  const useV = async (clip: string) => (await q("select public.use_free_redo('cliente-a', $1, $2) as id", [AD, clip]))[0].id;
+
+  test("only what the review granted, once per clip, two per ad", async () => {
+    assert.equal(await useV("c1"), null); // nothing granted yet
+    assert.equal(await grantV("c1"), true);
+    assert.equal(await grantV("c1"), true); // same clip: no second voucher
+    assert.equal(await grantV("c2"), true);
+    assert.equal(await grantV("c3"), false); // third clip of the same ad
+    const before = await balance("cliente-a");
+    assert.ok(await useV("c1"));
+    assert.equal(await useV("c1"), null); // already used
+    assert.equal(await balance("cliente-a"), before); // free means free
+  });
+
+  test("a failed free redo gives the voucher back, and doesn't touch paid charges", async () => {
+    await spend("cliente-a", 7, "c2"); // an earlier paid run of c2
+    const bal = await balance("cliente-a");
+    assert.ok(await useV("c2"));
+    await q("select public.refund_last('cliente-a', 'c2', 'falló')"); // the free redo failed
+    assert.equal(await balance("cliente-a"), bal); // the paid run was not refunded
+    assert.ok(await useV("c2")); // the voucher works again
+  });
+});
+
 describe("rate limits", () => {
   test("allows up to the limit, then refuses", async () => {
     const hit = async () => (await q("select public.hit_rate('login:test', 600, 3) as ok"))[0].ok;

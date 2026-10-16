@@ -166,7 +166,7 @@ export class DailyCapError extends Error {
 /** What Creads recorded as spent today (all customers). */
 export async function spentToday() {
   const day = new Date().toISOString().slice(0, 10);
-  const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&created_at=gte.${day}&limit=100000`).catch(() => []);
+  const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&status=neq.failed&created_at=gte.${day}&limit=100000`).catch(() => []);
   return rows.reduce((a, r) => a + Number(r.usd ?? 0), 0);
 }
 
@@ -383,7 +383,7 @@ export async function ensureDailyCap(usd: number) {
   if (!diario) return;
   const day = new Date().toISOString().slice(0, 10);
   if (!dayCache || dayCache.day !== day || Date.now() - dayCache.at > 30_000) {
-    const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&created_at=gte.${day}&limit=100000`).catch(() => null);
+    const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&status=neq.failed&created_at=gte.${day}&limit=100000`).catch(() => null);
     if (!rows) return; // can't read it: don't block on bookkeeping
     dayCache = { at: Date.now(), day, usd: rows.reduce((a, r) => a + Number(r.usd ?? 0), 0) };
   }

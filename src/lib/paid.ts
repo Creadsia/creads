@@ -5,10 +5,10 @@ import { CreditError, chargeJob, refundJob } from "./credits";
 // One door for every paid job: charge the customer's credits, then make sure Creads can pay the
 // provider today (daily limit, provider balance). If anything says no, the credits go back.
 
-export async function payFor(user: User, usd: number, note: string, svc: Service, opts: { ref?: string; free?: boolean; chars?: number } = {}) {
-  const charge = await chargeJob(user, usd, note, opts.ref, { free: opts.free });
+export async function payFor(user: User, usd: number, note: string, svc: Service, opts: { ref?: string; freeRedoOf?: string; chars?: number } = {}) {
+  const charge = await chargeJob(user, usd, note, opts.ref, { freeRedoOf: opts.freeRedoOf });
   try {
-    await ensureDailyCap(usd);
+    if (user.workspace !== "main") await ensureDailyCap(usd); // the owner sees the alert but is never blocked
     await ensureFunds(svc, usd, opts.chars ?? 0);
   } catch (err) {
     await refundJob(user.workspace, charge.ref, "Devuelto: el servicio no estaba disponible");

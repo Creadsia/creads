@@ -83,9 +83,45 @@ begin
   where x.owner = p_owner and x.kind = 'charge' and x.ref = p_ref
     and not exists (select 1 from public.credits r where r.owner = p_owner and r.kind = 'refund' and r.ref = 'charge:' || x.id)
   order by x.id desc limit 1;
-  if not found or c.delta >= 0 then return 0; end if;
+  if not found or c.delta > 0 then return 0; end if; -- (a free redo has delta 0: refunding it gives the free redo back)
   insert into public.credits (owner, delta, kind, note, ref) values (p_owner, -c.delta, 'refund', p_note, 'charge:' || c.id);
   return -c.delta;
+end $$;
+
+-- Free automatic redos. The review (server) grants a voucher for a clip with a severe error: at most
+-- one per clip and two per ad. A redo can use it once; if that redo fails, refund_last gives it back.
+create or replace function public.grant_free_redo(p_owner text, p_ad text, p_clip text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  perform pg_advisory_xact_lock(hashtext('credits:' || p_owner));
+  if exists (select 1 from public.credits where owner = p_owner and kind = 'adjust' and ref = 'voucher:' || p_ad || ':' || p_clip) then
+    return true;
+  end if;
+  if (select count(*) from public.credits where owner = p_owner and kind = 'adjust' and ref like 'voucher:' || p_ad || ':%') >= 2 then
+    return false;
+  end if;
+  insert into public.credits (owner, delta, kind, note, ref) values (p_owner, 0, 'adjust', 'Rehecho gratis disponible', 'voucher:' || p_ad || ':' || p_clip);
+  return true;
+end $$;
+
+create or replace function public.use_free_redo(p_owner text, p_ad text, p_clip text) returns bigint
+language plpgsql security definer set search_path = public as $$
+declare
+  cid bigint;
+begin
+  perform pg_advisory_xact_lock(hashtext('credits:' || p_owner));
+  if not exists (select 1 from public.credits where owner = p_owner and kind = 'adjust' and ref = 'voucher:' || p_ad || ':' || p_clip) then
+    return null;
+  end if;
+  if exists (
+    select 1 from public.credits x
+    where x.owner = p_owner and x.kind = 'charge' and x.ref = p_clip and x.delta = 0 and x.note = 'Rehecho gratis · ' || p_ad
+      and not exists (select 1 from public.credits r where r.owner = p_owner and r.kind = 'refund' and r.ref = 'charge:' || x.id)
+  ) then
+    return null;
+  end if;
+  insert into public.credits (owner, delta, kind, note, ref) values (p_owner, 0, 'charge', 'Rehecho gratis · ' || p_ad, p_clip) returning id into cid;
+  return cid;
 end $$;
 
 -- Counts one attempt for p_key; true while it stays within p_max per p_window seconds.
@@ -108,10 +144,14 @@ revoke execute on function public.credit_balance(text) from public, anon, authen
 revoke execute on function public.spend_credits(text, integer, text, text, numeric, text, boolean) from public, anon, authenticated;
 revoke execute on function public.refund_last(text, text, text) from public, anon, authenticated;
 revoke execute on function public.hit_rate(text, integer, integer) from public, anon, authenticated;
+revoke execute on function public.grant_free_redo(text, text, text) from public, anon, authenticated;
+revoke execute on function public.use_free_redo(text, text, text) from public, anon, authenticated;
 grant execute on function public.credit_balance(text) to service_role;
 grant execute on function public.spend_credits(text, integer, text, text, numeric, text, boolean) to service_role;
 grant execute on function public.refund_last(text, text, text) to service_role;
 grant execute on function public.hit_rate(text, integer, integer) to service_role;
+grant execute on function public.grant_free_redo(text, text, text) to service_role;
+grant execute on function public.use_free_redo(text, text, text) to service_role;
 
 -- Ask the API to see the new functions right away.
 notify pgrst, 'reload schema';

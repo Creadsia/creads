@@ -98,7 +98,6 @@ export default function AdWork({ adId }: { adId: string }) {
     if (todo.length) {
       setPhase("redo");
       todo.forEach((r) => { redos[r.clipId] = (redos[r.clipId] ?? 0) + 1; });
-      await fetch(`/api/data/ads/${adId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ settings: { ...(ad?.settings ?? {}), redos } }) });
       setNote((n) => `${n ? `${n} ` : ""}Rehaciendo ${todo.length} corte${todo.length === 1 ? "" : "s"} con errores graves, sin costo para ti.`);
       await Promise.all(todo.map((r) => redo(r.clipId, r.issues.join(". "), true)));
       setReview(null);
