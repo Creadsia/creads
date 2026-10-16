@@ -6,7 +6,7 @@ import { signedUploadFor } from "@/lib/media";
 // Prepares a direct browser → storage upload for files too big to pass through our server (up to 50 MB).
 const KINDS: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp",
-  "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg",
+  "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/wav": "wav", "audio/x-wav": "wav", "audio/ogg": "ogg", "audio/webm": "webm", "audio/aac": "aac",
   "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm",
 };
 const MAX = 50 * 1024 * 1024;

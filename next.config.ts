@@ -28,7 +28,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/montage": ffmpegFiles,
     "/api/review": ffmpegFiles,
+    // voice samples are cleaned up (any audio or video → mono mp3) before cloning
+    "/api/voices/clone": ["./node_modules/ffmpeg-static/ffmpeg"],
     // the tools measure uploaded videos and audio with FFmpeg before spending
     "/api/tools/*": ["./node_modules/ffmpeg-static/ffmpeg"],
   },

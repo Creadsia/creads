@@ -79,7 +79,7 @@ export interface VoiceProvider {
   /** Voices available on our account (cloned ones first). */
   voices(): Promise<Voice[]>;
   /** Clones a voice from a consented sample; returns the provider's voice id. */
-  clone(name: string, sample: { bytes: Uint8Array; mime: string; filename: string }): Promise<string>;
+  clone(name: string, sample: VoiceSample | VoiceSample[]): Promise<string>;
   /** Reads a line with a voice; returns the audio file. */
   speak(voiceId: string, text: string, opts?: { model?: string; lang?: "en" | "es" }): Promise<{ bytes: Uint8Array; mime: string }>;
   /** Word-level transcript of a hosted audio or video file. */
@@ -94,3 +94,5 @@ export interface TextAI {
   /** One prompt in, text out. Images (frames, contact sheets) are optional. */
   complete(opts: { system?: string; prompt: string; images?: string[]; json?: boolean }): Promise<string>;
 }
+
+export interface VoiceSample { bytes: Uint8Array; mime: string; filename: string }

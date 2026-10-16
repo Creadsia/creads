@@ -237,6 +237,12 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
   return readFile(out);
 }
 
+/** Any audio or video → a clean mono mp3 for voice cloning (first `maxSec` seconds). Returns its length. */
+export async function voiceSample(file: string, out: string, maxSec = 180) {
+  await ff(["-y", "-i", file, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "128k", "-t", String(maxSec), out], 90_000);
+  return (await probe(out)).dur;
+}
+
 export async function workdir(id: string) {
   const dir = path.join("/tmp", `creads-${id.replace(/[^a-z0-9-]/gi, "")}`);
   await rm(dir, { recursive: true, force: true });

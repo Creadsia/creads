@@ -8,7 +8,7 @@ export const maxDuration = 30;
 
 const KINDS: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp",
-  "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/wav": "wav", "audio/ogg": "ogg",
+  "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/x-m4a": "m4a", "audio/wav": "wav", "audio/ogg": "ogg", "audio/webm": "webm", "audio/aac": "aac", "audio/x-wav": "wav",
   "video/mp4": "mp4",
 };
 

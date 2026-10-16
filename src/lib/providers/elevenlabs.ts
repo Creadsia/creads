@@ -49,7 +49,9 @@ export const elevenlabs: VoiceProvider = {
   async clone(name, sample) {
     const form = new FormData();
     form.append("name", name);
-    form.append("files", new Blob([sample.bytes as BlobPart], { type: sample.mime }), sample.filename);
+    for (const one of Array.isArray(sample) ? sample : [sample]) {
+      form.append("files", new Blob([one.bytes as BlobPart], { type: one.mime }), one.filename);
+    }
     form.append("remove_background_noise", "true");
     form.append("description", "Clonada desde Creads con consentimiento");
     const res = await fetch(`${API}/v1/voices/add`, { method: "POST", headers: { "xi-api-key": key() }, body: form });

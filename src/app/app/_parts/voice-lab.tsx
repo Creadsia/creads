@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import VoiceFromAudios from "./voice-upload";
 
 // Voice bench: pick or clone a voice, then have it read a line. Uses ElevenLabs characters from our plan.
 
@@ -24,12 +25,6 @@ export default function VoiceLab({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [audio, setAudio] = useState<string | null>(null);
-
-  const [cName, setCName] = useState("");
-  const [cFile, setCFile] = useState<File | null>(null);
-  const [cConsent, setCConsent] = useState(false);
-  const [cBusy, setCBusy] = useState(false);
-  const [cMsg, setCMsg] = useState("");
 
   const load = useCallback(async () => {
     if (!code) return;
@@ -56,21 +51,6 @@ export default function VoiceLab({ code }: { code: string }) {
     finally { setBusy(false); }
   }
 
-  async function clone() {
-    if (!cFile) return;
-    setCBusy(true); setCMsg("");
-    const fd = new FormData();
-    fd.append("name", cName); fd.append("file", cFile); fd.append("consent", cConsent ? "yes" : "no");
-    const res = await fetch("/api/voices/clone", { method: "POST", headers: { "x-creads-code": code }, body: fd });
-    const d = await res.json().catch(() => ({}));
-    setCBusy(false);
-    if (!res.ok) return setCMsg(d.error || "No se pudo clonar la voz.");
-    setCMsg(`Voz «${cName}» creada. Ya está en la lista.`);
-    setCName(""); setCFile(null); setCConsent(false);
-    await load();
-    setVoiceId(d.voiceId);
-  }
-
   const own = voices.filter((v) => v.category === "cloned");
   const lib = voices.filter((v) => v.category !== "cloned");
   const selected = voices.find((v) => v.id === voiceId);
@@ -91,9 +71,11 @@ export default function VoiceLab({ code }: { code: string }) {
 
             {loadErr && <p className="text-sm text-bad">{loadErr}</p>}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <VoiceFromAudios code={code} onCreated={async (id: string) => { await load(); setVoiceId(id); }} />
+
+      <div className="grid gap-4">
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
-          <h3 className="font-semibold">Leer una frase</h3>
+          <h3 className="font-semibold">Probar una voz: escríbele una frase</h3>
           <div className="flex flex-wrap gap-2">
             <select aria-label="Voz" value={voiceId} onChange={(e) => setVoiceId(e.target.value)} className={`${input} min-w-0 flex-1`}>
               {own.length > 0 && <optgroup label="Tus voces">{own.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>}
@@ -120,20 +102,6 @@ export default function VoiceLab({ code }: { code: string }) {
           )}
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
-          <h3 className="font-semibold">Clonar una voz</h3>
-          <p className="text-sm text-muted">Sube 1 a 2 minutos de la persona hablando sola, sin música ni ruido (mp3 o m4a, hasta 4 MB).</p>
-          <input aria-label="Nombre de la voz" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Ej: Papá (Chile)" className={input} />
-          <input aria-label="Audio de muestra" type="file" accept="audio/*,video/mp4" onChange={(e) => setCFile(e.target.files?.[0] ?? null)} className="text-sm" />
-          <label className="flex items-start gap-2 text-sm">
-            <input type="checkbox" checked={cConsent} onChange={(e) => setCConsent(e.target.checked)} className="mt-1" />
-            <span>Tengo el permiso de esta persona para clonar su voz y usarla en anuncios.</span>
-          </label>
-          <button type="button" onClick={clone} disabled={!code || !cName.trim() || !cFile || !cConsent || cBusy} className={btn}>
-            {cBusy ? "Clonando… (≈ 20 s)" : "Clonar voz"}
-          </button>
-          {cMsg && <p className="text-sm">{cMsg}</p>}
-        </div>
       </div>
     </section>
   );
