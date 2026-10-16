@@ -172,12 +172,12 @@ export async function endSession(token: string) {
   await rest(`sessions?id=eq.${sha(token)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }).catch(() => {});
 }
 
-// A workspace's status and access level, cached for a minute. Until the workspaces table exists
+// A workspace's status and access level, cached for 20 seconds. Until the workspaces table exists
 // (supabase/tenancy.sql) every workspace counts as active with full access.
 const wsCache = new Map<string, { ok: boolean; access: Access; at: number }>();
 async function workspaceInfo(id: string): Promise<{ ok: boolean; access: Access }> {
   const hit = wsCache.get(id);
-  if (hit && Date.now() - hit.at < 60_000) return hit;
+  if (hit && Date.now() - hit.at < 20_000) return hit;
   let info: { ok: boolean; access: Access } = { ok: true, access: "full" };
   try {
     let rows: { active: boolean; access?: string }[];

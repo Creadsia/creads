@@ -34,7 +34,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
     return [...m.entries()].sort((a, b) => (a[1].label === "Sin nicho" ? 1 : b[1].label === "Sin nicho" ? -1 : b[1].n - a[1].n));
   }, [mine]);
   const rows = mine.filter((a) => !fav || a.favorite).filter((a) => !niche || nicheKey(nicheOf(a) || "Sin nicho") === niche);
-  const saveNiche = (a: Ad, v: string) => { t.update(a.id, { settings: { ...(a.settings ?? {}), niche: cleanNiche(v) || null } }); setEditing(null); };
+  const saveNiche = (a: Ad, v: string) => { t.update(a.id, { niche: cleanNiche(v) || null }); setEditing(null); };
 
   return (
     <>

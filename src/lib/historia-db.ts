@@ -12,3 +12,15 @@ export async function loadStory(db: Db, adId: string) {
 }
 
 export const saveSettings = (db: Db, adId: string, st: StorySettings) => db.update("ads", adId, { settings: st as unknown as Record<string, unknown> });
+
+/**
+ * Changes a story from its latest saved version (reloaded just before writing), so two jobs that finish
+ * at the same time (e.g. two character sheets) don't erase each other's result.
+ */
+export async function updateStory(db: Db, adId: string, change: (st: StorySettings) => void) {
+  const fresh = await loadStory(db, adId);
+  if (!fresh) throw new Error("Historia no encontrada.");
+  change(fresh.st);
+  await saveSettings(db, adId, fresh.st);
+  return fresh.st;
+}

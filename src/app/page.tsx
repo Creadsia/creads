@@ -14,5 +14,5 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  return <Landing t={es} rate={await usdClpRate().catch(() => 950)} />;
+  return <Landing t={es} rate={await usdClpRate().catch(() => 950)} renews={process.env.MP_ONE_TIME !== "1"} />;
 }

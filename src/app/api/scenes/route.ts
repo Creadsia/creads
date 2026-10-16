@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { needsCredits } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { sharedRules } from "@/lib/db";
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const limited = await tooMany("ai", s.user.id);
   if (limited) return limited;
+  const broke = await needsCredits(s.user);
+  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   const { db } = s;
   if (!textAI.configured()) return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY en Vercel." }, { status: 503 });
 

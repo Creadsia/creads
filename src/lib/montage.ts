@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
@@ -20,7 +20,8 @@ function ffmpeg() {
 /** Runs ffmpeg and returns its log (ffmpeg writes everything to stderr). */
 async function ff(args: string[], timeoutMs = 240_000) {
   try {
-    const r = await run(ffmpeg(), ["-hide_banner", ...args], { maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs });
+    // only local files: a customer's upload disguised as a playlist can't make FFmpeg fetch other addresses
+    const r = await run(ffmpeg(), ["-hide_banner", "-protocol_whitelist", "file,pipe", ...args], { maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs });
     return r.stderr + r.stdout;
   } catch (err) {
     const e = err as { stderr?: string; message?: string };
@@ -50,6 +51,19 @@ export async function probe(file: string) {
   const m = log.match(/Duration: (\d+):(\d+):([\d.]+)/);
   const dur = m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) : 0;
   return { dur, audio: /Stream #\d+:\d+[^:]*: Audio/.test(log) };
+}
+
+/** Where the last sound of a clip ends (the trailing silence is cut), for shots where someone talks. */
+export async function speechEnd(file: string, dur: number) {
+  const log = await ff(["-i", file, "-af", "silencedetect=noise=-32dB:d=0.35", "-f", "null", "-"]);
+  const ev = [...log.matchAll(/silence_(start|end): ([\d.]+)/g)];
+  let lastStart: number | null = null;
+  for (const [, k, v] of ev) {
+    if (k === "start") lastStart = Number(v);
+    else if (Number(v) < dur - 0.3) lastStart = null; // that silence ended before the clip did: sound came after it
+  }
+  // a silence that runs to the end of the clip: speech ended where it began
+  return lastStart !== null && lastStart > 0.3 ? Math.min(dur, lastStart + 0.2) : dur;
 }
 
 /** Where speech starts and ends: skip leading silence and dead air at the end (prototype: trim_points). */
@@ -294,9 +308,9 @@ export async function buildStory(dir: string, shots: StoryCut[], aspect: string,
   ];
   if (music) {
     const mi = n++;
-    args.push("-stream_loop", "-1", "-i", music);
+    args.push("-i", music); // (made to the film's length; padded with silence if it's ever short)
     const dips = talk.map(([a, b]) => `,volume=0.25:enable='between(t,${a.toFixed(2)},${b.toFixed(2)})'`).join("");
-    parts.push(`[${mi}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${T},asetpts=PTS-STARTPTS${dips},afade=t=out:st=${fadeA}:d=1.5[mus]`);
+    parts.push(`[${mi}:a]aresample=44100,aformat=channel_layouts=stereo,apad=whole_dur=${T},atrim=duration=${T},asetpts=PTS-STARTPTS${dips},afade=t=out:st=${fadeA}:d=1.5[mus]`);
     tracks.push("[mus]");
   }
   shots.forEach((sh, i) => {
@@ -333,7 +347,19 @@ export async function thumbnail(file: string, out: string, width = 512) {
   return readFile(out);
 }
 
+/** Deletes work folders left by earlier jobs (older than 15 minutes) so the server's disk never fills up. */
+async function sweepWork() {
+  const now = Date.now();
+  const names = await readdir("/tmp").catch(() => [] as string[]);
+  await Promise.all(names.filter((n) => n.startsWith("creads-")).map(async (n) => {
+    const p = path.join("/tmp", n);
+    const st = await stat(p).catch(() => null);
+    if (st && now - st.mtimeMs > 15 * 60_000) await rm(p, { recursive: true, force: true }).catch(() => null);
+  }));
+}
+
 export async function workdir(id: string) {
+  await sweepWork();
   const dir = path.join("/tmp", `creads-${id.replace(/[^a-z0-9-]/gi, "")}`);
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });

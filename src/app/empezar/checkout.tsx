@@ -43,6 +43,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
   useEffect(() => {
     track("ViewContent", { content_name: "Checkout", value: q.total, currency: "USD" });
+    track("AddToCart", { content_name: q.label, value: q.total, currency: "USD" }); // one per visit, whichever button brought them
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loginHref = `/app/planes?plan=${item}&periodo=${period}`;
@@ -64,8 +65,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
     const p = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method: "mercadopago", eventId }) }).catch(() => null);
     const pd = p ? await p.json().catch(() => ({})) : {};
     if (p?.ok) track("InitiateCheckout", { value: pd.order?.total ?? q.total, currency: "USD", content_name: q.label }, eventId);
-    // Mercado Pago's page; if payments aren't online yet (or something failed), the account's plans page
-    window.location.href = p?.ok && pd.redirect ? pd.redirect : loginHref;
+    // give the pixel a moment to send its events before leaving the page
+    await new Promise((r) => setTimeout(r, 400));
+    if (p?.ok && pd.redirect) { window.location.href = pd.redirect; return; } // Mercado Pago's page
+    // the account exists; the payment couldn't open here: their plans page explains what happens next
+    window.location.href = p?.ok ? `/app/planes?recibido=${encodeURIComponent(pd.order?.id ?? "")}` : `${loginHref}&aviso=pago`;
   }
 
   const fieldErr = (f: string) => (err?.field === f ? err.text : "");
@@ -99,7 +103,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tus créditos" : "Tu plan"}</h1>
             <div role="tablist" aria-label="Qué comprar" className="inline-flex rounded-xl border border-line bg-surface p-1 text-sm">
-              {([["plan", "Plan mensual"], ["pack", "Solo créditos"]] as const).map(([k, l]) => (
+              {([["plan", "Planes"], ["pack", "Solo créditos"]] as const).map(([k, l]) => (
                 <button key={k} type="button" role="tab" aria-selected={(k === "pack") === isPack}
                   onClick={() => setItem(k === "pack" ? (isPack ? item : "pack-2000") : isPack ? "plus" : item)}
                   className={`rounded-lg px-3 py-1.5 font-semibold ${(k === "pack") === isPack ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{l}</button>
@@ -240,12 +244,15 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${pesos(totalClp)}`}
             </button>
+            <p className="text-center text-xs text-muted">
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>.
+            </p>
 
             <div className="flex flex-col items-center gap-2 text-center">
               <PayBadges compact />
               <p className="flex items-center gap-1.5 text-xs text-muted">
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>
-                Pago cifrado en Mercado Pago. Cancela cuando quieras.
+                Pago cifrado en Mercado Pago.{q.period === "mensual" && renews ? " Cancela cuando quieras." : ""}
               </p>
             </div>
           </form>

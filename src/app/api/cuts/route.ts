@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { needsCredits } from "@/lib/credits";
 import { SESSION_ENDED } from "@/lib/access";
 import { userFromRequest } from "@/lib/auth";
 import { tooMany } from "@/lib/rate";
@@ -58,6 +59,8 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const limited = await tooMany("ai", user.id);
   if (limited) return limited;
+  const broke = await needsCredits(user);
+  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
 
   const body = await req.json().catch(() => null);
   const script = typeof body?.script === "string" ? body.script.trim() : "";

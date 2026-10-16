@@ -6,7 +6,7 @@ import { SESSION_COOKIE, cookieOptions, createSession, listUsers, passwordProble
 // The owner forgot their password: proving access to Vercel (ADMIN_ACCESS_CODE) lets them set a new one.
 // Only works for the owner account; team members ask the owner for a new password instead.
 export async function POST(req: Request) {
-  const limited = await tooMany("recover", clientIp(req));
+  const limited = await tooMany("recover", clientIp(req)) ?? (await tooMany("recoverAll", "all"));
   if (limited) return limited;
   const b = await req.json().catch(() => null);
   const code = String(b?.code ?? "");

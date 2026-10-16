@@ -65,6 +65,21 @@ export async function creditStatus(ws: string) {
 export interface Charge { credits: number; ref: string; free: boolean }
 
 /**
+ * Free helpers that still cost Creadsia money (Claude writing, transcription, voice cloning) are only for
+ * accounts with credits: a brand-new signup with 0 credits can't use them. Returns a message, or null.
+ */
+export async function needsCredits(user: User): Promise<string | null> {
+  if (unlimited(user.workspace)) return null;
+  try {
+    const st = await creditStatus(user.workspace);
+    if ((st.balance ?? 0) > 0) return null;
+  } catch {
+    return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
+  }
+  return "Para usar esto necesitas créditos. Elige un plan en «Planes y créditos» (primer mes con 50% de descuento).";
+}
+
+/**
  * Charges a job before it starts. Throws CreditError (shown to the customer as is) when the plan
  * expired or the credits don't cover it. `ref` ties the charge to the job so a failure can refund it.
  */
@@ -128,6 +143,15 @@ export async function freeRedoAvailable(ws: string, adId: string, clipId: string
   } catch {
     return false;
   }
+}
+
+/** True if a charge for `ref` made since `since` (ISO time) hasn't been refunded yet. */
+export async function chargedSince(ws: string, ref: string, since: string) {
+  if (unlimited(ws)) return false;
+  const rows = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&ref=eq.${encodeURIComponent(ref)}&created_at=gte.${encodeURIComponent(since)}&delta=lt.0&select=id`);
+  if (!rows.length) return false;
+  const back = await sbRest<{ ref: string }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.refund&ref=in.(${rows.map((r) => `charge:${r.id}`).join(",")})&select=ref`);
+  return back.length < rows.length;
 }
 
 // ---------- owner tools (panel) ----------

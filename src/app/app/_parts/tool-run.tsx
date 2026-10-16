@@ -227,6 +227,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   const [err, setErr] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const fails = useRef(new Map<string, number>());
 
   // a video passed from another tool: read its length
   useEffect(() => {
@@ -245,7 +246,13 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
         }
         timers.current.set(id, setTimeout(() => check(id), t.output === "video" ? 10000 : 4000));
       })
-      .catch(() => timers.current.set(id, setTimeout(() => check(id), 15000)));
+      .catch(() => {
+        // keep trying for about 10 minutes of errors, then stop and say so (reloading checks again)
+        const n = (fails.current.get(id) ?? 0) + 1;
+        fails.current.set(id, n);
+        if (n < 40) timers.current.set(id, setTimeout(() => check(id), 15000));
+        else setJobs((js) => js.map((j) => (j.id === id ? { ...j, error: "No pudimos revisar este trabajo. Recarga la página para volver a intentarlo." } : j)));
+      });
   }, [t.id, t.output]);
 
   // this tool's earlier jobs; keep watching the ones still running

@@ -19,7 +19,8 @@ export async function POST(req: Request) {
   const email = typeof b?.email === "string" ? b.email.slice(0, 200) : "";
   const password = typeof b?.password === "string" ? b.password.slice(0, 200) : "";
   if (!email || !password) return fail();
-  const limited = (await tooMany("loginIp", clientIp(req))) ?? (await tooMany("loginEmail", normEmail(email)));
+  const ip = clientIp(req);
+  const limited = (await tooMany("loginIp", ip)) ?? (await tooMany("loginEmail", `${normEmail(email)}|${ip}`)) ?? (await tooMany("loginAccount", normEmail(email)));
   if (limited) return limited;
   try {
     const user = await findUserByEmail(email);

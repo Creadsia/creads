@@ -4,26 +4,32 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import { mediaRefOf, mediaSaved, saveMedia } from "@/lib/media";
 import { explainFailure, serviceOfModel } from "@/lib/balances";
-import { refundJob } from "@/lib/credits";
+import { chargedSince, refundJob } from "@/lib/credits";
 import { isOwner } from "@/lib/auth";
 import { fetchableUrl } from "@/lib/media";
 import { falPoll, falSubmit } from "@/lib/providers/fal";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { type StorySettings, voiceLang } from "@/lib/historias";
+import { canUseVoice } from "@/lib/voices";
 
 const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
 
 /** Story shots whose speaker has their own voice: after the animation, the line is recorded with that
  * voice and lip-synced onto the clip (a second job, "ls:<fal job>"). */
-async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<string, unknown> | null> }, adId: string, idx: number) {
-  const ad = await db.get("ads", adId);
-  if (!ad || ad.format !== "historia") return null;
-  const st = ad.settings as StorySettings | null;
-  const shot = st?.plan?.shots?.[idx];
-  const line = shot?.dialogue?.line?.trim();
-  const voiceId = line ? st?.plan.characters.find((c) => c.key === shot!.dialogue!.speaker)?.voiceId : null;
-  return line && voiceId ? { line, voiceId, lang: voiceLang(st!.lang) as "es" | "en" } : null;
+// What was paid for is pinned on the clip when it starts ("shot:ls:<voice>" + its line), so later edits to
+// the story can't add or drop a lip-sync nobody paid for.
+async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<string, unknown> | null> }, clip: Record<string, unknown>, ws: string) {
+  const kind = String(clip.kind ?? "");
+  if (!kind.startsWith("shot:ls:")) return null;
+  const voiceId = kind.slice(8);
+  const line = String(clip.text ?? "").trim().slice(0, 200);
+  if (!line || !(await canUseVoice(ws, voiceId))) return null;
+  const ad = clip.ad_id ? await db.get("ads", String(clip.ad_id)) : null;
+  const st = ad?.settings as StorySettings | null;
+  return { line, voiceId, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
 }
+
+const STALE_MS = 5 * 60_000;
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -37,8 +43,16 @@ export async function GET(req: Request) {
   try {
     const clip = await db.get("clips", id);
     if (!clip) return NextResponse.json({ error: "Corte no encontrado." }, { status: 404 });
-    if (clip.status !== "generating" || !clip.provider_job) return NextResponse.json({ clip });
     const ws = s.user.workspace;
+    // A start or a voice step that died halfway (server timeout) would stay "starting"/"syncing" forever:
+    // after 5 minutes it fails, and the credits go back if they were taken for it.
+    if ((clip.status === "starting" || clip.status === "syncing") && Date.now() - Date.parse(String(clip.updated_at ?? clip.created_at)) > STALE_MS) {
+      const since = new Date(Date.parse(String(clip.updated_at ?? clip.created_at)) - (clip.status === "syncing" ? 20 * 60_000 : 60_000)).toISOString();
+      const row = await db.claim("clips", id, { in: [String(clip.status)] }, { status: "failed", error: "Se cortó a medio camino. Vuelve a intentarlo: no se cobró." });
+      if (row && (await chargedSince(ws, id, since).catch(() => false))) await refundJob(ws, id);
+      return NextResponse.json({ clip: row ?? (await db.get("clips", id)) });
+    }
+    if (clip.status !== "generating" || !clip.provider_job) return NextResponse.json({ clip });
 
     // second step of a voiced story shot: the lip-sync job
     if (String(clip.provider_job).startsWith("ls:")) {
@@ -82,7 +96,7 @@ export async function GET(req: Request) {
       url = await saveMedia(ws, "videos", bytes, "video/mp4", name);
     }
     // voiced story shot: record the line with the character's voice and lip-sync it (only one poll does it)
-    const voice = clip.ad_id ? await voiceFor(db, String(clip.ad_id), Number(clip.idx)) : null;
+    const voice = await voiceFor(db, clip, ws);
     if (voice) {
       const mine = await db.claim("clips", id, { in: ["generating"] }, { status: "syncing", url });
       if (!mine) return NextResponse.json({ clip: await db.get("clips", id) });

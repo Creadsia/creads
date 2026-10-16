@@ -40,12 +40,24 @@ export default function Planes() {
   const [done, setDone] = useState<{ id: string; label: string; total: number; method: MethodId } | null>(null);
 
   const [back, setBack] = useState<{ state: string; id: string } | null>(null);
+  const [received, setReceived] = useState<string | null>(null);
+  useEffect(() => {
+    if (!received || !pay) return;
+    const o = pay.orders.find((x) => x.id === received);
+    if (o) setDone({ id: o.id, label: o.label, total: o.total, method: "mercadopago" });
+    setReceived(null);
+    window.history.replaceState(null, "", "/app/planes");
+  }, [received, pay]);
   const load = () => fetch("/api/pagos").then((r) => (r.ok ? r.json() : null)).then(setPay).catch(() => {});
   useEffect(() => {
     load();
     // back from Mercado Pago: check the payment right away
     const sp = new URLSearchParams(window.location.search);
     const pedido = sp.get("pedido");
+    // arriving from the website's checkout: the order was saved but online payment didn't open
+    const got = sp.get("recibido");
+    if (got) setReceived(got);
+    if (sp.get("aviso") === "pago") setErr("Tu cuenta quedó creada, pero no pudimos abrir el pago. Elige tu plan aquí abajo e inténtalo de nuevo.");
     // arriving from the website with a plan already chosen (/app/planes?plan=plus&periodo=anual)
     const want = sp.get("plan") as ItemId | null;
     if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
@@ -115,7 +127,7 @@ export default function Planes() {
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
           <span className="text-xl font-bold">{info?.unlimited ? "Dueño" : currentPlan ?? "Sin plan todavía"}</span>
-          {info?.paidUntil && <span className={`text-sm ${info.expired ? "text-bad" : "text-muted"}`}>{info.expired ? "Venció" : "Se renueva"} el {new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</span>}
+          {info?.paidUntil && <span className={`text-sm ${info.expired ? "text-bad" : "text-muted"}`}>{info.expired ? "Venció" : pay?.renews === false ? "Vigente hasta" : "Se renueva"} el {new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</span>}
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
@@ -176,7 +188,7 @@ export default function Planes() {
                   className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${period === p ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{p === "mensual" ? "Mensual" : "Anual"}</button>
               ))}
             </div>
-            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "2 meses gratis" : pay?.firstPurchase ? `−${LAUNCH_PCT}% el primer mes` : "Cancela cuando quieras"}</span>
+            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "2 meses gratis" : pay?.firstPurchase ? `−${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             {PLANS.map((p) => {

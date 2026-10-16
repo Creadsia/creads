@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { needsCredits } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
 import { textAI, findVideo } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { LANGS, LENGTHS, type StoryPlan, type StorySettings, STYLES, motionPrompt, planPrompt, tidyPlan } from "@/lib/historias";
-import { loadStory } from "@/lib/historia-db";
+import { loadStory, updateStory } from "@/lib/historia-db";
 import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 300;
@@ -17,6 +18,8 @@ export async function POST(req: Request) {
   if (s instanceof NextResponse) return s;
   const limited = await tooMany("ai", s.user.id);
   if (limited) return limited;
+  const broke = await needsCredits(s.user);
+  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   const b = await req.json().catch(() => null);
   const idea = String(b?.idea ?? "").trim().slice(0, 3000);
   if (idea.length < 15) return NextResponse.json({ error: "Cuenta un poco más la idea (quién, qué le pasa, cómo termina)." }, { status: 400 });
@@ -50,33 +53,42 @@ export async function PATCH(req: Request) {
   try {
     const found = await loadStory(s.db, adId);
     if (!found) return NextResponse.json({ error: "Historia no encontrada." }, { status: 404 });
-    const st = found.st;
+    let next: StoryPlan | null = null;
     if (b?.plan) {
-      // keep the approved sheets: only text fields come from the browser
-      const next = tidyPlan(b.plan as StoryPlan, st.seconds);
-      next.characters = next.characters.map((c) => {
-        const old = st.plan.characters.find((o) => o.key === c.key);
-        return { ...c, image_url: old?.image_url ?? null, avatar: old?.avatar ?? null };
-      });
+      // only text fields come from the browser (no re-scaling of the customer's lengths)
+      next = tidyPlan(b.plan as StoryPlan, found.st.seconds, false);
       // a character's voice must be one this customer may use
       for (const c of next.characters) if (c.voiceId && !(await canUseVoice(s.user.workspace, c.voiceId))) c.voiceId = null;
       // the shot list can't grow or shrink here (rows already exist)
-      if (next.shots.length !== st.plan.shots.length) return NextResponse.json({ error: "No se puede cambiar la cantidad de tomas." }, { status: 400 });
-      st.plan = next;
+      if (next.shots.length !== found.st.plan.shots.length) return NextResponse.json({ error: "No se puede cambiar la cantidad de tomas." }, { status: 400 });
+    }
+    const voiceId = typeof b?.voiceId === "string" && (await canUseVoice(s.user.workspace, b.voiceId)) ? b.voiceId : null;
+    // written on the latest saved story: the approved sheets (made meanwhile, maybe) are kept
+    const st = await updateStory(s.db, adId, (x) => {
+      if (next) {
+        next.characters = next.characters.map((c) => {
+          const old = x.plan.characters.find((o) => o.key === c.key);
+          return { ...c, image_url: old?.image_url ?? null, avatar: old?.avatar ?? null };
+        });
+        x.plan = next;
+      }
+      if (voiceId) x.voiceId = voiceId;
+    });
+    if (next) {
+      // shots being animated keep what they were started (and paid) with
       const clips = await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`);
-      await Promise.all(clips.map((c) => {
-        const sh = next.shots[Number(c.idx)];
-        return sh ? s.db.update("clips", String(c.id), { text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, st.style, next, st.lang) }) : null;
+      await Promise.all(clips.filter((c) => !["generating", "starting", "syncing"].includes(String(c.status))).map((c) => {
+        const sh = st.plan.shots[Number(c.idx)];
+        return sh ? s.db.update("clips", String(c.id), { text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, st.style, st.plan, st.lang) }) : null;
       }));
     }
-    if (typeof b?.voiceId === "string") st.voiceId = (await canUseVoice(s.user.workspace, b.voiceId)) ? b.voiceId : st.voiceId;
-    const patch: Record<string, unknown> = { settings: st };
+    const patch: Record<string, unknown> = {};
     if (typeof b?.model === "string" && findVideo(b.model)?.configured()) {
       patch.model = b.model;
       const clips = await s.db.list("clips", `ad_id=eq.${adId}`);
-      await Promise.all(clips.filter((c) => c.status !== "done" && c.status !== "generating").map((c) => s.db.update("clips", String(c.id), { model: b.model })));
+      await Promise.all(clips.filter((c) => !["done", "generating", "starting", "syncing"].includes(String(c.status))).map((c) => s.db.update("clips", String(c.id), { model: b.model })));
     }
-    const row = await s.db.update("ads", adId, patch);
+    const row = Object.keys(patch).length ? await s.db.update("ads", adId, patch) : await s.db.get("ads", adId);
     return NextResponse.json({ ad: row });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar." }, { status: 502 });

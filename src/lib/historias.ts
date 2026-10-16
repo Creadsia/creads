@@ -72,8 +72,33 @@ export interface StoryShot {
   es: string; // one line in Spanish so the customer can follow the story
 }
 
+/** A spoken line of at most 14 words (longer ones don't fit a shot or a lip-sync). */
+export const shortLine = (line: string) => line.trim().split(/\s+/).filter(Boolean).slice(0, 14).join(" ").slice(0, 160);
+
 /** The shot has a line spoken on camera. */
 export const speaks = (s: StoryShot) => Boolean(s.dialogue?.line?.trim() && s.dialogue.speaker);
+/** Seconds of video generated for a story shot (the montage cuts it to the plan's length). */
+export function storyClipSeconds(shot: StoryShot | undefined, ownVoice: boolean) {
+  const secs = Number(shot?.seconds);
+  const s = Number.isFinite(secs) && secs > 0 ? Math.min(8, secs) : 2.5;
+  if (ownVoice && shot?.dialogue?.line) return lipsyncSeconds(shot.dialogue.line);
+  return Math.min(10, Math.max(4, Math.ceil(s + (shot && speaks(shot) ? 1 : 0.6))));
+}
+
+/** What a video model really makes for a requested length: its nearest allowed duration at or above it. */
+export function billedSeconds(seconds: number, durations?: number[], veo = false) {
+  if (veo) return seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8;
+  if (!durations?.length) return seconds;
+  const up = [...durations].sort((a, b) => a - b).find((d) => d >= seconds);
+  return up ?? Math.max(...durations);
+}
+
+/** Price of animating one story shot (and recording + lip-syncing its line with the character's voice). */
+export function storyShotUsd(shot: StoryShot | undefined, model: { id: string; usdPerSecond: number; durations?: number[] | null }, ownVoice: boolean) {
+  const secs = billedSeconds(storyClipSeconds(shot, ownVoice), model.durations ?? undefined, model.id.startsWith("veo"));
+  return model.usdPerSecond * secs + (ownVoice && shot?.dialogue?.line ? lipsyncUsd(secs, shot.dialogue.line) : 0);
+}
+
 /** Recording the line with the character's voice (ElevenLabs) + lip-syncing it (Kling Lipsync). */
 export const lipsyncUsd = (seconds: number, line: string) => +(0.014 * Math.max(5, Math.ceil(seconds / 5) * 5) + line.length * 0.00022).toFixed(3);
 /** Seconds of video a lip-synced line needs (the recorded line must fit inside the clip). */
@@ -100,7 +125,10 @@ export interface StorySettings {
   voiceId?: string | null;
   plan: StoryPlan;
   music_url?: string | null;
+  music_secs?: number; // how long the saved music is
   narration_url?: string | null;
+  narration_cache?: Record<string, string>; // "<voice>|<line>" → recorded file
+  duration?: number;
   subtitles?: boolean;
   niche?: string;
 }
@@ -153,28 +181,44 @@ JSON shape:
 }
 
 /** Cleans what Claude sends back: valid keys, lengths that add up, at most 24 shots. */
-export function tidyPlan(p: StoryPlan, seconds: number): StoryPlan {
+/** Cleans what Claude (or the browser) sends: valid unique keys, lengths that add up, at most 24 shots. */
+export function tidyPlan(p0: StoryPlan | null | undefined, seconds: number, rescale = true): StoryPlan {
+  const p = (p0 && typeof p0 === "object" ? p0 : {}) as Partial<StoryPlan>;
+  const base = (k: unknown) => String(k ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]/g, "").slice(0, 20);
+  // raw key → clean unique key ("niño" → "nino"; two that clash get a number)
+  const map = new Map<string, string>();
+  const used = new Set<string>();
   const characters = (Array.isArray(p.characters) ? p.characters : [])
     .filter((c) => c && c.key && c.look)
     .slice(0, 4)
-    .map((c) => ({ key: String(c.key).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20) || "c", name: String(c.name || c.key).slice(0, 40), look: String(c.look).slice(0, 600), image_url: null, voiceId: typeof c.voiceId === "string" && /^[A-Za-z0-9]{10,40}$/.test(c.voiceId) ? c.voiceId : null }));
-  const keys = new Set(characters.map((c) => c.key));
-  let shots = (Array.isArray(p.shots) ? p.shots : []).filter((s) => s && s.image).slice(0, 24).map((s, i) => ({
-    idx: i,
-    seconds: Math.min(5, Math.max(1.5, Number(s.seconds) || 2.5)),
-    shot: String(s.shot ?? "").slice(0, 80),
-    characters: (Array.isArray(s.characters) ? s.characters : []).map((k) => String(k).toLowerCase().replace(/[^a-z0-9_-]/g, "")).filter((k) => keys.has(k)).slice(0, 3),
-    image: String(s.image).slice(0, 1200),
-    motion: String(s.motion ?? "").slice(0, 500),
-    narration: String(s.narration ?? "").slice(0, 300),
-    dialogue: s.dialogue && keys.has(String(s.dialogue.speaker ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "")) && String(s.dialogue.line ?? "").trim()
-      ? { speaker: String(s.dialogue.speaker).toLowerCase().replace(/[^a-z0-9_-]/g, ""), line: String(s.dialogue.line).trim().slice(0, 160) }
-      : null,
-    es: String(s.es ?? "").slice(0, 200),
-  }));
-  // scale the lengths so the film lasts what the customer asked for
+    .map((c) => {
+      let k = base(c.key) || "c";
+      for (let n = 2; used.has(k); n++) k = `${(base(c.key) || "c").slice(0, 18)}${n}`;
+      used.add(k);
+      map.set(String(c.key), k);
+      map.set(base(c.key), map.get(base(c.key)) ?? k);
+      return { key: k, name: String(c.name || c.key).slice(0, 40), look: String(c.look).slice(0, 600), image_url: null, voiceId: typeof c.voiceId === "string" && /^[A-Za-z0-9]{10,40}$/.test(c.voiceId) ? c.voiceId : null };
+    });
+  const keyOf = (k: unknown) => map.get(String(k ?? "")) ?? map.get(base(k)) ?? null;
+  let shots = (Array.isArray(p.shots) ? p.shots : []).filter((s) => s && s.image).slice(0, 24).map((s, i) => {
+    const speaker = s.dialogue ? keyOf(s.dialogue.speaker) : null;
+    const line = s.dialogue ? shortLine(String(s.dialogue.line ?? "")) : "";
+    const secs = Number(s.seconds);
+    return {
+      idx: i,
+      seconds: Math.min(rescale ? 5 : 8, Math.max(1.5, Number.isFinite(secs) ? secs : 2.5)),
+      shot: String(s.shot ?? "").slice(0, 80),
+      characters: [...new Set((Array.isArray(s.characters) ? s.characters : []).map(keyOf).filter((k): k is string => Boolean(k)))].slice(0, 3),
+      image: String(s.image).slice(0, 1200),
+      motion: String(s.motion ?? "").slice(0, 500),
+      narration: String(s.narration ?? "").slice(0, 300),
+      dialogue: speaker && line ? { speaker, line } : null,
+      es: String(s.es ?? "").slice(0, 200),
+    };
+  });
+  // a new story: scale the lengths so the film lasts what the customer asked for
   const total = shots.reduce((a, s) => a + s.seconds, 0);
-  if (total > 0) {
+  if (rescale && total > 0) {
     const k = seconds / total;
     shots = shots.map((s) => ({ ...s, seconds: Math.round(Math.min(5, Math.max(1.5, s.seconds * k)) * 10) / 10 }));
   }

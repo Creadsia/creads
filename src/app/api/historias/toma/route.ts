@@ -29,11 +29,13 @@ export async function POST(req: Request) {
   if (!shot) return NextResponse.json({ error: "Toma no encontrada." }, { status: 404 });
   const clip = (await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)).find((c) => Number(c.idx) === idx);
   if (!clip) return NextResponse.json({ error: "Toma no encontrada." }, { status: 404 });
-  if (clip.status === "generating" || clip.status === "starting") return NextResponse.json({ error: "Esta toma se está animando; espera que termine." }, { status: 409 });
+  if (clip.status === "generating" || clip.status === "starting" || clip.status === "syncing") return NextResponse.json({ error: "Esta toma se está animando; espera que termine." }, { status: 409 });
 
   if (b?.image) {
     if (!ownsMedia(b.image, s.user.workspace)) return NextResponse.json({ error: "Esa imagen no es de tu cuenta." }, { status: 403 });
-    const row = await s.db.update("clips", String(clip.id), { image_url: b.image, status: "pending", url: null, error: null });
+    // only if nobody started animating it meanwhile (that job would be lost)
+    const row = await s.db.claim("clips", String(clip.id), { notIn: ["generating", "starting", "syncing"] }, { image_url: b.image, status: "pending", url: null, error: null });
+    if (!row) return NextResponse.json({ error: "Esta toma se empezó a animar; espera que termine." }, { status: 409 });
     return NextResponse.json({ clip: row });
   }
 
@@ -52,7 +54,8 @@ export async function POST(req: Request) {
     const aspect = String(ad.aspect || "9:16") as AspectRatio;
     const { bytes, mime } = await provider.generate({ prompt: keyframePrompt(shot, st.plan, st.style, aspect) + extra, aspect, refs });
     const url = await saveMedia(s.user.workspace, "historias", bytes, mime);
-    const row = await s.db.update("clips", String(clip.id), { image_url: url, status: "pending", url: null, error: null });
+    const row = await s.db.claim("clips", String(clip.id), { notIn: ["generating", "starting", "syncing"] }, { image_url: url, status: "pending", url: null, error: null });
+    if (!row) return NextResponse.json({ error: "La imagen se creó, pero la toma se empezó a animar mientras tanto. Cuando termine, usa «Rehacer imagen»." }, { status: 409 });
     return NextResponse.json({ clip: row, usd: provider.usdPerImage });
   } catch (err) {
     console.error("historias/toma", err instanceof Error ? err.message : err);

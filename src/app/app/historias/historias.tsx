@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGS, LENGTHS, STYLES, type StoryLang, type StoryPlan, type StorySettings, estimateStory } from "@/lib/historias";
+import { LANGS, LENGTHS, STYLES, type StoryLang, type StoryPlan, type StorySettings, billedSeconds, estimateStory, storyShotUsd } from "@/lib/historias";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 
 // "Historias animadas": idea → story and shots → characters → shot images → animation → film.
 
-interface VideoModel { id: string; label: string; configured: boolean; usdPerSecond: number; seconds: number[]; silent?: boolean }
+interface VideoModel { id: string; label: string; configured: boolean; usdPerSecond: number; seconds: number[]; durations?: number[] | null; silent?: boolean }
 interface Voice { id: string; name: string; category: string }
 interface Ad { id: string; title: string; aspect: string; model: string; status: string; final_url: string | null; settings: StorySettings; created_at: string }
 interface Avatar { id: string; name: string; image_url: string | null }
@@ -77,7 +77,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
 
   const m = models.find((x) => x.id === model);
   const n = Math.max(8, Math.min(24, Math.round(seconds / 2.6)));
-  const est = m ? estimateStory({ characters: 3, shots: n, videoSecondsPerShot: shotSecs(seconds / n), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds }) : null;
+  const est = m ? estimateStory({ characters: 3, shots: n, videoSecondsPerShot: billedSeconds(shotSecs(seconds / n), m.durations ?? undefined, m.id.startsWith("veo")), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds }) : null;
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -249,7 +249,12 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   if (!ad || !plan) return <p className="text-muted">Cargando la historia…</p>;
   const st = ad.settings;
   const m = models.find((x) => x.id === ad.model);
-  const vidUsd = (secs: number) => (m ? m.usdPerSecond * shotSecs(secs) : 0);
+  // same price the server charges: real model length, plus voice + lip-sync for a character with their own voice
+  const shotUsd = (idx: number) => {
+    const sh = plan.shots[idx];
+    const own = Boolean(sh?.dialogue?.line && plan.characters.find((c) => c.key === sh.dialogue!.speaker)?.voiceId);
+    return m ? storyShotUsd(sh, m, own) : 0;
+  };
   const sheetsReady = plan.characters.every((c) => c.image_url);
   const allDone = clips.length > 0 && clips.every((c) => c.status === "done" && c.url);
   const run = async (key: string, fn: () => Promise<unknown>) => {
@@ -285,8 +290,16 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const missingFrames = clips.filter((c) => !c.image_url);
   const talkingDone = clips.filter((c) => c.status === "done" && Boolean(plan.shots[c.idx]?.dialogue?.line?.trim()));
   const toAnimate = clips.filter((c) => c.image_url && (c.status === "pending" || c.status === "failed"));
-  const montar = (newMusic = false, partial = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial }));
-  const est = m ? estimateStory({ characters: plan.characters.length, shots: plan.shots.length, videoSecondsPerShot: shotSecs(st.seconds / plan.shots.length), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds: st.seconds }) : null;
+  const montar = (newMusic = false, partial = false) => run("film", async () => {
+    const d = await post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial });
+    if (d.note) setTimeout(() => setErr(d.note), 0); // e.g. the music couldn't be made this time
+  });
+  const est = m ? (() => {
+    const video = plan.shots.reduce((a, _, i) => a + shotUsd(i), 0);
+    const images = (plan.characters.length + plan.shots.length) * imgUsd;
+    const music = (0.15 * Math.max(st.seconds, 15)) / 60;
+    return { total: +(video + images + music).toFixed(2) };
+  })() : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -411,16 +424,16 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             </button>
           )}
           {toAnimate.length > 0 && (
-            <button type="button" disabled={busy.anim || !covers(toAnimate.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}
+            <button type="button" disabled={busy.anim || !covers(toAnimate.reduce((a, c) => a + shotUsd(c.idx), 0))}
               onClick={() => many(toAnimate.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "anim")} className={btnCls}>
-              {busy.anim ? "Enviando…" : `Animar ${toAnimate.length} tomas · ${price(toAnimate.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}`}
+              {busy.anim ? "Enviando…" : `Animar ${toAnimate.length} tomas · ${price(toAnimate.reduce((a, c) => a + shotUsd(c.idx), 0))}`}
             </button>
           )}
           {talkingDone.length > 0 && (
             <button type="button" disabled={busy.reanim || busy.anim}
               onClick={() => { if (window.confirm(`Se vuelven a animar ${talkingDone.length} tomas con diálogo (las mismas imágenes) para que hablen. ¿Seguir?`)) many(talkingDone.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "reanim"); }}
               className={ghostCls}>
-              {busy.reanim ? "Enviando…" : `Re-animar las ${talkingDone.length} tomas con diálogo · ${price(talkingDone.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}`}
+              {busy.reanim ? "Enviando…" : `Re-animar las ${talkingDone.length} tomas con diálogo · ${price(talkingDone.reduce((a, c) => a + shotUsd(c.idx), 0))}`}
             </button>
           )}
           {!sheetsReady && <span className="self-center text-sm text-muted">Primero crea los personajes.</span>}
@@ -431,7 +444,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           {clips.map((c) => (
             <ShotCard key={c.id} n={c.idx + 1} aspect={ad.aspect} text={plan.shots[c.idx]?.es ?? ""} line={plan.shots[c.idx]?.dialogue?.line ?? ""} secs={plan.shots[c.idx]?.seconds ?? 0} clip={c}
               busy={Boolean(busy[`f:${c.idx}`] || busy[`v:${c.idx}`])} canFrame={sheetsReady}
-              framePrice={price(imgUsd)} videoPrice={price(vidUsd(plan.shots[c.idx]?.seconds ?? 2.5))}
+              framePrice={price(imgUsd)} videoPrice={price(shotUsd(c.idx))}
               onFrame={(extra) => frame(c.idx, extra)} onAnimate={() => animate(c.id, c.idx)} />
           ))}
         </ol>

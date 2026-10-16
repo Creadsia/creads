@@ -36,6 +36,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (typeof w.data.voice_id === "string" && w.data.voice_id && !(await canUseVoice(s.user.workspace, w.data.voice_id))) {
       return NextResponse.json({ error: "Esa voz no está en tu cuenta." }, { status: 400 });
     }
+    if (w.table === "ads" && "niche" in w.data) {
+      const { niche, ...rest } = w.data;
+      const ad = await s.db.get("ads", id);
+      if (!ad) return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+      const clean = typeof niche === "string" ? niche.trim().replace(/\s+/g, " ").slice(0, 60) : "";
+      w.data = { ...rest, settings: { ...((ad.settings as object) ?? {}), niche: clean || null } };
+    }
     const row = await s.db.update(w.table, id, w.data);
     return row ? NextResponse.json({ row }) : NextResponse.json({ error: "No encontrado." }, { status: 404 });
   } catch (err) {

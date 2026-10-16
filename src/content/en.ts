@@ -61,7 +61,7 @@ export const en = {
     more: "AI models, and new ones every month",
     moreCta: "See every model",
     items: [
-      { group: "image", name: "Create image", text: "Any image from a sentence, with 5 top models.", models: "Nano Banana Pro · Seedream 5 · FLUX 3", art: "chef", badge: "" },
+      { group: "image", name: "Create image", text: "Any image from a sentence, with the best models.", models: "Nano Banana Pro · Seedream 5 · FLUX 3", art: "chef", badge: "" },
       { group: "image", name: "Remove background & upscale", text: "Cut out in one click and double the quality.", models: "Bria · SeedVR", art: "cutout", badge: "new" },
       { group: "image", name: "Product photos", text: "Catalog and feed shots in 4:5.", models: "Nano Banana Pro", art: "frames", badge: "" },
       { group: "image", name: "Edit & retouch", text: "Change backgrounds, colors or details by asking.", models: "Nano Banana Pro Edit", art: "edit", badge: "" },
@@ -122,7 +122,7 @@ export const en = {
     exitCta: "Save my offer",
     exitPlans: "See the plans now",
     exitClose: "No thanks",
-    exitDone: "Saved. We'll write to you with your offer.",
+    exitDone: "Saved. The offer is still here when you come back.",
   },
   composer: {
     label: "Describe what you want to create",
@@ -231,7 +231,7 @@ export const en = {
       { name: "Veo 3.1 Fast", maker: "Google", group: "video", use: "Photoreal video with dialogue and sound in the same take.", cost: "10", unit: "s" },
       { name: "Veo 3.1", maker: "Google", group: "video", use: "Top quality for hero shots and premium spots.", cost: "30", unit: "s" },
       { name: "Veo 3.1 Lite", maker: "Google", group: "video", use: "Fast, low-cost drafts to test hooks before the final cut.", cost: "5", unit: "s" },
-      { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Consistent characters, multi-reference scenes and native audio.", cost: "", unit: "s" },
+      { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Consistent characters, multi-reference scenes and native audio.", cost: "16", unit: "s" },
       { name: "Kling 3.0", maker: "Kuaishou", group: "video", use: "Motion and action with believable physics.", cost: "10", unit: "s" },
       { name: "Wan 3.0", maker: "Alibaba", group: "video", use: "Stylized, creative video for bold social content.", cost: "7", unit: "s" },
       { name: "Hailuo 2.3", maker: "MiniMax", group: "video", use: "Natural physics and facial emotion.", cost: "4", unit: "s" },

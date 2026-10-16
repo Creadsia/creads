@@ -12,7 +12,7 @@ import { btnCls, cardCls, ghostCls, inputCls } from "./ui";
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
-interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean }
+interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
 
 export default function AdWork({ adId }: { adId: string }) {
@@ -42,11 +42,13 @@ export default function AdWork({ adId }: { adId: string }) {
     if (rv) setReview(rv);
   }, [adId]);
 
+  // Follows a clip until it's done or failed. A failed check (network, server busy) just tries again;
+  // a clip stuck while starting is cleared by the server after a few minutes (and its credits return).
   const poll = useCallback(async (id: string, tries = 0) => {
-    const res = await fetch(`/api/clips/status?id=${id}`);
-    const d = await res.json().catch(() => ({}));
+    const d = await fetch(`/api/clips/status?id=${id}`).then((r) => r.json()).catch(() => ({}));
     if (d.clip) setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
-    if (d.clip?.status === "generating" && tries < 80) timers.current.push(setTimeout(() => poll(id, tries + 1), 12000));
+    const still = !d.clip || ["generating", "starting", "syncing"].includes(d.clip.status);
+    if (still && tries < 120) timers.current.push(setTimeout(() => poll(id, tries + 1), 12000));
   }, []);
 
   const loadClips = useCallback(async () => {
@@ -54,7 +56,7 @@ export default function AdWork({ adId }: { adId: string }) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return setErr(d.error || "No se pudieron cargar los cortes.");
     setClips(d.rows);
-    (d.rows as Clip[]).filter((c) => c.status === "generating").forEach((c, i) => timers.current.push(setTimeout(() => poll(c.id), 1500 + i * 400)));
+    (d.rows as Clip[]).filter((c) => ["generating", "starting", "syncing"].includes(c.status)).forEach((c, i) => timers.current.push(setTimeout(() => poll(c.id), 1500 + i * 400)));
   }, [adId, poll]);
 
   useEffect(() => {
@@ -65,9 +67,10 @@ export default function AdWork({ adId }: { adId: string }) {
 
   async function run(id: string, model?: string, free = false) {
     setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
-    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model, free }) });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c)));
+    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model, free }) }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : { error: "Se cortó la conexión. Revisa tu internet y vuelve a intentar." };
+    if (!res) { timers.current.push(setTimeout(() => poll(id), 5000)); }
+    if (!res || !res.ok) return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c)));
     setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
     timers.current.push(setTimeout(() => poll(id), 20000));
   }
@@ -83,10 +86,10 @@ export default function AdWork({ adId }: { adId: string }) {
 
   async function doReview() {
     setPhase("review"); setErr("");
-    const res = await fetch("/api/review", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId }) });
-    const d = await res.json().catch(() => ({}));
+    const res = await fetch("/api/review", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId }) }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
-    if (!res.ok) return setErr(d.error || "No se pudo revisar.");
+    if (!res || !res.ok) return setErr(d.error || "No se pudo revisar. Revisa tu conexión e intenta de nuevo.");
     setReview(d.results);
     if (d.learned) setNote(`Creads aprendió ${d.learned} regla${d.learned === 1 ? "" : "s"} nueva${d.learned === 1 ? "" : "s"} de este video.`);
     // Free automatic redo of severe problems: the server says which clips still have one
@@ -104,11 +107,11 @@ export default function AdWork({ adId }: { adId: string }) {
 
   async function doBuild() {
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle }) });
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
-    const d = await res.json().catch(() => ({}));
+    const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
-    if (!res.ok) return setErr(d.error || "No se pudo armar el anuncio.");
+    if (!res || !res.ok) return setErr(d.error || "No se pudo armar el anuncio. Revisa tu conexión e intenta de nuevo.");
     setAd(d.ad);
   }
 
@@ -116,8 +119,11 @@ export default function AdWork({ adId }: { adId: string }) {
   const f = formatById(ad.format ?? "ugc");
   const done = clips.filter((c) => c.status === "done").length;
   const all = clips.length > 0 && done === clips.length;
-  const busyClips = clips.some((c) => ["generating", "starting", "pending"].includes(c.status));
-  const reviewOf = (id: string) => review?.find((r) => r.clipId === id);
+  const busyClips = clips.some((c) => ["generating", "starting", "syncing"].includes(c.status));
+  // never started (the tab closed while starting them, or a start was refused): start them from here
+  const waiting = clips.filter((c) => c.status === "pending");
+  // a review belongs to the video it looked at: a redone clip has no review yet
+  const reviewOf = (id: string) => { const c = clips.find((x) => x.id === id); return review?.find((r) => r.clipId === id && (!r.url || r.url === c?.url)); };
   const failed = clips.filter((c) => c.status === "failed");
   const faceRefused = failed.some((c) => /no acepta fotos de personas reales|likeness/i.test(c.error ?? ""));
   const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces));
@@ -136,6 +142,14 @@ export default function AdWork({ adId }: { adId: string }) {
           </div>
           {busyClips && <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text">Generando… cada corte tarda 1 a 4 min</span>}
         </div>
+        {waiting.length > 0 && !busyClips && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/50 bg-warn/10 p-3 text-sm">
+            <span>{waiting.length === 1 ? "1 corte quedó sin empezar." : `${waiting.length} cortes quedaron sin empezar.`} Se cobran recién cuando empiezan.</span>
+            <button type="button" className={btnCls} onClick={async () => { for (let i = 0; i < waiting.length; i += 2) await Promise.all(waiting.slice(i, i + 2).map((c) => run(c.id))); }}>
+              Empezar {waiting.length === 1 ? "el corte" : `los ${waiting.length}`}
+            </button>
+          </div>
+        )}
         {failed.length > 0 && !busyClips && (
           <div className="flex flex-wrap items-end gap-3 rounded-xl border border-bad/40 bg-bad/10 p-3 text-sm">
             <p className="basis-full">
@@ -175,7 +189,7 @@ export default function AdWork({ adId }: { adId: string }) {
                     <div className="mt-auto flex flex-col gap-1">
                       <input aria-label={`Qué corregir en el corte ${c.idx + 1}`} value={notes[c.id] ?? ""} onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
-                      <button type="button" onClick={() => redo(c.id, notes[c.id] ?? "")} className="self-start text-xs font-semibold text-accent-text">
+                      <button type="button" onClick={() => { if (c.status === "failed" || window.confirm("Rehacer este corte lo genera de nuevo y usa créditos (lo mismo que costó la primera vez). ¿Seguir?")) redo(c.id, notes[c.id] ?? ""); }} className="self-start text-xs font-semibold text-accent-text">
                         {c.status === "failed" ? "Reintentar" : "Rehacer este corte"}
                       </button>
                     </div>

@@ -22,19 +22,23 @@ function Yes() {
   );
 }
 
-export default function Pricing({ t, lang, rate }: { t: Content["pricing"]; lang: string; rate: number }) {
+export default function Pricing({ t, lang, rate, renews = true }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // money as the visitor reads it: pesos in Spanish (that's what Mercado Pago charges), dollars in English
   const money = (usd: number) => (es ? pesos(clpFor(usd, rate)) : dollars(usd));
+  // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
+  const perMonthOfYear = (usdYear: number) => (es ? pesos(Math.round(clpFor(usdYear, rate) / 12 / 10) * 10) : dollars(Math.round((usdYear / 12) * 100) / 100));
+  // without automatic renewal (temporary payment setup) the FAQ must not promise it
+  const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes y créditos» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans and credits\" with one click. There are no automatic charges." } : f));
   const other = (usd: number) => (es ? dollars(usd) : `≈ ${pesos(clpFor(usd, rate))} CLP`);
 
   // Meta "ViewContent": the visitor saw the plans (once per visit)
   useEffect(() => {
     const el = box.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { track("ViewContent", { content_name: "Planes" }); io.disconnect(); } }, { threshold: 0.3 });
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { track("ViewContent", { content_name: "Planes" }); io.disconnect(); } }, { threshold: 0 }); // the block is taller than a phone screen: any part counts
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -82,7 +86,7 @@ export default function Pricing({ t, lang, rate }: { t: Content["pricing"]; lang
                   <>
                     <p className="flex flex-wrap items-baseline gap-x-2">
                       <s className="text-lg text-muted">{money(p.price)}</s>
-                      <span className="font-display text-[2.6rem] leading-none font-semibold">{money(p.yearly)}</span>
+                      <span className="font-display text-[2.6rem] leading-none font-semibold">{perMonthOfYear(p.yearly * 12)}</span>
                       <span className="text-muted">{t.perMonth}</span>
                     </p>
                     <p className="text-sm text-muted">{money(p.yearly * 12)} {t.yearlyTotal} · {other(p.yearly * 12)}</p>
@@ -104,7 +108,7 @@ export default function Pricing({ t, lang, rate }: { t: Content["pricing"]; lang
                 <span className="text-sm text-muted">≈ {Math.floor(credits / 300)} {t.adsMonth}</span>
               </div>
 
-              <a href={startHref(p.id, yearly)} onClick={() => track("AddToCart", { content_name: p.name, value: yearly ? p.yearly * 12 : first, currency: "USD" })}
+              <a href={startHref(p.id, yearly)}
                 className={`flex flex-col items-center rounded-xl px-5 py-3.5 text-center font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]" : "bg-ink text-bg"}`}>
                 <span className="text-[17px]">{t.cta} {p.name}</span>
                 <span className={`text-xs font-normal ${featured ? "text-white/85" : "opacity-70"}`}>{t.ctaNote}</span>
@@ -203,7 +207,7 @@ export default function Pricing({ t, lang, rate }: { t: Content["pricing"]; lang
           </div>
         </div>
         <div className="flex flex-col divide-y divide-line rounded-3xl border border-line bg-surface px-6">
-          {t.payFaq.map((f) => (
+          {faq.map((f) => (
             <details key={f.q} className="group py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
                 {f.q}

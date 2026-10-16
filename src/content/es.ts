@@ -62,7 +62,7 @@ export const es: Content = {
     more: "modelos de IA, y nuevos cada mes",
     moreCta: "Ver todos los modelos",
     items: [
-      { group: "image", name: "Crear imagen", text: "Cualquier imagen a partir de una frase, con 5 modelos top.", models: "Nano Banana Pro · Seedream 5 · FLUX 3", art: "chef", badge: "" },
+      { group: "image", name: "Crear imagen", text: "Cualquier imagen a partir de una frase, con los mejores modelos.", models: "Nano Banana Pro · Seedream 5 · FLUX 3", art: "chef", badge: "" },
       { group: "image", name: "Quitar fondo y mejorar", text: "Recorta en un clic y sube la calidad al doble.", models: "Bria · SeedVR", art: "cutout", badge: "new" },
       { group: "image", name: "Fotos de producto", text: "Fotos de catálogo y de feed en 4:5.", models: "Nano Banana Pro", art: "frames", badge: "" },
       { group: "image", name: "Editar y retocar", text: "Cambia fondos, colores o detalles pidiéndolo.", models: "Nano Banana Pro Edit", art: "edit", badge: "" },
@@ -123,7 +123,7 @@ export const es: Content = {
     exitCta: "Guardar mi oferta",
     exitPlans: "Ver los planes ahora",
     exitClose: "No, gracias",
-    exitDone: "Listo, quedó guardada. Te escribimos con tu oferta.",
+    exitDone: "Listo, quedó guardada. La oferta sigue vigente cuando vuelvas.",
   },
   composer: {
     label: "Describe lo que quieres crear",
@@ -232,7 +232,7 @@ export const es: Content = {
       { name: "Veo 3.1 Fast", maker: "Google", group: "video", use: "Video fotorrealista con diálogo y sonido en la misma toma.", cost: "10", unit: "s" },
       { name: "Veo 3.1", maker: "Google", group: "video", use: "Máxima calidad para tomas principales y spots premium.", cost: "30", unit: "s" },
       { name: "Veo 3.1 Lite", maker: "Google", group: "video", use: "Borradores rápidos y baratos para probar ganchos antes del final.", cost: "5", unit: "s" },
-      { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Personajes consistentes, escenas con varias referencias y audio nativo.", cost: "", unit: "s" },
+      { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Personajes consistentes, escenas con varias referencias y audio nativo.", cost: "16", unit: "s" },
       { name: "Kling 3.0", maker: "Kuaishou", group: "video", use: "Movimiento y acción con física creíble.", cost: "10", unit: "s" },
       { name: "Wan 3.0", maker: "Alibaba", group: "video", use: "Video estilizado y creativo para contenido llamativo.", cost: "7", unit: "s" },
       { name: "Hailuo 2.3", maker: "MiniMax", group: "video", use: "Física natural y emoción en los rostros.", cost: "4", unit: "s" },

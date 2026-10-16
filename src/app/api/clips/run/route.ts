@@ -6,9 +6,10 @@ import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
-import { refundJob } from "@/lib/credits";
+import { chargedSince, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
-import { type StorySettings, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
+import { type StorySettings, billedSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
+import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 120;
 
@@ -39,10 +40,15 @@ export async function POST(req: Request) {
     // Claim the clip atomically: a double click, a second tab or two parallel requests can't
     // start (and charge) the same clip twice.
     let clip = await db.claim("clips", id, { notIn: ["generating", "starting", "syncing"] }, { status: "starting" });
-    // a start that died halfway (e.g. the server timed out) leaves "starting": take it over after 3 minutes
-    const stale = (found.status === "starting" || found.status === "syncing") && Date.now() - Date.parse(String(found.updated_at ?? found.created_at)) > 3 * 60_000;
-    if (!clip && stale) clip = await db.claim("clips", id, { in: ["starting", "syncing"] }, { status: "starting" });
-    if (!clip) return NextResponse.json({ error: "Este corte ya se está generando." }, { status: 409 });
+    // a start that died halfway (e.g. the server timed out) leaves "starting": take it over after 3 minutes,
+    // giving back what that attempt charged first (a stuck voice step is cleared by the status check)
+    const startedAt = Date.parse(String(found.updated_at ?? found.created_at));
+    const stale = found.status === "starting" && Date.now() - startedAt > 3 * 60_000;
+    if (!clip && stale) {
+      clip = await db.claim("clips", id, { in: ["starting"] }, { status: "starting" });
+      if (clip && (await chargedSince(s.user.workspace, id, new Date(startedAt - 60_000).toISOString()).catch(() => false))) await refundJob(s.user.workspace, id);
+    }
+    if (!clip) return NextResponse.json({ error: found.status === "syncing" ? "Esta toma está poniendo la voz. Espera un momento." : "Este corte ya se está generando." }, { status: 409 });
     before = found.status === "starting" || found.status === "syncing" ? "failed" : String(found.status ?? "pending");
     const giveBack = async (res: NextResponse) => { await db.update("clips", id, { status: before }).catch(() => {}); return res; };
     // Retry with another model (e.g. when one refuses the avatar's face).
@@ -71,17 +77,17 @@ export async function POST(req: Request) {
     const shotPlan = story?.plan?.shots?.[Number(clip.idx)];
     const talks = Boolean(shotPlan?.dialogue?.line?.trim()); // a character speaks: the clip keeps its voice
     // the speaker has their own voice (e.g. a cloned one): animate, then record the line and lip-sync it
-    const ownVoice = talks ? story?.plan?.characters?.find((c) => c.key === shotPlan?.dialogue?.speaker)?.voiceId ?? null : null;
+    let ownVoice = talks ? story?.plan?.characters?.find((c) => c.key === shotPlan?.dialogue?.speaker)?.voiceId ?? null : null;
+    if (ownVoice && !(await canUseVoice(ws, ownVoice))) ownVoice = null;
     if (talks && !ownVoice && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
-    const shotSecs = Number(shotPlan?.seconds ?? 0);
-    const seconds = story
-      ? ownVoice ? lipsyncSeconds(shotPlan!.dialogue!.line) : Math.min(10, Math.max(4, Math.ceil(shotSecs + (talks ? 1 : 0.6))))
-      : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const asked = story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    // charge (and ask) for what the model really makes: its nearest allowed length
+    const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
     const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
-    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? nanoBananaPro.usdPerImage : 0) + (ownVoice ? lipsyncUsd(seconds, shotPlan!.dialogue!.line) : 0);
+    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? nanoBananaPro.usdPerImage : 0) + (ownVoice ? lipsyncUsd(videoSecs, shotPlan!.dialogue!.line) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
     await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
@@ -105,7 +111,10 @@ export async function POST(req: Request) {
 
     const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story || (talks && !ownVoice), refs });
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
-    const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd });
+    // what was paid for travels with the clip: the lip-sync step reads it from here, not from the
+    // story (which the customer may edit while the clip renders)
+    const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : {};
+    const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd, ...extra });
     return NextResponse.json({ clip: row });
   } catch (err) {
     if (charged) await refundJob(s.user.workspace, id);

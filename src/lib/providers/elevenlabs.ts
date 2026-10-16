@@ -78,13 +78,22 @@ export const elevenlabs: VoiceProvider = {
 
   /** Word-level transcript of a hosted audio or video file (Scribe). Used by the automatic review and the captions. */
   async transcribe(url: string, lang: "en" | "es" = "en") {
-    const form = new FormData();
-    form.append("model_id", "scribe_v2");
-    form.append("source_url", url);
-    form.append("timestamps_granularity", "word");
-    form.append("tag_audio_events", "false");
-    form.append("language_code", lang === "es" ? "spa" : "eng");
-    const res = await fetch(`${API}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
+    const send = (file?: Blob) => {
+      const form = new FormData();
+      form.append("model_id", "scribe_v2");
+      if (file) form.append("file", file, "clip.mp4");
+      else form.append("source_url", url);
+      form.append("timestamps_granularity", "word");
+      form.append("tag_audio_events", "false");
+      form.append("language_code", lang === "es" ? "spa" : "eng");
+      return fetch(`${API}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
+    };
+    let res = await send();
+    // if the link isn't accepted, send the file itself (clips are small)
+    if (!res.ok && res.status !== 401 && res.status !== 429) {
+      const file = await fetch(url).then((r) => (r.ok ? r.blob() : null)).catch(() => null);
+      if (file) res = await send(file);
+    }
     if (!res.ok) return fail(res, "ElevenLabs (transcribir)");
     const d = await res.json();
     const words = ((d?.words ?? []) as { text: string; start: number; end: number; type: string }[])

@@ -6,7 +6,7 @@ import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/prov
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
 import { explainFailure, serviceOf } from "@/lib/balances";
-import { refundJob } from "@/lib/credits";
+import { chargedSince, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { isOwner } from "@/lib/auth";
 
@@ -62,12 +62,11 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
   }
 
   // Measure what the customer gave: the price and the limits depend on it.
-  const clientSecs = Math.max(0, Number(b.seconds) || 0);
   let seconds = 0;
   if (need.video) {
     if (!mine(b.video)) return "Sube un video.";
     input.video = b.video;
-    const d = (await lengthOf(await open(b.video))) || clientSecs;
+    const d = await lengthOf(await open(b.video)); // measured here: the price depends on it
     if (!d) return "No pude medir el largo del video. Prueba con un MP4.";
     if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
@@ -75,7 +74,7 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
   if (need.audio) {
     if (!mine(b.audio)) return "Sube un audio o genera la voz.";
     input.audio = b.audio;
-    const d = (await lengthOf(await open(b.audio))) || (need.video ? 0 : clientSecs);
+    const d = await lengthOf(await open(b.audio));
     if (!d) return "No pude medir el largo del audio. Prueba con un MP3.";
     if ((d < need.audio.min - 0.3 || d > need.audio.max + 0.5)) return `El audio debe durar entre ${need.audio.min} y ${need.audio.max} segundos (este dura ${secs(d)}).`;
     if (t.id === "avatar-habla") seconds = d; // billed by the audio
@@ -159,13 +158,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     if (!row || row.kind !== `tool:${t.id}`) return bad("No encontré ese trabajo.", 404);
     if (row.status === "done") return NextResponse.json({ state: "done", url: row.url });
     if (row.status === "failed") return NextResponse.json({ state: "failed", error: row.error });
-    if (!row.provider_job) return NextResponse.json({ state: "queued" });
+    if (!row.provider_job) {
+      // the start died before the job was handed over (server timeout): fail it and give the credits back
+      const since = String(row.created_at ?? "");
+      if (Date.now() - Date.parse(since) > 10 * 60_000) {
+        const gone = await db.claim("clips", id, { notIn: ["done", "failed"] }, { status: "failed", error: "Se cortó antes de empezar. Vuelve a intentarlo: no se cobró." });
+        if (gone && (await chargedSince(s.user.workspace, id, new Date(Date.parse(since) - 60_000).toISOString()).catch(() => false))) await refundJob(s.user.workspace, id);
+        return NextResponse.json({ state: "failed", error: "Se cortó antes de empezar. Vuelve a intentarlo: no se cobró." });
+      }
+      return NextResponse.json({ state: "queued" });
+    }
 
     const st = await checkTool(t, String(row.provider_job));
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
-      await db.update("clips", id, { status: "failed", error });
-      await refundJob(s.user.workspace, id);
+      // only the check that flips it to failed gives the credits back (two tabs can't refund twice)
+      const flipped = await db.claim("clips", id, { notIn: ["done", "failed"] }, { status: "failed", error });
+      if (flipped) await refundJob(s.user.workspace, id);
       return NextResponse.json({ state: "failed", error });
     }
     if (st.state !== "done") return NextResponse.json(st);

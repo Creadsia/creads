@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, cookieOptions, createSession, createUser, findUserByEmail, normEmail, passwordProblem } from "@/lib/auth";
+import { SESSION_COOKIE, cookieOptions, createSession, createUser, deleteUser, findUserByEmail, normEmail, passwordProblem } from "@/lib/auth";
 import { clientIp, tooMany } from "@/lib/rate";
 import { createClientWorkspace, emailOk, removeWorkspace } from "@/lib/signup";
 import { sendMeta, visitorFrom } from "@/lib/meta";
@@ -22,21 +22,26 @@ export async function POST(req: Request) {
   const weak = passwordProblem(password);
   if (weak) return NextResponse.json({ error: weak, field: "password" }, { status: 400 });
   let ws = "";
+  let userId = "";
   try {
     if (await findUserByEmail(email)) {
       return NextResponse.json({ error: "Ya tienes una cuenta con ese correo. Entra con tu clave para pagar.", field: "email", exists: true }, { status: 409 });
     }
     ws = await createClientWorkspace(company || name);
     const user = await createUser({ email, name, password, role: "member", workspace: ws });
+    userId = user.id;
     const token = await createSession(user.id, req.headers.get("user-agent") ?? "");
+    userId = ""; ws = ""; // from here on the account is complete: nothing to undo
     // same id the first sign-in would use, and the browser pixel gets it too: Meta counts it once
     const eventId = `reg-${user.id}`;
-    await sendMeta({ name: "CompleteRegistration", eventId, email }, visitorFrom(req));
+    await sendMeta({ name: "CompleteRegistration", eventId, email }, visitorFrom(req)).catch(() => null);
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;
   } catch (err) {
-    if (ws) await removeWorkspace(ws); // don't leave an empty workspace behind
+    // don't leave half an account behind (a user without a session, an empty workspace)
+    if (userId) await deleteUser(userId).catch(() => null);
+    if (ws) await removeWorkspace(ws);
     const dup = err instanceof Error && /duplicate|unique/i.test(err.message);
     if (dup) return NextResponse.json({ error: "Ya tienes una cuenta con ese correo. Entra con tu clave para pagar.", field: "email", exists: true }, { status: 409 });
     console.error("signup failed", err instanceof Error ? err.message : err);

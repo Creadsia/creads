@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { needsCredits } from "@/lib/credits";
 import { freeRedoAvailable, grantFreeRedo } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import path from "node:path";
@@ -25,6 +26,8 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const limited = await tooMany("ai", s.user.id);
   if (limited) return limited;
+  const broke = await needsCredits(s.user);
+  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   const { db } = s;
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
@@ -90,7 +93,7 @@ Responde SOLO JSON: {"cortes":[{"corte":número,"problema":"en español, corto",
 
     // 3) remember: problems become rules for every future prompt
     const severeIssues = results.filter((r) => r.severe).flatMap((r) => r.issues);
-    const learned = await learnFrom(severeIssues, format).catch(() => 0);
+    const learned = await learnFrom(severeIssues, format, s.user.workspace === "main").catch(() => 0);
 
     await db.update("ads", adId, { settings: { ...settings, review: results, reviewedAt: new Date().toISOString() } });
     // severe errors earn a free automatic redo (granted here, server-side: max 1 per clip, 2 per ad)

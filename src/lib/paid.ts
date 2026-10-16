@@ -6,6 +6,8 @@ import { CreditError, chargeJob, refundJob } from "./credits";
 // provider today (daily limit, provider balance). If anything says no, the credits go back.
 
 export async function payFor(user: User, usd: number, note: string, svc: Service, opts: { ref?: string; freeRedoOf?: string; chars?: number } = {}) {
+  // a job with no real price (NaN, 0, negative) is never started: it would run for free
+  if (!Number.isFinite(usd) || usd <= 0) throw new CreditError("No pudimos calcular el precio de este trabajo. Revisa los datos e intenta de nuevo.", 400);
   const charge = await chargeJob(user, usd, note, opts.ref, { freeRedoOf: opts.freeRedoOf });
   try {
     if (user.workspace !== "main") await ensureDailyCap(usd); // the owner sees the alert but is never blocked

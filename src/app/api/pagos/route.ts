@@ -47,7 +47,12 @@ export async function POST(req: Request) {
   const ws = s.user.workspace;
   if (ws === "main") return NextResponse.json({ error: "Esta es la vista de cliente: tu cuenta no paga." }, { status: 400 });
   try {
-    const [w, paid, rate] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), usdClp()]);
+    const [w, paid, rate, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), usdClp(), ordersOf(ws)]);
+    // one monthly subscription at a time: two would both charge the card every month
+    const active = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
+    if (active && period === "mensual" && PLANS.some((p) => p.id === b?.item) && !oneTimeOnly()) {
+      return NextResponse.json({ error: `Ya tienes la renovación automática de ${active.quote.label}. Para cambiar de plan, primero cancela esa renovación aquí mismo (tu plan sigue activo hasta la fecha pagada) y luego elige el nuevo.` }, { status: 409 });
+    }
     const discountPct = Number(w.discount ?? 0);
     const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct, firstPurchase: !paid });
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });

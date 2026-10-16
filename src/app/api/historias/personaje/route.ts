@@ -7,7 +7,7 @@ import { serviceOfModel } from "@/lib/balances";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { avatarCharacterPrompt, characterPrompt } from "@/lib/historias";
-import { loadStory, saveSettings } from "@/lib/historia-db";
+import { loadStory, updateStory } from "@/lib/historia-db";
 
 export const maxDuration = 120;
 
@@ -30,9 +30,8 @@ export async function POST(req: Request) {
 
   if (b?.image) {
     if (!ownsMedia(b.image, s.user.workspace)) return NextResponse.json({ error: "Esa imagen no es de tu cuenta." }, { status: 403 });
-    c.image_url = b.image;
-    await saveSettings(s.db, adId, st);
-    return NextResponse.json({ character: c });
+    await updateStory(s.db, adId, (x) => { const y = x.plan.characters.find((k) => k.key === key); if (y) y.image_url = b.image; });
+    return NextResponse.json({ character: { ...c, image_url: b.image } });
   }
 
   // one of the customer's avatars (their own row, so their own photo and consent)
@@ -52,12 +51,19 @@ export async function POST(req: Request) {
       prompt = avatarCharacterPrompt(c, st.style);
       refs = [{ url: await fetchableUrl(String(avatar.image_url), s.user.workspace), role: "face" as const }];
       c.avatar = String(avatar.id);
-      // the avatar's voice (e.g. its clone) becomes the character's voice, unless one was chosen already
-      if (!c.voiceId && typeof avatar.voice_id === "string" && avatar.voice_id) c.voiceId = avatar.voice_id;
     }
     const { bytes, mime } = await provider.generate({ prompt: prompt + extra, aspect: "16:9", refs });
-    c.image_url = await saveMedia(s.user.workspace, "historias", bytes, mime);
-    await saveSettings(s.db, adId, st);
+    const url = await saveMedia(s.user.workspace, "historias", bytes, mime);
+    const avatarVoice = avatar && typeof avatar.voice_id === "string" ? avatar.voice_id : "";
+    await updateStory(s.db, adId, (x) => {
+      const y = x.plan.characters.find((k) => k.key === key);
+      if (!y) return;
+      y.image_url = url;
+      if (avatar) y.avatar = String(avatar.id);
+      // the avatar's voice (e.g. its clone) becomes the character's voice, unless one was chosen already
+      if (avatarVoice && !y.voiceId) y.voiceId = avatarVoice;
+    });
+    c.image_url = url;
     return NextResponse.json({ character: c, usd: provider.usdPerImage });
   } catch (err) {
     console.error("historias/personaje", err instanceof Error ? err.message : err);

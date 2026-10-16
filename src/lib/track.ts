@@ -4,7 +4,7 @@
 // an id that the server repeats in its own copy, so Meta counts it once.
 
 type Fbq = (...args: unknown[]) => void;
-declare global { interface Window { fbq?: Fbq } }
+declare global { interface Window { fbq?: Fbq; __creadsQ?: unknown[][] } }
 
 export const hasConsent = () => {
   try { return document.cookie.split(/;\s*/).includes("creads_consent=1"); } catch { return false; }
@@ -15,7 +15,9 @@ export const newEventId = () => (typeof crypto !== "undefined" && "randomUUID" i
 /** Fires a standard Meta event in the browser (no-op without consent or pixel). Returns its id. */
 export function track(name: string, data: Record<string, unknown> = {}, eventId = newEventId()) {
   try {
-    if (hasConsent() && window.fbq) window.fbq("track", name, data, { eventID: eventId });
+    if (!hasConsent()) return eventId;
+    if (window.fbq) window.fbq("track", name, data, { eventID: eventId });
+    else (window.__creadsQ ??= []).push(["track", name, data, { eventID: eventId }]); // sent when the pixel loads
   } catch { /* measurement never breaks the page */ }
   return eventId;
 }

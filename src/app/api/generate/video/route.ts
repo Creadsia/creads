@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { billedSeconds } from "@/lib/historias";
 import { tooMany } from "@/lib/rate";
 import { createHash } from "node:crypto";
 import { fullSession } from "@/lib/access";
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim().slice(0, 3000) : "";
   const aspect: AspectRatio = (["9:16", "16:9", "1:1", "4:5"] as const).find((a) => a === body?.aspect) ?? "9:16";
-  const seconds = Math.min(15, Math.max(3, Math.round(Number(body?.seconds) || 8)));
+  const asked = Math.min(15, Math.max(3, Math.round(Number(body?.seconds) || 8)));
   const firstFrame = ownsMedia(body?.firstFrame, s.user.workspace) ? body.firstFrame : "";
   if (prompt.length < 10) return NextResponse.json({ error: "Describe la escena con un poco más de detalle." }, { status: 400 });
 
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
 
+  // charge for (and ask) the length the model really makes
+  const seconds = billedSeconds(asked, provider.durations, provider.id.startsWith("veo"));
   const svc = serviceOfModel(provider.id);
   const usd = +(provider.usdPerSecond * seconds).toFixed(2);
   // Recorded first (so it shows in "Tus creaciones" even if the tab is closed); its id ties the charge to it.

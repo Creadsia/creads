@@ -47,6 +47,12 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
       return { ok: false, reason: "monto menor al esperado" };
     }
   }
+  // A one-time order paid twice (marked paid by hand, then Mercado Pago confirms; or the reverse) only
+  // counts once. Subscriptions are the exception: each month is a new payment on the same order.
+  if (order.mp?.kind !== "subscription" && order.status === "pagado") {
+    const other = (order.payments ?? []).some((p) => !p.startsWith(`${source}:`));
+    if (other) return { ok: true, already: true };
+  }
   const g = orderGrant(order);
   const r = await applyPayment({
     paymentId: `${source}:${pay.id}`, orderId: order.id, amount: pay.amount, currency: pay.currency,

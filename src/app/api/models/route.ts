@@ -22,6 +22,7 @@ export async function GET(req: Request) {
         live: perSecond != null,
         aspects: p.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
         seconds: p.durations ?? [4, 5, 6, 8, 10],
+        durations: p.durations ?? null, // the exact lengths the model makes (null: any)
         needsImage: Boolean(p.needsImage),
         silent: Boolean(p.silent),
         noFaces: Boolean(p.noFaces),

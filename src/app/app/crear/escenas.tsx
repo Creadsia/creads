@@ -64,6 +64,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
 
   async function direct(e?: React.FormEvent) {
     e?.preventDefault();
+    const empty = cuts.findIndex((c) => !c.texto?.trim());
+    if (empty >= 0) { setErr(`El corte ${empty + 1} está vacío. Escríbele su texto o bórralo en el paso anterior.`); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch("/api/scenes", {
@@ -93,8 +95,10 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   }
 
   async function generate() {
-    if (!scenes) return;
+    if (!scenes || starting) return;
+    if (scenes.length !== cuts.length || scenes.some((x) => !x?.prompt)) { setErr("Los cortes cambiaron: vuelve a dirigir las escenas antes de generar."); return; }
     setConfirm(false); setErr("");
+    setStarting("Creando el anuncio…"); // also hides the button: a second click can't create a second ad
     const res = await fetch("/api/ads/start", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -102,9 +106,9 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
         avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null,
         clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i) })),
       }),
-    });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) { setErr(d.error || "No se pudo crear el anuncio."); return; }
+    }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    if (!res || !res.ok) { setStarting(""); setErr(d.error || "No se pudo crear el anuncio. Revisa tu conexión e intenta de nuevo."); return; }
     // Start them two at a time so the providers don't throttle us; failures show up on each clip.
     const ids: string[] = d.clips.map((c: { id: string }) => c.id);
     for (let i = 0; i < ids.length; i += 2) {

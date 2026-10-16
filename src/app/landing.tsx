@@ -426,7 +426,7 @@ const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
 function SectionHead({ id, title, lead }: { id: string; title: string; lead?: string }) {
   return (
     <div className="flex max-w-3xl flex-col gap-3">
-      <h2 id={id} className="text-[2rem] font-extrabold sm:text-[2.75rem]">
+      <h2 id={id} className="scroll-mt-32 text-[2rem] font-extrabold sm:text-[2.75rem] lg:scroll-mt-24">
         {title}
       </h2>
       {lead && <p className="text-lg text-muted">{lead}</p>}
@@ -533,7 +533,7 @@ function CtaStrip({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate: 
   );
 }
 
-export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }) {
+export default function Landing({ t, rate = 950, renews = true }: { t: Content; rate?: number; renews?: boolean }) {
   const home = t.lang === "es" ? "/" : "/en";
   const other = t.lang === "es" ? "/en" : "/";
   const groups = ["video", "image", "voice", "brain"] as const;
@@ -694,7 +694,7 @@ export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }
         <section id="pricing" aria-labelledby="pricing-title" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-10">
             <SectionHead id="pricing-title" title={t.pricing.title} lead={t.pricing.lead} />
-            <Pricing t={t.pricing} lang={t.lang} rate={rate} />
+            <Pricing t={t.pricing} lang={t.lang} rate={rate} renews={renews} />
           </div>
         </section>
 
@@ -962,7 +962,7 @@ export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }
         {/* FAQ */}
         <section aria-labelledby="faq" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto flex max-w-3xl flex-col gap-6">
-            <h2 id="faq" className="text-[2rem] font-extrabold sm:text-[2.75rem]">
+            <h2 id="faq" className="scroll-mt-32 text-[2rem] font-extrabold sm:text-[2.75rem] lg:scroll-mt-24">
               {t.faq.title}
             </h2>
             <div className="divide-y divide-line border-y border-line">
@@ -1021,6 +1021,8 @@ export default function Landing({ t, rate = 950 }: { t: Content; rate?: number }
             <b className="mb-1">{t.footer.contact}</b>
             <span className="select-all text-muted">hola@creadsia.com</span>
             <a href={other} className="text-muted hover:text-ink">{t.nav.switchLabel}</a>
+            <a href="/terminos" className="text-muted hover:text-ink">{t.lang === "es" ? "Términos y condiciones" : "Terms (Spanish)"}</a>
+            <a href="/privacidad" className="text-muted hover:text-ink">{t.lang === "es" ? "Política de privacidad" : "Privacy policy (Spanish)"}</a>
           </div>
         </div>
         <p className="mx-auto max-w-7xl border-t border-line py-6 text-sm text-muted">© {new Date().getFullYear()} Creads IA</p>

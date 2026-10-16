@@ -3,7 +3,9 @@ import { textAI } from "./providers";
 import { parseJSON } from "./providers/claude";
 
 // Turns problems found by the review into short rules that every future prompt carries (prototype: learnFrom).
-export async function learnFrom(issues: string[], format: string): Promise<number> {
+// Rules learned from a customer's video wait for the owner's approval (Aprendizajes), so nobody can plant
+// instructions in every customer's prompts through their own script.
+export async function learnFrom(issues: string[], format: string, trusted = false): Promise<number> {
   if (!issues.length || !textAI.configured()) return 0;
   const current = (await sharedRules.list("order=hits.desc&limit=60").catch(() => [])) as { id: string; rule_en: string; formats: string[] | null; hits: number }[];
   const r = parseJSON<{ nuevas?: { rule_en: string; es: string; formats: string[] }[]; repetidas?: number[] }>(
@@ -24,7 +26,7 @@ Responde SOLO JSON: {"nuevas":[{"rule_en":"","es":"en español, corta","formats"
   }
   let added = 0;
   for (const x of (r.nuevas ?? []).filter((y) => y?.rule_en).slice(0, 5)) {
-    await sharedRules.add({ rule_en: x.rule_en, rule_es: x.es, formats: x.formats?.length ? x.formats : ["all"], hits: 1, active: true }).catch(() => {});
+    await sharedRules.add({ rule_en: x.rule_en, rule_es: x.es, formats: x.formats?.length ? x.formats : ["all"], hits: 1, active: trusted }).catch(() => {});
     added++;
   }
   return added;

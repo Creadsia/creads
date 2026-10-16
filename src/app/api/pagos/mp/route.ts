@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getOrder, setOrderMp } from "@/lib/billing";
 import { getAuthorizedPayment, getPayment, getPreapproval, signatureOk } from "@/lib/mercadopago";
-import { settleOrder } from "@/lib/settle";
+import { orderGrant, settleOrder } from "@/lib/settle";
+import { AlreadyDone, grant } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,6 +21,18 @@ export async function POST(req: Request) {
   try {
     if (type === "payment") {
       const p = await getPayment(id);
+      // money given back (refund or chargeback): the credits that payment gave are taken back, once
+      if ((p.status === "refunded" || p.status === "charged_back") && p.external_reference) {
+        const o = await getOrder(p.external_reference);
+        if (o && (o.payments ?? []).includes(`mp:${p.id}`)) {
+          const g = orderGrant(o);
+          await grant(o.ws, -g.credits, "adjust", `Devolución en Mercado Pago · ${o.id}`, "mercadopago", `pay:rev:mp:${p.id}`).catch((e) => {
+            if (!(e instanceof AlreadyDone)) throw e;
+          });
+          console.warn("mercadopago: pago devuelto, créditos descontados", o.id, p.id, p.status);
+        }
+        return NextResponse.json({ ok: true, status: p.status });
+      }
       if (p.status !== "approved") return NextResponse.json({ ok: true, status: p.status });
       let orderId = p.external_reference ?? "";
       const pre = typeof p.metadata?.preapproval_id === "string" ? p.metadata.preapproval_id : "";

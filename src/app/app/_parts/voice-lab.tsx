@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import VoiceFromAudios from "./voice-upload";
+import { useCredits } from "./use-credits";
 
 // Voice bench: pick or clone a voice, then have it read a line. Uses ElevenLabs characters from our plan.
 
@@ -14,6 +15,7 @@ const btn = "rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabl
 
 export default function VoiceLab({ code }: { code: string }) {
   const [voices, setVoices] = useState<Voice[]>([]);
+  const { price } = useCredits();
   const [models, setModels] = useState<Model[]>([]);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loadErr, setLoadErr] = useState("");
@@ -59,8 +61,8 @@ export default function VoiceLab({ code }: { code: string }) {
     <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold">Voces (ElevenLabs)</h2>
-          <p className="text-sm text-muted">Elige una voz o clona la tuya, y haz que lea una frase. Se descuenta de los caracteres del plan de ElevenLabs.</p>
+          <h2 className="text-xl font-semibold">Voces</h2>
+          <p className="text-sm text-muted">Crea una voz con tus audios o elige una de la biblioteca, y escucha cómo lee tu texto. Cada lectura usa créditos según su largo.</p>
         </div>
         {usage && usage.limit > 0 && (
           <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">
@@ -94,7 +96,7 @@ export default function VoiceLab({ code }: { code: string }) {
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} aria-label="Texto a leer"
             placeholder='If you have Medicare Parts A and B, listen up.' className={`${input} leading-relaxed`} />
           <button type="button" onClick={speak} disabled={!code || !voiceId || text.trim().length < 2 || busy} className={btn}>
-            {busy ? "Generando…" : `Generar voz · ${text.trim().length} caracteres`}
+            {busy ? "Generando…" : `Generar voz · ${price(text.trim().length * 0.00022)}`}
           </button>
           {err && <p className="text-sm text-bad">{err}</p>}
           {audio && (

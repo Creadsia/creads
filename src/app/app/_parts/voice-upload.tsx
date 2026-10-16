@@ -47,6 +47,7 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
   // microphone
   const [rec, setRec] = useState<MediaRecorder | null>(null);
   const [recSecs, setRecSecs] = useState(0);
+  const recStart = useRef(0);
   const chunks = useRef<Blob[]>([]);
   useEffect(() => {
     if (!rec) return;
@@ -55,7 +56,7 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
   }, [rec]);
   useEffect(() => () => items.forEach((i) => URL.revokeObjectURL(i.url)), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function add(files: File[]) {
+  async function add(files: File[], secsHint?: number) {
     setErr(""); setDone("");
     const room = MAX_FILES - items.length;
     if (room <= 0) return setErr(`Máximo ${MAX_FILES} audios por voz.`);
@@ -65,7 +66,8 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
       if (!t.startsWith("audio/") && !t.startsWith("video/")) { setErr(`«${f.name}» no es audio ni video.`); continue; }
       if (f.size > MAX_MB * 1024 * 1024) { setErr(`«${f.name}» pesa más de ${MAX_MB} MB.`); continue; }
       const url = URL.createObjectURL(f);
-      ok.push({ id: `${Date.now()}-${Math.random()}`, file: f, secs: await lengthOf(url), url });
+      // browsers can't tell the length of a fresh recording (webm says "infinite"): use the recording timer
+      ok.push({ id: `${Date.now()}-${Math.random()}`, file: f, secs: (await lengthOf(url)) ?? secsHint ?? null, url });
     }
     if (files.length > room) setErr(`Solo caben ${MAX_FILES} audios; agregué los primeros ${room}.`);
     setItems((x) => [...x, ...ok]);
@@ -91,11 +93,12 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
         stream.getTracks().forEach((t) => t.stop());
         const t = baseType(r.mimeType || type || "audio/webm");
         const ext = t.includes("mp4") ? "m4a" : t.includes("ogg") ? "ogg" : "webm";
-        const file = new File(chunks.current, `grabacion-${items.length + 1}.${ext}`, { type: t });
-        add([file]);
+        const file = new File(chunks.current, `grabacion-${new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).replace(/:/g, "")}.${ext}`, { type: t });
+        add([file], Math.round((Date.now() - recStart.current) / 1000));
         setRec(null);
       };
       r.start(1000);
+      recStart.current = Date.now();
       setRecSecs(0);
       setRec(r);
     } catch {

@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { tooMany } from "@/lib/rate";
+import { needsCredits } from "@/lib/credits";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { deleteVoice, elevenlabs } from "@/lib/providers/elevenlabs";
 import type { VoiceSample } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { download, voiceSample, workdir } from "@/lib/montage";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
+const MAX_VOICES = 10; // clones per customer (they share Creadsia's voice slots)
 
 // Creates a voice from the customer's own recordings. Two ways in:
 // - JSON {name, consent, files: [refs]}: up to 5 audios or videos already uploaded to the customer's
@@ -23,6 +25,11 @@ export async function POST(req: Request) {
   const limited = await tooMany("heavy", s.user.id);
   if (limited) return limited;
   const ws = s.user.workspace;
+  const broke = await needsCredits(s.user);
+  if (broke) return NextResponse.json({ error: broke }, { status: 402 });
+  if (ws !== "main" && (await s.db.count("voices").catch(() => 0)) >= MAX_VOICES) {
+    return NextResponse.json({ error: `Ya tienes ${MAX_VOICES} voces creadas. Borra una que no uses para crear otra.` }, { status: 409 });
+  }
 
   let name = "";
   let consent = false;
@@ -39,16 +46,18 @@ export async function POST(req: Request) {
       if (refs.length > 5) return NextResponse.json({ error: "Máximo 5 audios por voz." }, { status: 400 });
       if (!refs.every((r) => ownsMedia(r, ws))) return NextResponse.json({ error: "Uno de los audios no es de tu cuenta." }, { status: 403 });
       const dir = await workdir(`voice-${s.user.id.slice(0, 8)}-${Date.now()}`);
-      let total = 0;
-      for (const [i, ref] of (refs as string[]).entries()) {
+      // all files at once (videos can be big): each becomes a clean mono mp3
+      const done = await Promise.all((refs as string[]).map(async (ref, i) => {
         const src = path.join(dir, `in-${i}`);
         await download(await fetchableUrl(ref, ws, 600), src);
         const out = path.join(dir, `muestra-${i + 1}.mp3`);
         const dur = await voiceSample(src, out).catch(() => 0);
-        if (dur < 1) return NextResponse.json({ error: `El archivo ${i + 1} no tiene audio que se pueda usar.` }, { status: 400 });
-        total += dur;
-        samples.push({ bytes: new Uint8Array(await readFile(out)), mime: "audio/mpeg", filename: `muestra-${i + 1}.mp3` });
-      }
+        return { i, dur, out };
+      }));
+      const bad = done.find((x) => x.dur < 1);
+      if (bad) return NextResponse.json({ error: `El archivo ${bad.i + 1} no tiene audio que se pueda usar.` }, { status: 400 });
+      const total = done.reduce((a, x) => a + x.dur, 0);
+      for (const x of done) samples.push({ bytes: new Uint8Array(await readFile(x.out)), mime: "audio/mpeg", filename: `muestra-${x.i + 1}.mp3` });
       if (total < MIN_SECONDS) return NextResponse.json({ error: `Hay muy poco audio (${Math.round(total)} s). Sube al menos 30 segundos; lo ideal es 1 a 3 minutos.` }, { status: 400 });
     } else {
       const form = await req.formData().catch(() => null);

@@ -20,7 +20,8 @@ const WRITE: Partial<Record<TenantTable, string[]>> = {
   avatars: ["name", "description", "image_url", "voice_id", "voice_name", "lang", "consent", "notes"],
   products: ["name", "description", "image_url", "notes"],
   scripts: ["title", "lang", "format", "text", "cuts", "favorite", "notes"],
-  ads: ["title", "favorite", "settings"],
+  // settings drive what the server generates and charges: the browser may only change the niche
+  ads: ["title", "favorite", "niche"],
 };
 const REMOVE: TenantTable[] = ["avatars", "products", "scripts", "ads", "images"];
 
