@@ -9,7 +9,9 @@ export type ToolId =
   | "mejorar-video"
   | "avatar-habla"
   | "sincronizar-labios"
-  | "doblaje";
+  | "doblaje"
+  | "musica"
+  | "efectos";
 
 export interface ToolDef {
   id: ToolId;
@@ -18,7 +20,7 @@ export interface ToolDef {
   short: string;
   /** What it does and what to give it, for the tool page. */
   lead: string;
-  output: "image" | "video";
+  output: "image" | "video" | "audio";
   /** The model doing the work, shown to the customer. */
   model: string;
   inputs: {
@@ -29,6 +31,8 @@ export interface ToolDef {
     prompt?: "required" | "optional";
     promptHint?: string;
     target?: boolean; // dubbing: language to dub into
+    length?: number[]; // the customer picks how long the result is (seconds)
+    instrumental?: boolean; // music: offer "sin voz"
   };
   /** US$ estimate. `seconds` is the length of the video or audio the customer gave. */
   estimate: (seconds: number) => number;
@@ -124,6 +128,28 @@ export const TOOLS: ToolDef[] = [
     estimate: (s) => +((0.5 * Math.max(s, 10)) / 60).toFixed(2),
     priceNote: "US$0,50 por minuto (tu plan incluye 12 min al mes)",
     consent: true,
+  },
+  {
+    id: "musica",
+    name: "Música IA",
+    short: "Una canción o fondo musical a medida, libre de derechos.",
+    lead: "Describe el estilo, el ánimo y los instrumentos. Ideal como música de fondo para tus anuncios y reels.",
+    output: "audio",
+    model: "ElevenLabs Music",
+    inputs: { prompt: "required", promptHint: "Por ejemplo: «pop latino alegre, guitarra y percusión, 100 bpm, para un anuncio de verano».", length: [15, 30, 60], instrumental: true },
+    estimate: (s) => +((0.15 * Math.max(s, 15)) / 60).toFixed(2),
+    priceNote: "US$0,15 por minuto",
+  },
+  {
+    id: "efectos",
+    name: "Efectos de sonido",
+    short: "Whoosh, clics, aplausos, ambiente: lo que describas.",
+    lead: "Describe el sonido y su largo. Sirve para transiciones, ganchos y ambiente de tus videos.",
+    output: "audio",
+    model: "ElevenLabs Sound Effects",
+    inputs: { prompt: "required", promptHint: "Por ejemplo: «whoosh rápido de transición» o «ambiente de cafetería con gente conversando».", length: [2, 5, 10, 20, 30] },
+    estimate: (s) => +((0.12 * Math.max(s, 2)) / 60).toFixed(2),
+    priceNote: "US$0,12 por minuto",
   },
 ];
 

@@ -1,5 +1,7 @@
 import type { ToolDef, ToolId } from "../tools";
-import { dubFile, dubStart, dubStatus } from "./elevenlabs";
+import { randomUUID } from "node:crypto";
+import { uploadMedia } from "../supabase";
+import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
 // Runs the "Crear" tools (catalog in src/lib/tools.ts). Server-only. Every tool is a job:
@@ -13,12 +15,15 @@ export interface ToolInput {
   audio?: string;
   prompt?: string;
   target?: string;
+  seconds?: number; // music / sound effects: chosen length
+  instrumental?: boolean;
 }
 
 export type ToolCheck =
   | { state: "queued" | "running" }
   | { state: "failed"; error: string }
-  | { state: "done"; fetch: () => Promise<ArrayBuffer>; mime: string; ext: string };
+  | { state: "done"; fetch: () => Promise<ArrayBuffer>; mime: string; ext: string }
+  | { state: "done"; url: string };
 
 interface FalTool {
   endpoint: string;
@@ -71,10 +76,17 @@ export const toolRequest = (id: ToolId, i: ToolInput) => {
   return t ? { endpoint: t.endpoint, body: t.build(i) } : null;
 };
 
-export const toolConfigured = (t: ToolDef) => (t.id === "doblaje" ? Boolean(process.env.ELEVENLABS_API_KEY) : Boolean(process.env.FAL_KEY));
+const ELEVEN: ToolId[] = ["doblaje", "musica", "efectos"];
+export const toolConfigured = (t: ToolDef) => Boolean(ELEVEN.includes(t.id) ? process.env.ELEVENLABS_API_KEY : process.env.FAL_KEY);
 
 /** Starts the tool. The job id says who runs it: a fal result link, or "el:<dub id>:<lang>". */
 export async function startTool(t: ToolDef, input: ToolInput): Promise<string> {
+  // Music and sound effects come back in one call: store the file now; the job id is its link.
+  if (t.id === "musica" || t.id === "efectos") {
+    const secs = input.seconds ?? 15;
+    const bytes = t.id === "musica" ? await compose(input.prompt!, secs, Boolean(input.instrumental)) : await soundEffect(input.prompt!, secs);
+    return `url:${await uploadMedia(`tools/${t.id}/${randomUUID()}.mp3`, bytes, "audio/mpeg")}`;
+  }
   if (t.id === "doblaje") {
     const lang = input.target ?? "es";
     const id = await dubStart(input.video!, lang, `Creads · ${lang}`);
@@ -92,6 +104,7 @@ const extOf = (url: string, fallback: string) => {
 const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp: "image/webp", mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm", mp3: "audio/mpeg" };
 
 export async function checkTool(t: ToolDef, job: string): Promise<ToolCheck> {
+  if (job.startsWith("url:")) return { state: "done", url: job.slice(4) };
   if (job.startsWith("el:")) {
     const [, id, lang] = job.split(":");
     const st = await dubStatus(id);

@@ -137,3 +137,28 @@ export async function dubFile(id: string, lang: string): Promise<ArrayBuffer> {
   if (!res.ok) return fail(res, "ElevenLabs (doblaje)");
   return res.arrayBuffer();
 }
+
+// ---------- music and sound effects ----------
+// Music: US$0.15 per minute (the Creator plan includes some minutes). Sound effects: US$0.12 per minute.
+
+/** Composes music from a description. Returns the mp3. */
+export async function compose(prompt: string, seconds: number, instrumental: boolean) {
+  const res = await fetch(`${API}/v1/music?output_format=mp3_44100_128`, {
+    method: "POST",
+    headers: { "xi-api-key": key(), "content-type": "application/json", accept: "audio/mpeg" },
+    body: JSON.stringify({ prompt, music_length_ms: Math.round(Math.min(300, Math.max(3, seconds)) * 1000), force_instrumental: instrumental }),
+  });
+  if (!res.ok) return fail(res, "ElevenLabs (música)");
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+/** Makes a sound effect from a description (0.5–30 s). Returns the mp3. */
+export async function soundEffect(text: string, seconds: number) {
+  const res = await fetch(`${API}/v1/sound-generation?output_format=mp3_44100_128`, {
+    method: "POST",
+    headers: { "xi-api-key": key(), "content-type": "application/json", accept: "audio/mpeg" },
+    body: JSON.stringify({ text, duration_seconds: Math.min(30, Math.max(0.5, seconds)), prompt_influence: 0.5 }),
+  });
+  if (!res.ok) return fail(res, "ElevenLabs (efectos)");
+  return new Uint8Array(await res.arrayBuffer());
+}

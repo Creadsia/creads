@@ -24,7 +24,8 @@ const FALLBACK: VideoModel[] = [
   { id: "veo-3.1", label: "Veo 3.1", usdPerSecond: 0.4 },
 ].map((m) => ({ ...m, configured: true, live: false, aspects: ["9:16", "16:9"], seconds: [4, 6, 8] }));
 
-const IMAGE_USD = 0.134;
+interface ImageModel { id: string; label: string; configured: boolean; usd: number }
+const IMAGE_FALLBACK: ImageModel[] = [{ id: "nano-banana-pro", label: "Nano Banana Pro", configured: true, usd: 0.134 }];
 const clp = (usd: number) => Math.round((usd * 950) / 10) * 10; // rough CLP, for orientation only
 
 type VideoState =
@@ -42,6 +43,8 @@ export default function ModelLab({ code }: { code: string }) {
   const [image, setImage] = useState<string | null>(null);
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
+  const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
+  const [imgModel, setImgModel] = useState("nano-banana-pro");
   const [model, setModel] = useState("veo-3.1-lite");
   const [seconds, setSeconds] = useState(4);
   const [frame, setFrame] = useState(""); // starting image for the video (generated, uploaded or from the library)
@@ -55,7 +58,10 @@ export default function ModelLab({ code }: { code: string }) {
     if (!code) return;
     fetch("/api/models", { headers: { "x-creads-code": code } })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d?.video?.length && setModels(d.video))
+      .then((d) => {
+        if (d?.video?.length) setModels(d.video);
+        if (d?.image?.length) setImageModels(d.image);
+      })
       .catch(() => {});
   }, [code]);
   useEffect(() => {
@@ -65,6 +71,7 @@ export default function ModelLab({ code }: { code: string }) {
   }, [video.s]);
 
   const headers = { "content-type": "application/json", "x-creads-code": code };
+  const im = imageModels.find((m) => m.id === imgModel) ?? imageModels[0];
   const vm = models.find((m) => m.id === model) ?? models[0];
   const secs = vm.seconds.includes(seconds) ? seconds : vm.seconds[0];
   const videoUsd = +(vm.usdPerSecond * secs).toFixed(2);
@@ -74,7 +81,7 @@ export default function ModelLab({ code }: { code: string }) {
     setImgBusy(true);
     setImgErr("");
     try {
-      const res = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt, aspect }) });
+      const res = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt, aspect, model: im.id }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo generar la imagen.");
       setImage(data.url);
@@ -165,14 +172,21 @@ export default function ModelLab({ code }: { code: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Image */}
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
-          <h3 className="font-semibold">1 · Imagen con Nano Banana Pro</h3>
+          <h3 className="font-semibold">1 · Imagen</h3>
+          <select value={im.id} onChange={(e) => setImgModel(e.target.value)} className={pill} aria-label="Modelo de imagen">
+            {imageModels.map((m) => (
+              <option key={m.id} value={m.id} disabled={!m.configured}>
+                {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `US$${m.usd.toFixed(3).replace(/0$/, "")}` : "sin conectar"}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={makeImage}
             disabled={!ready || imgBusy}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
-            {imgBusy ? "Generando… (≈ 30 s)" : `Generar imagen · US$${IMAGE_USD.toFixed(2)} (≈ $${clp(IMAGE_USD)})`}
+            {imgBusy ? "Generando… (≈ 30 s)" : `Generar imagen · US$${im.usd.toFixed(3).replace(/0$/, "")} (≈ $${clp(im.usd)})`}
           </button>
           {imgErr && <p className="text-sm text-bad">{imgErr}</p>}
           {image && (

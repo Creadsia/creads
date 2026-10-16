@@ -48,6 +48,13 @@ async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ inpu
     input.target = lang;
   }
 
+  if (need.length) {
+    const n = Number(b.length);
+    if (!need.length.includes(n)) return "Elige el largo.";
+    input.seconds = n;
+    if (need.instrumental) input.instrumental = b.instrumental === true;
+  }
+
   // Measure what the customer gave: the price and the limits depend on it.
   const clientSecs = Math.max(0, Number(b.seconds) || 0);
   let seconds = 0;
@@ -67,7 +74,7 @@ async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ inpu
     if ((d < need.audio.min - 0.3 || d > need.audio.max + 0.5)) return `El audio debe durar entre ${need.audio.min} y ${need.audio.max} segundos (este dura ${secs(d)}).`;
     if (t.id === "avatar-habla") seconds = d; // billed by the audio
   }
-  return { input, seconds };
+  return { input, seconds: input.seconds ?? seconds };
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ tool: string }> }) {
@@ -133,7 +140,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     }
     if (st.state !== "done") return NextResponse.json(st);
 
-    const url = await uploadMedia(`tools/${t.id}/${id}.${st.ext}`, await st.fetch(), st.mime);
+    const url = "url" in st ? st.url : await uploadMedia(`tools/${t.id}/${id}.${st.ext}`, await st.fetch(), st.mime);
     await db.update("clips", id, { status: "done", url });
     if (t.output === "image") await db.insert("images", { prompt: `${t.name}${row.prompt ? `: ${row.prompt}` : ""}`, url, model: t.model }).catch(() => null);
     return NextResponse.json({ state: "done", url });

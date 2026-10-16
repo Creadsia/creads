@@ -1,4 +1,4 @@
-import type { AspectRatio, Job, JobStatus, VideoProvider, VideoRequest } from "./types";
+import type { AspectRatio, ImageProvider, ImageRequest, Job, JobStatus, VideoProvider, VideoRequest } from "./types";
 
 // fal.ai queue API: one account gives us Kling, Seedance and many more. Server-only.
 // Schemas checked with fal's OpenAPI on 2026-10-15. Prices: fal model pages (audio on, 720p) — the
@@ -56,6 +56,16 @@ const seedance: Build = (req, image) => ({
   ...(image ? { image_url: image } : {}),
 });
 
+// Kling 3.0 Turbo (Pro quality, faster). No sound option.
+const klingTurbo: Build = (req, image) => ({
+  prompt: req.prompt,
+  duration: String(nearest(req.seconds, range(3, 15))),
+  ...(image ? { image_url: image } : { aspect_ratio: req.aspect === "16:9" || req.aspect === "1:1" ? req.aspect : "9:16" }),
+});
+
+// Hailuo 2.3 Pro: 1080p, fixed length (about 6 s), from an image.
+const hailuoPro: Build = (req, image) => ({ prompt: req.prompt, prompt_optimizer: true, image_url: image });
+
 // Hailuo 2.3 animates a starting image (its text-only mode is horizontal only). No sound.
 const hailuo: Build = (req, image) => ({
   prompt: req.prompt,
@@ -103,6 +113,16 @@ export const FAL_VIDEO: FalVideo[] = [
     build: kling,
   },
   {
+    id: "kling-3.0-turbo",
+    label: "Kling 3.0 Turbo",
+    usdPerSecond: 0.14,
+    i2v: "fal-ai/kling-video/v3/turbo/pro/image-to-video",
+    t2v: "fal-ai/kling-video/v3/turbo/pro/text-to-video",
+    durations: range(3, 15),
+    aspects: ["9:16", "1:1", "16:9"],
+    build: klingTurbo,
+  },
+  {
     id: "seedance-2.0-fast",
     label: "Seedance 2.0 Fast",
     usdPerSecond: 0.2419,
@@ -137,6 +157,15 @@ export const FAL_VIDEO: FalVideo[] = [
     durations: [6, 10],
     livePrice: false,
     build: hailuo,
+  },
+  {
+    id: "hailuo-2.3-pro",
+    label: "Hailuo 2.3 Pro",
+    usdPerSecond: 0.082, // $0.49 per clip (~6 s, 1080p)
+    i2v: "fal-ai/minimax/hailuo-2.3/pro/image-to-video",
+    durations: [6],
+    livePrice: false,
+    build: hailuoPro,
   },
   {
     id: "wan-3.0",
@@ -247,3 +276,103 @@ export async function falPricing(): Promise<Record<string, { usd: number; unit: 
     return {};
   }
 }
+
+
+// ---------- images ----------
+// Image models on fal, called with the synchronous endpoint (an image takes seconds).
+// With face/product references they switch to the model's edit endpoint.
+const SYNC = "https://fal.run";
+
+interface FalImage {
+  id: string;
+  label: string;
+  usdPerImage: number;
+  t2i: string;
+  edit: string;
+  build: (req: ImageRequest, refs: string[]) => Record<string, unknown>;
+}
+
+// Seedream sizes: total area kept at or under 1536×1536 (the cheaper price tier).
+const SEEDREAM_SIZE: Record<AspectRatio, { width: number; height: number }> = {
+  "9:16": { width: 1152, height: 2048 },
+  "4:5": { width: 1360, height: 1700 },
+  "1:1": { width: 1536, height: 1536 },
+  "16:9": { width: 2048, height: 1152 },
+};
+// FLUX 3 Klein takes pixel sizes (multiples of 16), about 1 MP.
+const KLEIN_SIZE: Record<AspectRatio, { width: number; height: number }> = {
+  "9:16": { width: 768, height: 1360 },
+  "4:5": { width: 912, height: 1136 },
+  "1:1": { width: 1024, height: 1024 },
+  "16:9": { width: 1360, height: 768 },
+};
+const withRefs = (refs: string[]) => (refs.length ? { image_urls: refs } : {});
+
+export const FAL_IMAGE: FalImage[] = [
+  {
+    id: "nano-banana-2",
+    label: "Nano Banana 2",
+    usdPerImage: 0.08,
+    t2i: "fal-ai/nano-banana-2",
+    edit: "fal-ai/nano-banana-2/edit",
+    build: (req, refs) => ({ prompt: req.prompt, aspect_ratio: req.aspect, resolution: "1K", output_format: "png", num_images: 1, ...withRefs(refs) }),
+  },
+  {
+    id: "seedream-5-pro",
+    label: "Seedream 5 Pro",
+    usdPerImage: 0.0675,
+    t2i: "bytedance/seedream/v5/pro/text-to-image",
+    edit: "bytedance/seedream/v5/pro/edit",
+    build: (req, refs) => ({ prompt: req.prompt, image_size: SEEDREAM_SIZE[req.aspect], output_format: "png", num_images: 1, ...withRefs(refs) }),
+  },
+  {
+    id: "flux-3",
+    label: "FLUX 3",
+    usdPerImage: 0.048,
+    t2i: "blackforestlabs/flux-3/text-to-image",
+    edit: "blackforestlabs/flux-3/edit-image",
+    build: (req, refs) => ({ prompt: req.prompt, aspect_ratio: req.aspect, resolution: "1k", output_format: "png", ...withRefs(refs) }),
+  },
+  {
+    id: "flux-3-klein",
+    label: "FLUX 3 Klein (borradores)",
+    usdPerImage: 0.009,
+    t2i: "blackforestlabs/flux-3/klein/text-to-image",
+    edit: "blackforestlabs/flux-3/klein/edit-image",
+    build: (req, refs) => ({ prompt: req.prompt, image_size: KLEIN_SIZE[req.aspect], output_format: "png", num_images: 1, enable_prompt_expansion: false, ...withRefs(refs) }),
+  },
+];
+
+/** The exact request each image model sends (exported for tests). */
+export const falImageRequest = (id: string, req: ImageRequest) => {
+  const m = FAL_IMAGE.find((x) => x.id === id);
+  if (!m) return null;
+  const refs = (req.refs ?? []).map((r) => r.url);
+  return { endpoint: refs.length ? m.edit : m.t2i, body: m.build(req, refs) };
+};
+
+function falImage(m: FalImage): ImageProvider {
+  return {
+    id: m.id,
+    label: `${m.label} (fal.ai)`,
+    usdPerImage: m.usdPerImage,
+    configured: () => Boolean(process.env.FAL_KEY),
+    async generate(req) {
+      const r = falImageRequest(m.id, req)!;
+      const res = await fetch(`${SYNC}/${r.endpoint}`, {
+        method: "POST",
+        headers: { ...auth(), "content-type": "application/json" },
+        body: JSON.stringify(r.body),
+      });
+      if (!res.ok) return fail(res, m.label);
+      const out = await res.json();
+      const url: string | undefined = out?.images?.[0]?.url;
+      if (!url) throw new Error(`${m.label} no devolvió imagen.`);
+      const file = await fetch(url);
+      if (!file.ok) throw new Error(`${m.label}: no se pudo descargar la imagen (${file.status}).`);
+      return { bytes: new Uint8Array(await file.arrayBuffer()), mime: file.headers.get("content-type") || "image/png" };
+    },
+  };
+}
+
+export const falImageProviders = FAL_IMAGE.map(falImage);

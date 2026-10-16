@@ -1,7 +1,7 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
 import { elevenlabs } from "./elevenlabs";
-import { falVideoProviders } from "./fal";
+import { falImageProviders, falVideoProviders } from "./fal";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
@@ -16,7 +16,7 @@ export const videoProviders: VideoProvider[] = [
   ...falVideoProviders,
 ];
 
-export const imageProviders: ImageProvider[] = [nanoBananaPro];
+export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders];
 
 export const voiceProviders: VoiceProvider[] = [elevenlabs];
 

@@ -183,10 +183,10 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 
 // ---------- results ----------
 
-function Result({ job, output }: { job: Job; output: "image" | "video" }) {
+function Result({ job, output }: { job: Job; output: "image" | "video" | "audio" }) {
   if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "Falló."}</p>;
   if (job.status !== "done" || !job.url) return <p className="text-sm text-muted">Trabajando… puedes cerrar esta página: queda en «Tus creaciones».</p>;
-  const next = TOOLS.filter((x) => (output === "image" ? x.inputs.image || x.inputs.images : x.inputs.video) && `tool:${x.id}` !== job.kind);
+  const next = output === "audio" ? [] : TOOLS.filter((x) => (output === "image" ? x.inputs.image || x.inputs.images : x.inputs.video) && `tool:${x.id}` !== job.kind);
   return (
     <div className="flex flex-col gap-3">
       {output === "image" ? (
@@ -194,6 +194,8 @@ function Result({ job, output }: { job: Job; output: "image" | "video" }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={job.url} alt="Resultado" className="max-h-[480px] w-auto rounded-xl object-contain" />
         </a>
+      ) : output === "audio" ? (
+        <audio src={job.url} controls className="w-full" />
       ) : (
         <video src={job.url} controls playsInline className="max-h-[520px] w-fit rounded-xl bg-black" />
       )}
@@ -220,6 +222,8 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   const [audio, setAudio] = useState<{ url: string; secs: number } | null>(null);
   const [prompt, setPrompt] = useState("");
   const [target, setTarget] = useState<string>("es");
+  const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
+  const [instrumental, setInstrumental] = useState(true);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -241,7 +245,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
           setJobs((js) => js.map((j) => (j.id === id ? { ...j, status: d.state, url: d.url ?? null, error: d.error ?? null } : j)));
           return;
         }
-        timers.current.set(id, setTimeout(() => check(id), t.output === "image" ? 4000 : 10000));
+        timers.current.set(id, setTimeout(() => check(id), t.output === "video" ? 10000 : 4000));
       })
       .catch(() => timers.current.set(id, setTimeout(() => check(id), 15000)));
   }, [t.id, t.output]);
@@ -258,7 +262,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   }, [t.id, poll]);
 
   const n = t.inputs;
-  const seconds = t.id === "avatar-habla" ? audio?.secs ?? 0 : video?.secs ?? 0;
+  const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : video?.secs ?? 0;
   const usd = t.estimate(seconds);
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :
@@ -274,13 +278,13 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
       const res = await fetch(`/api/tools/${t.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent }),
+        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent, length, instrumental }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo iniciar.");
       const job: Job = { id: d.id, created_at: new Date().toISOString(), kind: `tool:${t.id}`, status: "running", url: null, image_url: image || images[0] || video?.url || null, prompt, error: null, usd: d.usd, text: null };
       setJobs((js) => [job, ...js]);
-      timers.current.set(d.id, setTimeout(() => poll(d.id), t.output === "image" ? 3000 : 12000));
+      timers.current.set(d.id, setTimeout(() => poll(d.id), t.output === "video" ? 12000 : 2000));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "No se pudo iniciar.");
     } finally {
@@ -319,6 +323,19 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
             </select>
           </Field>
         )}
+        {n.length && (
+          <Field label="Largo">
+            <select value={length} onChange={(e) => setLength(Number(e.target.value))} className={inputCls}>
+              {n.length.map((l) => <option key={l} value={l}>{l < 60 ? `${l} segundos` : `${l / 60} minuto${l > 60 ? "s" : ""}`}</option>)}
+            </select>
+          </Field>
+        )}
+        {n.instrumental && (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={instrumental} onChange={(e) => setInstrumental(e.target.checked)} />
+            <span>Solo instrumental (sin voz cantada)</span>
+          </label>
+        )}
         {t.consent && (
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
@@ -351,6 +368,8 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
                   {j.url && t.output === "image" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={j.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : j.url && t.output === "audio" ? (
+                    <span className="grid h-full place-items-center text-xs text-muted">♪ Audio</span>
                   ) : j.url ? (
                     <video src={j.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
                   ) : (

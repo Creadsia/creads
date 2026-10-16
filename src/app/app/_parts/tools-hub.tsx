@@ -11,7 +11,7 @@ interface Job { id: string; kind: string; status: string; url: string | null; im
 
 const GENERATE = [
   { href: "/app/laboratorio", name: "Video IA", short: "Un clip desde texto o desde una imagen.", models: "Veo 3.1 · Kling 3.0 · Seedance 2.5 · Hailuo 2.3 · Wan 3.0 · Grok" },
-  { href: "/app/laboratorio", name: "Imagen IA", short: "Fotos realistas, producto y escenas.", models: "Nano Banana Pro" },
+  { href: "/app/laboratorio", name: "Imagen IA", short: "Fotos realistas, producto y escenas.", models: "Nano Banana Pro · Nano Banana 2 · Seedream 5 · FLUX 3" },
   { href: "/app/crear", name: "Anuncio completo", short: "Pega un guion y recibe el anuncio terminado y revisado.", models: "Claude + el modelo que elijas" },
   { href: "/app/voces", name: "Voz IA", short: "Clona tu voz o elige una y haz que lea tu texto.", models: "ElevenLabs" },
 ];
@@ -24,6 +24,8 @@ const ICON: Record<string, string> = {
   "avatar-habla": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 9-6.7M17 15v5M20 16.5v2M14 16.5v2",
   "sincronizar-labios": "M4 12c2.5-3 5-4.5 8-4.5s5.5 1.5 8 4.5c-2.5 3-5 4.5-8 4.5S6.5 15 4 12ZM4 12h16",
   doblaje: "M4 5h9v6H8l-4 3V5ZM11 13v2h5l4 3v-9h-4",
+  musica: "M9 18V6l10-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
+  efectos: "M3 12h2l2-5 3 10 3-14 3 12 2-3h3",
 };
 
 function Glyph({ d }: { d: string }) {
@@ -77,7 +79,23 @@ export default function ToolsHub() {
       <section aria-labelledby="edit" className="flex flex-col gap-3">
         <h2 id="edit" className="text-lg font-semibold">Editar y mejorar</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {TOOLS.map((t) => (
+          {TOOLS.filter((t) => t.output !== "audio").map((t) => (
+            <Link key={t.id} href={`/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-text"><Glyph d={ICON[t.id]} /></span>
+              <span className="flex min-w-0 flex-col gap-1">
+                <b className="font-semibold">{t.name}</b>
+                <span className="text-sm text-muted">{t.short}</span>
+                <span className="text-xs text-muted">{t.model} · {t.priceNote}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="audio" className="flex flex-col gap-3">
+        <h2 id="audio" className="text-lg font-semibold">Audio</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {TOOLS.filter((t) => t.output === "audio").map((t) => (
             <Link key={t.id} href={`/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-text"><Glyph d={ICON[t.id]} /></span>
               <span className="flex min-w-0 flex-col gap-1">
@@ -105,10 +123,11 @@ export default function ToolsHub() {
               if (!t) return null;
               const thumb = j.url ?? j.image_url;
               const isVid = thumb && /\.(mp4|mov|webm)$/i.test(thumb);
+              const isAudio = thumb && /\.(mp3|wav|m4a)$/i.test(thumb);
               return (
                 <Link key={j.id} href={j.url ? j.url : t.href} target={j.url ? "_blank" : undefined} className="flex flex-col gap-1.5">
                   <span className="relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-2">
-                    {thumb && (isVid
+                    {isAudio ? <span className="grid h-full place-items-center text-2xl text-muted" aria-hidden="true">♪</span> : thumb && (isVid
                       ? <video src={thumb} muted playsInline preload="metadata" className="h-full w-full object-cover" />
                       // eslint-disable-next-line @next/next/no-img-element
                       : <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover" />)}
