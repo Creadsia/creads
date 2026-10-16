@@ -20,16 +20,16 @@ export function Mark({ size = 32, className }: { size?: number; className?: stri
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`flex items-center gap-1.5 ${className}`}>
-      <span className="font-display text-[1.1rem] leading-none sm:text-[1.28rem] font-semibold tracking-[-0.05em]">creads</span>
-      <span className="rounded-[5px] bg-[image:var(--grad)] px-1.5 py-[3px] font-display text-[0.62rem] leading-none font-bold tracking-tight text-black">IA</span>
+      <span className="font-display text-[1.3rem] leading-none sm:text-[1.55rem] font-semibold tracking-[-0.05em]">creads</span>
+      <span className="rounded-[5px] bg-[image:var(--grad)] px-1.5 py-[3px] font-display text-[0.7rem] sm:text-[0.78rem] leading-none font-bold tracking-tight text-black">IA</span>
     </span>
   );
 }
 
-export function Logo({ size = 30, href = "/" }: { size?: number; href?: string; gid?: string }) {
+export function Logo({ size = 36, href = "/" }: { size?: number; href?: string; gid?: string }) {
   return (
     <a href={href} className="flex items-center gap-2.5" aria-label="Creads IA">
-      <Mark size={size} className="h-[26px] w-[26px] sm:h-auto sm:w-auto" />
+      <Mark size={size} className="h-[30px] w-[30px] sm:h-auto sm:w-auto" />
       <Wordmark />
     </a>
   );
