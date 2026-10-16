@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Content } from "@/content/en";
+import { newEventId, track } from "@/lib/track";
 
 type State = "idle" | "sending" | "done" | "error";
 
@@ -23,6 +24,7 @@ export default function WaitlistForm({
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setState("sending");
+    const eventId = newEventId();
     try {
       const res = await fetch("/api/waitlist", {
         method: "POST",
@@ -33,12 +35,14 @@ export default function WaitlistForm({
           ads_per_month: form.get("ads_per_month"),
           plan: plan ?? "",
           lang,
+          eventId,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t.error);
       setState("done");
       setMsg(t.done);
+      track("Lead", { content_name: plan ? `Reserva ${plan}` : "Lista de espera" }, eventId);
     } catch {
       setState("error");
       setMsg(t.error);

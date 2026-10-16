@@ -3,6 +3,7 @@ import { forgetWorkspace } from "./auth";
 import type { ItemId, MethodId, Period, Quote } from "./catalog";
 import { CreditError, grant } from "./credits";
 import { DEFAULT_FINANZAS, type Finanzas } from "./finance";
+import type { Visitor } from "./meta";
 import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
 
 // Payments: recording a paid plan or top-up (by hand today, by Stripe / Mercado Pago later) and the
@@ -74,6 +75,8 @@ export interface Order {
   status: "pendiente" | "pagado" | "cancelado";
   created: string;
   closed?: string;
+  /** For Meta: consent and browser ids at checkout, so the purchase can be matched later. */
+  visitor?: Visitor;
 }
 
 const FILE = "pedidos.json";

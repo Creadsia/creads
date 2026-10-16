@@ -3,6 +3,7 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { addOrder, hasPaidBefore, orders, workspaceRow } from "@/lib/billing";
 import { type ItemId, METHODS, type MethodId, type Period, quote } from "@/lib/catalog";
 import { tooMany } from "@/lib/rate";
+import { sendMeta, visitorFrom } from "@/lib/meta";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,9 @@ export async function POST(req: Request) {
     const [w, paid] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws)]);
     const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct: Number(w.discount ?? 0), firstPurchase: !paid });
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });
-    const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q });
+    const visitor = visitorFrom(req);
+    const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q, visitor });
+    await sendMeta({ name: "InitiateCheckout", eventId: typeof b?.eventId === "string" ? b.eventId : undefined, email: s.user.email, value: q.total, content: q.label }, visitor);
     return NextResponse.json({ online: ONLINE, order: { id: order.id, label: q.label, total: q.total, method } });
   } catch {
     return NextResponse.json({ error: "No se pudo guardar tu pedido. Escríbenos a hola@creadsia.com." }, { status: 502 });

@@ -4,18 +4,18 @@ const ffmpegFiles = ["./node_modules/ffmpeg-static/ffmpeg", "./assets/fonts/**"]
 
 // Security headers for every page and API answer.
 // The page scripts Next.js writes inline need 'unsafe-inline'; everything else is locked to our own site,
-// our storage (Supabase), the landing videos (CloudFront) and ElevenLabs' voice samples.
+// our storage (Supabase), the landing videos (CloudFront), ElevenLabs' voice samples and the Meta Pixel.
 const dev = process.env.NODE_ENV !== "production";
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://connect.facebook.net${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.supabase.co https://*.cloudfront.net",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.cloudfront.net https://www.facebook.com",
   "media-src 'self' blob: https://*.supabase.co https://*.cloudfront.net https://storage.googleapis.com",
   "font-src 'self' data:",
-  `connect-src 'self' https://*.supabase.co${dev ? " ws: http://localhost:*" : ""}`,
+  `connect-src 'self' https://*.supabase.co https://www.facebook.com https://connect.facebook.net${dev ? " ws: http://localhost:*" : ""}`,
   "frame-ancestors 'none'",
-  "frame-src 'none'",
+  "frame-src https://www.facebook.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

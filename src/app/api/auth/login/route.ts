@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE, cookieOptions, createSession, findUserByEmail, normEmail, twoFactorOf, verifyPassword, workspaceOpen } from "@/lib/auth";
 import { clientIp, tooMany } from "@/lib/rate";
 import { verifyCode } from "@/lib/totp";
+import { sendMeta, visitorFrom } from "@/lib/meta";
 
 // a valid scrypt hash of a random string: used when the email has no account
 const DUMMY_HASH = "scrypt$8b3f0c0e8f6b4f7c2d1a9e5b7c3d2f10$" + "a1".repeat(64);
@@ -38,6 +39,8 @@ export async function POST(req: Request) {
       }
     }
     const token = await createSession(user.id, req.headers.get("user-agent") ?? "");
+    // first time in: Meta "CompleteRegistration" (customers only)
+    if (!user.last_login && user.workspace !== "main") await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitorFrom(req));
     const res = NextResponse.json({ ok: true, user: { email: user.email, name: user.name, role: user.role } });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;

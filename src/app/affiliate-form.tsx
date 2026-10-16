@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Content } from "@/content/en";
+import { newEventId, track } from "@/lib/track";
 
 // Sign-up for the affiliate program (saved in the waitlist with plan "afiliado").
 export default function AffiliateForm({ t, form, lang }: { t: Content["affiliates"]; form: Content["form"]; lang: "en" | "es" }) {
@@ -12,12 +13,14 @@ export default function AffiliateForm({ t, form, lang }: { t: Content["affiliate
   async function send(e: React.FormEvent) {
     e.preventDefault();
     setState("sending");
+    const eventId = newEventId();
     const res = await fetch("/api/waitlist", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, niche: `afiliado: ${channel}`, plan: "afiliado", lang }),
+      body: JSON.stringify({ email, niche: `afiliado: ${channel}`, plan: "afiliado", lang, eventId }),
     }).catch(() => null);
     setState(res?.ok ? "done" : "error");
+    if (res?.ok) track("Lead", { content_name: "Afiliado" }, eventId);
   }
 
   if (state === "done") return <p className="rounded-xl bg-good/12 p-4 font-semibold text-good" role="status">{t.done}</p>;

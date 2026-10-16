@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { type ItemId, LAUNCH_PCT, METHODS, type MethodId, PACKS, PLANS, type Period, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { useCredits } from "../_parts/use-credits";
+import { newEventId, track } from "@/lib/track";
 
 // Plans and credits: choose a plan or a top-up, see exactly what you'll pay, pick how to pay.
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
@@ -54,10 +55,12 @@ export default function Planes() {
     e.preventDefault();
     if (!item) return;
     setBusy(true); setErr("");
-    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method }) });
+    const eventId = newEventId();
+    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method, eventId }) });
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) return setErr(d.error || "No se pudo crear el pedido.");
+    track("InitiateCheckout", { value: d.order.total, currency: "USD", content_name: d.order.label }, eventId);
     setDone(d.order); setItem(null); load();
     requestAnimationFrame(() => document.getElementById("pedido-ok")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }

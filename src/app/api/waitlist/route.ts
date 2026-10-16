@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { sendMeta, visitorFrom } from "@/lib/meta";
+import { clientIp, tooMany } from "@/lib/rate";
 
 // Saves a sign-up (plan reservation) in Supabase, table `waitlist` (see supabase/schema.sql).
 // Uses the REST endpoint with the service-role key, which stays on the server.
 export async function POST(req: Request) {
+  const limited = await tooMany("upload", `waitlist:${clientIp(req)}`);
+  if (limited) return limited;
   const body = await req.json().catch(() => null);
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
@@ -47,5 +51,7 @@ export async function POST(req: Request) {
     console.error("waitlist insert failed", res.status, detail.slice(0, 500));
     return NextResponse.json({ error: `Couldn't save (code ${res.status}).` }, { status: 502 });
   }
+  // the same Lead the browser pixel sent (same id), from the server
+  await sendMeta({ name: "Lead", eventId: typeof body?.eventId === "string" ? body.eventId : undefined, email, content: extra.plan ? `Reserva ${extra.plan}` : "Lista de espera" }, visitorFrom(req));
   return NextResponse.json({ ok: true });
 }

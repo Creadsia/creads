@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/track";
 import type { Content } from "@/content/en";
 import WaitlistForm from "./waitlist-form";
 
@@ -8,6 +9,15 @@ export default function Pricing({ t, form, lang }: { t: Content["pricing"]; form
   const [yearly, setYearly] = useState(false);
   const [plan, setPlan] = useState<string | null>(null);
   const formBox = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // Meta "ViewContent": the visitor saw the plans (once per visit)
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { track("ViewContent", { content_name: "Planes" }); io.disconnect(); } }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   function reserve(id: string) {
     setPlan(id);
@@ -17,7 +27,7 @@ export default function Pricing({ t, form, lang }: { t: Content["pricing"]; form
   const chosen = t.plans.find((p) => p.id === plan);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div ref={box} className="flex flex-col gap-8">
       {/* billing switch */}
       <div className="flex flex-wrap items-center gap-3">
         <div role="radiogroup" aria-label="Billing" className="inline-flex rounded-xl border border-line bg-surface p-1">

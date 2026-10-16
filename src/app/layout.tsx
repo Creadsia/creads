@@ -3,6 +3,7 @@ import "@fontsource-variable/unbounded";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "./globals.css";
+import MetaPixel from "./meta-pixel";
 
 export const metadata: Metadata = {
   title: "Creads IA · Every AI model, one studio",
@@ -22,7 +23,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           }}
         />
       </head>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <MetaPixel />
+      </body>
     </html>
   );
 }
