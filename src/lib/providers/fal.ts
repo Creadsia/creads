@@ -57,7 +57,7 @@ export const FAL_VIDEO: FalVideo[] = [
   {
     id: "kling-3.0",
     label: "Kling 3.0",
-    usdPerSecond: 0.168, // Standard tier assumed ≤ Pro; live price replaces this
+    usdPerSecond: 0.14,
     i2v: "fal-ai/kling-video/v3/standard/image-to-video",
     t2v: "fal-ai/kling-video/v3/standard/text-to-video",
     durations: range(3, 15),
@@ -66,7 +66,7 @@ export const FAL_VIDEO: FalVideo[] = [
   {
     id: "kling-3.0-pro",
     label: "Kling 3.0 Pro",
-    usdPerSecond: 0.168,
+    usdPerSecond: 0.14,
     i2v: "fal-ai/kling-video/v3/pro/image-to-video",
     t2v: "fal-ai/kling-video/v3/pro/text-to-video",
     durations: range(3, 15),
@@ -93,7 +93,7 @@ export const FAL_VIDEO: FalVideo[] = [
   {
     id: "seedance-2.5",
     label: "Seedance 2.5",
-    usdPerSecond: 0.3024, // assumed ≥ 2.0 until the live price loads
+    usdPerSecond: 0.462, // $0.0214 per 1k tokens at 720p
     i2v: "bytedance/seedance-2.5/image-to-video",
     t2v: "bytedance/seedance-2.5/text-to-video",
     durations: range(4, 15),

@@ -12,7 +12,8 @@ export async function GET(req: Request) {
   return NextResponse.json({
     video: videoProviders.map((p) => {
       const l = live[p.id];
-      const perSecond = l && /sec/i.test(l.unit) ? l.usd : null;
+      // Seedance is billed per 1,000 tokens; at 720p, 1 s ≈ 720×1280×24/1024 = 21,600 tokens.
+      const perSecond = !l ? null : /sec/i.test(l.unit) ? l.usd : /1000 tokens/i.test(l.unit) ? +(l.usd * 21.6).toFixed(4) : null;
       return {
         id: p.id,
         label: p.label,
