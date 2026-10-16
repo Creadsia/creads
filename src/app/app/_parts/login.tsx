@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Logo } from "../../brand";
 import ThemeToggle from "../../theme-toggle";
 
@@ -9,11 +9,7 @@ const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
 export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
   const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover">(initial);
-  const [rescue, setRescue] = useState("");
-  useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("rescate");
-    if (t) { setRescue(t); setMode("recover"); }
-  }, []);
+  const rescue = "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -27,11 +23,11 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
     setError("");
     if ((mode === "setup" || mode === "recover") && password !== password2) return setError("Las dos claves no coinciden.");
     setBusy(true);
-    const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? (rescue ? "/api/auth/rescue" : "/api/auth/recover") : "/api/auth/login";
+    const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? "/api/auth/recover" : "/api/auth/login";
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? (rescue ? { password, token: rescue } : { password, code }) : { email, password }),
+      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password }),
     });
     const d = await res.json().catch(() => ({}));
     if (res.ok) { window.location.href = "/app"; return; }
