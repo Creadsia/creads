@@ -123,7 +123,7 @@ export const FAL_VIDEO: FalVideo[] = [
     id: "kling-3.0-pro",
     maxPrompt: 2500,
     label: "Kling 3.0 Pro",
-    usdPerSecond: 0.14,
+    usdPerSecond: 0.168, // fal page 2026-10-16: $0.112 audio off, $0.168 audio on (we generate with audio)
     i2v: "fal-ai/kling-video/v3/pro/image-to-video",
     t2v: "fal-ai/kling-video/v3/pro/text-to-video",
     durations: range(3, 15),
