@@ -28,6 +28,7 @@ export const en = {
     { label: "AI Influencer", href: "#tools", badge: "NEW" },
     { label: "Apps", href: "#studios", badge: "" },
     { label: "API", href: "#tools", badge: "SOON" },
+    { label: "Affiliates", href: "#afiliados", badge: "SOON" },
     { label: "Pricing", href: "#pricing", badge: "-50%" },
   ],
   featured: {
@@ -275,6 +276,20 @@ export const en = {
     ],
     langTitle: "English and Spanish, built in",
     langText: "Create in English for the US market or in Spanish for Latin America. The whole platform, scripts and support work in both languages.",
+  },
+  affiliates: {
+    badge: "SOON",
+    title: "Earn money recommending Creads IA",
+    lead: "Got an audience, an agency or buy traffic? Run Creads IA as an offer and earn a commission every month for each customer you bring, for as long as they stay subscribed.",
+    steps: [
+      ["Apply", "Leave your email and where you promote. We open the program first come, first served."],
+      ["Share your link", "Get your own link plus ready-made material: AI videos, copy and hooks."],
+      ["Get paid monthly", "Track your sales in your dashboard and get a monthly commission for each active customer."],
+    ],
+    channel: "Where do you promote?",
+    channels: ["TikTok / Reels / YouTube", "Paid ads (Meta, Google)", "Marketing agency", "Community or newsletter", "Other"],
+    submit: "Become an affiliate",
+    done: "You're on the affiliate list. We'll email you as soon as the program opens.",
   },
   faq: {
     title: "Frequently asked questions",

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Content } from "@/content/en";
 import { Logo, Mark } from "./brand";
+import AffiliateForm from "./affiliate-form";
 import Composer from "./composer";
 import Pricing from "./pricing";
 import LoopVideo from "./loop-video";
@@ -616,6 +617,33 @@ export default function Landing({ t }: { t: Content }) {
               <div className="relative flex min-h-[460px] flex-col justify-end gap-3 p-7 text-white sm:p-10">
                 <h3 className="text-3xl font-extrabold sm:text-4xl">{t.audiences.langTitle}</h3>
                 <p className="max-w-[48ch] text-white/85">{t.audiences.langText}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Affiliates (program opens with payments; sign-ups now) */}
+        <section id="afiliados" aria-labelledby="afiliados-title" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto max-w-7xl rounded-[2rem] bg-[image:var(--grad)] p-px">
+            <div className="grid gap-10 rounded-[calc(2rem-1px)] bg-surface p-6 sm:p-10 lg:grid-cols-[1.2fr_1fr]">
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-3">
+                  <span className="w-fit rounded-md bg-surface-2 px-2 py-1 text-[11px] font-bold text-muted">{t.affiliates.badge}</span>
+                  <h2 id="afiliados-title" className="text-[2rem] font-extrabold sm:text-[2.75rem]">{t.affiliates.title}</h2>
+                  <p className="max-w-[56ch] text-lg text-muted">{t.affiliates.lead}</p>
+                </div>
+                <ol className="grid gap-4 sm:grid-cols-3">
+                  {t.affiliates.steps.map(([s, d], i) => (
+                    <li key={s} className="flex flex-col gap-1.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line font-display text-sm font-semibold">{i + 1}</span>
+                      <b className="font-semibold">{s}</b>
+                      <span className="text-sm text-muted">{d}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="self-center">
+                <AffiliateForm t={t.affiliates} form={t.form} lang={t.lang} />
               </div>
             </div>
           </div>

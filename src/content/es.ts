@@ -29,6 +29,7 @@ export const es: Content = {
     { label: "Influencer IA", href: "#tools", badge: "NUEVO" },
     { label: "Apps", href: "#studios", badge: "" },
     { label: "API", href: "#tools", badge: "PRONTO" },
+    { label: "Afiliados", href: "#afiliados", badge: "PRONTO" },
     { label: "Precios", href: "#pricing", badge: "-50%" },
   ],
   featured: {
@@ -276,6 +277,20 @@ export const es: Content = {
     ],
     langTitle: "Inglés y español, de fábrica",
     langText: "Crea en inglés para vender en Estados Unidos o en español para Latinoamérica. La plataforma, los guiones y el soporte funcionan en los dos idiomas.",
+  },
+  affiliates: {
+    badge: "PRONTO",
+    title: "Gana dinero recomendando Creads IA",
+    lead: "Si tienes audiencia, una agencia o compras tráfico, corre Creads IA como oferta y cobra una comisión cada mes por cada cliente que traigas, mientras siga suscrito.",
+    steps: [
+      ["Postula", "Déjanos tu correo y dónde promocionas. Abrimos el programa por orden de llegada."],
+      ["Comparte tu link", "Recibes un link propio y material listo: videos hechos con IA, textos y ganchos."],
+      ["Cobra cada mes", "Ves tus ventas en tu panel y recibes tu comisión mensual por cada cliente activo."],
+    ],
+    channel: "¿Dónde promocionas?",
+    channels: ["TikTok / Reels / YouTube", "Anuncios pagados (Meta, Google)", "Agencia de marketing", "Comunidad o newsletter", "Otro"],
+    submit: "Quiero ser afiliado",
+    done: "Listo, quedaste en la lista de afiliados. Te escribimos apenas abra el programa.",
   },
   faq: {
     title: "Preguntas frecuentes",
