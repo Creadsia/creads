@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
     "/api/montage": ffmpegFiles,
     "/api/review": ffmpegFiles,
     "/api/historias/montar": ffmpegFiles,
+    "/api/historias/dialogos": ["./node_modules/ffmpeg-static/ffmpeg"],
     // voice samples are cleaned up (any audio or video → mono mp3) before cloning
     "/api/voices/clone": ["./node_modules/ffmpeg-static/ffmpeg"],
     // the tools measure uploaded videos and audio with FFmpeg before spending

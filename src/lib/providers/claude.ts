@@ -4,7 +4,9 @@ import { noteOutage } from "../balances";
 // Claude through the Anthropic Messages API, called only from the server.
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 
-type Block = { type: "text"; text: string } | { type: "image"; source: { type: "url"; url: string } };
+type Block =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "url"; url: string } | { type: "base64"; media_type: string; data: string } };
 
 export const claude: TextAI = {
   id: "claude",
@@ -15,7 +17,11 @@ export const claude: TextAI = {
     if (!key) throw new Error("Falta ANTHROPIC_API_KEY en Vercel.");
 
     const content: Block[] = [
-      ...(images ?? []).map((url): Block => ({ type: "image", source: { type: "url", url } })),
+      // a link, or a small picture sent inline ("data:image/jpeg;base64,…")
+      ...(images ?? []).map((url): Block => {
+        const m = url.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+        return { type: "image", source: m ? { type: "base64", media_type: m[1], data: m[2] } : { type: "url", url } };
+      }),
       { type: "text", text: json ? `${prompt}\n\nRespond with JSON only, no text before or after.` : prompt },
     ];
 

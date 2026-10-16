@@ -47,3 +47,14 @@ test("historias: dialogue is kept only for real characters, gets its time, and g
   assert.match(m, /Chilean Spanish/);
   assert.match(motionPrompt(p.shots[2], "cine3d", p), /No dialogue/);
 });
+
+test("historias: the dialogue writer sees the idea, the customer's context and which image is each shot", async () => {
+  const { dialoguePrompt } = await import("../src/lib/historias");
+  const p = tidyPlan(raw, 30);
+  const t = dialoguePrompt({ idea: "niño y mentor", plan: p, lang: "es-CL", context: "Pancho habla relajado", withImages: p.shots.map((_, i) => i !== 1) });
+  assert.match(t, /Pancho habla relajado/);
+  assert.match(t, /#1 .*image 1/);
+  assert.doesNotMatch(t.split("\n").find((l) => l.startsWith("#2")) ?? "", /image/);
+  assert.match(t, /#3 .*image 2/);
+  assert.match(t, /Chilean Spanish/);
+});

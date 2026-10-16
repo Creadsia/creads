@@ -327,6 +327,12 @@ export async function voiceSample(file: string, out: string, maxSec = 180) {
   return (await probe(out)).dur;
 }
 
+/** A small JPEG of a picture (to show it to Claude without sending megabytes). */
+export async function thumbnail(file: string, out: string, width = 512) {
+  await ff(["-y", "-i", file, "-vf", `scale=${width}:-2`, "-q:v", "5", "-frames:v", "1", out], 30_000);
+  return readFile(out);
+}
+
 export async function workdir(id: string) {
   const dir = path.join("/tmp", `creads-${id.replace(/[^a-z0-9-]/gi, "")}`);
   await rm(dir, { recursive: true, force: true });

@@ -205,6 +205,8 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [music, setMusic] = useState("");
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [subtitles, setSubtitles] = useState(true);
+  const [context, setContext] = useState("");
+  const [dlgMsg, setDlgMsg] = useState("");
   const { price, covers } = useCredits();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -300,6 +302,26 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1.5 text-xs text-muted"><input type="checkbox" checked={tech} onChange={(e) => setTech(e.target.checked)} /> Ver instrucciones técnicas</label>
             {dirty && <button type="button" onClick={save} disabled={busy.save} className={btnCls}>{busy.save ? "Guardando…" : "Guardar cambios"}</button>}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 rounded-xl border border-accent-text/40 bg-accent/5 p-3">
+          <b className="text-sm">Diálogos con IA</b>
+          <p className="text-xs text-muted">Claude lee tu idea, mira las imágenes de las tomas que ya creaste y escribe qué dice cada personaje en los momentos clave. Dale contexto si quieres: cómo habla Pancho, qué le enseña, frases que no pueden faltar.</p>
+          <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={2} className={`${inputCls} text-sm`}
+            placeholder="Ej: Pancho habla relajado y seguro, como mentor. Le dice que el colegio no le enseña a ganar plata. Al final el niño le agradece frente a todos." />
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" disabled={busy.dlg} className={btnCls}
+              onClick={() => run("dlg", async () => {
+                await saved();
+                const d = await post("/api/historias/dialogos", { adId: id, context });
+                setPlan(d.plan); setDirty(false);
+                const animated = new Set(clips.filter((c) => c.status === "done").map((c) => c.idx));
+                const redo = (d.changed as number[]).filter((i) => animated.has(i)).length;
+                setDlgMsg(`Listo: ${d.plan.shots.filter((x: { dialogue?: unknown }) => x.dialogue).length} tomas con diálogo.${redo ? ` ${redo} de ellas ya estaban animadas: aprieta "Re-animar" en las que tienen 🗣 para que hablen.` : ""}`);
+              })}>
+              {busy.dlg ? "Escribiendo diálogos… (≈ 30 s)" : plan.shots.some((x) => x.dialogue) ? "Reescribir diálogos con IA (gratis)" : "Escribir diálogos con IA (gratis)"}
+            </button>
+            {dlgMsg && <span className="text-sm text-good">{dlgMsg}</span>}
           </div>
         </div>
         <ol className="flex flex-col divide-y divide-line">

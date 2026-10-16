@@ -227,3 +227,33 @@ export function estimateStory(o: { characters: number; shots: number; videoSecon
   const music = (0.15 * Math.max(o.seconds, 15)) / 60;
   return { images: +images.toFixed(2), video: +video.toFixed(2), music: +music.toFixed(2), total: +(images + video + music).toFixed(2) };
 }
+
+/** Claude writes (or rewrites) the dialogue of an existing story, looking at the shot images in order. */
+export function dialoguePrompt(o: { idea: string; plan: StoryPlan; lang: StoryLang; context: string; withImages: boolean[] }) {
+  const chars = o.plan.characters.map((c) => `- ${c.key}: ${c.name} — ${c.look}`).join("\n");
+  const shots = o.plan.shots
+    .map((s, i) => `#${i + 1} (${s.seconds}s, ${s.shot}; on screen: ${s.characters.join(", ") || "nobody"}${o.withImages[i] ? `; image ${o.withImages.slice(0, i + 1).filter(Boolean).length}` : ""}): ${s.es} — ${s.image}${s.dialogue?.line ? ` [current line: ${s.dialogue.speaker}: "${s.dialogue.line}"]` : ""}`)
+    .join("\n");
+  return `You are the screenwriter of a short animated film for social media. Write the DIALOGUE for the shots below.
+The attached images are the first frames of the shots, in order (each shot says which image is its frame). Look at them: who is on screen, where they are, their expressions. Lines must fit what we SEE.
+
+Original idea from the customer:
+"""
+${o.idea.slice(0, 3000)}
+"""
+${o.context.trim() ? `Extra context and instructions from the customer (follow them):\n"""\n${o.context.slice(0, 2000)}\n"""\n` : ""}
+Characters (keys):
+${chars}
+
+Shots:
+${shots}
+
+Rules:
+- Language: ${langById(o.lang).spoken}.
+- Give dialogue to the key moments only (about a third to a half of the shots). Silent shots let the music and images breathe.
+- One speaker per shot, and only a character that is ON SCREEN in that shot, ideally facing camera. At most 12 words per line.
+- Lines must feel real and emotional (a short film, not an ad): the scolding, the encounter, the lesson, the first win, the return. Build an arc; the last line should land.
+- Keep any current line that already works; improve the rest.
+
+JSON: {"shots":[{"idx":0,"dialogue":{"speaker":"key","line":"..."}},{"idx":1,"dialogue":null}]} with every shot index.`;
+}
