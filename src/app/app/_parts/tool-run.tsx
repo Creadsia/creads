@@ -4,11 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DUB_LANGS, findTool, TOOLS, type ToolId } from "@/lib/tools";
 import { btnCls, cardCls, Field, ghostCls, inputCls, uploadFile, useTable, type Row } from "./ui";
+import { refreshCredits, useCredits } from "./use-credits";
 
 // One "Crear" tool: pick the inputs, see the price, run it, and get the result (kept in "Tus creaciones").
-
-const clp = (usd: number) => Math.round((usd * 950) / 10) * 10; // rough CLP, for orientation only
-const money = (usd: number) => `US$${usd.toFixed(2).replace(".", ",")} (≈ $${clp(usd).toLocaleString("es-CL")})`;
 
 interface Job extends Row { kind: string; status: string; url: string | null; image_url: string | null; prompt: string | null; error: string | null; usd: number | null; text: string | null }
 export interface Img extends Row { url: string; prompt: string | null }
@@ -264,6 +262,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   const n = t.inputs;
   const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : video?.secs ?? 0;
   const usd = t.estimate(seconds);
+  const { price: money, covers, info } = useCredits();
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :
     (n.images && images.length === 0) ? "Sube o elige al menos una foto." :
@@ -284,6 +283,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
       if (!res.ok) throw new Error(d.error || "No se pudo iniciar.");
       const job: Job = { id: d.id, created_at: new Date().toISOString(), kind: `tool:${t.id}`, status: "running", url: null, image_url: image || images[0] || video?.url || null, prompt, error: null, usd: d.usd, text: null };
       setJobs((js) => [job, ...js]);
+      refreshCredits();
       timers.current.set(d.id, setTimeout(() => poll(d.id), t.output === "video" ? 12000 : 2000));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "No se pudo iniciar.");
@@ -345,13 +345,14 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
 
         <div className="flex flex-col gap-2 border-t border-line pt-4">
           <p className="text-sm text-muted">
-            Precio: <b className="text-ink">{(n.video || n.audio) && !seconds ? "desde " : ""}{money(usd)}</b>{t.approx ? " aprox." : ""} · {t.priceNote}
+            Precio: <b className="text-ink">{(n.video || n.audio) && !seconds ? "desde " : ""}{money(usd)}</b>{t.approx ? " aprox." : ""}{info?.unlimited ? ` · ${t.priceNote}` : ""}
             {(n.video || n.audio) && !seconds ? ". El precio exacto aparece al subir el archivo." : ""}
           </p>
-          <button type="button" onClick={run} disabled={busy || Boolean(missing)} className={btnCls}>
+          <button type="button" onClick={run} disabled={busy || Boolean(missing) || !covers(usd)} className={btnCls}>
             {busy ? "Iniciando…" : `${t.name} · ${money(usd)}`}
           </button>
           {missing && <p className="text-xs text-muted">{missing}</p>}
+          {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. Pide más en hola@creadsia.com.</p>}
           {err && <p className="text-sm text-bad">{err}</p>}
         </div>
       </section>

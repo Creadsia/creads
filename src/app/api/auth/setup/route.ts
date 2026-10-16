@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { clientIp, tooMany } from "@/lib/rate";
 import { timingSafeEqual } from "node:crypto";
 import { SESSION_COOKIE, cookieOptions, countUsers, createSession, createUser, passwordProblem } from "@/lib/auth";
 
 // First run only: creates the owner account. Requires the admin code from Vercel (ADMIN_ACCESS_CODE),
 // so nobody else can claim the platform before the owner does. Once an account exists, this is closed.
 export async function POST(req: Request) {
+  const limited = await tooMany("recover", clientIp(req));
+  if (limited) return limited;
   const b = await req.json().catch(() => null);
   const code = String(b?.code ?? "");
   const email = String(b?.email ?? "").trim();

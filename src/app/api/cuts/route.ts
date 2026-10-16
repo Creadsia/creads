@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
+import { SESSION_ENDED } from "@/lib/access";
+import { userFromRequest } from "@/lib/auth";
+import { tooMany } from "@/lib/rate";
 import { type FormatId, FORMATS, formatById, rondaPrompt, splitRules } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
@@ -52,8 +54,10 @@ interface RondaAnswer {
 }
 
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const user = await userFromRequest(req);
+  if (!user) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("ai", user.id);
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const script = typeof body?.script === "string" ? body.script.trim() : "";

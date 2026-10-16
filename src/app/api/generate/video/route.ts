@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { createHash } from "node:crypto";
 import { fullSession } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/lib/media";
-import { ensureFunds, explainFailure, serviceOfModel } from "@/lib/balances";
+import { explainFailure, serviceOfModel } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
+import { refundJob } from "@/lib/credits";
+import { failMessage, failStatus, payFor } from "@/lib/paid";
 
 export const maxDuration = 120;
 
@@ -15,6 +18,8 @@ export const maxDuration = 120;
 export async function POST(req: Request) {
   const s = await fullSession(req);
   if (s instanceof NextResponse) return s;
+  const limited = await tooMany("gen", s.user.id);
+  if (limited) return limited;
   const { db } = s;
 
   const body = await req.json().catch(() => null);
@@ -29,17 +34,31 @@ export async function POST(req: Request) {
   if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
 
   const svc = serviceOfModel(provider.id);
+  const usd = +(provider.usdPerSecond * seconds).toFixed(2);
+  // Recorded first (so it shows in "Tus creaciones" even if the tab is closed); its id ties the charge to it.
+  let row: Record<string, unknown>;
   try {
-    await ensureFunds(svc, provider.usdPerSecond * seconds);
+    row = await db.insert("clips", { kind: "gen:video", prompt, model: provider.id, status: "running", image_url: firstFrame || null, text: `${seconds} s`, usd });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar el trabajo." }, { status: 502 });
+  }
+  const id = String(row.id);
+  try {
+    await payFor(s.user, usd, `Video · ${provider.label}`, svc, { ref: id });
+  } catch (err) {
+    await db.remove("clips", id).catch(() => null);
+    return NextResponse.json({ error: await failMessage(err, s.user, svc) }, { status: failStatus(err) });
+  }
+  try {
     const refs: MediaRef[] = firstFrame ? [{ url: await fetchableUrl(firstFrame, s.user.workspace), role: "first_frame" }] : [];
     const job = await provider.submit({ prompt, seconds, aspect, resolution: "720p", withAudio: true, refs });
-    const usd = +(provider.usdPerSecond * seconds).toFixed(2);
-    // recorded so the clip shows in "Tus creaciones" even if the tab is closed
-    await db.insert("clips", { kind: "gen:video", prompt, model: provider.id, provider_job: job.jobId, status: "running", image_url: firstFrame || null, text: `${seconds} s`, usd });
+    await db.update("clips", id, { provider_job: job.jobId });
     return NextResponse.json({ job, usd });
   } catch (err) {
     console.error("generate/video submit", provider.id, err instanceof Error ? err.message : err);
-    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo iniciar el video."), isOwner(s.user), svc);
+    await refundJob(s.user.workspace, id);
+    const msg = await failMessage(err, s.user, svc);
+    await db.update("clips", id, { status: "failed", error: msg.slice(0, 500) }).catch(() => null);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
@@ -63,6 +82,7 @@ export async function GET(req: Request) {
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOfModel(provider.id));
       await db.update("clips", String(row.id), { status: "failed", error }).catch(() => null);
+      await refundJob(s.user.workspace, String(row.id));
       return NextResponse.json({ state: "failed", error });
     }
     if (st.state !== "done") return NextResponse.json(st);

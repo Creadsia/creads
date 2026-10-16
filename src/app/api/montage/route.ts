@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import path from "node:path";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
@@ -21,6 +22,8 @@ export async function GET() {
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("heavy", s.user.id);
+  if (limited) return limited;
   const { db } = s;
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");

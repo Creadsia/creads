@@ -11,5 +11,6 @@ export async function testDatabase() {
   await db.exec("create role service_role; create role anon; create role authenticated;");
   await db.exec(schema.replace(/create extension if not exists pgcrypto;/i, ""));
   await db.exec(tenancy);
+  await db.exec(readFileSync(path.join(root, "billing.sql"), "utf8"));
   return db;
 }

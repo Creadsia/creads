@@ -128,6 +128,20 @@ export async function updateUser(id: string, patch: Partial<Pick<User, "name" | 
   return rows[0];
 }
 
+/** Two-step verification of an account (null when the columns aren't created yet). */
+export async function twoFactorOf(userId: string): Promise<{ secret: string | null; on: boolean } | null> {
+  try {
+    const rows = (await rest(`users?id=eq.${encodeURIComponent(userId)}&select=totp_secret,totp_on&limit=1`)) as { totp_secret: string | null; totp_on: boolean }[];
+    return rows[0] ? { secret: rows[0].totp_secret, on: Boolean(rows[0].totp_on) } : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setTwoFactor(userId: string, secret: string | null, on: boolean) {
+  await rest(`users?id=eq.${encodeURIComponent(userId)}`, { method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ totp_secret: secret, totp_on: on }) });
+}
+
 export async function deleteUser(id: string) {
   await rest(`users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", headers: { prefer: "return=minimal" } });
 }

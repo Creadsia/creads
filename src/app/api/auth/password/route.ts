@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { SESSION_COOKIE, cookieOptions, createSession, findUserByEmail, passwordProblem, updateUser, userFromRequest, verifyPassword } from "@/lib/auth";
 
 // POST {current, next} changes your own password. Other sessions are closed; this one stays open.
 export async function POST(req: Request) {
   const me = await userFromRequest(req);
   if (!me) return NextResponse.json({ error: "Tu sesión terminó. Vuelve a entrar." }, { status: 401 });
+  const limited = await tooMany("loginEmail", me.email);
+  if (limited) return limited;
   const b = await req.json().catch(() => null);
   const full = await findUserByEmail(me.email);
   if (!full || !(await verifyPassword(String(b?.current ?? ""), full.password_hash))) {

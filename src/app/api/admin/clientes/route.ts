@@ -4,13 +4,14 @@ import { isAdmin } from "@/lib/admin";
 import { createUser, findUserByEmail, forgetWorkspace, listAllUsers } from "@/lib/auth";
 import { sbHeaders } from "@/lib/supabase";
 import { WORKSPACE_RE } from "@/lib/db";
+import { allBalances, grant } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 
 // Customers (workspaces) for Creadsia's owner: list with people and this month's spend, create, pause.
 // The owner sees across workspaces on purpose; customers never reach this route.
 
-interface Workspace { id: string; name: string; kind: string; plan: string | null; active: boolean; access?: string; discount?: number; notes?: string | null; created_at: string }
+interface Workspace { id: string; name: string; kind: string; plan: string | null; active: boolean; access?: string; discount?: number; notes?: string | null; paid_until?: string | null; created_at: string }
 
 function env() {
   const url = process.env.SUPABASE_URL;
@@ -47,10 +48,11 @@ export async function GET() {
     const month = new Date();
     month.setUTCDate(1);
     month.setUTCHours(0, 0, 0, 0);
-    const [workspaces, users, spend] = await Promise.all([
+    const [workspaces, users, spend, balances] = await Promise.all([
       rest("workspaces?select=*&order=created_at.asc") as Promise<Workspace[]>,
       listAllUsers(),
       rest(`clips?select=owner,usd&created_at=gte.${month.toISOString()}&limit=20000`) as Promise<{ owner: string; usd: number | null }[]>,
+      allBalances(),
     ]);
     const usd: Record<string, number> = {};
     for (const c of spend) usd[c.owner] = (usd[c.owner] ?? 0) + Number(c.usd ?? 0);
@@ -61,6 +63,8 @@ export async function GET() {
         discount: Number(w.discount ?? 0),
         people: users.filter((u) => u.workspace === w.id).map((u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, active: u.active, last_login: u.last_login })),
         usdMonth: +(usd[w.id] ?? 0).toFixed(2),
+        balance: balances[w.id] ?? 0,
+        paid_until: w.paid_until ?? null,
       })),
     });
   } catch (err) {
@@ -89,6 +93,9 @@ export async function POST(req: Request) {
     await rest("workspaces", { method: "POST", body: JSON.stringify({ id, name, kind: "client", plan: b?.plan ? String(b.plan).slice(0, 30) : null, access, discount }) });
     const password = tempPassword();
     const user = await createUser({ email, name: String(b?.contact ?? "").slice(0, 60), password, role: "member", workspace: id });
+    // starting credits (e.g. for a friend to try it); a failure here doesn't undo the account
+    const start = Math.round(Number(b?.credits) || 0);
+    if (start > 0 && start <= 100000) await grant(id, start, "topup", "Créditos de bienvenida", "dueño").catch(() => null);
     return NextResponse.json({ workspace: id, user, password });
   } catch (err) {
     return fail(err);

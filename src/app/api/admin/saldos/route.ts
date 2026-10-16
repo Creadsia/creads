@@ -30,9 +30,9 @@ export async function PUT(req: Request) {
         const x = Number(v);
         return isFinite(x) && x >= 0 && x <= max ? x : null;
       };
-      const fal = n(b?.umbrales?.fal, 100000), google = n(b?.umbrales?.google, 100000), eleven = n(b?.umbrales?.eleven, 100);
-      if (fal == null || google == null || eleven == null) return NextResponse.json({ error: "Revisa los montos." }, { status: 400 });
-      await setUmbrales({ fal, google, eleven });
+      const fal = n(b?.umbrales?.fal, 100000), google = n(b?.umbrales?.google, 100000), eleven = n(b?.umbrales?.eleven, 100), diario = n(b?.umbrales?.diario, 100000);
+      if (fal == null || google == null || eleven == null || diario == null) return NextResponse.json({ error: "Revisa los montos." }, { status: 400 });
+      await setUmbrales({ fal, google, eleven, diario });
     }
     return NextResponse.json(await overview());
   } catch (err) {

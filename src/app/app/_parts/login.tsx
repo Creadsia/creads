@@ -17,6 +17,8 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
   const [password2, setPassword2] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [need2fa, setNeed2fa] = useState(false);
+  const [otp, setOtp] = useState("");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,10 +29,11 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
     const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password }),
+      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password, code: need2fa ? otp : undefined }),
     });
     const d = await res.json().catch(() => ({}));
     if (res.ok) { window.location.href = "/app"; return; }
+    if (d.need2fa) setNeed2fa(true);
     setError(d.error || "No se pudo entrar.");
     setBusy(false);
   }
@@ -75,6 +78,14 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
             <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} className={input} />
             {mode !== "login" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
           </label>
+          {mode === "login" && need2fa && (
+            <label htmlFor="otp" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+              Código de verificación
+              <input id="otp" inputMode="numeric" pattern="[0-9 ]*" maxLength={7} required autoFocus value={otp} onChange={(e) => setOtp(e.target.value)} autoComplete="one-time-code"
+                placeholder="123 456" className={`${input} font-mono text-lg tracking-[0.3em]`} />
+              <span className="text-xs font-normal">Los 6 números que muestra tu app (Google Authenticator, Authy…).</span>
+            </label>
+          )}
           {(mode === "setup" || mode === "recover") && (
             <>
               <label htmlFor="password2" className="flex flex-col gap-1 text-sm font-semibold text-muted">
@@ -85,7 +96,7 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
               <label htmlFor="code" className="flex flex-col gap-1 text-sm font-semibold text-muted">
                 Clave de administrador de Vercel
                 <input id="code" type="password" required value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" className={input} />
-                <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production)."}</span>
+                <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production). Si perdiste el teléfono, esto también apaga la verificación en dos pasos."}</span>
               </label>
               )}
             </>

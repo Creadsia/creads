@@ -4,6 +4,7 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import { mediaRefOf, mediaSaved, saveMedia } from "@/lib/media";
 import { explainFailure, serviceOfModel } from "@/lib/balances";
+import { refundJob } from "@/lib/credits";
 import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOfModel(provider.id));
       const row = await db.update("clips", id, { status: "failed", error: error.slice(0, 500) });
+      await refundJob(s.user.workspace, id); // the provider didn't deliver: credits go back
       return NextResponse.json({ clip: row });
     }
     if (st.state !== "done") return NextResponse.json({ clip });

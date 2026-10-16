@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { randomUUID } from "node:crypto";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { saveMedia } from "@/lib/media";
@@ -15,6 +16,8 @@ const KINDS: Record<string, string> = {
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("upload", s.user.id);
+  if (limited) return limited;
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "Falta el archivo." }, { status: 400 });

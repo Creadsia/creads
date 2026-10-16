@@ -108,3 +108,31 @@ export async function signedUpload(path: string) {
   if (typeof data?.url !== "string") throw new Error("Storage: respuesta inesperada al preparar la subida.");
   return { uploadUrl: `${url}/storage/v1${data.url}`, publicUrl: publicUrl(path) };
 }
+
+/** Error from the database REST API; `missing` = the table or function isn't created yet. */
+export class SbError extends Error {
+  constructor(msg: string, public status: number, public missing: boolean) {
+    super(msg);
+  }
+}
+
+/** Calls the database REST API with the service key (server only, trusted callers only). */
+export async function sbRest<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const { url, key } = env();
+  const res = await fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    headers: { ...sbHeaders(key), "content-type": "application/json", prefer: "return=representation", ...(init.headers ?? {}) },
+    cache: "no-store",
+  });
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const missing = res.status === 404 || ["42P01", "42703", "42883", "PGRST202", "PGRST204", "PGRST205"].includes(body?.code);
+    throw new SbError(`Base de datos: ${body?.message ?? res.statusText}`, res.status, missing);
+  }
+  return body as T;
+}
+
+/** Runs a database function (security definer, service role only). */
+export const sbRpc = <T = unknown>(fn: string, args: Record<string, unknown>) =>
+  sbRest<T>(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });

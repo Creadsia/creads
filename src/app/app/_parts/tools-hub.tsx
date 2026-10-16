@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { findTool, TOOLS } from "@/lib/tools";
 import { cardCls, Empty, SetupNotice } from "./ui";
+import { useCredits } from "./use-credits";
 
 // The "Crear" menu: generators first, then the one-click tools, then everything you've made with them.
 
@@ -39,6 +40,8 @@ function Glyph({ d }: { d: string }) {
 export default function ToolsHub() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [missing, setMissing] = useState(false);
+  const { info, price } = useCredits();
+  const priceOf = (t: (typeof TOOLS)[number]) => (info?.unlimited ? t.priceNote : `desde ${price(t.estimate(0))}`);
   useEffect(() => {
     let alive = true;
     fetch("/api/tools").then((r) => r.json()).then((d) => {
@@ -85,7 +88,7 @@ export default function ToolsHub() {
               <span className="flex min-w-0 flex-col gap-1">
                 <b className="font-semibold">{t.name}</b>
                 <span className="text-sm text-muted">{t.short}</span>
-                <span className="text-xs text-muted">{t.model} · {t.priceNote}</span>
+                <span className="text-xs text-muted">{t.model} · {priceOf(t)}</span>
               </span>
             </Link>
           ))}
@@ -101,7 +104,7 @@ export default function ToolsHub() {
               <span className="flex min-w-0 flex-col gap-1">
                 <b className="font-semibold">{t.name}</b>
                 <span className="text-sm text-muted">{t.short}</span>
-                <span className="text-xs text-muted">{t.model} · {t.priceNote}</span>
+                <span className="text-xs text-muted">{t.model} · {priceOf(t)}</span>
               </span>
             </Link>
           ))}

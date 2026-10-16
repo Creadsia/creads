@@ -6,7 +6,9 @@ import {
   type CostoFijo,
   type Finanzas,
   type Movimiento,
+  type Plan,
   type PlanMonth,
+  DEFAULT_FINANZAS,
   fijoMensual,
   planMonth,
   proyectar,
@@ -154,7 +156,7 @@ export default function AdminPanel() {
       </nav>
 
       {!data ? (
-        tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes /> : <div className={card}><p className="text-muted">{status}</p></div>
+        tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -164,7 +166,7 @@ export default function AdminPanel() {
           {tab === "modelos" && <Modelos d={data} change={change} />}
           {tab === "cuentas" && <Cuentas d={data} />}
           {tab === "saldos" && <Saldos />}
-          {tab === "clientes" && <Clientes />}
+          {tab === "clientes" && <Clientes planes={data.config.planes} />}
           {tab === "registros" && <Registros />}
           {tab === "estado" && <Estado />}
         </>
@@ -625,7 +627,7 @@ function Registros() {
 interface Persona { id: string; email: string; name: string | null; role: string; active: boolean; last_login: string | null }
 interface Cliente {
   id: string; name: string; kind: string; plan: string | null; active: boolean; created_at: string; usdMonth: number;
-  access: "full" | "ads"; discount: number; people: Persona[];
+  access: "full" | "ads"; discount: number; people: Persona[]; balance: number; paid_until: string | null;
 }
 const ACCESS_LABEL = { full: "Acceso completo", ads: "Solo crear anuncios" } as const;
 
@@ -638,7 +640,7 @@ function Secret({ email, password, onClose }: { email: string; password: string;
   );
 }
 
-function ClienteCard({ c, reload }: { c: Cliente; reload: () => void }) {
+function ClienteCard({ c, reload, planes }: { c: Cliente; reload: () => void; planes: Plan[] }) {
   const [err, setErr] = useState("");
   const [secret, setSecret] = useState<{ email: string; password: string } | null>(null);
   const [add, setAdd] = useState({ email: "", name: "" });
@@ -697,6 +699,7 @@ function ClienteCard({ c, reload }: { c: Cliente; reload: () => void }) {
           </button>
         </Field>
       </div>
+      <Facturacion c={c} planes={planes} reload={reload} />
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-muted">Personas</span>
         {c.people.length === 0 && <p className="text-sm text-muted">Nadie todavía.</p>}
@@ -724,6 +727,108 @@ function ClienteCard({ c, reload }: { c: Cliente; reload: () => void }) {
       {secret && <Secret email={secret.email} password={secret.password} onClose={() => setSecret(null)} />}
       {err && <p className="text-sm text-bad" role="alert">{err}</p>}
     </article>
+  );
+}
+
+interface Mov { id: number; delta: number; kind: string; note: string | null; usd: number | null; by_user: string | null; created_at: string }
+const MOV_KIND: Record<string, string> = { plan: "Pago de plan", topup: "Créditos agregados", charge: "Usó", refund: "Devuelto (falló)", adjust: "Créditos quitados" };
+
+/** Credits, plan and payments of one customer (payments are recorded by hand for now). */
+function Facturacion({ c, planes, reload }: { c: Cliente; planes: Plan[]; reload: () => void }) {
+  const [mode, setMode] = useState<"" | "pago" | "agregar" | "quitar" | "historial">("");
+  const [plan, setPlan] = useState(planes[0]?.id ?? "");
+  const [months, setMonths] = useState(1);
+  const [credits, setCredits] = useState(100);
+  const [note, setNote] = useState("");
+  const [ingreso, setIngreso] = useState(true);
+  const [moves, setMoves] = useState<Mov[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const expired = c.paid_until && c.paid_until < today;
+  const p = planes.find((x) => x.id === plan);
+  const price = p ? (months === 12 ? p.anual * 12 : p.mensual * months) * (1 - c.discount / 100) : 0;
+
+  async function send(body: object) {
+    setBusy(true); setErr("");
+    const r = await fetch("/api/admin/creditos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ws: c.id, ...body }) });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setErr(d.error || "No se pudo.");
+    setMoves(d.history); setMode("historial"); setNote(""); reload();
+  }
+  async function showHistory() {
+    setMode(mode === "historial" ? "" : "historial");
+    if (mode !== "historial") {
+      const r = await fetch(`/api/admin/creditos?ws=${encodeURIComponent(c.id)}`);
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setMoves(d.history); else setErr(d.error || "No se pudo leer.");
+    }
+  }
+  const tab = (k: typeof mode, label: string) => (
+    <button type="button" onClick={() => (k === "historial" ? showHistory() : setMode(mode === k ? "" : k))} aria-pressed={mode === k}
+      className={`rounded-lg border px-3 py-1.5 text-sm font-semibold ${mode === k ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>{label}</button>
+  );
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-surface-2 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className={`${num} text-2xl font-bold ${c.balance <= 0 ? "text-warn" : ""}`}>{c.balance.toLocaleString("es-CL")}</span>
+          <span className="text-sm text-muted">créditos</span>
+          <span className="text-sm">{c.plan ? `Plan ${c.plan}` : "Sin plan"}{c.paid_until ? <> · <span className={expired ? "font-semibold text-bad" : ""}>{expired ? "venció" : "pagado hasta"} el {new Date(`${c.paid_until}T12:00:00`).toLocaleDateString("es-CL")}</span></> : " · sin vencimiento"}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {tab("pago", "Registrar pago")}
+          {tab("agregar", "Agregar créditos")}
+          {tab("quitar", "Quitar")}
+          {tab("historial", "Movimientos")}
+        </div>
+      </div>
+
+      {mode === "pago" && (
+        <form onSubmit={(e) => { e.preventDefault(); send({ action: "pago", plan, months, note, ingreso }); }} className="flex flex-wrap items-end gap-3">
+          <Field label="Plan">
+            <select value={plan} onChange={(e) => setPlan(e.target.value)} className={input}>
+              {planes.map((x) => <option key={x.id} value={x.id}>{x.nombre} · {x.creditos.toLocaleString("es-CL")} créditos/mes · US${x.mensual}</option>)}
+            </select>
+          </Field>
+          <Field label="Meses pagados">
+            <select value={months} onChange={(e) => setMonths(Number(e.target.value))} className={input}>
+              {[1, 2, 3, 6, 12].map((m) => <option key={m} value={m}>{m === 12 ? "12 (anual)" : m}</option>)}
+            </select>
+          </Field>
+          <Field label="Nota (opcional)"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej: transferencia 16/10" className={input} /></Field>
+          <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" checked={ingreso} onChange={(e) => setIngreso(e.target.checked)} /> Anotar US${price.toFixed(0)} como ingreso</label>
+          <button type="submit" disabled={busy || !p} className={btn}>{busy ? "Guardando…" : `Dar ${p ? (p.creditos * months).toLocaleString("es-CL") : 0} créditos`}</button>
+        </form>
+      )}
+      {(mode === "agregar" || mode === "quitar") && (
+        <form onSubmit={(e) => { e.preventDefault(); send({ action: mode, credits, note }); }} className="flex flex-wrap items-end gap-3">
+          <Field label="Créditos"><input type="number" min={1} max={1000000} step={50} value={credits} onChange={(e) => setCredits(Number(e.target.value))} className={`${input} w-32 ${num}`} /></Field>
+          <Field label="Motivo"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder={mode === "agregar" ? "Ej: regalo, compensación" : "Ej: corrección"} className={input} /></Field>
+          <button type="submit" disabled={busy} className={btn}>{busy ? "Guardando…" : mode === "agregar" ? "Agregar" : "Quitar"}</button>
+        </form>
+      )}
+      {mode === "historial" && (
+        !moves ? <p className="text-sm text-muted">Cargando…</p> : moves.length === 0 ? <p className="text-sm text-muted">Sin movimientos todavía.</p> : (
+          <div className="max-h-72 overflow-auto">
+            <table className="w-full text-sm">
+              <tbody>
+                {moves.map((m) => (
+                  <tr key={m.id} className="border-b border-line last:border-0">
+                    <td className="py-1.5 pr-3 whitespace-nowrap text-muted">{new Date(m.created_at).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                    <td className="py-1.5 pr-3">{MOV_KIND[m.kind] ?? m.kind}{m.note ? ` · ${m.note}` : ""}{m.usd ? <span className="text-muted"> · costo US${Number(m.usd).toFixed(2)}</span> : null}</td>
+                    <td className={`py-1.5 text-right ${num} ${m.delta > 0 ? "text-good" : ""}`}>{m.delta > 0 ? "+" : ""}{m.delta.toLocaleString("es-CL")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
+      {err && <p className="text-sm text-bad" role="alert">{err}</p>}
+    </div>
   );
 }
 
@@ -755,11 +860,11 @@ function ImportarWinnerLab() {
   );
 }
 
-function Clientes() {
+function Clientes({ planes }: { planes: Plan[] }) {
   const [rows, setRows] = useState<Cliente[] | null>(null);
   const [err, setErr] = useState("");
   const [missing, setMissing] = useState(false);
-  const [f, setF] = useState({ name: "", email: "", contact: "", access: "full", discount: 0 });
+  const [f, setF] = useState({ name: "", email: "", contact: "", access: "full", discount: 0, credits: 0 });
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState<{ email: string; password: string } | null>(null);
   const load = useCallback(() => {
@@ -779,7 +884,7 @@ function Clientes() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       setMade({ email: f.email, password: d.password });
-      setF({ name: "", email: "", contact: "", access: "full", discount: 0 });
+      setF({ name: "", email: "", contact: "", access: "full", discount: 0, credits: 0 });
       load();
     } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo crear."); } finally { setBusy(false); }
   }
@@ -816,6 +921,7 @@ function Clientes() {
             </select>
           </Field>
           <Field label="Descuento (%)"><input type="number" min={0} max={100} value={f.discount} onChange={(e) => setF({ ...f, discount: Number(e.target.value) })} className={`${input} w-28 ${num}`} /></Field>
+          <Field label="Créditos para empezar (opcional, ej. 300 para que un amigo pruebe)"><input type="number" min={0} max={100000} step={50} value={f.credits} onChange={(e) => setF({ ...f, credits: Number(e.target.value) })} className={`${input} w-32 ${num}`} /></Field>
           <div className="sm:col-span-2"><button type="submit" disabled={busy} className={btn}>{busy ? "Creando…" : "Dar acceso"}</button></div>
         </form>
         {made && <Secret email={made.email} password={made.password} onClose={() => setMade(null)} />}
@@ -824,7 +930,7 @@ function Clientes() {
       <ImportarWinnerLab />
 
       {!rows && !err && <p className="text-muted">Cargando…</p>}
-      {clients.map((c) => <ClienteCard key={c.id} c={c} reload={load} />)}
+      {clients.map((c) => <ClienteCard key={c.id} c={c} reload={load} planes={planes} />)}
       {rows && clients.length === 0 && <p className={`${card} text-muted`}>Todavía no has dado acceso a nadie.</p>}
     </div>
   );
@@ -872,7 +978,7 @@ interface SvcStatus {
   headline: string; detail: string; usd: number | null; estimated: boolean;
   spentMonth: number; topUps: number; lastFailure: { at: string; msg: string } | null;
 }
-interface SaldosData { services: SvcStatus[]; umbrales: { fal: number; google: number; eleven: number }; alerts: { service: Svc; text: string }[] }
+interface SaldosData { services: SvcStatus[]; umbrales: { fal: number; google: number; eleven: number; diario: number }; today: number; alerts: { service: Svc; text: string }[] }
 
 const LEVEL: Record<SvcStatus["level"], [string, string]> = {
   ok: ["good", "Bien"],
@@ -959,12 +1065,13 @@ function Saldos() {
         <section className={card}>
           <div>
             <h3 className="font-display text-lg font-bold">Cuándo avisarte</h3>
-            <p className="text-sm text-muted">Te aviso aquí y arriba en el estudio cuando un servicio baje de estos montos.</p>
+            <p className="text-sm text-muted">Te aviso aquí y arriba en el estudio cuando un servicio baje de estos montos. El tope diario frena todas las generaciones del día (de todos los clientes) si se pasa: protege tus cuentas si algo sale mal. 0 = sin tope.</p>
           </div>
           <form className="flex flex-wrap items-end gap-3" onSubmit={async (e) => { e.preventDefault(); setSaved(""); if (await put({ umbrales: u })) setSaved("Guardado."); }}>
             <Field label="fal.ai: menos de (US$)"><Num id="u-fal" value={u.fal} onChange={(v) => setU({ ...u, fal: v })} /></Field>
             <Field label="Google: menos de (US$)"><Num id="u-google" value={u.google} onChange={(v) => setU({ ...u, google: v })} /></Field>
             <Field label="ElevenLabs: menos del (% del plan)"><Num id="u-eleven" value={u.eleven} max={100} onChange={(v) => setU({ ...u, eleven: v })} /></Field>
+            <Field label={`Tope diario de todo Creads (US$, hoy van ${d ? fmtUsd(d.today, 2) : "…"})`}><Num id="u-diario" value={u.diario} step={10} onChange={(v) => setU({ ...u, diario: v })} /></Field>
             <button type="submit" disabled={busy} className={btn}>Guardar</button>
             {saved && <span className="text-sm text-good" role="status">{saved}</span>}
           </form>

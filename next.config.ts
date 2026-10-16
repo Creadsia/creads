@@ -2,7 +2,45 @@ import type { NextConfig } from "next";
 
 const ffmpegFiles = ["./node_modules/ffmpeg-static/ffmpeg", "./assets/fonts/**"];
 
+// Security headers for every page and API answer.
+// The page scripts Next.js writes inline need 'unsafe-inline'; everything else is locked to our own site,
+// our storage (Supabase), the landing videos (CloudFront) and ElevenLabs' voice samples.
+const dev = process.env.NODE_ENV !== "production";
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.supabase.co https://*.cloudfront.net",
+  "media-src 'self' blob: https://*.supabase.co https://*.cloudfront.net https://storage.googleapis.com",
+  "font-src 'self' data:",
+  `connect-src 'self' https://*.supabase.co${dev ? " ws: http://localhost:*" : ""}`,
+  "frame-ancestors 'none'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "worker-src 'self' blob:",
+  ...(dev ? [] : ["upgrade-insecure-requests"]),
+].join("; ");
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+];
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // private pages and data are never stored by browsers or shared caches
+      ...["/app/:path*", "/admin/:path*", "/api/:path*"].map((source) => ({ source, headers: [{ key: "Cache-Control", value: "private, no-store" }] })),
+    ];
+  },
   images: {
     // Showcase images generated for the site (to be moved to Creads' own storage in Phase 1).
     remotePatterns: [{ protocol: "https", hostname: "d8j0ntlcm91z4.cloudfront.net" }],

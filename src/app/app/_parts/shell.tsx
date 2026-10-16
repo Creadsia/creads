@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import ThemeToggle from "../../theme-toggle";
+import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
 
@@ -121,6 +122,25 @@ function Status() {
   );
 }
 
+/** The account's credits in the menu (the owner has no limit). */
+function CreditsBox() {
+  const { info } = useCredits();
+  const low = info && !info.unlimited && (info.balance ?? 0) < 100;
+  return (
+    <Link href="/app/cuenta" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs font-semibold text-muted">Créditos</span>
+        <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
+          {!info ? "…" : info.unlimited ? "Sin límite" : (info.balance ?? 0).toLocaleString("es-CL")}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted">
+        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Ver movimientos"}
+      </p>
+    </Link>
+  );
+}
+
 /** Owner only: a thin warning when a service is running out of money. */
 function MoneyAlerts() {
   const [alerts, setAlerts] = useState<{ service: string; name: string; text: string }[]>([]);
@@ -149,13 +169,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
 
   const footer = (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
-      <div className="rounded-xl bg-surface-2 p-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-xs font-semibold text-muted">Créditos</span>
-          <span className="font-mono text-sm font-bold">Beta</span>
-        </div>
-        <p className="mt-1 text-xs text-muted">Durante la beta no se descuentan créditos.</p>
-      </div>
+      <CreditsBox />
       <Status />
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col">

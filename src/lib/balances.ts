@@ -38,8 +38,9 @@ export interface Umbrales {
   fal: number; // US$ left
   google: number; // US$ left (estimated)
   eleven: number; // % of the month's plan left
+  diario: number; // US$: most Creads may spend in one day, all customers together (0 = no limit)
 }
-export const DEFAULT_UMBRALES: Umbrales = { fal: 10, google: 10, eleven: 15 };
+export const DEFAULT_UMBRALES: Umbrales = { fal: 10, google: 10, eleven: 15, diario: 60 };
 
 interface Incident { at: string; msg: string }
 interface SaldosFile { umbrales?: Partial<Umbrales>; fallas?: Partial<Record<Service, Incident>> }
@@ -52,7 +53,12 @@ async function readFile(): Promise<SaldosFile> {
 export async function getUmbrales(): Promise<Umbrales> {
   const u = (await readFile()).umbrales ?? {};
   const pick = (v: unknown, d: number, max: number) => (typeof v === "number" && isFinite(v) && v >= 0 && v <= max ? v : d);
-  return { fal: pick(u.fal, DEFAULT_UMBRALES.fal, 100000), google: pick(u.google, DEFAULT_UMBRALES.google, 100000), eleven: pick(u.eleven, DEFAULT_UMBRALES.eleven, 100) };
+  return {
+    fal: pick(u.fal, DEFAULT_UMBRALES.fal, 100000),
+    google: pick(u.google, DEFAULT_UMBRALES.google, 100000),
+    eleven: pick(u.eleven, DEFAULT_UMBRALES.eleven, 100),
+    diario: pick(u.diario, DEFAULT_UMBRALES.diario, 100000),
+  };
 }
 
 export async function setUmbrales(u: Umbrales) {
@@ -150,6 +156,20 @@ export async function elevenUsage(fresh = false): Promise<ElevenReading> {
 
 // ---------- the check before spending ----------
 
+export class DailyCapError extends Error {
+  constructor(public cap: number, public spent: number) {
+    super(`Tope diario de US$${cap} alcanzado (gastado hoy: US$${spent.toFixed(2)}).`);
+    this.name = "DailyCapError";
+  }
+}
+
+/** What Creads recorded as spent today (all customers). */
+export async function spentToday() {
+  const day = new Date().toISOString().slice(0, 10);
+  const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&created_at=gte.${day}&limit=100000`).catch(() => []);
+  return rows.reduce((a, r) => a + Number(r.usd ?? 0), 0);
+}
+
 export class NoFundsError extends Error {
   constructor(public service: Service, detail: string) {
     super(detail);
@@ -209,6 +229,9 @@ export const CUSTOMER_UNAVAILABLE = "Este modelo no está disponible en este mom
  */
 export async function explainFailure(err: unknown, owner: boolean, hint?: Service): Promise<string> {
   const raw = err instanceof Error ? err.message : "No se pudo completar.";
+  if (err instanceof DailyCapError) {
+    return owner ? `Creads llegó al tope diario de gasto (US$${err.cap}). Súbelo en Panel interno → Saldos y alertas si quieres seguir hoy.` : CUSTOMER_UNAVAILABLE;
+  }
   const svc = outOfFundsService(err, hint);
   if (!svc) return raw;
   if (!(err instanceof NoFundsError)) await noteOutage(svc, raw);
@@ -241,7 +264,7 @@ interface SpendRow { kind: string | null; model: string | null; usd: number | nu
 
 const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i };
 
-export async function overview(fresh = true): Promise<{ services: ServiceStatus[]; umbrales: Umbrales; alerts: { service: Service; name: string; text: string }[] }> {
+export async function overview(fresh = true): Promise<{ services: ServiceStatus[]; umbrales: Umbrales; today: number; alerts: { service: Service; name: string; text: string }[] }> {
   const [umbrales, file, finanzas, fal, eleven] = await Promise.all([
     getUmbrales(),
     readFile(),
@@ -340,5 +363,30 @@ export async function overview(fresh = true): Promise<{ services: ServiceStatus[
     } else if (s.level === "agotado") alerts.push({ service: s.id, name: s.name, text: `${s.name} está sin saldo: ${s.what.toLowerCase()} no van a funcionar.` });
     else if (s.level === "bajo") alerts.push({ service: s.id, name: s.name, text: `${s.name}: saldo bajo (${s.headline.toLowerCase()}).` });
   }
-  return { services, umbrales, alerts };
+  const today = await spentToday();
+  if (umbrales.diario && today >= umbrales.diario * 0.8) {
+    alerts.unshift({ service: "fal", name: "Tope diario", text: today >= umbrales.diario ? `Se alcanzó el tope diario de US$${umbrales.diario}: nadie puede generar hasta mañana (o súbelo).` : `Hoy ya se gastó US$${today.toFixed(2)} de un tope diario de US$${umbrales.diario}.` });
+  }
+  return { services, umbrales, today: +today.toFixed(2), alerts };
+}
+
+// ---------- daily safety limit ----------
+
+let dayCache: { at: number; day: string; usd: number } | null = null;
+
+/**
+ * Stops everything for the day once Creads (all customers together) has spent the owner's daily
+ * limit, so a bug or an abuser can't empty the accounts overnight. Counts what the studio recorded.
+ */
+export async function ensureDailyCap(usd: number) {
+  const { diario } = await getUmbrales();
+  if (!diario) return;
+  const day = new Date().toISOString().slice(0, 10);
+  if (!dayCache || dayCache.day !== day || Date.now() - dayCache.at > 30_000) {
+    const rows = await selectRows<{ usd: number | null }>("clips", `select=usd&usd=gt.0&created_at=gte.${day}&limit=100000`).catch(() => null);
+    if (!rows) return; // can't read it: don't block on bookkeeping
+    dayCache = { at: Date.now(), day, usd: rows.reduce((a, r) => a + Number(r.usd ?? 0), 0) };
+  }
+  if (dayCache.usd + usd > diario) throw new DailyCapError(diario, dayCache.usd);
+  dayCache.usd += usd;
 }

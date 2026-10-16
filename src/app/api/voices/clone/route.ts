@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { deleteVoice, elevenlabs } from "@/lib/providers/elevenlabs";
 
@@ -8,6 +9,8 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("heavy", s.user.id);
+  if (limited) return limited;
   const form = await req.formData().catch(() => null);
   const name = String(form?.get("name") ?? "").trim().slice(0, 60);
   const consent = form?.get("consent") === "yes";

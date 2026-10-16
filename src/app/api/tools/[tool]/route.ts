@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
 import { probe } from "@/lib/montage";
 import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/providers/tools";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
-import { ensureFunds, explainFailure, serviceOf } from "@/lib/balances";
+import { explainFailure, serviceOf } from "@/lib/balances";
+import { refundJob } from "@/lib/credits";
+import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
@@ -83,6 +86,8 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
 export async function POST(req: Request, ctx: { params: Promise<{ tool: string }> }) {
   const s = await fullSession(req);
   if (s instanceof NextResponse) return s;
+  const limited = await tooMany("gen", s.user.id);
+  if (limited) return limited;
   const { db } = s;
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);
@@ -94,11 +99,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   if (typeof read === "string") return bad(read);
   const usd = t.estimate(read.seconds);
   const svc = serviceOf(`tool:${t.id}`, null);
-  try {
-    await ensureFunds(svc, usd);
-  } catch (err) {
-    return bad(await explainFailure(err, isOwner(s.user), svc), 402);
-  }
 
   // Record first, then start: if the provider takes the job, it is never lost (and never paid twice).
   let row: Record<string, unknown>;
@@ -117,6 +117,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   }
   const id = String(row.id);
   try {
+    await payFor(s.user, usd, t.name, svc, { ref: id });
+  } catch (err) {
+    await db.remove("clips", id).catch(() => null);
+    return bad(await failMessage(err, s.user, svc), failStatus(err));
+  }
+  try {
     // outside services get short-lived links to the customer's files
     const ws = s.user.workspace;
     const open = async (u?: string) => (u ? fetchableUrl(u, ws) : undefined);
@@ -132,7 +138,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
     return NextResponse.json({ id, usd });
   } catch (err) {
     console.error("tools start", t.id, err instanceof Error ? err.message : err);
-    const msg = await explainFailure(err instanceof Error ? err : new Error("No se pudo iniciar."), isOwner(s.user), svc);
+    await refundJob(s.user.workspace, id);
+    const msg = await failMessage(err, s.user, svc);
     await db.update("clips", id, { status: "failed", error: msg }).catch(() => null);
     return bad(msg, 502);
   }
@@ -158,6 +165,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
       await db.update("clips", id, { status: "failed", error });
+      await refundJob(s.user.workspace, id);
       return NextResponse.json({ state: "failed", error });
     }
     if (st.state !== "done") return NextResponse.json(st);

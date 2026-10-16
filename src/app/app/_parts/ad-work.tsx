@@ -65,22 +65,22 @@ export default function AdWork({ adId }: { adId: string }) {
     return () => t.forEach(clearTimeout);
   }, [loadAd, loadClips]);
 
-  async function run(id: string, model?: string) {
+  async function run(id: string, model?: string, free = false) {
     setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
-    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model }) });
+    const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model, free }) });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c)));
     setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
     timers.current.push(setTimeout(() => poll(id), 20000));
   }
 
-  async function redo(id: string, problem: string) {
+  async function redo(id: string, problem: string, free = false) {
     if (problem.trim()) {
       setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
       const res = await fetch("/api/clips/fix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, problem }) });
       if (!res.ok) { const d = await res.json().catch(() => ({})); setErr(d.error || "No se pudo corregir el corte."); }
     }
-    await run(id);
+    await run(id, undefined, free);
   }
 
   async function doReview() {
@@ -98,9 +98,9 @@ export default function AdWork({ adId }: { adId: string }) {
     if (todo.length) {
       setPhase("redo");
       todo.forEach((r) => { redos[r.clipId] = (redos[r.clipId] ?? 0) + 1; });
-      await fetch(`/api/data/ads/${adId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ settings: { ...(ad?.settings ?? {}), review: undefined, redos } }) });
+      await fetch(`/api/data/ads/${adId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ settings: { ...(ad?.settings ?? {}), redos } }) });
       setNote((n) => `${n ? `${n} ` : ""}Rehaciendo ${todo.length} corte${todo.length === 1 ? "" : "s"} con errores graves, sin costo para ti.`);
-      await Promise.all(todo.map((r) => redo(r.clipId, r.issues.join(". "))));
+      await Promise.all(todo.map((r) => redo(r.clipId, r.issues.join(". "), true)));
       setReview(null);
       setPhase("");
       loadAd();

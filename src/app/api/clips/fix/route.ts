@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { sharedRules } from "@/lib/db";
 import { formatById } from "@/lib/formats";
@@ -11,6 +12,8 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("ai", s.user.id);
+  if (limited) return limited;
   const { db } = s;
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");

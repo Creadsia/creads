@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageInput, type Img } from "./tool-run";
 import { useTable } from "./ui";
+import { refreshCredits, useCredits } from "./use-credits";
 
 // Test bench for the connected models. Every button here spends real money, so the price is always shown first.
 
@@ -27,7 +28,6 @@ const FALLBACK: VideoModel[] = [
 
 interface ImageModel { id: string; label: string; configured: boolean; usd: number }
 const IMAGE_FALLBACK: ImageModel[] = [{ id: "nano-banana-pro", label: "Nano Banana Pro", configured: true, usd: 0.134 }];
-const clp = (usd: number) => Math.round((usd * 950) / 10) * 10; // rough CLP, for orientation only
 
 type VideoState =
   | { s: "idle" }
@@ -76,6 +76,7 @@ export default function ModelLab({ code }: { code: string }) {
   const vm = models.find((m) => m.id === model) ?? models[0];
   const secs = vm.seconds.includes(seconds) ? seconds : vm.seconds[0];
   const videoUsd = +(vm.usdPerSecond * secs).toFixed(2);
+  const { price, covers } = useCredits();
   const videoAspect = vm.aspects.includes(aspect) ? aspect : aspect === "16:9" ? "16:9" : "9:16";
 
   async function makeImage() {
@@ -87,6 +88,7 @@ export default function ModelLab({ code }: { code: string }) {
       if (!res.ok) throw new Error(data.error || "No se pudo generar la imagen.");
       setImage(data.url);
       setFrame(data.url);
+      refreshCredits();
     } catch (e) {
       setImgErr(e instanceof Error ? e.message : "No se pudo generar la imagen.");
     } finally {
@@ -118,6 +120,7 @@ export default function ModelLab({ code }: { code: string }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo iniciar el video.");
+      refreshCredits();
       const id = vm.id;
       poll.current = setTimeout(() => check(id, data.job.jobId, 0), 15000);
     } catch (e) {
@@ -177,17 +180,17 @@ export default function ModelLab({ code }: { code: string }) {
           <select value={im.id} onChange={(e) => setImgModel(e.target.value)} className={pill} aria-label="Modelo de imagen">
             {imageModels.map((m) => (
               <option key={m.id} value={m.id} disabled={!m.configured}>
-                {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `US$${m.usd.toFixed(3).replace(/0$/, "")}` : "sin conectar"}
+                {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? price(m.usd) : "sin conectar"}
               </option>
             ))}
           </select>
           <button
             type="button"
             onClick={makeImage}
-            disabled={!ready || imgBusy}
+            disabled={!ready || imgBusy || !covers(im.usd)}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
-            {imgBusy ? "Generando… (≈ 30 s)" : `Generar imagen · US$${im.usd.toFixed(3).replace(/0$/, "")} (≈ $${clp(im.usd)})`}
+            {imgBusy ? "Generando… (≈ 30 s)" : `Generar imagen · ${price(im.usd)}`}
           </button>
           {imgErr && <p className="text-sm text-bad">{imgErr}</p>}
           {image && (
@@ -203,7 +206,7 @@ export default function ModelLab({ code }: { code: string }) {
             <select value={vm.id} onChange={(e) => setModel(e.target.value)} className={pill} aria-label="Modelo">
               {models.map((m) => (
                 <option key={m.id} value={m.id} disabled={!m.configured}>
-                  {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `US$${m.usdPerSecond.toFixed(2)}/s` : "sin conectar"}
+                  {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `${price(m.usdPerSecond * 8)} por 8 s` : "sin conectar"}
                 </option>
               ))}
             </select>
@@ -226,12 +229,12 @@ export default function ModelLab({ code }: { code: string }) {
           <button
             type="button"
             onClick={makeVideo}
-            disabled={!ready || video.s === "running" || (vm.needsImage && !frame)}
+            disabled={!ready || video.s === "running" || (vm.needsImage && !frame) || !covers(videoUsd)}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
             {video.s === "running"
               ? `Generando… ${elapsed} s (suele tardar 1 a 3 min)`
-              : `Generar video · US$${videoUsd.toFixed(2)} (≈ $${clp(videoUsd)})`}
+              : `Generar video · ${price(videoUsd)}`}
           </button>
           {video.s === "error" && <p className="text-sm text-bad">{video.msg}</p>}
           {video.s === "done" && (

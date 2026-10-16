@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type FormatId, formatById } from "@/lib/formats";
 import AdWork from "../_parts/ad-work";
+import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import type { Cut } from "./crear";
 
@@ -17,7 +18,6 @@ interface Model { id: string; label: string; configured: boolean; usdPerSecond: 
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
-const clp = (usd: number) => Math.round((usd * 950) / 10) * 10;
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
 
@@ -44,6 +44,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [confirm, setConfirm] = useState(false);
   const [adId, setAdId] = useState<string | null>(null);
   const [starting, setStarting] = useState<string>("");
+  const { price, covers, info } = useCredits();
 
   useEffect(() => {
     fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {});
@@ -111,6 +112,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       await Promise.all(ids.slice(i, i + 2).map((id) => fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null)));
     }
     setStarting("");
+    refreshCredits();
     setAdId(d.ad.id);
   }
 
@@ -231,7 +233,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               <div className="flex flex-wrap items-end gap-3">
                 <Field label="Modelo de video">
                   <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage || x.silent || faceRefused(x)}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage || x.silent ? "sin voz: no sirve para anuncios hablados" : faceRefused(x) ? "no acepta la cara de tu avatar" : `US$${x.usdPerSecond.toFixed(2)}/s`}</option>)}
+                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage || x.silent || faceRefused(x)}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage || x.silent ? "sin voz: no sirve para anuncios hablados" : faceRefused(x) ? "no acepta la cara de tu avatar" : `${price(x.usdPerSecond * 8)} por corte de 8 s`}</option>)}
                   </select>
                 </Field>
               </div>
@@ -239,17 +241,18 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
                 {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}<br />
                 {takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
-                Costo estimado: <b>US${usd.toFixed(2)} (≈ ${clp(usd).toLocaleString("es-CL")} CLP)</b>.
+                Precio estimado: <b>{price(usd)}</b>{info && !info.unlimited ? ` · te quedan ${(info.balance ?? 0).toLocaleString("es-CL")}` : ""}. Si un corte falla, sus créditos vuelven solos.
                 {model.startsWith("veo") && aspect !== "9:16" && aspect !== "16:9" ? " Veo no hace 4:5 ni 1:1: se genera en 9:16." : ""}
               </p>
               {!confirm ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
-                  <button type="button" disabled={!scenes || !m?.configured} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
+                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd)} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
+                  {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o pide más en hola@creadsia.com.</span>}
                 </div>
               ) : (
                 <div className="flex flex-col gap-3 rounded-xl border border-warn/50 bg-warn/10 p-4 text-sm">
-                  <p>Vas a generar <b>{cuts.length} videos</b> con <b>{m?.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")}</b>. Esto gasta saldo real (≈ US${usd.toFixed(2)}).</p>
+                  <p>Vas a generar <b>{cuts.length} videos</b> con <b>{m?.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")}</b>. Esto usa ≈ {price(usd)}.</p>
                   <div className="flex gap-2">
                     <button type="button" onClick={generate} className={btnCls}>Sí, generar</button>
                     <button type="button" onClick={() => setConfirm(false)} className={ghostCls}>Cancelar</button>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { signedUploadFor } from "@/lib/media";
 
@@ -13,6 +14,8 @@ const MAX = 50 * 1024 * 1024;
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("upload", s.user.id);
+  if (limited) return limited;
   const b = await req.json().catch(() => null);
   const type = String(b?.type ?? "");
   const size = Number(b?.size ?? 0);
