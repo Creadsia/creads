@@ -55,10 +55,18 @@ export function pathOf(ref: string): string | null {
 /** Workspace that owns a media link (null if it isn't a media link). */
 export const workspaceOf = (ref: string) => pathOf(ref)?.split("/")[1] ?? null;
 
-/** Old public-bucket links: only Creadsia's own workspace may use them. */
+// Creadsia's own Higgsfield account (files made in the WinnerLab prototype).
+const HIGGSFIELD = [
+  "https://d2ol7oe51mr4n9.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/",
+  "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/",
+];
+
+/** Old links (public bucket, WinnerLab files): only Creadsia's own workspace may use them. */
 function isLegacyPublic(ref: string) {
+  if (ref.includes("..") || /[\s?#]/.test(ref)) return false;
   const base = process.env.SUPABASE_URL;
-  return Boolean(base) && ref.startsWith(`${base}/storage/v1/object/public/media/`) && !ref.includes("..");
+  if (base && ref.startsWith(`${base}/storage/v1/object/public/media/`)) return true;
+  return HIGGSFIELD.some((p) => ref.startsWith(p) && /^[\w.-]+$/.test(ref.slice(p.length)));
 }
 
 /** True if this link points to a file of that workspace (the only files a customer may use). */

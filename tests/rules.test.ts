@@ -40,6 +40,12 @@ test("old public links belong to Creadsia only", () => {
   assert.equal(ownsMedia(legacy.replace("/media/", "/media/../admin/"), "main"), false);
   assert.equal(ownsMedia("https://proj.supabase.co/storage/v1/object/public/admin/finanzas.json", "main"), false);
   assert.equal(ownsMedia("https://otro.supabase.co/storage/v1/object/public/media/x.png", "main"), false);
+  // WinnerLab files on Creadsia's Higgsfield account
+  const hf = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261012_152120_576bec66.mp4";
+  assert.equal(ownsMedia(hf, "main"), true);
+  assert.equal(ownsMedia(hf, "cliente-a"), false);
+  assert.equal(ownsMedia("https://d8j0ntlcm91z4.cloudfront.net/user_OTRO/x.mp4", "main"), false);
+  assert.equal(ownsMedia("https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/a/../b.mp4", "main"), false);
 });
 
 test("the browser can only write what it should", () => {
