@@ -18,10 +18,14 @@ export default async function AdminPage() {
     <main lang="es" className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Logo size={26} href="/" />
+          <Logo size={26} href="/app" />
           <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-bold tracking-wide text-muted uppercase">Panel interno</span>
         </div>
-        <ThemeToggle lang="es" />
+        <nav aria-label="Volver" className="flex flex-wrap items-center gap-2">
+          <a href="/app" className="rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">← Volver al estudio</a>
+          <a href="/app/crear" className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg">Crear anuncio</a>
+          <ThemeToggle lang="es" />
+        </nav>
       </header>
       {ok ? (
         <AdminPanel />

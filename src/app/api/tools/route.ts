@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { SESSION_ENDED, session } from "@/lib/access";
+import { fullSession } from "@/lib/access";
 import { DbError } from "@/lib/db";
 
 // The latest "Crear" tool jobs (any tool), newest first.
 export async function GET(req: Request) {
-  const s = await session(req);
-  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
   try {
     const rows = await db.list("clips", "or=(kind.like.tool:*,kind.like.gen:*)&order=created_at.desc&limit=60");

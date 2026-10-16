@@ -18,6 +18,7 @@ export const TABLES = {
   ads: ["title", "script_id", "format", "aspect", "model", "status", "settings", "final_url", "favorite"],
   clips: ["ad_id", "idx", "kind", "text", "prompt", "model", "provider_job", "status", "url", "image_url", "error", "usd"],
   images: ["prompt", "url", "model", "aspect", "favorite"],
+  voices: ["voice_id", "name"],
   rules: ["rule_en", "rule_es", "formats", "hits", "active"],
 } as const;
 export type Table = keyof typeof TABLES;

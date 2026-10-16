@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 // Customers (workspaces) for Creadsia's owner: list with people and this month's spend, create, pause.
 // The owner sees across workspaces on purpose; customers never reach this route.
 
-interface Workspace { id: string; name: string; kind: string; plan: string | null; active: boolean; created_at: string }
+interface Workspace { id: string; name: string; kind: string; plan: string | null; active: boolean; access?: string; discount?: number; notes?: string | null; created_at: string }
 
 function env() {
   const url = process.env.SUPABASE_URL;
@@ -57,7 +57,9 @@ export async function GET() {
     return NextResponse.json({
       clientes: workspaces.map((w) => ({
         ...w,
-        people: users.filter((u) => u.workspace === w.id).map((u) => ({ email: u.email, name: u.name, role: u.role, last_login: u.last_login })),
+        access: w.access === "ads" ? "ads" : "full",
+        discount: Number(w.discount ?? 0),
+        people: users.filter((u) => u.workspace === w.id).map((u) => ({ id: u.id, email: u.email, name: u.name, role: u.role, active: u.active, last_login: u.last_login })),
         usdMonth: +(usd[w.id] ?? 0).toFixed(2),
       })),
     });
@@ -66,8 +68,8 @@ export async function GET() {
   }
 }
 
-// POST {name, email, contact?} creates a customer workspace and its first account (an admin of that
-// workspace, never an owner). The temporary password is returned once.
+// POST {name, email, contact?, access?, discount?, plan?} creates a customer workspace and its first
+// account (a member: only Creadsia's owner manages people). The temporary password is returned once.
 export async function POST(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const b = await req.json().catch(() => null);
@@ -82,16 +84,19 @@ export async function POST(req: Request) {
     if (!WORKSPACE_RE.test(id) || id === "main") id = `cliente-${randomBytes(3).toString("hex")}`;
     const taken = (await rest(`workspaces?id=eq.${id}&select=id`)) as { id: string }[];
     if (taken.length) id = `${id.slice(0, 33)}-${randomBytes(2).toString("hex")}`;
-    await rest("workspaces", { method: "POST", body: JSON.stringify({ id, name, kind: "client", plan: b?.plan ? String(b.plan).slice(0, 30) : null }) });
+    const access = b?.access === "ads" ? "ads" : "full";
+    const discount = Math.min(100, Math.max(0, Math.round(Number(b?.discount) || 0)));
+    await rest("workspaces", { method: "POST", body: JSON.stringify({ id, name, kind: "client", plan: b?.plan ? String(b.plan).slice(0, 30) : null, access, discount }) });
     const password = tempPassword();
-    const user = await createUser({ email, name: String(b?.contact ?? "").slice(0, 60), password, role: "admin", workspace: id });
+    const user = await createUser({ email, name: String(b?.contact ?? "").slice(0, 60), password, role: "member", workspace: id });
     return NextResponse.json({ workspace: id, user, password });
   } catch (err) {
     return fail(err);
   }
 }
 
-// PATCH {id, active?, plan?, name?}: pause or resume a customer (paused customers can't sign in).
+// PATCH {id, active?, access?, discount?, plan?, name?, notes?}: pause/resume a customer (paused customers
+// can't sign in), change what they can use, or their discount.
 export async function PATCH(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const b = await req.json().catch(() => null);
@@ -101,6 +106,10 @@ export async function PATCH(req: Request) {
   if (typeof b?.active === "boolean") patch.active = b.active;
   if (typeof b?.plan === "string") patch.plan = b.plan.slice(0, 30) || null;
   if (typeof b?.name === "string" && b.name.trim().length >= 2) patch.name = b.name.trim().slice(0, 80);
+  if (b?.access === "full" || b?.access === "ads") patch.access = b.access;
+  if (b?.discount !== undefined) patch.discount = Math.min(100, Math.max(0, Math.round(Number(b.discount) || 0)));
+  if (typeof b?.notes === "string") patch.notes = b.notes.slice(0, 500) || null;
+  if (!Object.keys(patch).length) return NextResponse.json({ error: "Nada que cambiar." }, { status: 400 });
   try {
     const rows = await rest(`workspaces?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(patch) });
     forgetWorkspace(id);

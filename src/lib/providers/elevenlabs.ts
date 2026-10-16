@@ -162,3 +162,9 @@ export async function soundEffect(text: string, seconds: number) {
   if (!res.ok) return fail(res, "ElevenLabs (efectos)");
   return new Uint8Array(await res.arrayBuffer());
 }
+
+/** Deletes a voice from our ElevenLabs account (used if a clone can't be registered to its customer). */
+export async function deleteVoice(id: string) {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return;
+  await fetch(`${API}/v1/voices/${id}`, { method: "DELETE", headers: { "xi-api-key": key() } }).catch(() => {});
+}

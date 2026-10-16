@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { SESSION_ENDED, session } from "@/lib/access";
+import { fullSession } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/lib/media";
@@ -11,8 +11,8 @@ export const maxDuration = 120;
 // into our storage once and its public link returned. Costs real money: the studio shows the price first.
 
 export async function POST(req: Request) {
-  const s = await session(req);
-  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
 
   const body = await req.json().catch(() => null);
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const s = await session(req);
-  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
 
   const q = new URL(req.url).searchParams;

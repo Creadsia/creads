@@ -20,6 +20,31 @@ create table if not exists public.workspaces (
   created_at timestamptz not null default now()
 );
 insert into public.workspaces (id, name, kind) values ('main', 'Creadsia', 'owner') on conflict (id) do nothing;
+-- What each customer can use (full studio, or only "Crear anuncio"), and their discount (%).
+alter table public.workspaces add column if not exists access text not null default 'full';
+alter table public.workspaces add column if not exists discount int not null default 0;
+alter table public.workspaces add column if not exists notes text;
+do $$
+begin
+  if not exists (select from pg_constraint where conname = 'workspaces_access_check') then
+    alter table public.workspaces add constraint workspaces_access_check check (access in ('full', 'ads'));
+  end if;
+  if not exists (select from pg_constraint where conname = 'workspaces_discount_check') then
+    alter table public.workspaces add constraint workspaces_discount_check check (discount between 0 and 100);
+  end if;
+end $$;
+
+-- Cloned voices: each one belongs to the customer who cloned it (all clones live in one ElevenLabs account).
+create table if not exists public.voices (
+  id uuid primary key default gen_random_uuid(),
+  owner text not null default 'main',
+  voice_id text not null unique,
+  name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+create index if not exists voices_owner_created on public.voices (owner, created_at desc);
+grant all on table public.voices to service_role;
 alter table public.workspaces enable row level security;
 grant all on table public.workspaces to service_role;
 
@@ -41,7 +66,7 @@ create or replace function public.current_workspace() returns text
 do $$
 declare t text;
 begin
-  foreach t in array array['avatars', 'products', 'scripts', 'ads', 'clips', 'images'] loop
+  foreach t in array array['avatars', 'products', 'scripts', 'ads', 'clips', 'images', 'voices'] loop
     execute format('grant select, insert, update, delete on table public.%I to creads_app', t);
     execute format('alter table public.%I alter column owner set default public.current_workspace()', t);
     execute format('alter table public.%I enable row level security', t);

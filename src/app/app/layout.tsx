@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { countUsers } from "@/lib/auth";
 import { currentUser } from "@/lib/admin";
+import { isOwner } from "@/lib/auth";
 import Login from "./_parts/login";
 import Shell from "./_parts/shell";
 
@@ -16,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user) {
     return (
       <div lang="es">
-        <Shell user={{ email: user.email, name: user.name, role: user.role }}>{children}</Shell>
+        <Shell user={{ email: user.email, name: user.name, role: user.role, owner: isOwner(user), access: user.access ?? "full" }}>{children}</Shell>
       </div>
     );
   }

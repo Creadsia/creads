@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_ENDED, session } from "@/lib/access";
+import { fullSession } from "@/lib/access";
 import { findImage } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
@@ -10,8 +10,8 @@ const ASPECTS: AspectRatio[] = ["9:16", "1:1", "4:5", "16:9"];
 
 // Generates one image and stores it in our own storage. Costs real money: the studio shows the price first.
 export async function POST(req: Request) {
-  const s = await session(req);
-  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
 
   const body = await req.json().catch(() => null);

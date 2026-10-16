@@ -21,7 +21,10 @@ export interface User {
   active: boolean;
   created_at: string;
   last_login: string | null;
+  /** What this person's workspace may use: the whole studio, or only "Crear anuncio". */
+  access?: Access;
 }
+export type Access = "full" | "ads";
 
 function env() {
   const url = process.env.SUPABASE_URL;
@@ -143,23 +146,34 @@ export async function endSession(token: string) {
   await rest(`sessions?id=eq.${sha(token)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }).catch(() => {});
 }
 
-// Whether a workspace (customer) is active; cached for a minute. Until the workspaces table exists
-// (supabase/tenancy.sql) every workspace counts as active.
-const wsCache = new Map<string, { ok: boolean; at: number }>();
-async function workspaceActive(id: string) {
+// A workspace's status and access level, cached for a minute. Until the workspaces table exists
+// (supabase/tenancy.sql) every workspace counts as active with full access.
+const wsCache = new Map<string, { ok: boolean; access: Access; at: number }>();
+async function workspaceInfo(id: string): Promise<{ ok: boolean; access: Access }> {
   const hit = wsCache.get(id);
-  if (hit && Date.now() - hit.at < 60_000) return hit.ok;
-  let ok = true;
+  if (hit && Date.now() - hit.at < 60_000) return hit;
+  let info: { ok: boolean; access: Access } = { ok: true, access: "full" };
   try {
-    const rows = (await rest(`workspaces?id=eq.${encodeURIComponent(id)}&select=active&limit=1`)) as { active: boolean }[];
-    ok = rows.length ? rows[0].active !== false : id === "main";
+    let rows: { active: boolean; access?: string }[];
+    try {
+      rows = (await rest(`workspaces?id=eq.${encodeURIComponent(id)}&select=active,access&limit=1`)) as typeof rows;
+    } catch {
+      // table exists but without the access column yet
+      rows = (await rest(`workspaces?id=eq.${encodeURIComponent(id)}&select=active&limit=1`)) as typeof rows;
+    }
+    info = rows.length
+      ? { ok: rows[0].active !== false, access: rows[0].access === "ads" ? "ads" : "full" }
+      : { ok: id === "main", access: "full" };
   } catch (err) {
-    ok = Boolean((err as { missing?: boolean }).missing); // table not created yet: don't lock anyone out
+    // table not created yet: don't lock anyone out; any other error: refuse this time (fail closed)
+    if (!(err as { missing?: boolean }).missing) return { ok: false, access: "full" };
   }
-  wsCache.set(id, { ok, at: Date.now() });
-  return ok;
+  wsCache.set(id, { ...info, at: Date.now() });
+  return info;
 }
 export const forgetWorkspace = (id: string) => wsCache.delete(id);
+/** Whether people of this workspace may sign in right now. */
+export const workspaceOpen = async (id: string) => (await workspaceInfo(id)).ok;
 
 /** The signed-in user for a session token, or null. */
 export async function userFromToken(token: string | undefined | null): Promise<User | null> {
@@ -167,7 +181,10 @@ export async function userFromToken(token: string | undefined | null): Promise<U
   try {
     const rows = (await rest(`sessions?id=eq.${sha(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user:users(${PUBLIC})&limit=1`)) as { user: User | null }[];
     const u = rows[0]?.user;
-    return u && u.active && (await workspaceActive(u.workspace)) ? u : null;
+    if (!u || !u.active) return null;
+    const ws = await workspaceInfo(u.workspace);
+    // Creadsia's own workspace always has the whole studio
+    return ws.ok ? { ...u, access: u.workspace === "main" ? "full" : ws.access } : null;
   } catch {
     return null;
   }
@@ -183,6 +200,9 @@ export const userFromRequest = (req: Request) => userFromToken(tokenFromCookieHe
 
 export const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: SESSION_DAYS * 86400 };
 
-export const canManageTeam = (u: User | null) => u?.role === "owner" || u?.role === "admin";
-/** Creadsia's owner: the only one who sees finances, every customer and the shared rules. */
+/** Creadsia's owner: the only one who sees finances, every customer, accesses and the shared rules. */
 export const isOwner = (u: User | null) => u?.role === "owner" && u.workspace === "main";
+/** Only the owner gives or removes access (to Creadsia's team here; to customers in the Panel interno). */
+export const canManageTeam = (u: User | null) => isOwner(u);
+/** "Solo anuncios" accounts can use Crear anuncio and what it needs, nothing else. */
+export const hasFullStudio = (u: User | null) => Boolean(u) && (u!.access ?? "full") === "full";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, cookieOptions, createSession, findUserByEmail, verifyPassword } from "@/lib/auth";
+import { SESSION_COOKIE, cookieOptions, createSession, findUserByEmail, verifyPassword, workspaceOpen } from "@/lib/auth";
 
 const fail = async () => {
   await new Promise((r) => setTimeout(r, 900)); // slow down guessing
@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   try {
     const user = await findUserByEmail(email);
     if (!user || !user.active || !(await verifyPassword(password, user.password_hash))) return fail();
+    if (!(await workspaceOpen(user.workspace))) return NextResponse.json({ error: "Esta cuenta está pausada. Escríbenos a hola@creadsia.com." }, { status: 403 });
     const token = await createSession(user.id, req.headers.get("user-agent") ?? "");
     const res = NextResponse.json({ ok: true, user: { email: user.email, name: user.name, role: user.role } });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);

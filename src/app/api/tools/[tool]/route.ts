@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { SESSION_ENDED, session } from "@/lib/access";
+import { fullSession } from "@/lib/access";
 import { probe } from "@/lib/montage";
 import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/providers/tools";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
@@ -79,8 +79,8 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ tool: string }> }) {
-  const s = await session(req);
-  if (!s) return bad(SESSION_ENDED, 401);
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);
@@ -131,8 +131,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ tool: string }> }) {
-  const s = await session(req);
-  if (!s) return bad(SESSION_ENDED, 401);
+  const s = await fullSession(req);
+  if (s instanceof NextResponse) return s;
   const { db } = s;
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);

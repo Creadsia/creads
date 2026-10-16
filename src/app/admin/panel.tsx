@@ -18,7 +18,7 @@ import {
 type Tab = "resumen" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["resumen", "Resumen"],
-  ["clientes", "Clientes"],
+  ["clientes", "Clientes y accesos"],
   ["planes", "Planes y afiliados"],
   ["movs", "Movimientos"],
   ["fijos", "Costos fijos"],
@@ -618,21 +618,125 @@ function Registros() {
 }
 
 // ---------- Clientes ----------
+// Only the owner reaches this panel. Each customer (or friend) gets a separate space; here the owner
+// decides who gets in, what they can use (whole studio or only "Crear anuncio") and their discount.
+interface Persona { id: string; email: string; name: string | null; role: string; active: boolean; last_login: string | null }
 interface Cliente {
   id: string; name: string; kind: string; plan: string | null; active: boolean; created_at: string; usdMonth: number;
-  people: { email: string; name: string | null; role: string; last_login: string | null }[];
+  access: "full" | "ads"; discount: number; people: Persona[];
 }
+const ACCESS_LABEL = { full: "Acceso completo", ads: "Solo crear anuncios" } as const;
+
+function Secret({ email, password, onClose }: { email: string; password: string; onClose: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-good/12 p-3 text-sm" role="status">
+      <span><b>{email}</b> entra en creadsia.com/app con la clave temporal <b className="select-all font-mono">{password}</b>. Se muestra una sola vez: mándasela y que la cambie en «Mi cuenta».</span>
+      <button type="button" onClick={onClose} className="text-xs text-muted hover:text-ink">Listo</button>
+    </div>
+  );
+}
+
+function ClienteCard({ c, reload }: { c: Cliente; reload: () => void }) {
+  const [err, setErr] = useState("");
+  const [secret, setSecret] = useState<{ email: string; password: string } | null>(null);
+  const [add, setAdd] = useState({ email: "", name: "" });
+  const [discount, setDiscount] = useState(c.discount);
+  const call = async (url: string, method: string, body?: object) => {
+    setErr("");
+    const r = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setErr(d.error || "No se pudo."); return null; }
+    return d;
+  };
+  const setWs = async (patch: object) => { if (await call("/api/admin/clientes", "PATCH", { id: c.id, ...patch })) reload(); };
+  async function addPerson(e: React.FormEvent) {
+    e.preventDefault();
+    const d = await call("/api/admin/personas", "POST", { workspace: c.id, ...add });
+    if (d) { setSecret({ email: add.email, password: d.password }); setAdd({ email: "", name: "" }); reload(); }
+  }
+  async function reset(p: Persona) {
+    const d = await call("/api/admin/personas", "PATCH", { workspace: c.id, id: p.id, resetPassword: true });
+    if (d) setSecret({ email: p.email, password: d.password });
+  }
+  async function remove(p: Persona) {
+    if (!window.confirm(`¿Quitar a ${p.email}? Ya no podrá entrar.`)) return;
+    if (await call(`/api/admin/personas?workspace=${encodeURIComponent(c.id)}&id=${p.id}`, "DELETE")) reload();
+  }
+  return (
+    <article className={`${card} ${c.active ? "" : "opacity-70"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-display text-lg font-bold">{c.name}</h3>
+          <p className="font-mono text-xs text-muted">{c.id} · desde {new Date(c.created_at).toLocaleDateString("es-CL")}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill t={c.active ? "good" : "warn"}>{c.active ? "Activo" : "Pausado"}</Pill>
+          <Pill t="acc">{ACCESS_LABEL[c.access]}</Pill>
+          {c.discount > 0 && <Pill>{c.discount}% dcto.</Pill>}
+          <span className={`${num} text-sm`}>{fmtUsd(c.usdMonth, 2)} este mes</span>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Qué puede usar">
+          <select value={c.access} onChange={(e) => setWs({ access: e.target.value })} className={input}>
+            <option value="full">Acceso completo (todo el estudio)</option>
+            <option value="ads">Solo crear anuncios</option>
+          </select>
+        </Field>
+        <Field label="Descuento (%)">
+          <span className="flex gap-2">
+            <input type="number" min={0} max={100} value={discount} onChange={(e) => setDiscount(Number(e.target.value))} className={`${input} w-24 ${num}`} />
+            {discount !== c.discount && <button type="button" onClick={() => setWs({ discount })} className="rounded-lg border border-line px-3 text-sm">Guardar</button>}
+          </span>
+        </Field>
+        <Field label="Acceso a la cuenta">
+          <button type="button" onClick={() => setWs({ active: !c.active })} className="rounded-lg border border-line px-3 py-2 text-left text-sm">
+            {c.active ? "Pausar (nadie de esta cuenta puede entrar)" : "Reactivar"}
+          </button>
+        </Field>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-muted">Personas</span>
+        {c.people.length === 0 && <p className="text-sm text-muted">Nadie todavía.</p>}
+        <ul className="flex flex-col divide-y divide-line rounded-lg border border-line">
+          {c.people.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span className="min-w-0">
+                <b className="break-all">{p.email}</b>{p.name ? <span className="text-muted"> · {p.name}</span> : null}
+                <span className="block text-xs text-muted">{p.last_login ? `Última vez: ${new Date(p.last_login).toLocaleDateString("es-CL")}` : "Nunca ha entrado"}{p.active ? "" : " · pausada"}</span>
+              </span>
+              <span className="flex gap-3 text-xs">
+                <button type="button" onClick={() => reset(p)} className="text-muted hover:text-ink">Nueva clave</button>
+                <button type="button" onClick={async () => { if (await call("/api/admin/personas", "PATCH", { workspace: c.id, id: p.id, active: !p.active })) reload(); }} className="text-muted hover:text-ink">{p.active ? "Pausar" : "Reactivar"}</button>
+                <button type="button" onClick={() => remove(p)} className="text-muted hover:text-bad">Quitar</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={addPerson} className="flex flex-wrap items-end gap-2">
+          <Field label="Agregar persona (correo)"><input required type="email" value={add.email} onChange={(e) => setAdd({ ...add, email: e.target.value })} className={input} /></Field>
+          <Field label="Nombre (opcional)"><input value={add.name} onChange={(e) => setAdd({ ...add, name: e.target.value })} className={input} /></Field>
+          <button type="submit" className="rounded-lg border border-line px-3 py-2 text-sm font-semibold">Agregar</button>
+        </form>
+      </div>
+      {secret && <Secret email={secret.email} password={secret.password} onClose={() => setSecret(null)} />}
+      {err && <p className="text-sm text-bad" role="alert">{err}</p>}
+    </article>
+  );
+}
+
 function Clientes() {
   const [rows, setRows] = useState<Cliente[] | null>(null);
   const [err, setErr] = useState("");
   const [missing, setMissing] = useState(false);
-  const [f, setF] = useState({ name: "", email: "", contact: "", plan: "" });
+  const [f, setF] = useState({ name: "", email: "", contact: "", access: "full", discount: 0 });
   const [busy, setBusy] = useState(false);
-  const [made, setMade] = useState<{ email: string; password: string; workspace: string } | null>(null);
+  const [made, setMade] = useState<{ email: string; password: string } | null>(null);
   const load = useCallback(() => {
     fetch("/api/admin/clientes").then(async (r) => {
       const d = await r.json();
       if (!r.ok) { setMissing(Boolean(d.missing)); throw new Error(d.error); }
+      setErr("");
       setRows(d.clientes);
     }).catch((e) => setErr(e.message || "No se pudo cargar."));
   }, []);
@@ -644,69 +748,52 @@ function Clientes() {
       const r = await fetch("/api/admin/clientes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(f) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
-      setMade({ email: f.email, password: d.password, workspace: d.workspace });
-      setF({ name: "", email: "", contact: "", plan: "" });
+      setMade({ email: f.email, password: d.password });
+      setF({ name: "", email: "", contact: "", access: "full", discount: 0 });
       load();
     } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo crear."); } finally { setBusy(false); }
   }
-  async function toggle(c: Cliente) {
-    const r = await fetch("/api/admin/clientes", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: c.id, active: !c.active }) });
-    if (r.ok) load();
-  }
+  const clients = (rows ?? []).filter((c) => c.kind === "client");
   const total = (rows ?? []).reduce((a, c) => a + c.usdMonth, 0);
   return (
     <div className="flex flex-col gap-4">
       <section className={card}>
         <div>
-          <h2 className="font-display text-xl font-bold">Clientes</h2>
-          <p className="text-sm text-muted">Cada cliente tiene su propio espacio: solo ve sus avatares, productos, guiones y videos. Aquí ves quién usa Creads y cuánto gastó en modelos este mes.</p>
+          <h2 className="font-display text-xl font-bold">Clientes y accesos</h2>
+          <p className="text-sm text-muted">Cada cliente o amigo tiene su propio espacio: solo ve sus avatares, productos, guiones y videos. Solo tú puedes dar, cambiar o quitar accesos.</p>
         </div>
         {missing && <p className="rounded-lg bg-warn/12 p-3 text-sm">Falta activar las cuentas separadas en Supabase (el archivo tenancy.sql). Te dejé los pasos en el chat.</p>}
         {err && !missing && <p className="text-sm text-bad">{err}</p>}
-        {!rows && !err && <p className="text-muted">Cargando…</p>}
         {rows && (
-          <>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
-              <Stat label="Clientes" value={String(rows.filter((c) => c.kind === "client").length)} />
-              <Stat label="Activos" value={String(rows.filter((c) => c.kind === "client" && c.active).length)} />
-              <Stat label="Gasto en modelos (mes)" value={fmtUsd(total, 2)} />
-            </div>
-            <div className="min-w-0 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr>{["Cliente", "Personas", "Plan", "Gasto del mes", "Estado", ""].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {rows.map((c) => (
-                    <tr key={c.id}>
-                      <td className={td}><b>{c.name}</b><span className="block font-mono text-xs text-muted">{c.id}</span></td>
-                      <td className={td}>{c.people.length ? c.people.map((p) => <span key={p.email} className="block">{p.email} <span className="text-xs text-muted">({p.role === "owner" ? "dueño" : p.role === "admin" ? "admin" : "miembro"})</span></span>) : <span className="text-muted">—</span>}</td>
-                      <td className={td}>{c.plan || <span className="text-muted">—</span>}</td>
-                      <td className={`${td} ${num}`}>{fmtUsd(c.usdMonth, 2)}</td>
-                      <td className={td}><Pill t={c.active ? "good" : "warn"}>{c.kind === "owner" ? "Creadsia" : c.active ? "Activo" : "Pausado"}</Pill></td>
-                      <td className={td}>{c.kind === "client" && <button type="button" onClick={() => toggle(c)} className="text-xs text-muted hover:text-ink">{c.active ? "Pausar" : "Reactivar"}</button>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
-      <section className={card}>
-        <h3 className="font-display text-lg font-bold">Crear cliente</h3>
-        <p className="text-sm text-muted">Crea su espacio y su primera cuenta (administrador de su espacio). La clave temporal aparece una sola vez: mándasela y que la cambie en «Mi cuenta».</p>
-        <form onSubmit={create} className="grid gap-3 sm:grid-cols-2">
-          <Field label="Nombre del cliente o empresa"><input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={input} /></Field>
-          <Field label="Correo de acceso"><input required type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={input} /></Field>
-          <Field label="Nombre de la persona (opcional)"><input value={f.contact} onChange={(e) => setF({ ...f, contact: e.target.value })} className={input} /></Field>
-          <Field label="Plan (opcional)"><input value={f.plan} onChange={(e) => setF({ ...f, plan: e.target.value })} placeholder="fundador, pro…" className={input} /></Field>
-          <div className="sm:col-span-2"><button type="submit" disabled={busy} className={btn}>{busy ? "Creando…" : "Crear cliente"}</button></div>
-        </form>
-        {made && (
-          <div className="rounded-lg bg-good/12 p-3 text-sm" role="status">
-            Listo: <b>{made.email}</b> entra en creadsia.com/app con la clave temporal <b className="font-mono select-all">{made.password}</b> (espacio <span className="font-mono">{made.workspace}</span>).
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+            <Stat label="Clientes" value={String(clients.length)} />
+            <Stat label="Activos" value={String(clients.filter((c) => c.active).length)} />
+            <Stat label="Solo anuncios" value={String(clients.filter((c) => c.access === "ads").length)} />
+            <Stat label="Gasto en modelos (mes)" value={fmtUsd(total, 2)} />
           </div>
         )}
       </section>
+
+      <section className={card}>
+        <h3 className="font-display text-lg font-bold">Dar acceso a alguien nuevo</h3>
+        <form onSubmit={create} className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nombre del cliente, empresa o amigo"><input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className={input} /></Field>
+          <Field label="Correo para entrar"><input required type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={input} /></Field>
+          <Field label="Qué puede usar">
+            <select value={f.access} onChange={(e) => setF({ ...f, access: e.target.value })} className={input}>
+              <option value="full">Acceso completo (todo el estudio)</option>
+              <option value="ads">Solo crear anuncios</option>
+            </select>
+          </Field>
+          <Field label="Descuento (%)"><input type="number" min={0} max={100} value={f.discount} onChange={(e) => setF({ ...f, discount: Number(e.target.value) })} className={`${input} w-28 ${num}`} /></Field>
+          <div className="sm:col-span-2"><button type="submit" disabled={busy} className={btn}>{busy ? "Creando…" : "Dar acceso"}</button></div>
+        </form>
+        {made && <Secret email={made.email} password={made.password} onClose={() => setMade(null)} />}
+      </section>
+
+      {!rows && !err && <p className="text-muted">Cargando…</p>}
+      {clients.map((c) => <ClienteCard key={c.id} c={c} reload={load} />)}
+      {rows && clients.length === 0 && <p className={`${card} text-muted`}>Todavía no has dado acceso a nadie.</p>}
     </div>
   );
 }

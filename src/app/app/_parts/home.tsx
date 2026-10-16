@@ -7,7 +7,7 @@ import { PageHead, SetupNotice, cardCls } from "./ui";
 
 type Counts = Record<"avatars" | "products" | "scripts" | "ads", number | null>;
 
-export default function Home() {
+export default function Home({ full = true }: { full?: boolean }) {
   const [c, setC] = useState<Counts | null>(null);
   const [missing, setMissing] = useState(false);
 
@@ -59,7 +59,7 @@ export default function Home() {
           </li>
         ))}
       </ol>
-      <section className={cardCls} aria-labelledby="quick">
+      {full && <section className={cardCls} aria-labelledby="quick">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="quick" className="font-display text-lg font-bold">Herramientas IA</h2>
           <Link href="/app/herramientas" className="text-sm text-accent-text">Ver todas →</Link>
@@ -71,7 +71,7 @@ export default function Home() {
             <Link key={t.id} href={`/app/herramientas/${t.id}`} className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">{t.name}</Link>
           ))}
         </div>
-      </section>
+      </section>}
       <section className={cardCls}>
         <h2 className="font-display text-lg font-bold">Cómo se hace un anuncio en Creads</h2>
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -36,16 +36,16 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean };
+type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean };
 const NAV: { group?: string; items: Item[] }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
-  { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true }] },
+  { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true, full: true }] },
   {
     group: "Crear",
     items: [
       { href: "/app/crear", label: "Crear anuncio", icon: I.create },
-      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark },
-      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab },
+      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
+      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
     ],
   },
   {
@@ -61,24 +61,28 @@ const NAV: { group?: string; items: Item[] }[] = [
     items: [
       { href: "/app/videos", label: "Videos", icon: I.film },
       { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
-      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain },
+      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true },
     ],
   },
 ];
 
-export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member" }
+export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
-function navFor(role: ShellUser["role"]) {
+function navFor(user: ShellUser) {
   const account: Item[] = [{ href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
-  if (role !== "member") account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
-  if (role === "owner") account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
-  return [...NAV, { group: "Cuenta", items: account }];
+  // giving access is the owner's alone
+  if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
+  if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
+  const groups = [...NAV, { group: "Cuenta", items: account }];
+  if (user.access === "full") return groups;
+  // "Solo anuncios": Crear anuncio and what it needs
+  return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.full) })).filter((g) => g.items.length);
 }
 
-function Nav({ path, role, onPick }: { path: string; role: ShellUser["role"]; onPick?: () => void }) {
+function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: () => void }) {
   return (
     <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
-      {navFor(role).map((g, i) => (
+      {navFor(user).map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           {g.group && <span className="px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}</span>}
           {g.items.map((it) => {
@@ -122,7 +126,6 @@ async function logout() {
   window.location.href = "/app";
 }
 
-const ROLE: Record<ShellUser["role"], string> = { owner: "Dueño", admin: "Administrador", member: "Miembro" };
 
 export default function Shell({ children, user }: { children: React.ReactNode; user: ShellUser }) {
   const path = usePathname() ?? "/app";
@@ -142,7 +145,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-semibold">{user.name || user.email}</span>
-          <span className="truncate text-xs text-muted">{ROLE[user.role]} · <button type="button" onClick={logout} className="hover:text-ink hover:underline">Salir</button></span>
+          <span className="truncate text-xs text-muted">{user.owner ? "Dueño" : user.access === "ads" ? "Solo anuncios" : "Acceso completo"} · <button type="button" onClick={logout} className="hover:text-ink hover:underline">Salir</button></span>
         </div>
         <ThemeToggle lang="es" />
       </div>
@@ -154,7 +157,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       {/* desktop menu */}
       <aside className="sticky top-0 hidden h-screen flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 lg:flex">
         <div className="px-2"><Logo size={26} href="/app" gid="mark-aside" /></div>
-        <div className="flex-1"><Nav path={path} role={user.role} /></div>
+        <div className="flex-1"><Nav path={path} user={user} /></div>
         {footer}
       </aside>
 
@@ -173,7 +176,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
               <Logo size={24} href="/app" gid="mark-drawer" />
               <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="grid h-9 w-9 place-items-center rounded-lg border border-line"><Icon d={I.close} /></button>
             </div>
-            <div className="flex-1"><Nav path={path} role={user.role} onPick={() => setOpen(false)} /></div>
+            <div className="flex-1"><Nav path={path} user={user} onPick={() => setOpen(false)} /></div>
             {footer}
           </div>
         </div>

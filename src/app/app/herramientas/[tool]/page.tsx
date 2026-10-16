@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findTool } from "@/lib/tools";
 import ToolRun from "../../_parts/tool-run";
+import { FullOnly } from "../../_parts/full-only";
 import { PageHead } from "../../_parts/ui";
 
 type Props = { params: Promise<{ tool: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -12,7 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: t?.name ?? "Herramienta" };
 }
 
-const one = (v: string | string[] | undefined) => (typeof v === "string" && v.startsWith("https://") ? v : undefined);
+// a file passed from another tool: only our own media links (the server checks they are the customer's)
+const one = (v: string | string[] | undefined) => (typeof v === "string" && v.startsWith("/api/media/ws/") && !v.includes("..") ? v : undefined);
 
 export default async function ToolPage({ params, searchParams }: Props) {
   const t = findTool((await params).tool);
@@ -26,7 +28,7 @@ export default async function ToolPage({ params, searchParams }: Props) {
           <span className="rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.model}</span>
         </PageHead>
       </div>
-      <ToolRun key={t.id} toolId={t.id} initial={{ image: one(q.image), video: one(q.video) }} />
+      <FullOnly><ToolRun key={t.id} toolId={t.id} initial={{ image: one(q.image), video: one(q.video) }} /></FullOnly>
     </>
   );
 }

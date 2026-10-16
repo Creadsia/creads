@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
-import { checkAccess } from "@/lib/access";
+import { SESSION_ENDED, session } from "@/lib/access";
 import { elevenlabs, VOICE_MODELS } from "@/lib/providers/elevenlabs";
-import { uploadMedia } from "@/lib/supabase";
+import { saveMedia } from "@/lib/media";
+import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 60;
 
 // Reads a line with a voice and stores the mp3 in our storage.
 export async function POST(req: Request) {
-  const denied = await checkAccess(req);
-  if (denied) return NextResponse.json({ error: denied }, { status: 401 });
+  const s = await session(req);
+  if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, 3000) : "";
   const voiceId = typeof body?.voiceId === "string" ? body.voiceId : "";
@@ -18,8 +18,9 @@ export async function POST(req: Request) {
   const lang = (body?.lang === "es" || body?.lang === "en") && /flash|turbo/.test(model) ? body.lang : undefined;
   if (text.length < 2 || !voiceId) return NextResponse.json({ error: "Elige una voz y escribe el texto." }, { status: 400 });
   try {
+    if (!(await canUseVoice(s.user.workspace, voiceId))) return NextResponse.json({ error: "Esa voz no está en tu cuenta." }, { status: 403 });
     const { bytes, mime } = await elevenlabs.speak(voiceId, text, { model, lang });
-    const url = await uploadMedia(`audio/${randomUUID()}.mp3`, bytes, mime);
+    const url = await saveMedia(s.user.workspace, "audio", bytes, mime);
     return NextResponse.json({ url, chars: text.length });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "No se pudo generar la voz.";
