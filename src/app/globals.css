@@ -139,6 +139,14 @@ h3 {
 .marquee-up { animation: creads-rise var(--speed, 60s) linear infinite; }
 .marquee-down { animation: creads-rise var(--speed, 60s) linear infinite reverse; }
 
+/* Horizontal ticker (announcement bar). The track is drawn twice; pause on hover so it can be read. */
+@keyframes creads-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-x { animation: creads-slide var(--speed, 50s) linear infinite; }
+.marquee-x:hover { animation-play-state: paused; }
+
 .grad-text {
   background: var(--grad);
   -webkit-background-clip: text;
