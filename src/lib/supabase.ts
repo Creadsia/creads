@@ -1,6 +1,7 @@
 // Server-only helpers for Supabase (database REST + storage). The service key never reaches the browser.
 
-const BUCKET = "media";
+const BUCKET = "media"; // public: generated images and videos
+const PRIVATE = "admin"; // private: the owner's internal files (finance book)
 
 function env() {
   const url = process.env.SUPABASE_URL;
@@ -14,23 +15,23 @@ export function sbHeaders(key: string): Record<string, string> {
   return { apikey: key, ...(key.startsWith("eyJ") ? { authorization: `Bearer ${key}` } : {}) };
 }
 
-let bucketReady = false;
+const ready = new Set<string>();
 
-/** Creates the public `media` bucket the first time it is needed. */
-async function ensureBucket() {
-  if (bucketReady) return;
+/** Creates a storage bucket the first time it is needed. */
+async function ensureBucket(id = BUCKET, isPublic = true) {
+  if (ready.has(id)) return;
   const { url, key } = env();
   const res = await fetch(`${url}/storage/v1/bucket`, {
     method: "POST",
     headers: { ...sbHeaders(key), "content-type": "application/json" },
-    body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true, file_size_limit: 52428800 }),
+    body: JSON.stringify({ id, name: id, public: isPublic, file_size_limit: 52428800 }),
   });
   // 409 / "already exists" is fine.
   if (!res.ok && res.status !== 409) {
     const text = await res.text();
     if (!/already exists|Duplicate/i.test(text)) throw new Error(`Storage: no se pudo crear el bucket (${res.status}).`);
   }
-  bucketReady = true;
+  ready.add(id);
 }
 
 export function publicUrl(path: string) {
@@ -54,4 +55,34 @@ export async function uploadMedia(path: string, body: ArrayBuffer | Uint8Array, 
 export async function mediaExists(path: string) {
   const res = await fetch(publicUrl(path), { method: "HEAD" });
   return res.ok;
+}
+
+/** Reads a JSON file from the private bucket; null if it doesn't exist yet. */
+export async function readPrivateJSON<T>(path: string): Promise<T | null> {
+  await ensureBucket(PRIVATE, false);
+  const { url, key } = env();
+  const res = await fetch(`${url}/storage/v1/object/${PRIVATE}/${path}`, { headers: sbHeaders(key), cache: "no-store" });
+  if (res.status === 404 || res.status === 400) return null;
+  if (!res.ok) throw new Error(`Storage: no se pudo leer ${path} (${res.status}).`);
+  return (await res.json()) as T;
+}
+
+/** Writes a JSON file to the private bucket (replacing it). */
+export async function writePrivateJSON(path: string, data: unknown) {
+  await ensureBucket(PRIVATE, false);
+  const { url, key } = env();
+  const res = await fetch(`${url}/storage/v1/object/${PRIVATE}/${path}`, {
+    method: "POST",
+    headers: { ...sbHeaders(key), "content-type": "application/json", "x-upsert": "true", "cache-control": "no-cache" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Storage: no se pudo guardar ${path} (${res.status}).`);
+}
+
+/** Rows from a database table through the REST API (server only). */
+export async function selectRows<T>(table: string, query: string): Promise<T[]> {
+  const { url, key } = env();
+  const res = await fetch(`${url}/rest/v1/${table}?${query}`, { headers: sbHeaders(key), cache: "no-store" });
+  if (!res.ok) throw new Error(`Base de datos: no se pudo leer ${table} (${res.status}).`);
+  return (await res.json()) as T[];
 }

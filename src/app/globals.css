@@ -19,6 +19,7 @@
   --caption: #ffd84d; /* the reel caption highlight — used inside the phone only */
   --good: #1f8f50;
   --bad: #c2413a;
+  --warn: #a96500;
   --grad: linear-gradient(120deg, #8b7cff 0%, #e06cc8 55%, #ff8a5c 100%);
   --rec: #ff5a4e;
   --font-display: "Archivo Variable", "Arial Narrow", system-ui, sans-serif;
@@ -38,6 +39,7 @@
     --accent-text: #b9b3fa;
     --good: #6fcf97;
     --bad: #f2877c;
+    --warn: #f0b35a;
     color-scheme: dark;
   }
 }
@@ -54,6 +56,7 @@
   --accent-text: #b9b3fa;
   --good: #6fcf97;
   --bad: #f2877c;
+  --warn: #f0b35a;
   color-scheme: dark;
 }
 
@@ -71,6 +74,7 @@
   --color-rec: var(--rec);
   --color-good: var(--good);
   --color-bad: var(--bad);
+  --color-warn: var(--warn);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
 }
