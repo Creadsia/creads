@@ -283,6 +283,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   }
   const missingSheets = plan.characters.filter((c) => !c.image_url);
   const missingFrames = clips.filter((c) => !c.image_url);
+  const talkingDone = clips.filter((c) => c.status === "done" && Boolean(plan.shots[c.idx]?.dialogue?.line?.trim()));
   const toAnimate = clips.filter((c) => c.image_url && (c.status === "pending" || c.status === "failed"));
   const montar = (newMusic = false, partial = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial }));
   const est = m ? estimateStory({ characters: plan.characters.length, shots: plan.shots.length, videoSecondsPerShot: shotSecs(st.seconds / plan.shots.length), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds: st.seconds }) : null;
@@ -413,6 +414,13 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             <button type="button" disabled={busy.anim || !covers(toAnimate.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}
               onClick={() => many(toAnimate.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "anim")} className={btnCls}>
               {busy.anim ? "Enviando…" : `Animar ${toAnimate.length} tomas · ${price(toAnimate.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}`}
+            </button>
+          )}
+          {talkingDone.length > 0 && (
+            <button type="button" disabled={busy.reanim || busy.anim}
+              onClick={() => { if (window.confirm(`Se vuelven a animar ${talkingDone.length} tomas con diálogo (las mismas imágenes) para que hablen. ¿Seguir?`)) many(talkingDone.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "reanim"); }}
+              className={ghostCls}>
+              {busy.reanim ? "Enviando…" : `Re-animar las ${talkingDone.length} tomas con diálogo · ${price(talkingDone.reduce((a, c) => a + vidUsd(plan.shots[c.idx]?.seconds ?? 2.5), 0))}`}
             </button>
           )}
           {!sheetsReady && <span className="self-center text-sm text-muted">Primero crea los personajes.</span>}
