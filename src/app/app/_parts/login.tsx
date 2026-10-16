@@ -7,7 +7,8 @@ import ThemeToggle from "../../theme-toggle";
 const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal text-ink";
 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
-export default function Login({ mode }: { mode: "login" | "setup" | "missing" }) {
+export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
+  const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover">(initial);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -19,12 +20,13 @@ export default function Login({ mode }: { mode: "login" | "setup" | "missing" })
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (mode === "setup" && password !== password2) return setError("Las dos claves no coinciden.");
+    if ((mode === "setup" || mode === "recover") && password !== password2) return setError("Las dos claves no coinciden.");
     setBusy(true);
-    const res = await fetch(mode === "setup" ? "/api/auth/setup" : "/api/auth/login", {
+    const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? "/api/auth/recover" : "/api/auth/login";
+    const res = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : { email, password }),
+      body: JSON.stringify(mode === "setup" ? { email, password, name, code } : mode === "recover" ? { password, code } : { email, password }),
     });
     const d = await res.json().catch(() => ({}));
     if (res.ok) return window.location.reload();
@@ -46,11 +48,13 @@ export default function Login({ mode }: { mode: "login" | "setup" | "missing" })
       ) : (
         <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-line bg-surface p-6">
           <div className="flex flex-col gap-1">
-            <h1 className="font-display text-2xl font-extrabold">{mode === "setup" ? "Crea tu cuenta de dueño" : "Entrar a Creads"}</h1>
+            <h1 className="font-display text-2xl font-extrabold">{mode === "setup" ? "Crea tu cuenta de dueño" : mode === "recover" ? "Nueva clave del dueño" : "Entrar a Creads"}</h1>
             <p className="text-sm text-muted">
               {mode === "setup"
                 ? "Es la primera vez que se abre la plataforma. Esta cuenta tendrá acceso a todo y podrá invitar a otras personas."
-                : "Entra con tu correo y tu clave."}
+                : mode === "recover"
+                  ? "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador."
+                  : "Entra con tu correo y tu clave."}
             </p>
           </div>
           {mode === "setup" && (
@@ -59,16 +63,18 @@ export default function Login({ mode }: { mode: "login" | "setup" | "missing" })
               <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
             </label>
           )}
-          <label htmlFor="email" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-            Correo
-            <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={input} />
-          </label>
+          {mode !== "recover" && (
+            <label htmlFor="email" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+              Correo
+              <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={input} />
+            </label>
+          )}
           <label htmlFor="password" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-            Clave
-            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "setup" ? "new-password" : "current-password"} className={input} />
-            {mode === "setup" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
+            {mode === "recover" ? "Clave nueva" : "Clave"}
+            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} className={input} />
+            {mode !== "login" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
           </label>
-          {mode === "setup" && (
+          {(mode === "setup" || mode === "recover") && (
             <>
               <label htmlFor="password2" className="flex flex-col gap-1 text-sm font-semibold text-muted">
                 Repite la clave
@@ -77,15 +83,21 @@ export default function Login({ mode }: { mode: "login" | "setup" | "missing" })
               <label htmlFor="code" className="flex flex-col gap-1 text-sm font-semibold text-muted">
                 Clave de administrador de Vercel
                 <input id="code" type="password" required value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" className={input} />
-                <span className="text-xs font-normal">La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño.</span>
+                <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production)."}</span>
               </label>
             </>
           )}
           <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
-            {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : "Entrar"}
+            {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : "Entrar"}
           </button>
           {error && <p className="text-sm text-bad">{error}</p>}
-          {mode === "login" && <p className="text-xs text-muted">¿Olvidaste tu clave? Pídele al dueño de la cuenta que te dé una nueva.</p>}
+          {mode === "login" && (
+            <p className="text-xs text-muted">
+              ¿Olvidaste tu clave? Si eres parte de un equipo, pídele una nueva al dueño.{" "}
+              <button type="button" onClick={() => { setMode("recover"); setError(""); }} className="font-semibold text-accent-text underline">Soy el dueño</button>
+            </p>
+          )}
+          {mode === "recover" && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
         </form>
       )}
     </main>
