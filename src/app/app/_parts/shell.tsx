@@ -38,7 +38,7 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean };
+type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string };
 const NAV: { group?: string; items: Item[] }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true, full: true }] },
@@ -46,6 +46,7 @@ const NAV: { group?: string; items: Item[] }[] = [
     group: "Crear",
     items: [
       { href: "/app/crear", label: "Crear anuncio", icon: I.create },
+      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true, badge: "NUEVO" },
       { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
       { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
     ],
@@ -95,6 +96,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
                 <Icon d={it.icon} />
                 <span className="flex-1">{it.label}</span>
                 {it.soon && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted">PRONTO</span>}
+                {it.badge && <span className="rounded bg-[image:var(--grad)] px-1.5 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>}
               </Link>
             );
           })}

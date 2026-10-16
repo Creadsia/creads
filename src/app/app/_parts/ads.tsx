@@ -70,7 +70,9 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
           {rows.map((a) => {
-            const f = formatById(a.format ?? "ugc");
+            const story = a.format === "historia";
+            const f = story ? { name: "Historia animada", icon: "🎬" } : formatById(a.format ?? "ugc");
+            const href = story ? `/app/historias?id=${a.id}` : `/app/videos/${a.id}`;
             const [label, cls] = STATUS[a.status] ?? STATUS.draft;
             return (
               <li key={a.id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
@@ -79,7 +81,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                 </div>
                 <div className="flex flex-1 flex-col gap-1 p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <Link href={`/app/videos/${a.id}`} className="line-clamp-2 font-bold hover:underline">{a.title || "Sin título"}</Link>
+                    <Link href={href} className="line-clamp-2 font-bold hover:underline">{a.title || "Sin título"}</Link>
                     <button type="button" onClick={() => t.update(a.id, { favorite: !a.favorite })} aria-label={a.favorite ? "Quitar de favoritos" : "Agregar a favoritos"} className={a.favorite ? "text-warn" : "text-muted"}>★</button>
                   </div>
                   <span className="text-xs text-muted">{f.name} · {a.aspect ?? "9:16"} · {new Date(a.created_at).toLocaleDateString("es-CL")}</span>
@@ -94,7 +96,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                     </button>
                   )}
                   <div className="mt-auto flex items-center justify-between pt-2">
-                    <Link href={`/app/videos/${a.id}`} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
+                    <Link href={href} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
                     <DeleteButton onDelete={() => t.remove(a.id)} />
                   </div>
                 </div>

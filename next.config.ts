@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/montage": ffmpegFiles,
     "/api/review": ffmpegFiles,
+    "/api/historias/montar": ffmpegFiles,
     // voice samples are cleaned up (any audio or video → mono mp3) before cloning
     "/api/voices/clone": ["./node_modules/ffmpeg-static/ffmpeg"],
     // the tools measure uploaded videos and audio with FFmpeg before spending

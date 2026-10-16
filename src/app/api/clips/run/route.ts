@@ -63,7 +63,12 @@ export async function POST(req: Request) {
     let aspect = String(ad.aspect || "9:16") as AspectRatio;
     if (provider.id.startsWith("veo") && aspect !== "16:9") aspect = "9:16";
     const words = String(clip.text || "").split(/\s+/).filter(Boolean).length;
-    const seconds = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    // Animated stories: each shot lasts what the plan says (the montage trims it); the picture is the
+    // keyframe drawn from the character sheets, and the sound is the film's music, not the clip's.
+    const story = ad.format === "historia" ? (ad.settings as { plan?: { shots?: { seconds?: number }[] } } | null) : null;
+    if (story && !clip.image_url) return giveBack(NextResponse.json({ error: "Primero crea la imagen de esta toma." }, { status: 400 }));
+    const shotSecs = Number(story?.plan?.shots?.[Number(clip.idx)]?.seconds ?? 0);
+    const seconds = story ? Math.min(10, Math.max(4, Math.ceil(shotSecs + 0.6))) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // Charge before spending anything (the opening frame below already costs).
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
     const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
@@ -71,7 +76,7 @@ export async function POST(req: Request) {
     const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? nanoBananaPro.usdPerImage : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
-    await payFor(s.user, estimate, `Corte ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
+    await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
     charged = true; // paid or free, a failure below gives it back (a free redo gets its voucher back)
 
     let refs: MediaRef[] = [];
@@ -90,7 +95,7 @@ export async function POST(req: Request) {
     }
     if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
 
-    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: true, refs });
+    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story, refs });
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd });
     return NextResponse.json({ clip: row });

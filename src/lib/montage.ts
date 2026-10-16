@@ -237,6 +237,50 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
   return readFile(out);
 }
 
+/**
+ * Animated stories: every shot cut to its planned length (hard cuts, like the reference films), then the
+ * film's music underneath (lower while the narrator speaks) and a short fade at the end.
+ */
+export async function buildStory(dir: string, shots: { file: string; secs: number }[], aspect: string, music: string | null, narration: { file: string; at: number }[] = []) {
+  const [W, H] = frameSize(aspect);
+  const args: string[] = ["-y", "-v", "error"];
+  const parts: string[] = [];
+  let n = 0;
+  const total = shots.reduce((a, x) => a + x.secs, 0);
+  shots.forEach((sh, i) => {
+    const vi = n++;
+    args.push("-i", sh.file);
+    parts.push(`[${vi}:v]fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,tpad=stop_mode=clone:stop_duration=10,trim=duration=${sh.secs.toFixed(3)},setpts=PTS-STARTPTS[v${i}]`);
+  });
+  const fadeAt = Math.max(0, total - 0.6).toFixed(3);
+  parts.push(`${shots.map((_, i) => `[v${i}]`).join("")}concat=n=${shots.length}:v=1:a=0,fade=t=out:st=${fadeAt}:d=0.6[vo]`);
+  const T = total.toFixed(3);
+  const fadeA = Math.max(0, total - 1.5).toFixed(3);
+  if (music) {
+    const mi = n++;
+    args.push("-stream_loop", "-1", "-i", music);
+    parts.push(`[${mi}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${T},volume=${narration.length ? 0.35 : 1},afade=t=out:st=${fadeA}:d=1.5[mus]`);
+  }
+  // each narrator line starts with its shot
+  narration.forEach((l, i) => {
+    const ni = n++;
+    args.push("-i", l.file);
+    const ms = Math.round(l.at * 1000);
+    parts.push(`[${ni}:a]aresample=44100,aformat=channel_layouts=stereo,adelay=${ms}|${ms}[n${i}]`);
+  });
+  const lines = narration.map((_, i) => `[n${i}]`).join("");
+  if (narration.length) parts.push(`${lines}amix=inputs=${narration.length}:duration=longest:normalize=0,apad=whole_dur=${T},atrim=duration=${T}[nar]`);
+  if (music && narration.length) parts.push(`[mus][nar]amix=inputs=2:duration=first:normalize=0[ao]`);
+  else if (music) parts.push(`[mus]anull[ao]`);
+  else if (narration.length) parts.push(`[nar]anull[ao]`);
+  else { const zi = n++; args.push("-f", "lavfi", "-t", T, "-i", "anullsrc=r=44100:cl=stereo"); parts.push(`[${zi}:a]anull[ao]`); }
+  const out = path.join(dir, "final.mp4");
+  args.push("-filter_complex", parts.join(";"), "-map", "[vo]", "-map", "[ao]", "-t", T,
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out);
+  await ff(args, 280_000);
+  return { bytes: await readFile(out), seconds: total };
+}
+
 /** Any audio or video → a clean mono mp3 for voice cloning (first `maxSec` seconds). Returns its length. */
 export async function voiceSample(file: string, out: string, maxSec = 180) {
   await ff(["-y", "-i", file, "-vn", "-ac", "1", "-ar", "44100", "-b:a", "128k", "-t", String(maxSec), out], 90_000);
