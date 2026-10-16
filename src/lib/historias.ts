@@ -130,6 +130,7 @@ Rules:
 - "motion" says in English what moves during the shot (camera move + action), simple enough for 4 seconds of video. No text, captions, logos or watermarks in any image.
 - Avoid violence, weapons, real brands and anything unsafe for a general audience.
 - "es" is one short line in Spanish describing the shot for the customer.
+- Be concise: each "image" at most 55 words, each "motion" at most 20 words, each character "look" at most 50 words. Plain JSON, no comments.
 - "music" is a music prompt in English for the soundtrack (genre, mood, tempo, instruments, how it builds), instrumental.
 - "title" and "logline" in Spanish${o.lang === "es-CL" ? " from Chile" : ""}.${o.lang === "es-CL" ? "\n- The story happens in Chile unless the idea says otherwise: Chilean places, streets, schools, homes and faces, so a Chilean audience feels it is theirs." : ""}
 

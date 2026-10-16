@@ -7,7 +7,7 @@ import { LANGS, LENGTHS, type StoryPlan, type StorySettings, STYLES, motionPromp
 import { loadStory } from "@/lib/historia-db";
 import { canUseVoice } from "@/lib/voices";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const ASPECTS = ["9:16", "16:9", "1:1"];
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const model = findVideo(String(b?.model ?? ""))?.configured() ? String(b.model) : "kling-3.0";
   const voiceId = narrator && typeof b?.voiceId === "string" && (await canUseVoice(s.user.workspace, b.voiceId)) ? b.voiceId : null;
   try {
-    const raw = parseJSON<StoryPlan>(await textAI.complete({ prompt: planPrompt({ idea, style, seconds, lang, narrator, aspect }), json: true }));
+    const raw = parseJSON<StoryPlan>(await textAI.complete({ prompt: planPrompt({ idea, style, seconds, lang, narrator, aspect }), json: true, maxTokens: 20000 }));
     const plan = tidyPlan(raw, seconds);
     if (plan.shots.length < 4) throw new Error("La IA no armó suficientes tomas. Intenta de nuevo con más detalle.");
     const settings: StorySettings = { kind: "historia", idea, style, seconds, lang, narrator, voiceId, plan, niche: typeof b?.niche === "string" ? b.niche.slice(0, 40) : undefined };

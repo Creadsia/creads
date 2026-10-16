@@ -92,7 +92,7 @@ export interface TextAI {
   id: string; // e.g. "claude"
   configured(): boolean;
   /** One prompt in, text out. Images (frames, contact sheets) are optional. */
-  complete(opts: { system?: string; prompt: string; images?: string[]; json?: boolean }): Promise<string>;
+  complete(opts: { system?: string; prompt: string; images?: string[]; json?: boolean; maxTokens?: number }): Promise<string>;
 }
 
 export interface VoiceSample { bytes: Uint8Array; mime: string; filename: string }

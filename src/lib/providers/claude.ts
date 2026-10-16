@@ -10,7 +10,7 @@ export const claude: TextAI = {
   id: "claude",
   configured: () => Boolean(process.env.ANTHROPIC_API_KEY),
 
-  async complete({ system, prompt, images, json }) {
+  async complete({ system, prompt, images, json, maxTokens }) {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error("Falta ANTHROPIC_API_KEY en Vercel.");
 
@@ -28,7 +28,7 @@ export const claude: TextAI = {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 8000,
+        max_tokens: Math.min(32000, Math.max(1000, maxTokens ?? 8000)),
         ...(system ? { system } : {}),
         messages: [{ role: "user", content }],
       }),
