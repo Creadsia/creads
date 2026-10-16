@@ -160,10 +160,10 @@ export default function Landing({ t }: { t: Content }) {
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Language switch: both options visible, the current one filled. */}
             <nav aria-label="Language" className="flex items-center rounded-full border border-line bg-surface p-0.5 text-xs font-bold">
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="mx-1.5 h-4 w-4 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="mx-1.5 hidden h-4 w-4 text-muted sm:block" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
               </svg>
@@ -187,7 +187,7 @@ export default function Landing({ t }: { t: Content }) {
               )}
             </nav>
             <ThemeToggle lang={t.lang} />
-            <a href="#pricing" className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90">
+            <a href="#pricing" className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 sm:px-4">
               {t.nav.cta}
             </a>
           </div>
