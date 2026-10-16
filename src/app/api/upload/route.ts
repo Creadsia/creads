@@ -13,7 +13,7 @@ const KINDS: Record<string, string> = {
 
 // Uploads a face photo, product photo or audio sample to our storage and returns its link.
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

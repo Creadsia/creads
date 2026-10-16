@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
-import { hasAccessCookies } from "@/lib/access";
-import Gate from "./_parts/gate";
+import { countUsers } from "@/lib/auth";
+import { currentUser } from "@/lib/admin";
+import Login from "./_parts/login";
 import Shell from "./_parts/shell";
 
 export const metadata: Metadata = {
@@ -10,9 +10,20 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-// The customer platform. Until accounts exist (Phase 2), an access code opens it.
+// The customer platform: only signed-in accounts get in.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const jar = await cookies();
-  const ok = hasAccessCookies((n) => jar.get(n)?.value);
-  return <div lang="es">{ok ? <Shell>{children}</Shell> : <Gate />}</div>;
+  const user = await currentUser();
+  if (user) {
+    return (
+      <div lang="es">
+        <Shell user={{ email: user.email, name: user.name, role: user.role }}>{children}</Shell>
+      </div>
+    );
+  }
+  const n = await countUsers().catch(() => 1);
+  return (
+    <div lang="es">
+      <Login mode={n === -1 ? "missing" : n === 0 ? "setup" : "login"} />
+    </div>
+  );
 }

@@ -132,3 +132,31 @@ begin
   end loop;
 end $$;
 create index if not exists clips_ad on public.clips (ad_id, idx);
+
+-- ============================================================================
+-- Accounts: email + password sign-in (scrypt hashes) and sessions (only the
+-- SHA-256 of each session token is stored). Roles: owner, admin, member.
+-- ============================================================================
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  name text,
+  password_hash text not null,
+  role text not null default 'member' check (role in ('owner','admin','member')),
+  workspace text not null default 'main',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  last_login timestamptz
+);
+create table if not exists public.sessions (
+  id text primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  expires_at timestamptz not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists sessions_user on public.sessions (user_id);
+alter table public.users enable row level security;
+alter table public.sessions enable row level security;
+grant all on table public.users to service_role;
+grant all on table public.sessions to service_role;

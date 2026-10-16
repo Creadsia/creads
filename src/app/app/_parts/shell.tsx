@@ -21,6 +21,9 @@ const I = {
   brain: "M12 5a3 3 0 0 0-5.6 1.5A3 3 0 0 0 5 12a3 3 0 0 0 2 5.5A3 3 0 0 0 12 19M12 5a3 3 0 0 1 5.6 1.5A3 3 0 0 1 19 12a3 3 0 0 1-2 5.5A3 3 0 0 1 12 19M12 5v14",
   lab: "M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3M7.5 14h9",
   menu: "M4 7h16M4 12h16M4 17h16",
+  team: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm-6 9a6 6 0 0 1 12 0M16.5 11a3 3 0 1 0 0-6M18 20a6 6 0 0 0-2.5-4.8",
+  key: "M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7Zm1 2h.01",
+  chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
 };
 
@@ -32,7 +35,8 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-const NAV: { group?: string; items: { href: string; label: string; icon: string; soon?: boolean }[] }[] = [
+type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean };
+const NAV: { group?: string; items: Item[] }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true }] },
   {
@@ -60,16 +64,25 @@ const NAV: { group?: string; items: { href: string; label: string; icon: string;
   },
 ];
 
-function Nav({ path, onPick }: { path: string; onPick?: () => void }) {
+export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member" }
+
+function navFor(role: ShellUser["role"]) {
+  const account: Item[] = [{ href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
+  if (role !== "member") account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
+  if (role === "owner") account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
+  return [...NAV, { group: "Cuenta", items: account }];
+}
+
+function Nav({ path, role, onPick }: { path: string; role: ShellUser["role"]; onPick?: () => void }) {
   return (
     <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
-      {NAV.map((g, i) => (
+      {navFor(role).map((g, i) => (
         <div key={i} className="flex flex-col gap-0.5">
           {g.group && <span className="px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}</span>}
           {g.items.map((it) => {
             const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
             return (
-              <Link key={it.href} href={it.href} onClick={onPick} aria-current={on ? "page" : undefined}
+              <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
                 <Icon d={it.icon} />
                 <span className="flex-1">{it.label}</span>
@@ -103,11 +116,13 @@ function Status() {
 }
 
 async function logout() {
-  await fetch("/api/access", { method: "DELETE" });
+  await fetch("/api/auth/logout", { method: "POST" });
   window.location.href = "/app";
 }
 
-export default function Shell({ children }: { children: React.ReactNode }) {
+const ROLE: Record<ShellUser["role"], string> = { owner: "Dueño", admin: "Administrador", member: "Miembro" };
+
+export default function Shell({ children, user }: { children: React.ReactNode; user: ShellUser }) {
   const path = usePathname() ?? "/app";
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [path]);
@@ -122,8 +137,11 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <p className="mt-1 text-xs text-muted">Durante la beta no se descuentan créditos.</p>
       </div>
       <Status />
-      <div className="flex items-center justify-between">
-        <button type="button" onClick={logout} className="text-xs text-muted hover:text-ink">Salir</button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-semibold">{user.name || user.email}</span>
+          <span className="truncate text-xs text-muted">{ROLE[user.role]} · <button type="button" onClick={logout} className="hover:text-ink hover:underline">Salir</button></span>
+        </div>
         <ThemeToggle lang="es" />
       </div>
     </div>
@@ -134,7 +152,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* desktop menu */}
       <aside className="sticky top-0 hidden h-screen flex-col gap-6 overflow-y-auto border-r border-line bg-surface px-3 py-5 lg:flex">
         <div className="px-2"><Logo size={26} href="/app" gid="mark-aside" /></div>
-        <div className="flex-1"><Nav path={path} /></div>
+        <div className="flex-1"><Nav path={path} role={user.role} /></div>
         {footer}
       </aside>
 
@@ -153,7 +171,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               <Logo size={24} href="/app" gid="mark-drawer" />
               <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="grid h-9 w-9 place-items-center rounded-lg border border-line"><Icon d={I.close} /></button>
             </div>
-            <div className="flex-1"><Nav path={path} onPick={() => setOpen(false)} /></div>
+            <div className="flex-1"><Nav path={path} role={user.role} onPick={() => setOpen(false)} /></div>
             {footer}
           </div>
         </div>

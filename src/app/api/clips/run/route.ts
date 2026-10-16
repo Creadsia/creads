@@ -21,7 +21,7 @@ interface Settings {
 
 /** Starts (or restarts) the generation of one clip. Spends money: the studio asks before calling it. */
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "");

@@ -5,7 +5,7 @@ import { falPricing } from "@/lib/providers/fal";
 
 // The studio's model list: which models are connected and what they cost (fal prices are live when available).
 export async function GET(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
   const live = await falPricing();

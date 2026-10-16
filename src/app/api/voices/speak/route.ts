@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 // Reads a line with a voice and stores the mp3 in our storage.
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === "string" ? body.text.trim().slice(0, 3000) : "";

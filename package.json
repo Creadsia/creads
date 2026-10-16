@@ -12,6 +12,7 @@
     "@fontsource-variable/archivo": "^5.2.8",
     "@fontsource-variable/hanken-grotesk": "^5.2.8",
     "@fontsource-variable/inter": "^5.2.8",
+    "ffmpeg-static": "^5.2.0",
     "next": "^15.5.28",
     "react": "19.1.0",
     "react-dom": "19.1.0"

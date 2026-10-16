@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 // Instant voice clone from an uploaded sample. Requires an explicit consent tick from the uploader.
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const form = await req.formData().catch(() => null);
   const name = String(form?.get("name") ?? "").trim().slice(0, 60);

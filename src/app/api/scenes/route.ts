@@ -10,7 +10,7 @@ export const maxDuration = 120;
 
 // Step 3 of "Crear anuncio": Claude directs every cut, then each cut gets its video prompt.
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   if (!textAI.configured()) return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY en Vercel." }, { status: 503 });
 

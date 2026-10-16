@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** Checks one clip with its provider; when it's ready, copies the video to our storage. */
 export async function GET(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id") ?? "";
   try {

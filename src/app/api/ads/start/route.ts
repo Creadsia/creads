@@ -5,7 +5,7 @@ import { findVideo } from "@/lib/providers";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const b = await req.json().catch(() => null);
   const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 8) : [];

@@ -11,7 +11,7 @@ const fail = (err: unknown) =>
 
 // GET lists the rows of a platform table; POST adds one.
 export async function GET(req: Request, { params }: { params: Promise<{ table: string }> }) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const { table } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ table: s
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ table: string }> }) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const { table } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });

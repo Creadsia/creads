@@ -10,7 +10,7 @@ const fail = (err: unknown) =>
 type Ctx = { params: Promise<{ table: string; id: string }> };
 
 export async function PATCH(req: Request, { params }: Ctx) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const { table, id } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });
@@ -24,7 +24,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(req: Request, { params }: Ctx) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
   const { table, id } = await params;
   if (!isTable(table)) return NextResponse.json({ error: "Tabla desconocida." }, { status: 404 });

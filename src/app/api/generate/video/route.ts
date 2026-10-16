@@ -11,7 +11,7 @@ export const maxDuration = 120;
 // into our storage once and its public link returned. Costs real money: the studio shows the price first.
 
 export async function POST(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
   const body = await req.json().catch(() => null);
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const denied = checkAccess(req);
+  const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
   const q = new URL(req.url).searchParams;

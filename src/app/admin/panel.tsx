@@ -123,8 +123,8 @@ export default function AdminPanel() {
   const setCfg = (fn: (c: Config) => void) => change((d) => { fn(d.config); return d; });
 
   async function logout() {
-    await fetch("/api/admin/login", { method: "DELETE" });
-    window.location.reload();
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/app";
   }
 
   return (
