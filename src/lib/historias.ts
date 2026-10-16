@@ -67,8 +67,14 @@ export interface StoryShot {
   image: string; // the keyframe: what we see, in English
   motion: string; // what moves during the shot, in English
   narration?: string; // narrator line for this shot (spoken language), optional
+  dialogue?: { speaker: string; line: string } | null; // a character speaks on camera (lip-synced)
   es: string; // one line in Spanish so the customer can follow the story
 }
+
+/** The shot has a line spoken on camera. */
+export const speaks = (s: StoryShot) => Boolean(s.dialogue?.line?.trim() && s.dialogue.speaker);
+/** Seconds a spoken line needs (≈ 2.4 words per second, plus a breath). */
+export const lineSeconds = (line: string) => Math.ceil((line.trim().split(/\s+/).filter(Boolean).length / 2.4 + 0.8) * 2) / 2;
 
 export interface StoryPlan {
   title: string;
@@ -85,10 +91,12 @@ export interface StorySettings {
   seconds: number; // target length
   lang: StoryLang;
   narrator: boolean;
+  dialogue?: boolean; // characters speak on camera
   voiceId?: string | null;
   plan: StoryPlan;
   music_url?: string | null;
   narration_url?: string | null;
+  subtitles?: boolean;
   niche?: string;
 }
 
@@ -107,7 +115,7 @@ export const voiceLang = (l: StoryLang) => (l === "en" ? "en" : "es");
 /** How many shots for a film of this length (the reference films cut every 2–3 s). */
 export const shotsFor = (seconds: number) => Math.max(8, Math.min(24, Math.round(seconds / 2.6)));
 
-export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: StoryLang; narrator: boolean; aspect: string }) {
+export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: StoryLang; narrator: boolean; dialogue?: boolean; aspect: string }) {
   const st = styleById(o.style);
   const n = shotsFor(o.seconds);
   const spoken = langById(o.lang).spoken;
@@ -120,7 +128,8 @@ ${o.idea.slice(0, 3000)}
 
 Visual style: ${st.name} — ${st.prompt}.
 Target length: ${o.seconds} seconds, in exactly ${n} shots of 1.5 to 4 seconds each (the seconds must add up to about ${o.seconds}).
-${o.narrator ? `There is a narrator. Write short narrator lines in ${spoken}: at most 2.3 words per second of each shot, and leave some shots without narration so the music breathes.` : "There is NO dialogue and NO narrator: the story is told only with images and music. Leave every \"narration\" empty."}
+${o.narrator ? `There is a narrator. Write short narrator lines in ${spoken}: at most 2.3 words per second of each shot, and leave some shots without narration so the music breathes.` : "There is NO narrator: leave every \"narration\" empty."}
+${o.dialogue ? `Characters SPEAK on camera. In about a third to a half of the shots (the key moments), one character says a short line in ${spoken}: "dialogue": {"speaker": "<character key>", "line": "<what they say>"}. One speaker per shot, at most 12 words, and the shot must last at least (words ÷ 2.4 + 1) seconds (up to 5 s). Frame those shots so the speaker's face and mouth are clearly visible. Lines must sound real and emotional, never like an ad. Other shots: "dialogue": null.${o.narrator ? " Never put narration and dialogue in the same shot." : ""}` : "Nobody speaks on camera: every \"dialogue\" is null."}
 
 Rules:
 - Strong emotional arc in three acts: a hook in the first 2 seconds, a conflict, a turning point and a satisfying ending. Think viral "based on a true story" shorts.
@@ -135,7 +144,7 @@ Rules:
 - "title" and "logline" in Spanish${o.lang === "es-CL" ? " from Chile" : ""}.${o.lang === "es-CL" ? "\n- The story happens in Chile unless the idea says otherwise: Chilean places, streets, schools, homes and faces, so a Chilean audience feels it is theirs." : ""}
 
 JSON shape:
-{"title":"","logline":"","music":"","characters":[{"key":"boy","name":"","look":""}],"shots":[{"idx":0,"seconds":2.5,"shot":"","characters":["boy"],"image":"","motion":"","narration":"","es":""}]}`;
+{"title":"","logline":"","music":"","characters":[{"key":"boy","name":"","look":""}],"shots":[{"idx":0,"seconds":2.5,"shot":"","characters":["boy"],"image":"","motion":"","narration":"","dialogue":null,"es":""}]}`;
 }
 
 /** Cleans what Claude sends back: valid keys, lengths that add up, at most 24 shots. */
@@ -153,6 +162,9 @@ export function tidyPlan(p: StoryPlan, seconds: number): StoryPlan {
     image: String(s.image).slice(0, 1200),
     motion: String(s.motion ?? "").slice(0, 500),
     narration: String(s.narration ?? "").slice(0, 300),
+    dialogue: s.dialogue && keys.has(String(s.dialogue.speaker ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "")) && String(s.dialogue.line ?? "").trim()
+      ? { speaker: String(s.dialogue.speaker).toLowerCase().replace(/[^a-z0-9_-]/g, ""), line: String(s.dialogue.line).trim().slice(0, 160) }
+      : null,
     es: String(s.es ?? "").slice(0, 200),
   }));
   // scale the lengths so the film lasts what the customer asked for
@@ -161,6 +173,8 @@ export function tidyPlan(p: StoryPlan, seconds: number): StoryPlan {
     const k = seconds / total;
     shots = shots.map((s) => ({ ...s, seconds: Math.round(Math.min(5, Math.max(1.5, s.seconds * k)) * 10) / 10 }));
   }
+  // a spoken line needs its time (up to 8 s; the film gets a bit longer rather than cutting words)
+  shots = shots.map((s) => (s.dialogue ? { ...s, seconds: Math.min(8, Math.max(s.seconds, lineSeconds(s.dialogue.line))) } : s));
   return { title: String(p.title ?? "Historia").slice(0, 80), logline: String(p.logline ?? "").slice(0, 300), music: String(p.music ?? "").slice(0, 600), characters, shots };
 }
 
@@ -193,9 +207,17 @@ ${who ? `Characters:\n${who}` : ""}
 Keep every character exactly as in their reference sheet. Cinematic, emotional, high detail. No text, no captions, no logos, no watermark, no split panels.`;
 }
 
-export function motionPrompt(shot: StoryShot, style: StyleId) {
+export function motionPrompt(shot: StoryShot, style: StyleId, plan?: StoryPlan, lang: StoryLang = "es-CL") {
   const st = styleById(style);
-  return `${shot.motion || "Subtle natural movement, slow cinematic camera push-in."} Keep the style (${st.name}: ${st.prompt}) and the characters exactly as in the first frame. Smooth, cinematic motion. No text or captions. No dialogue, no lip movement unless the shot asks for it.`.slice(0, 2400);
+  const base = `${shot.motion || "Subtle natural movement, slow cinematic camera push-in."} Keep the style (${st.name}: ${st.prompt}) and the characters exactly as in the first frame. Smooth, cinematic motion. No text or captions.`;
+  if (shot.dialogue && speaks(shot)) {
+    const who = plan?.characters.find((c) => c.key === shot.dialogue!.speaker);
+    const name = who ? `${who.name} (${who.look.split(/[.,]/)[0]})` : shot.dialogue.speaker;
+    return `${base}
+${name} looks natural and speaks this line out loud, with clear lip sync and a voice that fits their age and gender, in ${langById(lang).spoken}: "${shot.dialogue.line}"
+Only ${who?.name ?? "this character"} speaks; everyone else stays silent. No background music, no other voices.`.slice(0, 2400);
+  }
+  return `${base} No dialogue, no lip movement.`.slice(0, 2400);
 }
 
 /** Rough provider cost of a whole film, to show before starting. */

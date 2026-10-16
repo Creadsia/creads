@@ -9,7 +9,7 @@ import { refreshCredits, useCredits } from "../_parts/use-credits";
 
 // "Historias animadas": idea → story and shots → characters → shot images → animation → film.
 
-interface VideoModel { id: string; label: string; configured: boolean; usdPerSecond: number; seconds: number[] }
+interface VideoModel { id: string; label: string; configured: boolean; usdPerSecond: number; seconds: number[]; silent?: boolean }
 interface Voice { id: string; name: string; category: string }
 interface Ad { id: string; title: string; aspect: string; model: string; status: string; final_url: string | null; settings: StorySettings; created_at: string }
 interface Avatar { id: string; name: string; image_url: string | null }
@@ -51,6 +51,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
   const [aspect, setAspect] = useState("9:16");
   const [lang, setLang] = useState<StoryLang>("es-CL");
   const [narrator, setNarrator] = useState(false);
+  const [dialogue, setDialogue] = useState(true);
   const [voiceId, setVoiceId] = useState("");
   const [niche, setNiche] = useState("");
   const [model, setModel] = useState("");
@@ -82,7 +83,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
     e.preventDefault();
     setBusy(true); setErr("");
     try {
-      const d = await post("/api/historias", { idea, style, seconds, aspect, lang, narrator, voiceId: narrator ? voiceId : null, model, niche });
+      const d = await post("/api/historias", { idea, style, seconds, aspect, lang, narrator, dialogue, voiceId: narrator ? voiceId : null, model, niche });
       onOpen(d.id);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "No se pudo escribir la historia.");
@@ -140,8 +141,9 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Sonido">
             <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={!narrator} onChange={() => setNarrator(false)} /> Solo música (como los videos virales)</label>
-              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={narrator} onChange={() => setNarrator(true)} /> Música + narrador</label>
+              <label className="flex items-start gap-2 text-sm font-semibold"><input type="checkbox" checked={dialogue} onChange={(e) => setDialogue(e.target.checked)} className="mt-1" /> <span>Los personajes hablan <span className="font-normal text-muted">(diálogos con voz y labios sincronizados, en los momentos clave)</span></span></label>
+              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={!narrator} onChange={() => setNarrator(false)} /> {dialogue ? "Sin narrador" : "Solo música (como los videos virales)"}</label>
+              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={narrator} onChange={() => setNarrator(true)} /> Con narrador (voz en off)</label>
               {narrator && (
                 <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} className={inputCls} aria-label="Voz del narrador">
                   <option value="">Elige la voz del narrador</option>
@@ -150,9 +152,9 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
               )}
             </div>
           </Field>
-          <Field label="Modelo de animación" hint="Puedes cambiarlo después, antes de animar.">
+          <Field label="Modelo de animación" hint={dialogue ? "Para que hablen, usa un modelo con voz: Kling 3.0, Seedance o Veo." : "Puedes cambiarlo después, antes de animar."}>
             <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-              {models.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+              {models.filter((x) => !dialogue || !x.silent).map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
             </select>
           </Field>
         </div>
@@ -202,6 +204,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [tech, setTech] = useState(false);
   const [music, setMusic] = useState("");
   const [avatars, setAvatars] = useState<Avatar[]>([]);
+  const [subtitles, setSubtitles] = useState(true);
   const { price, covers } = useCredits();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -276,7 +279,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const missingSheets = plan.characters.filter((c) => !c.image_url);
   const missingFrames = clips.filter((c) => !c.image_url);
   const toAnimate = clips.filter((c) => c.image_url && (c.status === "pending" || c.status === "failed"));
-  const montar = (newMusic = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music }));
+  const montar = (newMusic = false) => run("film", () => post("/api/historias/montar", { adId: id, newMusic, music, subtitles }));
   const est = m ? estimateStory({ characters: plan.characters.length, shots: plan.shots.length, videoSecondsPerShot: shotSecs(st.seconds / plan.shots.length), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds: st.seconds }) : null;
 
   return (
@@ -305,6 +308,18 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
               <span className="font-mono text-xs text-muted">#{i + 1}</span>
               <div className="flex min-w-0 flex-col gap-1">
                 <input value={sh.es} onChange={(e) => edit((p) => { p.shots[i].es = e.target.value; return p; })} className="bg-transparent text-sm outline-none" aria-label={`Toma ${i + 1}`} />
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <select value={sh.dialogue?.speaker ?? ""} aria-label={`Quién habla en la toma ${i + 1}`}
+                    onChange={(e) => edit((p) => { const k = e.target.value; p.shots[i].dialogue = k ? { speaker: k, line: p.shots[i].dialogue?.line ?? "" } : null; return p; })}
+                    className="rounded-md border border-line bg-surface-2 px-1.5 py-0.5 text-xs">
+                    <option value="">Nadie habla</option>
+                    {plan.characters.map((c) => <option key={c.key} value={c.key}>Habla {c.name}</option>)}
+                  </select>
+                  {sh.dialogue && (
+                    <input value={sh.dialogue.line} onChange={(e) => edit((p) => { p.shots[i].dialogue = { speaker: p.shots[i].dialogue!.speaker, line: e.target.value }; return p; })}
+                      placeholder="Qué dice (máx. 12 palabras)" className={`${inputCls} min-w-0 flex-1 py-1 text-sm font-semibold`} aria-label={`Diálogo toma ${i + 1}`} />
+                  )}
+                </div>
                 {st.narrator && <input value={sh.narration ?? ""} onChange={(e) => edit((p) => { p.shots[i].narration = e.target.value; return p; })} placeholder="(sin narración)" className="bg-transparent text-sm italic text-accent-text outline-none" aria-label={`Narración toma ${i + 1}`} />}
                 {tech && (
                   <>
@@ -372,10 +387,11 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           )}
           {!sheetsReady && <span className="self-center text-sm text-muted">Primero crea los personajes.</span>}
           {generating.length > 0 && <span className="self-center text-sm text-muted">Animando {generating.length} tomas… (2 a 5 min)</span>}
+          {m?.silent && plan.shots.some((x) => x.dialogue?.line) && <span className="self-center text-sm text-warn">{m.label} no genera voz: para las tomas con diálogo cambia a Kling 3.0, Seedance o Veo.</span>}
         </div>
         <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {clips.map((c) => (
-            <ShotCard key={c.id} n={c.idx + 1} aspect={ad.aspect} text={plan.shots[c.idx]?.es ?? ""} secs={plan.shots[c.idx]?.seconds ?? 0} clip={c}
+            <ShotCard key={c.id} n={c.idx + 1} aspect={ad.aspect} text={plan.shots[c.idx]?.es ?? ""} line={plan.shots[c.idx]?.dialogue?.line ?? ""} secs={plan.shots[c.idx]?.seconds ?? 0} clip={c}
               busy={Boolean(busy[`f:${c.idx}`] || busy[`v:${c.idx}`])} canFrame={sheetsReady}
               framePrice={price(imgUsd)} videoPrice={price(vidUsd(plan.shots[c.idx]?.seconds ?? 2.5))}
               onFrame={(extra) => frame(c.idx, extra)} onAnimate={() => animate(c.id, c.idx)} />
@@ -389,6 +405,9 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         <Field label="Música" hint="Descríbela en inglés o español: estilo, ánimo, cómo crece.">
           <textarea value={music} onChange={(e) => setMusic(e.target.value)} rows={2} className={inputCls} />
         </Field>
+        {plan.shots.some((x) => x.dialogue?.line || x.narration) && (
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={subtitles} onChange={(e) => setSubtitles(e.target.checked)} /> Subtítulos en pantalla con lo que dicen</label>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={!allDone || busy.film} onClick={() => montar(false)} className={btnCls}>
             {busy.film ? "Armando la película… (≈ 1 min)" : ad.final_url ? "Volver a armar" : "Armar la película"}
@@ -447,8 +466,8 @@ function CharacterCard({ name, look, image, busy, priceLabel, avatars, avatarId,
   );
 }
 
-function ShotCard({ n, aspect, text, secs, clip, busy, canFrame, framePrice, videoPrice, onFrame, onAnimate }: {
-  n: number; aspect: string; text: string; secs: number; clip: Clip; busy: boolean; canFrame: boolean; framePrice: string; videoPrice: string;
+function ShotCard({ n, aspect, text, line, secs, clip, busy, canFrame, framePrice, videoPrice, onFrame, onAnimate }: {
+  n: number; aspect: string; text: string; line: string; secs: number; clip: Clip; busy: boolean; canFrame: boolean; framePrice: string; videoPrice: string;
   onFrame: (extra?: string) => void; onAnimate: () => void;
 }) {
   const img = useMedia(clip.image_url);
@@ -466,6 +485,7 @@ function ShotCard({ n, aspect, text, secs, clip, busy, canFrame, framePrice, vid
         {animating && <span className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-[11px] text-white">Animando…</span>}
       </div>
       <p className="line-clamp-2 text-xs text-muted">{text}</p>
+      {line && <p className="line-clamp-2 text-xs font-semibold">🗣 «{line}»{clip.status === "done" ? <span className="block font-normal text-muted">Si agregaste o cambiaste el diálogo después de animar, aprieta Re-animar.</span> : null}</p>}
       {clip.status === "failed" && clip.error && <p className="line-clamp-3 text-[11px] text-bad">{clip.error}</p>}
       <div className="flex flex-wrap gap-1.5">
         {!clip.image_url ? (

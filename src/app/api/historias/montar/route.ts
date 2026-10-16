@@ -3,13 +3,13 @@ import path from "node:path";
 import { writeFile } from "node:fs/promises";
 import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
-import { buildStory, download, workdir } from "@/lib/montage";
+import { buildStory, download, probe, workdir } from "@/lib/montage";
 import { compose, elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { loadStory, saveSettings } from "@/lib/historia-db";
-import { voiceLang } from "@/lib/historias";
+import { speaks, voiceLang } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 300;
@@ -17,7 +17,7 @@ export const maxDuration = 300;
 const USD_PER_CHAR = 0.00022; // same as "Voz IA"
 const musicUsd = (secs: number) => +((0.15 * Math.max(secs, 15)) / 60).toFixed(3);
 
-// POST {adId, newMusic?, music?}: makes the soundtrack (once; again with newMusic), the narrator's lines
+// POST {adId, newMusic?, music?, subtitles?}: makes the soundtrack (once; again with newMusic), the narrator's lines
 // if the story has a narrator, and cuts the film. The finished film goes to "Anuncios terminados".
 export async function POST(req: Request) {
   const s = await fullSession(req);
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   }
   const narr = st.narrator && lines.length && st.voiceId && (await canUseVoice(ws, st.voiceId)) ? lines : [];
   const dir = await workdir(`story-${adId}`);
-  const narrFiles: { file: string; at: number }[] = [];
+  const narrFiles: { file: string; at: number; secs?: number; text?: string }[] = [];
   if (narr.length) {
     const chars = narr.reduce((a, l) => a + l.text.length, 0);
     let ref = "";
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         const { bytes } = await elevenlabs.speak(st.voiceId!, l.text, { model: "eleven_multilingual_v2", lang: voiceLang(st.lang) });
         const file = path.join(dir, `n${i}.mp3`);
         await writeFile(file, Buffer.from(bytes));
-        narrFiles.push({ file, at: l.at });
+        narrFiles.push({ file, at: l.at, secs: (await probe(file)).dur || 3, text: l.text });
       }
     } catch (err) {
       if (ref) await refundJob(ws, ref);
@@ -84,14 +84,18 @@ export async function POST(req: Request) {
       clips.map(async (c) => {
         const file = path.join(dir, `s${c.idx}.mp4`);
         await download(await fetchableUrl(c.url!, ws), file);
-        return { file, secs: st.plan.shots[c.idx]?.seconds ?? 2.5 };
+        const sh = st.plan.shots[c.idx];
+        // shots where a character speaks keep the voice the model made (if the clip has sound)
+        const voice = Boolean(sh && speaks(sh)) && (await probe(file)).audio;
+        return { file, secs: sh?.seconds ?? 2.5, voice, text: sh?.dialogue?.line };
       }),
     );
     const music = path.join(dir, "music.mp3");
     await download(await fetchableUrl(st.music_url!, ws), music);
-    const { bytes, seconds } = await buildStory(dir, shots, String(ad.aspect || "9:16"), music, narrFiles);
+    const subtitles = b?.subtitles === true;
+    const { bytes, seconds } = await buildStory(dir, shots, String(ad.aspect || "9:16"), music, narrFiles, subtitles);
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${Date.now()}.mp4`);
-    const row = await s.db.update("ads", adId, { final_url: url, status: "done", settings: { ...st, duration: Math.round(seconds * 10) / 10 } });
+    const row = await s.db.update("ads", adId, { final_url: url, status: "done", settings: { ...st, subtitles, duration: Math.round(seconds * 10) / 10 } });
     return NextResponse.json({ ad: row, url, duration: seconds });
   } catch (err) {
     console.error("historias/montar", err instanceof Error ? err.message : err);

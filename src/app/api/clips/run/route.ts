@@ -65,10 +65,13 @@ export async function POST(req: Request) {
     const words = String(clip.text || "").split(/\s+/).filter(Boolean).length;
     // Animated stories: each shot lasts what the plan says (the montage trims it); the picture is the
     // keyframe drawn from the character sheets, and the sound is the film's music, not the clip's.
-    const story = ad.format === "historia" ? (ad.settings as { plan?: { shots?: { seconds?: number }[] } } | null) : null;
+    const story = ad.format === "historia" ? (ad.settings as { plan?: { shots?: { seconds?: number; dialogue?: { line?: string } | null }[] } } | null) : null;
     if (story && !clip.image_url) return giveBack(NextResponse.json({ error: "Primero crea la imagen de esta toma." }, { status: 400 }));
-    const shotSecs = Number(story?.plan?.shots?.[Number(clip.idx)]?.seconds ?? 0);
-    const seconds = story ? Math.min(10, Math.max(4, Math.ceil(shotSecs + 0.6))) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const shotPlan = story?.plan?.shots?.[Number(clip.idx)];
+    const talks = Boolean(shotPlan?.dialogue?.line?.trim()); // a character speaks: the clip keeps its voice
+    if (talks && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
+    const shotSecs = Number(shotPlan?.seconds ?? 0);
+    const seconds = story ? Math.min(10, Math.max(4, Math.ceil(shotSecs + (talks ? 1 : 0.6)))) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // Charge before spending anything (the opening frame below already costs).
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
     const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
@@ -95,7 +98,7 @@ export async function POST(req: Request) {
     }
     if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
 
-    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story, refs });
+    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story || talks, refs });
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd });
     return NextResponse.json({ clip: row });

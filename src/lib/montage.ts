@@ -239,41 +239,81 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
 
 /**
  * Animated stories: every shot cut to its planned length (hard cuts, like the reference films), then the
- * film's music underneath (lower while the narrator speaks) and a short fade at the end.
+ * film's music underneath. Shots where a character speaks keep their own voice and the music dips
+ * under it; narrator lines start with their shot. Optional subtitles (one line per shot) and a short
+ * fade at the end.
  */
-export async function buildStory(dir: string, shots: { file: string; secs: number }[], aspect: string, music: string | null, narration: { file: string; at: number }[] = []) {
+export interface StoryCut { file: string; secs: number; voice?: boolean; text?: string }
+export async function buildStory(dir: string, shots: StoryCut[], aspect: string, music: string | null, narration: { file: string; at: number; secs?: number; text?: string }[] = [], subtitles = false) {
   const [W, H] = frameSize(aspect);
   const args: string[] = ["-y", "-v", "error"];
   const parts: string[] = [];
   let n = 0;
   const total = shots.reduce((a, x) => a + x.secs, 0);
+  const starts: number[] = [];
+  shots.reduce((a, x) => { starts.push(a); return a + x.secs; }, 0);
+  const vin: number[] = [];
   shots.forEach((sh, i) => {
     const vi = n++;
+    vin.push(vi);
     args.push("-i", sh.file);
     parts.push(`[${vi}:v]fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,tpad=stop_mode=clone:stop_duration=10,trim=duration=${sh.secs.toFixed(3)},setpts=PTS-STARTPTS[v${i}]`);
   });
   const fadeAt = Math.max(0, total - 0.6).toFixed(3);
-  parts.push(`${shots.map((_, i) => `[v${i}]`).join("")}concat=n=${shots.length}:v=1:a=0,fade=t=out:st=${fadeAt}:d=0.6[vo]`);
+  parts.push(`${shots.map((_, i) => `[v${i}]`).join("")}concat=n=${shots.length}:v=1:a=0,fade=t=out:st=${fadeAt}:d=0.6[vc]`);
+
+  // subtitles: the spoken line of each shot, on screen while it plays
+  const subs: { a: number; b: number; text: string }[] = [];
+  if (subtitles) {
+    shots.forEach((sh, i) => { if (sh.voice && sh.text?.trim()) subs.push({ a: starts[i] + 0.15, b: starts[i] + sh.secs - 0.1, text: sh.text.trim() }); });
+    for (const l of narration) if (l.text?.trim()) subs.push({ a: l.at + 0.4, b: Math.min(total, l.at + 0.4 + (l.secs ?? 3)), text: l.text.trim() });
+  }
+  if (subs.length) {
+    const t = (x: number) => { const h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60), s = x % 60; return `${h}:${String(m).padStart(2, "0")}:${s.toFixed(2).padStart(5, "0")}`; };
+    const size = Math.round((Math.min(W, H) / 1080) * 64);
+    const ass = [
+      "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "",
+      "[V4+ Styles]",
+      "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+      `Style: Sub,Montserrat ExtraBold,${size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,${Math.max(2, Math.round(size / 14))},1,2,${Math.round(W * 0.08)},${Math.round(W * 0.08)},${Math.round(H * 0.16)},1`,
+      "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+      ...subs.map((x) => `Dialogue: 0,${t(x.a)},${t(x.b)},Sub,,0,0,0,,${x.text.replace(/[{}]/g, "").replace(/\n/g, " ")}`),
+    ].join("\n");
+    await writeFile(path.join(dir, "story.ass"), `${ass}\n`);
+    const esc = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
+    parts.push(`[vc]ass=filename='${esc(path.join(dir, "story.ass"))}':fontsdir='${esc(FONTS)}'[vo]`);
+  } else parts.push(`[vc]null[vo]`);
+
   const T = total.toFixed(3);
   const fadeA = Math.max(0, total - 1.5).toFixed(3);
+  const tracks: string[] = [];
+  // where someone talks (on camera or narrator), the music goes down
+  const talk: [number, number][] = [
+    ...shots.flatMap((sh, i) => (sh.voice ? [[starts[i], starts[i] + sh.secs] as [number, number]] : [])),
+    ...narration.map((l) => [l.at, l.at + 0.4 + (l.secs ?? 3)] as [number, number]),
+  ];
   if (music) {
     const mi = n++;
     args.push("-stream_loop", "-1", "-i", music);
-    parts.push(`[${mi}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${T},volume=${narration.length ? 0.35 : 1},afade=t=out:st=${fadeA}:d=1.5[mus]`);
+    const dips = talk.map(([a, b]) => `,volume=0.25:enable='between(t,${a.toFixed(2)},${b.toFixed(2)})'`).join("");
+    parts.push(`[${mi}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${T},asetpts=PTS-STARTPTS${dips},afade=t=out:st=${fadeA}:d=1.5[mus]`);
+    tracks.push("[mus]");
   }
-  // each narrator line starts with its shot
+  shots.forEach((sh, i) => {
+    if (!sh.voice) return;
+    const ms = Math.round(starts[i] * 1000);
+    parts.push(`[${vin[i]}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${sh.secs.toFixed(3)},afade=t=out:st=${Math.max(0, sh.secs - 0.15).toFixed(3)}:d=0.15,adelay=${ms}|${ms}[d${i}]`);
+    tracks.push(`[d${i}]`);
+  });
   narration.forEach((l, i) => {
     const ni = n++;
     args.push("-i", l.file);
-    const ms = Math.round(l.at * 1000);
+    const ms = Math.round((l.at + 0.4) * 1000);
     parts.push(`[${ni}:a]aresample=44100,aformat=channel_layouts=stereo,adelay=${ms}|${ms}[n${i}]`);
+    tracks.push(`[n${i}]`);
   });
-  const lines = narration.map((_, i) => `[n${i}]`).join("");
-  if (narration.length) parts.push(`${lines}amix=inputs=${narration.length}:duration=longest:normalize=0,apad=whole_dur=${T},atrim=duration=${T}[nar]`);
-  if (music && narration.length) parts.push(`[mus][nar]amix=inputs=2:duration=first:normalize=0[ao]`);
-  else if (music) parts.push(`[mus]anull[ao]`);
-  else if (narration.length) parts.push(`[nar]anull[ao]`);
-  else { const zi = n++; args.push("-f", "lavfi", "-t", T, "-i", "anullsrc=r=44100:cl=stereo"); parts.push(`[${zi}:a]anull[ao]`); }
+  if (!tracks.length) { const zi = n++; args.push("-f", "lavfi", "-t", T, "-i", "anullsrc=r=44100:cl=stereo"); tracks.push(`[${zi}:a]`); }
+  parts.push(`${tracks.join("")}amix=inputs=${tracks.length}:duration=longest:normalize=0,apad=whole_dur=${T},atrim=duration=${T}[ao]`);
   const out = path.join(dir, "final.mp4");
   args.push("-filter_complex", parts.join(";"), "-map", "[vo]", "-map", "[ao]", "-t", T,
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out);

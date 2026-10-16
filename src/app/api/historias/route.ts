@@ -24,16 +24,17 @@ export async function POST(req: Request) {
   const seconds = LENGTHS.includes(Number(b?.seconds)) ? Number(b.seconds) : 30;
   const lang = LANGS.find((l) => l.id === b?.lang)?.id ?? "es-CL";
   const narrator = b?.narrator === true;
+  const dialogue = b?.dialogue === true;
   const aspect = ASPECTS.includes(b?.aspect) ? String(b.aspect) : "9:16";
   const model = findVideo(String(b?.model ?? ""))?.configured() ? String(b.model) : "kling-3.0";
   const voiceId = narrator && typeof b?.voiceId === "string" && (await canUseVoice(s.user.workspace, b.voiceId)) ? b.voiceId : null;
   try {
-    const raw = parseJSON<StoryPlan>(await textAI.complete({ prompt: planPrompt({ idea, style, seconds, lang, narrator, aspect }), json: true, maxTokens: 20000 }));
+    const raw = parseJSON<StoryPlan>(await textAI.complete({ prompt: planPrompt({ idea, style, seconds, lang, narrator, dialogue, aspect }), json: true, maxTokens: 20000 }));
     const plan = tidyPlan(raw, seconds);
     if (plan.shots.length < 4) throw new Error("La IA no armó suficientes tomas. Intenta de nuevo con más detalle.");
-    const settings: StorySettings = { kind: "historia", idea, style, seconds, lang, narrator, voiceId, plan, niche: typeof b?.niche === "string" ? b.niche.slice(0, 40) : undefined };
+    const settings: StorySettings = { kind: "historia", idea, style, seconds, lang, narrator, dialogue, voiceId, plan, niche: typeof b?.niche === "string" ? b.niche.slice(0, 40) : undefined };
     const ad = await s.db.insert("ads", { title: plan.title, format: "historia", aspect, model, status: "draft", settings: settings as unknown as Record<string, unknown> });
-    await Promise.all(plan.shots.map((sh) => s.db.insert("clips", { ad_id: ad.id, idx: sh.idx, kind: "shot", text: sh.narration || sh.es, prompt: motionPrompt(sh, style), model, status: "pending" })));
+    await Promise.all(plan.shots.map((sh) => s.db.insert("clips", { ad_id: ad.id, idx: sh.idx, kind: "shot", text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, style, plan, lang), model, status: "pending" })));
     return NextResponse.json({ id: ad.id });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo escribir la historia." }, { status: 502 });
@@ -63,7 +64,7 @@ export async function PATCH(req: Request) {
       const clips = await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`);
       await Promise.all(clips.map((c) => {
         const sh = next.shots[Number(c.idx)];
-        return sh ? s.db.update("clips", String(c.id), { text: sh.narration || sh.es, prompt: motionPrompt(sh, st.style) }) : null;
+        return sh ? s.db.update("clips", String(c.id), { text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, st.style, next, st.lang) }) : null;
       }));
     }
     if (typeof b?.voiceId === "string") st.voiceId = (await canUseVoice(s.user.workspace, b.voiceId)) ? b.voiceId : st.voiceId;

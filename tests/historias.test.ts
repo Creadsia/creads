@@ -28,3 +28,22 @@ test("historias: prompts tie each shot to the character sheets and ask for no te
   assert.match(characterPrompt(p.characters[0], "anime"), /anime/i);
   assert.ok(motionPrompt(p.shots[0], "cine3d").length <= 2400);
 });
+
+test("historias: dialogue is kept only for real characters, gets its time, and goes into the video prompt", () => {
+  const withTalk = {
+    ...raw,
+    shots: [
+      { idx: 0, seconds: 2, shot: "close-up", characters: ["mentor"], image: "car window", motion: "window rolls down", dialogue: { speaker: "mentor", line: "Oye, súbete po, te voy a enseñar algo que te va a cambiar la vida" }, es: "x" },
+      { idx: 1, seconds: 2, shot: "wide", characters: ["boy"], image: "street", motion: "walks", dialogue: { speaker: "ghost", line: "hola" }, es: "y" },
+      ...raw.shots.slice(0, 6),
+    ],
+  } as unknown as StoryPlan;
+  const p = tidyPlan(withTalk, 20);
+  assert.equal(p.shots[0].dialogue?.speaker, "mentor");
+  assert.equal(p.shots[1].dialogue, null);
+  assert.ok(p.shots[0].seconds >= 5, `seconds ${p.shots[0].seconds}`);
+  const m = motionPrompt(p.shots[0], "cine3d", p, "es-CL");
+  assert.match(m, /súbete po/);
+  assert.match(m, /Chilean Spanish/);
+  assert.match(motionPrompt(p.shots[2], "cine3d", p), /No dialogue/);
+});
