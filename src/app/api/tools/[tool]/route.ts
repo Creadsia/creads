@@ -55,14 +55,16 @@ async function readInput(t: ToolDef, b: Record<string, unknown>): Promise<{ inpu
     if (!isOurMedia(b.video)) return "Sube un video.";
     input.video = b.video;
     const d = (await lengthOf(b.video)) || clientSecs;
-    if (d && (d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
+    if (!d) return "No pude medir el largo del video. Prueba con un MP4.";
+    if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
   }
   if (need.audio) {
     if (!isOurMedia(b.audio)) return "Sube un audio o genera la voz.";
     input.audio = b.audio;
-    const d = (await lengthOf(b.audio)) || clientSecs;
-    if (d && (d < need.audio.min - 0.3 || d > need.audio.max + 0.5)) return `El audio debe durar entre ${need.audio.min} y ${need.audio.max} segundos (este dura ${secs(d)}).`;
+    const d = (await lengthOf(b.audio)) || (need.video ? 0 : clientSecs);
+    if (!d) return "No pude medir el largo del audio. Prueba con un MP3.";
+    if ((d < need.audio.min - 0.3 || d > need.audio.max + 0.5)) return `El audio debe durar entre ${need.audio.min} y ${need.audio.max} segundos (este dura ${secs(d)}).`;
     if (t.id === "avatar-habla") seconds = d; // billed by the audio
   }
   return { input, seconds };
