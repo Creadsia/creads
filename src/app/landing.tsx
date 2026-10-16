@@ -665,9 +665,9 @@ export default function Landing({ t }: { t: Content }) {
                 </div>
                 <dl className="mt-4 grid grid-cols-3 gap-2">
                   {t.affiliates.stats.map(([k, v]) => (
-                    <div key={k} className="rounded-xl bg-surface-2 p-3">
-                      <dt className="text-[11px] text-muted">{k}</dt>
-                      <dd className="font-display text-xl font-semibold">{v}</dd>
+                    <div key={k} className="min-w-0 rounded-xl bg-surface-2 p-2.5 sm:p-3">
+                      <dt className="truncate text-[11px] text-muted">{k}</dt>
+                      <dd className="font-display text-base font-semibold whitespace-nowrap sm:text-xl">{v}</dd>
                     </div>
                   ))}
                 </dl>
