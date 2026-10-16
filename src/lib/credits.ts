@@ -115,6 +115,21 @@ export async function grantFreeRedo(ws: string, adId: string, clipId: string) {
   return Boolean(await sbRpc<boolean>("grant_free_redo", { p_owner: ws, p_ad: adId, p_clip: clipId }).catch(() => false));
 }
 
+/** True if this clip has a granted free redo that hasn't been used (a failed one counts as unused). */
+export async function freeRedoAvailable(ws: string, adId: string, clipId: string) {
+  if (unlimited(ws)) return true;
+  try {
+    const voucher = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.adjust&ref=eq.${encodeURIComponent(`voucher:${adId}:${clipId}`)}&select=id&limit=1`);
+    if (!voucher.length) return false;
+    const used = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&delta=eq.0&ref=eq.${encodeURIComponent(clipId)}&note=eq.${encodeURIComponent(`Rehecho gratis · ${adId}`)}&select=id`);
+    if (!used.length) return true;
+    const refunds = await sbRest<{ ref: string }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.refund&ref=in.(${used.map((u) => `charge:${u.id}`).join(",")})&select=ref`);
+    return refunds.length >= used.length;
+  } catch {
+    return false;
+  }
+}
+
 // ---------- owner tools (panel) ----------
 
 export interface Movement { id: number; delta: number; kind: string; note: string | null; usd: number | null; by_user: string | null; created_at: string }

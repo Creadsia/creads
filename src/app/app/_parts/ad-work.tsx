@@ -12,10 +12,8 @@ import { btnCls, cardCls, ghostCls, inputCls } from "./ui";
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
-interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string }
+interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean }
 
-const MAX_REDO_PER_CLIP = 1;
-const MAX_REDO_PER_AD = 2;
 
 export default function AdWork({ adId }: { adId: string }) {
   const [ad, setAd] = useState<Ad | null>(null);
@@ -91,13 +89,11 @@ export default function AdWork({ adId }: { adId: string }) {
     if (!res.ok) return setErr(d.error || "No se pudo revisar.");
     setReview(d.results);
     if (d.learned) setNote(`Creads aprendió ${d.learned} regla${d.learned === 1 ? "" : "s"} nueva${d.learned === 1 ? "" : "s"} de este video.`);
-    // Free automatic redo of severe problems (max 1 per clip, 2 per ad).
-    const redos = { ...((ad?.settings?.redos as Record<string, number>) ?? {}) };
-    const used = Object.values(redos).reduce((a, b) => a + b, 0);
-    const todo = (d.results as ReviewRow[]).filter((r) => r.severe && (redos[r.clipId] ?? 0) < MAX_REDO_PER_CLIP).slice(0, Math.max(0, MAX_REDO_PER_AD - used));
+    // Free automatic redo of severe problems: the server says which clips still have one
+    // (max 1 per clip and 2 per ad, counted on the server).
+    const todo = (d.results as ReviewRow[]).filter((r) => r.severe && r.freeRedo);
     if (todo.length) {
       setPhase("redo");
-      todo.forEach((r) => { redos[r.clipId] = (redos[r.clipId] ?? 0) + 1; });
       setNote((n) => `${n ? `${n} ` : ""}Rehaciendo ${todo.length} corte${todo.length === 1 ? "" : "s"} con errores graves, sin costo para ti.`);
       await Promise.all(todo.map((r) => redo(r.clipId, r.issues.join(". "), true)));
       setReview(null);

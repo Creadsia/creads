@@ -12,8 +12,12 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const me = await userFromRequest(req);
   if (!me) return NextResponse.json({ error: "Tu sesión terminó. Vuelve a entrar." }, { status: 401 });
-  const tf = await twoFactorOf(me.id);
-  return NextResponse.json({ ready: tf !== null, on: Boolean(tf?.on) });
+  try {
+    const tf = await twoFactorOf(me.id);
+    return NextResponse.json({ ready: tf !== null, on: Boolean(tf?.on) });
+  } catch {
+    return NextResponse.json({ error: "No se pudo revisar. Intenta de nuevo." }, { status: 502 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -23,7 +27,8 @@ export async function POST(req: Request) {
   if (limited) return limited;
   const b = await req.json().catch(() => null);
   const action = String(b?.action ?? "");
-  const tf = await twoFactorOf(me.id);
+  const tf = await twoFactorOf(me.id).catch(() => undefined);
+  if (tf === undefined) return NextResponse.json({ error: "No se pudo revisar. Intenta de nuevo." }, { status: 502 });
   if (tf === null) return NextResponse.json({ error: "Falta activar esto en Supabase (billing.sql)." }, { status: 503 });
 
   const passwordOk = async () => {

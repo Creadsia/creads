@@ -6,7 +6,7 @@ import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
-import { CreditError, refundJob } from "@/lib/credits";
+import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 
 export const maxDuration = 120;
@@ -38,18 +38,22 @@ export async function POST(req: Request) {
     // Claim the clip atomically: a double click, a second tab or two parallel requests can't
     // start (and charge) the same clip twice.
     let clip = await db.claim("clips", id, { notIn: ["generating", "starting"] }, { status: "starting" });
+    // a start that died halfway (e.g. the server timed out) leaves "starting": take it over after 3 minutes
+    const stale = found.status === "starting" && Date.now() - Date.parse(String(found.updated_at ?? found.created_at)) > 3 * 60_000;
+    if (!clip && stale) clip = await db.claim("clips", id, { in: ["starting"] }, { status: "starting" });
     if (!clip) return NextResponse.json({ error: "Este corte ya se está generando." }, { status: 409 });
-    before = String(found.status ?? "pending");
+    before = found.status === "starting" ? "failed" : String(found.status ?? "pending");
+    const giveBack = async (res: NextResponse) => { await db.update("clips", id, { status: before }).catch(() => {}); return res; };
     // Retry with another model (e.g. when one refuses the avatar's face).
     if (typeof b?.model === "string" && b.model && b.model !== clip.model) {
       const other = findVideo(b.model);
-      if (!other?.configured() || other.silent) return NextResponse.json({ error: "Ese modelo no sirve para este corte." }, { status: 400 });
+      if (!other?.configured() || other.silent) return giveBack(NextResponse.json({ error: "Ese modelo no sirve para este corte." }, { status: 400 }));
       clip = (await db.update("clips", id, { model: other.id })) ?? clip;
     }
     const ad = await db.get("ads", String(clip.ad_id));
-    if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
+    if (!ad) return giveBack(NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 }));
     const provider = findVideo(String(clip.model));
-    if (!provider?.configured()) return NextResponse.json({ error: "Ese modelo no está conectado." }, { status: 503 });
+    if (!provider?.configured()) return giveBack(NextResponse.json({ error: "Ese modelo no está conectado." }, { status: 503 }));
 
     const st = (ad.settings ?? {}) as Settings;
     const ws = s.user.workspace;
@@ -93,9 +97,9 @@ export async function POST(req: Request) {
   } catch (err) {
     if (charged) await refundJob(s.user.workspace, id);
     const msg = await failMessage(err, s.user);
-    if (!charged && err instanceof CreditError && before) {
-      // nothing was spent (no credits / plan expired): leave the clip as it was
-      await db.update("clips", id, { status: before }).catch(() => {});
+    if (!charged && before) {
+      // nothing was spent (no credits, daily limit, provider without balance): a finished clip stays finished
+      await db.update("clips", id, before === "done" ? { status: "done", error: msg.slice(0, 500) } : { status: "failed", error: msg.slice(0, 500) }).catch(() => {});
     } else if (before !== null) {
       await db.update("clips", id, { status: "failed", error: msg.slice(0, 500) }).catch(() => {});
     }
