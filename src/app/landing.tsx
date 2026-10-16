@@ -28,7 +28,6 @@ type SceneKey = keyof typeof SCENES;
 // TODO(phase 1): move to our own storage.
 const CLIP = "https://d2ol7oe51mr4n9.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/";
 const VIDEOS: Partial<Record<SceneKey, string>> = {
-  ugc: `${CLIP}9d9f2c3e-4480-4706-93dc-92bb94a8e8f0.mp4`,
   valpo: `${CLIP}9b933c53-6d3c-4306-9eff-5d0bd4bd58b0.mp4`,
   serum: `${CLIP}dbfb983f-a3d8-4a46-bb53-e86fc64f91d6.mp4`,
   podcast: `${CLIP}dbf87bbe-75ec-407e-8dfb-b8a48c570644.mp4`,
@@ -60,7 +59,6 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
       C("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling 3.0 Turbo", "kling"),
       C("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo 3.1 Lite", "google"),
       C("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan 3.0", "alibaba"),
-      K("ugc", "Nano Banana + Kling", "google"),
       C("81fb90d2-22c5-404f-92d8-a201275530cf", "9a50f2c6-6bbd-4891-8299-f1151a77c433", "Grok Video", "xai"),
     ],
   },
@@ -120,7 +118,7 @@ function ClipWall({ label }: { label: string }) {
           </div>
         ))}
       </div>
-      <p className="mt-3 text-center text-xs text-muted lg:absolute lg:inset-x-0 lg:bottom-4 lg:mt-0">{label}</p>
+      <p className="mt-3 text-center text-xs text-white/70 [text-shadow:0_1px_6px_#000] lg:absolute lg:inset-x-0 lg:bottom-4 lg:mt-0">{label}</p>
     </div>
   );
 }
@@ -301,7 +299,11 @@ export default function Landing({ t }: { t: Content }) {
         <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 py-12 sm:py-16 lg:min-h-[min(820px,calc(100svh-120px))] lg:grid-cols-[1fr_1.08fr] lg:py-0">
             <div className="relative z-10 flex min-w-0 flex-col gap-7">
-              <h1 className="chroma font-display text-[2.55rem] leading-[1.02] font-semibold sm:text-6xl lg:text-[4.1rem]">{t.hero.title}</h1>
+              <h1 className="chroma font-display text-[2.55rem] leading-[1.02] font-semibold sm:text-6xl lg:text-[4.1rem]">
+                {t.hero.title.split(/(?<=\.) /).map((part) => (
+                  <span key={part} className="block">{part}</span>
+                ))}
+              </h1>
               <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
               <Composer t={t.composer} />
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
