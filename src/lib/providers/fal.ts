@@ -29,6 +29,7 @@ interface FalVideo {
   t2v?: string; // text-to-video endpoint (when no first frame)
   durations: number[];
   aspects?: AspectRatio[];
+  silent?: boolean;
   /** fal's live price list only works for flat per-second prices; tiered models keep our static 720p price. */
   livePrice?: boolean;
   build: Build;
@@ -114,6 +115,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "kling-3.0-turbo",
+    silent: true,
     label: "Kling 3.0 Turbo",
     usdPerSecond: 0.14,
     i2v: "fal-ai/kling-video/v3/turbo/pro/image-to-video",
@@ -151,6 +153,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "hailuo-2.3",
+    silent: true,
     label: "Hailuo 2.3",
     usdPerSecond: 0.056, // $0.28 per 6 s, $0.56 per 10 s
     i2v: "fal-ai/minimax/hailuo-2.3/standard/image-to-video",
@@ -160,6 +163,7 @@ export const FAL_VIDEO: FalVideo[] = [
   },
   {
     id: "hailuo-2.3-pro",
+    silent: true,
     label: "Hailuo 2.3 Pro",
     usdPerSecond: 0.082, // $0.49 per clip (~6 s, 1080p)
     i2v: "fal-ai/minimax/hailuo-2.3/pro/image-to-video",
@@ -234,6 +238,7 @@ function falVideo(m: FalVideo): VideoProvider {
     durations: m.durations.filter((d) => [3, 4, 5, 6, 8, 10, 12, 15].includes(d)),
     aspects: m.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
     needsImage: !m.t2v,
+    silent: Boolean(m.silent),
 
     async submit(req) {
       const image = req.refs?.find((r) => r.role === "first_frame")?.url;

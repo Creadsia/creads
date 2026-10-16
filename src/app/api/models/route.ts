@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         aspects: p.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
         seconds: p.durations ?? [4, 5, 6, 8, 10],
         needsImage: Boolean(p.needsImage),
+        silent: Boolean(p.silent),
       };
     }),
     image: imageProviders.map((p) => ({ id: p.id, label: p.label, configured: p.configured(), usd: p.usdPerImage })),

@@ -15,6 +15,7 @@ interface VideoModel {
   aspects: string[];
   seconds: number[];
   needsImage?: boolean;
+  silent?: boolean;
 }
 
 // Shown until /api/models answers.
@@ -220,7 +221,7 @@ export default function ModelLab({ code }: { code: string }) {
           </div>
           <p className="text-xs text-muted">
             {vm.needsImage && <b className="block text-warn">Este modelo solo anima una imagen: genera una, súbela o elígela de tus imágenes.</b>}
-            Se genera en {videoAspect} a 720p{vm.id.startsWith("hailuo") ? ", sin audio" : ", con audio"}{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
+            Se genera en {videoAspect} a 720p{vm.silent ? ", sin audio" : ", con audio"}{vm.live ? "" : " (precio aproximado)"}. Si el texto incluye lo que dice la persona entre comillas, lo habla.
           </p>
           <button
             type="button"

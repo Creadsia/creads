@@ -42,6 +42,8 @@ export interface VideoProvider {
   durations?: number[];
   /** True when the model can only animate a starting image (no text-only clips). */
   needsImage?: boolean;
+  /** True when the clip has no sound (can't be used for scenes where someone talks). */
+  silent?: boolean;
   /** For providers whose result links need our key (Veo): fetch the finished file so we can re-host it. */
   download?(url: string): Promise<ArrayBuffer>;
 }
