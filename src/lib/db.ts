@@ -138,7 +138,7 @@ async function pgExec(workspace: string | null, sql: string, params: unknown[]):
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const exec: Exec = (ws, sql, params) => (customExec ?? pgExec)(ws, sql, params);
-const useSql = () => Boolean(customExec || process.env.DATABASE_URL);
+const sqlMode = () => Boolean(customExec || process.env.DATABASE_URL);
 
 function sqlDb(ws: string | null) {
   const q = (sql: string, params: unknown[] = []) => exec(ws, sql, params);
@@ -229,7 +229,7 @@ function restDb(owner: string | null) {
 /** The studio tables as seen by one workspace. Rules (shared) are not reachable from here. */
 export function dbFor(workspace: string) {
   if (!WORKSPACE_RE.test(workspace)) throw new DbError("Espacio de trabajo inválido.", 400);
-  const inner = useSql() ? sqlDb(workspace) : restDb(workspace);
+  const inner = sqlMode() ? sqlDb(workspace) : restDb(workspace);
   const guard = (t: Table): TenantTable => {
     if (t === "rules") throw new DbError("Las reglas aprendidas se leen con sharedRules.", 400);
     return t;
@@ -251,7 +251,7 @@ export type Db = ReturnType<typeof dbFor>;
  * Anyone may read; the app adds and updates them; only Creadsia (workspace "main") turns them off.
  */
 export const sharedRules = {
-  list: (query = "order=hits.desc&limit=60") => (useSql() ? sqlDb(null) : restDb(null)).list("rules", query),
-  add: (data: Row) => (useSql() ? sqlDb(null) : restDb(null)).insert("rules", data, "main"),
-  update: (id: string, data: Row) => (useSql() ? sqlDb(null) : restDb(null)).update("rules", id, data),
+  list: (query = "order=hits.desc&limit=60") => (sqlMode() ? sqlDb(null) : restDb(null)).list("rules", query),
+  add: (data: Row) => (sqlMode() ? sqlDb(null) : restDb(null)).insert("rules", data, "main"),
+  update: (id: string, data: Row) => (sqlMode() ? sqlDb(null) : restDb(null)).update("rules", id, data),
 };
