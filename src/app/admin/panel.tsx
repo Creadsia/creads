@@ -1033,18 +1033,21 @@ const AUTO: Record<string, { title: string; how: string }> = {
   "mp-token": { title: "Mercado Pago: Access Token", how: "mercadopago.cl/developers → Tus integraciones → tu aplicación → Credenciales de producción → Access Token → Vercel: MP_ACCESS_TOKEN." },
   "mp-webhook": { title: "Mercado Pago: avisos de pago", how: "En tu aplicación → Webhooks: URL https://www.creadsia.com/api/pagos/mp, eventos Pagos y Planes y suscripciones → copia la clave secreta → Vercel: MP_WEBHOOK_SECRET." },
   "mp-once": { title: "Modo de cobro de los planes", how: "MP_ONE_TIME=1 cobra cada mes por separado (recomendado mientras uses una cuenta temporal)." },
-  meta: { title: "Meta: API de conversiones", how: "Administrador de eventos → tu píxel → Configuración → Generar token → Vercel: META_CAPI_TOKEN." },
-  admin: { title: "Clave de administrador", how: "Vercel: ADMIN_ACCESS_CODE con 24 caracteres o más. Guárdala en un lugar seguro: sirve para recuperar la cuenta del dueño." },
+  meta: { title: "Meta: API de conversiones (no es el píxel)", how: "El píxel ya está instalado. Este token deja que Creads avise las ventas a Meta desde el servidor (cuenta iPhone y bloqueadores). Administrador de eventos → tu píxel → Configuración → API de conversiones → Generar token de acceso → Vercel: META_CAPI_TOKEN → Redeploy. Hazlo antes de lanzar anuncios." },
+  admin: { title: "Clave de administrador (llave maestra)", how: "Sirve para recuperar tu cuenta de dueño si pierdes la clave y el teléfono (en creadsia.com/app?dueno). Vercel → Environment Variables → ADMIN_ACCESS_CODE con 24 caracteres o más → guárdala en un lugar seguro → Redeploy." },
   email: { title: "Correos automáticos (Resend)", how: "Resend → API Keys → Vercel: RESEND_API_KEY." },
   cron: { title: "Avisos de plan por vencer", how: "Vercel: CRON_SECRET con una clave larga inventada." },
   ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
 };
 const MANUAL: { id: string; title: string; how: string }[] = [
-  { id: "backups", title: "Respaldos diarios de la base de datos", how: "Supabase → Settings → Billing: plan Pro (US$25/mes) incluye un respaldo diario." },
-  { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Correo, Vercel, Supabase, GitHub, Namecheap, Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend." },
-  { id: "caps", title: "Topes de gasto en los servicios de IA", how: "fal.ai, ElevenLabs y Anthropic: límite mensual. Google Cloud: alerta de presupuesto (no tiene tope real)." },
-  { id: "compra", title: "Compra de prueba", how: "Desde una cuenta nueva, compra el pack de 500 créditos: deben llegar los créditos y el correo de pago. Después la puedes devolver en Mercado Pago." },
-  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar si los precios van con IVA incluido, revisar /terminos y el giro de la SpA." },
+  { id: "pasarela", title: "Pasarela de pago (Flow o Stripe)", how: "Con la SpA lista: revisa en stripe.com/global si aparece Chile. Recomendado partir con Flow (Webpay, cobro mensual automático): crea la cuenta, saca la API Key y la Secret Key, pégalas en Vercel y avísale a Claude para conectarla." },
+  { id: "compra", title: "Compra de prueba", how: "Cuando la pasarela esté conectada: desde una cuenta nueva compra el pack de 500 créditos. Deben llegar los créditos y el correo de pago. Después la puedes devolver." },
+  { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Primero las 5 llaves de todo: correo (Google), Vercel, GitHub, Supabase y Namecheap. También tu cuenta de Creads (Mi cuenta). Después: Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend." },
+  { id: "recarga", title: "Recarga automática con tarjeta", how: "Google AI Studio → Billing → Setup auto-reload (US$50 cuando quede menos de US$15). ElevenLabs → Developers → Top Up → Auto Top Up (US$20 bajo US$10). fal.ai y Anthropic: buscar «Auto top-up» o «Auto reload» en Billing (US$50 bajo US$20 / US$20 bajo US$5)." },
+  { id: "caps", title: "Topes de gasto", how: "Límite mensual en fal.ai, ElevenLabs y Anthropic; alerta de presupuesto en Google Cloud. El tope diario de Creads está en Saldos y alertas." },
+  { id: "backups", title: "Respaldos diarios de la base de datos", how: "Supabase → Settings → Billing: el plan Pro (US$25/mes) incluye un respaldo diario." },
+  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar IVA incluido y boletas, giro de la SpA (620100 / 631100), pagos a proveedores extranjeros en US$ y revisar /terminos." },
+  { id: "precios", title: "Decidir la oferta de Plus y Studio", how: "Con 50% el primer mes, Plus y Studio pierden plata si el cliente usa todo. Recomendado: 50% solo en Starter, 20% en Plus y Studio, Studio anual a US$229/mes. Avísale a Claude para cambiarlo." },
 ];
 
 function Lanzamiento() {
