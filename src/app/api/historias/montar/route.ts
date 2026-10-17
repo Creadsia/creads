@@ -10,7 +10,9 @@ import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { isOwner } from "@/lib/auth";
 import { loadStory, updateStory } from "@/lib/historia-db";
-import { musicModeOf, speaks, voiceLang } from "@/lib/historias";
+import { langById, lyricsPrompt, musicModeOf, needsNewTrack, savedTrack, speaks, voiceLang } from "@/lib/historias";
+import { textAI } from "@/lib/providers";
+import { parseJSON } from "@/lib/providers/claude";
 import { publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
@@ -53,7 +55,8 @@ export async function POST(req: Request) {
         if (talks) secs = Math.max(secs, Math.min(p.dur, await speechEnd(file, p.dur)));
         // muted dialogue: the shot keeps its length but plays without the voice
         const voice = talks && !st.mute_dialogue;
-        return { idx: c.idx, file, secs: Math.round(secs * 10) / 10, voice, ambient: Boolean(st.ambient) && p.audio && !talks, text: sh?.dialogue?.line };
+        // muted lines can still be read: they get subtitles like spoken ones
+        return { idx: c.idx, file, secs: Math.round(secs * 10) / 10, voice, muted: talks && !voice, ambient: Boolean(st.ambient) && p.audio && !talks, text: sh?.dialogue?.line };
       }),
     );
     const starts = new Map<number, number>();
@@ -61,30 +64,44 @@ export async function POST(req: Request) {
 
     // 2. music, made for the real length (paid once; "otra música" or a longer film makes a new one).
     //    If it can't be made, the film goes out without it (and the music isn't charged).
+    // what the screen shows right now (the lyrics box and music style may not have been saved yet)
     if (typeof b?.music === "string" && b.music.trim().length > 5) st.plan.music = b.music.trim().slice(0, 600);
+    if (typeof b?.lyrics === "string") st.plan.lyrics = b.lyrics.slice(0, 1200);
     const mode = musicModeOf(st);
     let musicNote = "";
-    // AI music or a song: made once for this length and kind; again when asked, when the film got
-    // longer or when the kind changed (instrumental ↔ song)
-    const made = st.music_made ?? "ia";
-    if ((mode === "ia" || mode === "cancion") && (!st.music_url || b?.newMusic === true || (st.music_secs ?? 0) < total - 0.5 || made !== mode)) {
-      let ref = "";
-      try {
-        ref = (await payFor(s.user, musicUsd(total), mode === "cancion" ? "Historia · canción" : "Historia · música", "eleven")).ref;
-        const lyrics = st.plan.lyrics?.trim();
-        const bytes = mode === "cancion"
-          ? await compose(`${st.plan.music || "uplifting emotional pop song with a catchy chorus"}.${lyrics ? ` Sing exactly these lyrics, in this order:\n${lyrics}` : " With vocals."}`, Math.ceil(total) + 2, false)
-          : await compose(`${st.plan.music || "cinematic emotional orchestral score that builds to an uplifting climax"}. Instrumental, no vocals.`, Math.ceil(total) + 2, true);
-        const musicUrl = await saveMedia(ws, "historias", bytes, "audio/mpeg");
-        st.music_url = musicUrl;
-        st.music_secs = Math.ceil(total) + 2;
-        st.music_made = mode;
-        await updateStory(s.db, adId, (x) => { x.music_url = musicUrl; x.music_secs = Math.ceil(total) + 2; x.music_made = mode; x.plan.music = st.plan.music; });
-      } catch (err) {
-        if (ref) await refundJob(ws, ref);
-        const what = mode === "cancion" ? "La canción" : "La música";
-        if (!st.music_url || made !== mode) musicNote = isOwner(s.user) ? `${what} no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música.` : `${what} no se pudo crear esta vez. La película salió sin música; prueba de nuevo en un rato.`;
-        if (made !== mode) st.music_url = null; // don't play the other kind of music by mistake
+    let track: string | null = mode === "ninguna" ? null : mode === "propia" ? st.own_music_url ?? null : savedTrack(st, mode)?.url ?? null;
+    if (mode === "ia" || mode === "cancion") {
+      // a song always has lyrics in the story's language: written first (free) if there are none
+      if (mode === "cancion" && !st.plan.lyrics?.trim()) {
+        try {
+          const a = parseJSON<{ lyrics?: string; music?: string }>(await textAI.complete({ prompt: lyricsPrompt({ idea: st.idea, plan: st.plan, lang: st.lang, context: st.context }), json: true, maxTokens: 2000, fast: true }));
+          st.plan.lyrics = String(a.lyrics ?? "").replace(/\\n/g, "\n").trim().slice(0, 1200);
+          if (typeof a.music === "string" && a.music.trim().length > 10 && !st.plan.music) st.plan.music = a.music.trim().slice(0, 600);
+        } catch { /* below: without lyrics the song isn't made */ }
+        if (!st.plan.lyrics?.trim()) return NextResponse.json({ error: "Escribe la letra de la canción primero (o toca «Escribir la letra con IA»)." }, { status: 400 });
+      }
+      const lyrics = st.plan.lyrics?.trim() ?? "";
+      // made once per kind and kept: again only when asked, when the film got longer, or (a song) when the lyrics changed
+      if (needsNewTrack(st, mode, total, lyrics, b?.newMusic === true)) {
+        let ref = "";
+        try {
+          ref = (await payFor(s.user, musicUsd(total), mode === "cancion" ? "Historia · canción" : "Historia · música", "eleven")).ref;
+          const bytes = mode === "cancion"
+            ? await compose(`${st.plan.music || "uplifting emotional pop song with a catchy chorus"}. Sung in ${langById(st.lang).spoken}. Sing exactly these lyrics, in this order:\n${lyrics}`, Math.ceil(total) + 2, false)
+            : await compose(`${st.plan.music || "cinematic emotional orchestral score that builds to an uplifting climax"}. Instrumental, no vocals.`, Math.ceil(total) + 2, true);
+          const url = await saveMedia(ws, "historias", bytes, "audio/mpeg");
+          const saved = { url, secs: Math.ceil(total) + 2, ...(mode === "cancion" ? { lyrics } : {}), prompt: st.plan.music };
+          track = url;
+          await updateStory(s.db, adId, (x) => { x.music_by = { ...(x.music_by ?? {}), [mode]: saved }; x.plan.music = st.plan.music; x.plan.lyrics = st.plan.lyrics; });
+        } catch (err) {
+          if (ref) await refundJob(ws, ref);
+          const what = mode === "cancion" ? "La canción" : "La música";
+          const keep = track && !(mode === "cancion" && (savedTrack(st, mode)?.lyrics ?? "").trim() !== lyrics);
+          if (!keep) track = null; // never play a song with other lyrics by mistake
+          if (!track) musicNote = isOwner(s.user) ? `${what} no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música.` : `${what} no se pudo crear esta vez. La película salió sin música; prueba de nuevo en un rato.`;
+        }
+      } else if (b?.lyrics !== undefined) {
+        await updateStory(s.db, adId, (x) => { x.plan.lyrics = st.plan.lyrics; x.plan.music = st.plan.music; }).catch(() => null);
       }
     }
 
@@ -120,10 +137,14 @@ export async function POST(req: Request) {
 
     // 4. the film
     let music: string | null = null;
-    const track = mode === "ninguna" ? null : mode === "propia" ? st.own_music_url ?? null : st.music_url ?? null;
     if (track) {
       music = path.join(dir, "music.mp3");
       await download(await fetchableUrl(track, ws), music);
+      // the customer's own file must really be audio
+      if (mode === "propia" && !(await probe(music).catch(() => ({ audio: false }))).audio) {
+        music = null;
+        musicNote = "El archivo que subiste no tiene sonido que podamos usar: la película salió sin música. Sube un mp3, m4a o wav.";
+      }
     } else if (mode === "propia") musicNote = "No subiste tu música: la película salió sin música. Súbela en «Sonido» y vuelve a armarla.";
     const subtitles = b?.subtitles === true;
     try {

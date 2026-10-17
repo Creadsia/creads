@@ -77,21 +77,25 @@ export async function PATCH(req: Request) {
     if (snd?.musicUrl !== undefined && snd.musicUrl !== null && !ownsMedia(snd.musicUrl, s.user.workspace)) return NextResponse.json({ error: "Ese archivo no es de tu cuenta." }, { status: 400 });
     // written on the latest saved story: the approved sheets (made meanwhile, maybe) are kept
     const st = await updateStory(s.db, adId, (x) => {
-      if (snd) {
-        if (typeof snd.music === "string") x.music_mode = musicModeOf({ music_mode: snd.music }) as MusicMode;
-        if (snd.musicUrl === null || typeof snd.musicUrl === "string") x.own_music_url = (snd.musicUrl as string | null) || null;
-        if (typeof snd.lyrics === "string") x.plan.lyrics = snd.lyrics.slice(0, 1200);
-        if (typeof snd.ambient === "boolean") x.ambient = snd.ambient;
-        if (typeof snd.narrator === "boolean") x.narrator = snd.narrator;
-        if (typeof snd.mute === "boolean") x.mute_dialogue = snd.mute;
-        if (typeof snd.context === "string") x.context = snd.context.slice(0, 1500);
-      }
       if (next) {
         next.characters = next.characters.map((c) => {
           const old = x.plan.characters.find((o) => o.key === c.key);
           return { ...c, image_url: old?.image_url ?? null, avatar: old?.avatar ?? null };
         });
+        // the song's lyrics and style change only through their own fields (a stale screen can't undo them)
+        next.lyrics = x.plan.lyrics;
+        next.music = x.plan.music;
         x.plan = next;
+      }
+      if (snd) {
+        if (typeof snd.music === "string") x.music_mode = musicModeOf({ music_mode: snd.music }) as MusicMode;
+        if (snd.musicUrl === null || typeof snd.musicUrl === "string") x.own_music_url = (snd.musicUrl as string | null) || null;
+        if (typeof snd.lyrics === "string") x.plan.lyrics = snd.lyrics.slice(0, 1200);
+        if (typeof snd.musicPrompt === "string" && snd.musicPrompt.trim()) x.plan.music = snd.musicPrompt.trim().slice(0, 600);
+        if (typeof snd.ambient === "boolean") x.ambient = snd.ambient;
+        if (typeof snd.narrator === "boolean") x.narrator = snd.narrator;
+        if (typeof snd.mute === "boolean") { x.mute_dialogue = snd.mute; if (!snd.mute) x.dialogue = true; }
+        if (typeof snd.context === "string") x.context = snd.context.slice(0, 1500);
       }
       if (voiceId) x.voiceId = voiceId;
     });

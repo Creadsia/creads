@@ -83,3 +83,15 @@ test("historias: sound options, song lyrics, context and the readable script", a
   assert.match(sc, /LETRA\nLínea uno/);
   assert.match(h.storyScript(plan, { music_mode: "ninguna" }), /sin música/);
 });
+
+test("historias: one saved track per kind; a song is remade only when its lyrics change", async () => {
+  const h = await import("../src/lib/historias");
+  const st = { music_by: { cancion: { url: "/api/media/ws/a/s.mp3", secs: 32, lyrics: "uno\ndos\ntres" } }, music_url: "/api/media/ws/a/i.mp3", music_secs: 32 };
+  assert.equal(h.savedTrack(st, "ia")?.url, "/api/media/ws/a/i.mp3"); // stories from before keep their instrumental
+  assert.equal(h.needsNewTrack(st, "ia", 30, ""), false);
+  assert.equal(h.needsNewTrack(st, "cancion", 30, "uno\ndos\ntres"), false); // switching back doesn't pay again
+  assert.equal(h.needsNewTrack(st, "cancion", 30, "uno\ndos\ncuatro"), true); // new lyrics, new song
+  assert.equal(h.needsNewTrack(st, "cancion", 40, "uno\ndos\ntres"), true); // longer film
+  assert.equal(h.needsNewTrack(st, "ia", 30, "", true), true); // «Otra música»
+  assert.equal(h.needsNewTrack({}, "cancion", 30, "x"), true);
+});

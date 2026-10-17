@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGS, LENGTHS, MUSIC_MODES, SOUND_PRESETS, STORY_TEMPLATES, STYLES, type SoundSetup, type StoryLang, type StoryPlan, type StorySettings, type StyleId, billedSeconds, estimateStory, musicModeOf, presetOf, shotsFor, storyScript, storyShotUsd } from "@/lib/historias";
+import { LANGS, LENGTHS, MUSIC_MODES, SOUND_PRESETS, STORY_TEMPLATES, STYLES, type SoundSetup, type StoryLang, type StoryPlan, type StorySettings, type StyleId, billedSeconds, estimateStory, musicModeOf, needsNewTrack, presetOf, savedTrack, shotsFor, storyScript, storyShotUsd } from "@/lib/historias";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
@@ -317,6 +317,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [upBusy, setUpBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [wantNarrator, setWantNarrator] = useState(false);
   const [dlgMsg, setDlgMsg] = useState("");
   const [dlgAll, setDlgAll] = useState(true);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -427,7 +428,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
     const total = idxs.reduce((a, i) => a + (Number(plan.shots[i]?.seconds) || 2.5), 0);
     const st0 = ad.settings;
     const m0 = musicModeOf(st0);
-    const music = (m0 === "ia" || m0 === "cancion") && (!st0.music_url || newMusic || (st0.music_secs ?? 0) < total - 0.5 || (st0.music_made ?? "ia") !== m0) ? (0.15 * Math.max(total, 15)) / 60 : 0;
+    const music = (m0 === "ia" || m0 === "cancion") && needsNewTrack(st0, m0, total, lyrics ?? plan.lyrics ?? "", newMusic) ? (0.15 * Math.max(total, 15)) / 60 : 0;
     const cache = st0.narration_cache ?? {};
     const chars = st0.narrator && st0.voiceId
       ? idxs.map((i) => plan.shots[i]?.narration?.trim() ?? "").filter((t) => t && !cache[`${st0.voiceId}|${t}`]).reduce((a, t) => a + t.length, 0)
@@ -437,9 +438,13 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const filmCost = (newMusic: boolean, partial = false) => { const u = filmUsd(newMusic, partial); return u > 0 ? ` · ≈ ${price(u)}` : ""; };
   // sound options are saved right away (they don't change the shots already animated)
   const mode = musicModeOf(st);
-  const sound: SoundSetup = { dialogue: !st.mute_dialogue, narrator: Boolean(st.narrator), music: mode, ambient: Boolean(st.ambient) };
+  // stories made without dialogue (or before the option) open with it off
+  const hasLines = plan.shots.some((x) => x.dialogue?.line?.trim());
+  const sound: SoundSetup = { dialogue: !st.mute_dialogue && (st.dialogue ?? hasLines), narrator: Boolean(st.narrator) || wantNarrator, music: mode, ambient: Boolean(st.ambient) };
   const setSound = (next: SoundSetup, extra: Record<string, unknown> = {}) => run("sound", async () => {
-    if (next.narrator && !st.voiceId && !extra.voiceId) throw new Error("Elige la voz del narrador.");
+    // turning the narrator on first asks for its voice (shown right there); nothing is saved until then
+    if (next.narrator && !st.voiceId && !extra.voiceId) { setWantNarrator(true); return; }
+    if (!next.narrator) setWantNarrator(false);
     await saved();
     await post("/api/historias", { adId: id, voiceId: extra.voiceId, sound: { music: next.music, ambient: next.ambient, narrator: next.narrator, mute: !next.dialogue, ...extra } }, "PATCH");
   });
@@ -455,7 +460,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
     catch { setErr("No se pudo copiar. Intenta de nuevo."); }
   };
   const montar = (newMusic = false, partial = false) => run("film", async () => {
-    const d = await post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial });
+    const d = await post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial, ...(lyrics !== null ? { lyrics } : {}) });
     if (d.note) setTimeout(() => setErr(d.note), 0); // e.g. the music couldn't be made this time
   });
   const est = m ? (() => {
@@ -640,7 +645,8 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         <SoundControls sound={sound} disabled={busy.sound} onChange={(x) => setSound(x)} voices={voices} voiceId={st.voiceId ?? ""}
           onVoice={(v) => v && setSound({ ...sound, narrator: true }, { voiceId: v })}
           ownName={st.own_music_url ? "Tu música" : ""} upBusy={upBusy} onUpload={uploadMusic} dialogueLabel="Se escuchan los diálogos" />
-        {sound.dialogue && !plan.shots.some((x) => x.dialogue?.line) && <p className="text-sm text-warn">Esta historia todavía no tiene diálogos: escríbelos arriba con «Diálogos con IA» y anima esas tomas.</p>}
+        {!sound.dialogue && hasLines && <p className="text-xs text-muted">Los personajes mueven los labios pero no se escucha su voz: sus frases salen como subtítulos si los activas abajo.</p>}
+        {sound.dialogue && !hasLines && <p className="text-sm text-warn">Esta historia todavía no tiene diálogos: escríbelos arriba con «Diálogos con IA» y anima esas tomas.</p>}
         {sound.narrator && !plan.shots.some((x) => x.narration?.trim()) && <p className="text-sm text-warn">Escribe lo que dice el narrador en cada toma, arriba en el guion (debajo de cada toma).</p>}
         {sound.ambient && clips.some((c) => c.status === "done" && !plan.shots[c.idx]?.dialogue?.line) && <p className="text-xs text-muted">El sonido ambiente se graba al animar: las tomas que ya estaban animadas sin él siguen en silencio hasta que las re-animes.</p>}
         {(mode === "ia" || mode === "cancion") && (
@@ -650,7 +656,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         )}
         {mode === "cancion" && (
           <div className="flex flex-col gap-2">
-            <Field label="Letra de la canción" hint="Léela y cámbiala a tu gusto antes de crear la canción.">
+            <Field label="Letra de la canción" hint="Léela y cámbiala a tu gusto. Si cambias la letra después de crear la canción, al volver a armar se crea una nueva con la letra nueva.">
               <textarea value={lyrics ?? plan.lyrics ?? ""} onChange={(e) => setLyrics(e.target.value)} rows={7} className={`${inputCls} leading-relaxed`}
                 onBlur={() => lyrics !== null && run("lyrics", async () => { await post("/api/historias", { adId: id, sound: { lyrics } }, "PATCH"); })}
                 placeholder="Aquí va la letra. Si está vacía, toca «Escribir la letra con IA»." />
@@ -669,7 +675,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           <button type="button" disabled={!allDone || busy.film} onClick={() => montar(false)} className={btnCls}>
             {busy.film ? "Armando la película… (≈ 1 min)" : `${ad.final_url ? "Volver a armar" : "Armar la película"}${filmCost(false)}`}
           </button>
-          {st.music_url && (mode === "ia" || mode === "cancion") && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>{mode === "cancion" ? "Otra versión de la canción" : "Otra música"}{filmCost(true)}</button>}
+          {(mode === "ia" || mode === "cancion") && savedTrack(st, mode) && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>{mode === "cancion" ? "Otra versión de la canción" : "Otra música"}{filmCost(true)}</button>}
           {!allDone && clips.filter((c) => c.status === "done" && c.url).length >= 2 && (
             <button type="button" disabled={busy.film} onClick={() => montar(false, true)} className={ghostCls}>Armar solo con las {clips.filter((c) => c.status === "done" && c.url).length} tomas listas{filmCost(false, true)}</button>
           )}

@@ -128,6 +128,26 @@ export const MUSIC_MODES: { id: MusicMode; name: string; hint: string }[] = [
 export const musicModeOf = (st: { music_mode?: string } | null | undefined): MusicMode =>
   (["ia", "cancion", "propia", "ninguna"].includes(String(st?.music_mode)) ? (st!.music_mode as MusicMode) : "ia");
 
+/** A soundtrack made by AI, kept so switching options back and forth doesn't pay again. */
+export interface SavedTrack { url: string; secs: number; lyrics?: string; prompt?: string }
+
+/** The saved AI track of this kind (stories from before keep their instrumental in music_url). */
+export function savedTrack(st: { music_by?: { ia?: SavedTrack; cancion?: SavedTrack }; music_url?: string | null; music_secs?: number; music_made?: string }, kind: "ia" | "cancion"): SavedTrack | null {
+  const t = st.music_by?.[kind];
+  if (t?.url) return t;
+  if (st.music_url && (st.music_made ?? "ia") === kind) return { url: st.music_url, secs: st.music_secs ?? 0 };
+  return null;
+}
+
+/**
+ * Whether building the film must make (and charge) a new AI track: none of this kind yet, the customer
+ * asked for another one, the film got longer, or (a song) its lyrics changed since it was made.
+ */
+export function needsNewTrack(st: Parameters<typeof savedTrack>[0], kind: "ia" | "cancion", seconds: number, lyrics: string, again = false) {
+  const t = savedTrack(st, kind);
+  return !t || again || t.secs < seconds - 0.5 || (kind === "cancion" && (t.lyrics ?? "").trim() !== lyrics.trim());
+}
+
 /** One-tap sound setups (everything stays editable). */
 export interface SoundSetup { dialogue: boolean; narrator: boolean; music: MusicMode; ambient: boolean }
 export const SOUND_PRESETS: ({ id: string; name: string; hint: string } & SoundSetup)[] = [
@@ -188,9 +208,10 @@ export interface StorySettings {
   dialogue?: boolean; // characters speak on camera
   voiceId?: string | null;
   plan: StoryPlan;
-  music_url?: string | null; // the music made by AI (instrumental or song)
-  music_secs?: number; // how long the saved music is
-  music_made?: "ia" | "cancion"; // what music_url holds (switching kind makes a new one)
+  music_url?: string | null; // (stories made before music_by) the AI instrumental
+  music_secs?: number; // how long that music is
+  music_made?: "ia" | "cancion"; // (short-lived) what music_url held
+  music_by?: { ia?: SavedTrack; cancion?: SavedTrack }; // one saved track per kind, reused while valid
   own_music_url?: string | null; // the customer's own track (music_mode "propia")
   narration_url?: string | null;
   narration_cache?: Record<string, string>; // "<voice>|<line>" → recorded file

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const found = await loadStory(s.db, adId).catch(() => null);
   if (!found) return NextResponse.json({ error: "Historia no encontrada." }, { status: 404 });
   const { st } = found;
-  const context = typed.trim() || st.context || "";
+  const context = typeof b?.context === "string" ? typed : st.context ?? "";
   try {
     const clips = await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`);
     const frames = st.plan.shots.map((_, i) => clips.find((c) => Number(c.idx) === i)?.image_url as string | null | undefined);
@@ -65,6 +65,7 @@ export async function POST(req: Request) {
         if (next) sh.seconds = Math.min(8, Math.max(sh.seconds, lineSeconds(next.line)));
       }
       x.dialogue = true;
+      x.context = context.slice(0, 1500);
     });
     // shots being animated keep what they were started (and paid) with
     await Promise.all(clips.filter((c) => !["generating", "starting", "syncing"].includes(String(c.status))).map((c) => {

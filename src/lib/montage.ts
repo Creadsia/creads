@@ -257,7 +257,7 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
  * under it; narrator lines start with their shot. Optional subtitles (one line per shot) and a short
  * fade at the end.
  */
-export interface StoryCut { file: string; secs: number; voice?: boolean; text?: string; ambient?: boolean }
+export interface StoryCut { file: string; secs: number; voice?: boolean; text?: string; ambient?: boolean; muted?: boolean }
 export async function buildStory(dir: string, shots: StoryCut[], aspect: string, music: string | null, narration: { file: string; at: number; secs?: number; text?: string }[] = [], subtitles = false) {
   const [W, H] = frameSize(aspect);
   const args: string[] = ["-y", "-v", "error"];
@@ -279,7 +279,7 @@ export async function buildStory(dir: string, shots: StoryCut[], aspect: string,
   // subtitles: the spoken line of each shot, on screen while it plays
   const subs: { a: number; b: number; text: string }[] = [];
   if (subtitles) {
-    shots.forEach((sh, i) => { if (sh.voice && sh.text?.trim()) subs.push({ a: starts[i] + 0.15, b: starts[i] + sh.secs - 0.1, text: sh.text.trim() }); });
+    shots.forEach((sh, i) => { if ((sh.voice || sh.muted) && sh.text?.trim()) subs.push({ a: starts[i] + 0.15, b: starts[i] + sh.secs - 0.1, text: sh.text.trim() }); });
     for (const l of narration) if (l.text?.trim()) subs.push({ a: l.at + 0.4, b: Math.min(total, l.at + 0.4 + (l.secs ?? 3)), text: l.text.trim() });
   }
   if (subs.length) {
@@ -330,7 +330,8 @@ export async function buildStory(dir: string, shots: StoryCut[], aspect: string,
     tracks.push(`[n${i}]`);
   });
   if (!tracks.length) { const zi = n++; args.push("-f", "lavfi", "-t", T, "-i", "anullsrc=r=44100:cl=stereo"); tracks.push(`[${zi}:a]`); }
-  parts.push(`${tracks.join("")}amix=inputs=${tracks.length}:duration=longest:normalize=0,apad=whole_dur=${T},atrim=duration=${T}[ao]`);
+  // music + voices + ambience added together can clip on loud scenes: a limiter keeps it clean
+  parts.push(`${tracks.join("")}amix=inputs=${tracks.length}:duration=longest:normalize=0,alimiter=limit=0.95,apad=whole_dur=${T},atrim=duration=${T}[ao]`);
   const out = path.join(dir, "final.mp4");
   args.push("-filter_complex", parts.join(";"), "-map", "[vo]", "-map", "[ao]", "-t", T,
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out);
