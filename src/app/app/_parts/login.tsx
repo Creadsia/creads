@@ -8,7 +8,8 @@ const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal 
 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
 export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
-  const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover">(initial);
+  const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover" | "forgot">(initial);
+  const [sent, setSent] = useState(false);
   const rescue = "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +26,13 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
     setError("");
     if ((mode === "setup" || mode === "recover") && password !== password2) return setError("Las dos claves no coinciden.");
     setBusy(true);
+    if (mode === "forgot") {
+      const r = await fetch("/api/auth/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) }).catch(() => null);
+      const d = r ? await r.json().catch(() => ({})) : {};
+      setBusy(false);
+      if (r?.ok) return setSent(true);
+      return setError(d.error || "No se pudo enviar el correo. Revisa tu conexión e intenta de nuevo.");
+    }
     const url = mode === "setup" ? "/api/auth/setup" : mode === "recover" ? "/api/auth/recover" : "/api/auth/login";
     const res = await fetch(url, {
       method: "POST",
@@ -52,13 +60,15 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
       ) : (
         <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-line bg-surface p-6">
           <div className="flex flex-col gap-1">
-            <h1 className="font-display text-2xl font-extrabold">{mode === "setup" ? "Crea tu cuenta de dueño" : mode === "recover" ? "Nueva clave del dueño" : "Entrar a Creads"}</h1>
+            <h1 className="font-display text-2xl font-extrabold">{mode === "setup" ? "Crea tu cuenta de dueño" : mode === "recover" ? "Nueva clave del dueño" : mode === "forgot" ? "¿Olvidaste tu clave?" : "Entrar a Creads"}</h1>
             <p className="text-sm text-muted">
               {mode === "setup"
                 ? "Es la primera vez que se abre la plataforma. Esta cuenta tendrá acceso a todo y podrá invitar a otras personas."
                 : mode === "recover"
                   ? rescue ? "Elige tu clave nueva para entrar. Este enlace sirve una sola vez." : "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador."
-                  : "Entra con tu correo y tu clave."}
+                  : mode === "forgot"
+                    ? sent ? "Si hay una cuenta con ese correo, te llegará un enlace para elegir una clave nueva. Revisa también la carpeta de spam. El enlace vence en 1 hora." : "Escribe el correo de tu cuenta y te enviamos un enlace para elegir una clave nueva."
+                    : "Entra con tu correo y tu clave."}
             </p>
           </div>
           {mode === "setup" && (
@@ -67,17 +77,17 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
               <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
             </label>
           )}
-          {mode !== "recover" && (
+          {mode !== "recover" && !(mode === "forgot" && sent) && (
             <label htmlFor="email" className="flex flex-col gap-1 text-sm font-semibold text-muted">
               Correo
               <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={input} />
             </label>
           )}
-          <label htmlFor="password" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+          {mode !== "forgot" && <label htmlFor="password" className="flex flex-col gap-1 text-sm font-semibold text-muted">
             {mode === "recover" ? "Clave nueva" : "Clave"}
             <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} className={input} />
             {mode !== "login" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
-          </label>
+          </label>}
           {mode === "login" && need2fa && (
             <label htmlFor="otp" className="flex flex-col gap-1 text-sm font-semibold text-muted">
               Código de verificación
@@ -101,17 +111,18 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
               )}
             </>
           )}
-          <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
-            {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : "Entrar"}
-          </button>
+          {!(mode === "forgot" && sent) && <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
+            {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : mode === "forgot" ? "Enviarme el enlace" : "Entrar"}
+          </button>}
           {error && <p className="text-sm text-bad">{error}</p>}
           {mode === "login" && (
             <p className="text-xs text-muted">
-              ¿Olvidaste tu clave? Escríbenos a hola@creadsia.com desde el correo de tu cuenta.{" "}
-              <button type="button" onClick={() => { setMode("recover"); setError(""); }} className="font-semibold text-accent-text underline">Soy el dueño</button>
+              <button type="button" onClick={() => { setMode("forgot"); setSent(false); setError(""); }} className="font-semibold text-accent-text underline">¿Olvidaste tu clave?</button>
+              {" · "}
+              <button type="button" onClick={() => { setMode("recover"); setError(""); }} className="underline">Soy el dueño</button>
             </p>
           )}
-          {mode === "recover" && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
+          {(mode === "recover" || mode === "forgot") && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
         </form>
       )}
       {mode === "login" && (

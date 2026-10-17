@@ -37,6 +37,7 @@ export default function Privacidad() {
         <li><b>Infraestructura:</b> Vercel (sitio y servidores) y Supabase (base de datos y archivos privados).</li>
         <li><b>Modelos de IA:</b> Google (Veo, Gemini), fal.ai (Kling, Seedance y otros), ElevenLabs (voces) y Anthropic (Claude), que procesan tu contenido para generarlo.</li>
         <li><b>Pagos:</b> Mercado Pago.</li>
+        <li><b>Correos:</b> Resend, que envía los correos de la cuenta (bienvenida, comprobantes de pago, cambio de clave y avisos de tu plan).</li>
         <li><b>Medición:</b> Meta, solo si aceptas las cookies de medición.</li>
       </ul>
       <p>Algunos de estos proveedores procesan datos fuera de Chile. Elegimos proveedores con medidas de seguridad adecuadas. No vendemos tus datos.</p>

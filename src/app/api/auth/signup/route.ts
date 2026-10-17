@@ -3,6 +3,8 @@ import { SESSION_COOKIE, cookieOptions, createSession, createUser, deleteUser, f
 import { clientIp, tooMany } from "@/lib/rate";
 import { createClientWorkspace, emailOk, removeWorkspace } from "@/lib/signup";
 import { sendMeta, visitorFrom } from "@/lib/meta";
+import { sendEmail } from "@/lib/providers/email";
+import { welcomeEmail } from "@/lib/emails";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export async function POST(req: Request) {
     // same id the first sign-in would use, and the browser pixel gets it too: Meta counts it once
     const eventId = `reg-${user.id}`;
     await sendMeta({ name: "CompleteRegistration", eventId, email }, visitorFrom(req)).catch(() => null);
+    await sendEmail(welcomeEmail(email, name)); // never fails the sign-up
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;

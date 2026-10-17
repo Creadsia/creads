@@ -1,6 +1,8 @@
 import { type Order, applyPayment, getOrder, recordIncome } from "./billing";
 import { PACKS, PLANS } from "./catalog";
 import { sendMeta } from "./meta";
+import { sendEmail } from "./providers/email";
+import { receiptEmail } from "./emails";
 import { getPreapproval, setSubscriptionAmount } from "./mercadopago";
 
 // Applies a payment confirmed by Mercado Pago (or by the owner) to its order. The money part
@@ -62,6 +64,9 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   if (r === "already") return { ok: true, already: true };
 
   await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));
+  if (order.email) {
+    await sendEmail(receiptEmail(order.email, { label: order.quote.label, credits: g.credits, amount: pay.amount, currency: pay.currency, orderId: order.id, paymentId: `${pay.id}` }));
+  }
   if (order.visitor) {
     await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
   }

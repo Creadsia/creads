@@ -17,13 +17,17 @@ const BUCKETS = {
   upload: [10 * 60, 120],
   signup: [60 * 60, 5], // new accounts per connection per hour
   recoverAll: [60 * 60, 15], // owner recovery attempts from anywhere
+  forgotIp: [60 * 60, 6], // "forgot my password" emails asked from one connection per hour
+  forgotEmail: [60 * 60, 3], // ... and to one address per hour
+  forgotAll: [60 * 60, 200], // ... and in total (keeps the email account from being used for spam)
+  resetIp: [60 * 60, 20], // new-password attempts with an emailed link
 } as const;
 export type Bucket = keyof typeof BUCKETS;
 
 /** True while `key` stays within its bucket's limit (counts this attempt). */
 // Guarding passwords, codes and new accounts matters more than convenience: if the counter is down,
 // those are refused; everything else goes through (credits and the daily cap still protect the money).
-const STRICT: Bucket[] = ["loginEmail", "loginAccount", "loginIp", "twoFactor", "recover", "recoverAll", "signup"];
+const STRICT: Bucket[] = ["loginEmail", "loginAccount", "loginIp", "twoFactor", "recover", "recoverAll", "signup", "forgotIp", "forgotEmail", "forgotAll", "resetIp"];
 
 export async function allow(bucket: Bucket, key: string): Promise<boolean> {
   const [win, max] = BUCKETS[bucket];
@@ -57,6 +61,10 @@ const MSG: Record<Bucket, string> = {
   heavy: "Vas muy rápido: espera unos minutos y sigue.",
   upload: "Demasiadas subidas seguidas: espera unos minutos.",
   signup: "Ya se crearon varias cuentas desde esta conexión. Espera una hora o escríbenos a hola@creadsia.com.",
+  forgotIp: "Ya pediste varios enlaces. Revisa tu correo (también spam) o espera una hora.",
+  forgotEmail: "Ya te enviamos un enlace a ese correo. Revisa también la carpeta de spam, o espera una hora para pedir otro.",
+  forgotAll: "No podemos enviar más correos por ahora. Escríbenos a hola@creadsia.com.",
+  resetIp: "Demasiados intentos. Espera una hora.",
 };
 
 /** A 429 response when over the limit, otherwise null. */
