@@ -25,7 +25,9 @@ function params(req: Request) {
   const u = new URL(req.url);
   const email = String(u.searchParams.get("e") ?? "").slice(0, 200);
   const token = String(u.searchParams.get("t") ?? "");
-  return { email, token, ok: Boolean(email) && unsubOk(email, token) };
+  let ok = false;
+  try { ok = Boolean(email) && unsubOk(email, token); } catch (e) { console.error("unsub check", e instanceof Error ? e.message : e); }
+  return { email, token, ok };
 }
 
 export async function GET(req: Request) {
