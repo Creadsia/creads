@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import AccountMenu, { CreditsPill } from "./account-menu";
 import InstallBanner from "./install-banner";
+import Assistant from "./assistant";
+import FailNotices from "./fail-notices";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -29,6 +31,7 @@ const I = {
   chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
   pen: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4",
+  help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01",
   redo: "M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z",
 };
@@ -105,7 +108,7 @@ function BackButton({ path }: { path: string }) {
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
 function navFor(user: ShellUser) {
-  const account: Item[] = [{ href: "/app/planes", label: "Planes y créditos", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
+  const account: Item[] = [{ href: "/app/planes", label: "Planes y créditos", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }, { href: "/app/ayuda", label: "Centro de ayuda", icon: I.help }];
   // giving access is the owner's alone
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
@@ -273,8 +276,9 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
             <AccountMenu user={user} />
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
+      <Assistant />
     </div>
   );
 }

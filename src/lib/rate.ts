@@ -21,6 +21,8 @@ const BUCKETS = {
   forgotEmail: [60 * 60, 3], // ... and to one address per hour
   forgotAll: [60 * 60, 200], // ... and in total (keeps the email account from being used for spam)
   resetIp: [60 * 60, 20], // new-password attempts with an emailed link
+  assist: [10 * 60, 25], // messages to the in-app assistant per person in 10 min
+  assistDay: [24 * 60 * 60, 150], // ... and per day (each one is a paid AI call)
 } as const;
 export type Bucket = keyof typeof BUCKETS;
 
@@ -65,6 +67,8 @@ const MSG: Record<Bucket, string> = {
   forgotEmail: "Ya te enviamos un enlace a ese correo. Revisa también la carpeta de spam, o espera una hora para pedir otro.",
   forgotAll: "No podemos enviar más correos por ahora. Escríbenos a hola@creadsia.com.",
   resetIp: "Demasiados intentos. Espera una hora.",
+  assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
+  assistDay: "Llegaste al máximo de preguntas de hoy. Mañana sigo ayudándote; mientras, revisa el Centro de ayuda o escribe a hola@creadsia.com.",
 };
 
 /** A 429 response when over the limit, otherwise null. */

@@ -39,3 +39,20 @@ export function customerText(raw: string, fallback = "No se pudo completar."): s
 
 /** customerText for a caught error. */
 export const publicError = (err: unknown, fallback: string) => customerText(err instanceof Error ? err.message : typeof err === "string" ? err : "", fallback);
+
+/**
+ * Like customerText but silent (no log line, no reference): for showing a customer's past errors again,
+ * e.g. to the in-app assistant. Technical text becomes a short generic sentence.
+ */
+export function quietCustomerText(raw: string | null | undefined): string {
+  const msg = String(raw ?? "").trim();
+  if (!msg) return "";
+  if (OUT_OF_FUNDS.test(msg)) return UNAVAILABLE;
+  if (SAFETY.test(msg)) return REFUSED;
+  if (TIMEOUT.test(msg)) return SLOW;
+  // our own Spanish messages may carry our email and a reference code: those are fine
+  return TECHNICAL.test(msg.replace(/hola@creadsia\.com|c[oó]digo [A-F0-9]{6}/gi, "")) ? "Falló por un problema técnico pasajero." : msg.slice(0, 300);
+}
+
+/** Words a customer must never read in our own texts (services behind Creads). */
+export const VENDOR_WORDS = /\b(fal\.ai|fal|anthropic|claude|openai|chatgpt|gpt-?\d*|elevenlabs|eleven ?labs|vercel|supabase|resend|bytedance|google|gemini|mindicador)\b/gi;

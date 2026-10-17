@@ -15,6 +15,7 @@ export default function Privacidad() {
         <li><b>Pagos:</b> el plan o recarga que compras, el monto y el estado del pago. El pago lo procesa Mercado Pago: Creads no ve ni guarda los datos de tu tarjeta.</li>
         <li><b>Contenido que subes o creas:</b> guiones, fotos de personas y productos, audios y voces, videos e imágenes generados.</li>
         <li><b>Uso de la plataforma:</b> trabajos realizados, créditos usados, registros técnicos de seguridad (por ejemplo, dirección IP e intentos de ingreso).</li>
+        <li><b>Consultas al Asistente Creads:</b> tus mensajes se procesan con IA para responderte (junto con el estado de tu plan, créditos y últimos trabajos). Guardamos el tema y un resumen corto de cada pregunta para mejorar el Centro de ayuda.</li>
         <li><b>Medición publicitaria:</b> solo si aceptas las cookies de medición, usamos el píxel y la API de conversiones de Meta para saber qué anuncios nos traen visitas y compras. Tu correo se envía cifrado (hash) y nunca en texto.</li>
       </ul>
 
@@ -25,7 +26,7 @@ export default function Privacidad() {
         <li>Proteger la plataforma y a los usuarios: evitar fraudes, abusos y accesos no autorizados.</li>
         <li>Mejorar la calidad: la revisión automática compara cada video con su guion. Los aprendizajes que se aplican a todos los usuarios son reglas generales, nunca tu contenido.</li>
         <li>Medir nuestras campañas, solo con tu consentimiento.</li>
-        <li>Responder tus consultas y avisarte cambios importantes del servicio.</li>
+        <li>Responder tus consultas (también con el Asistente Creads, con IA) y avisarte cambios importantes del servicio.</li>
         <li>Enviarte consejos para usar la plataforma durante tu primera semana. Puedes dejar de recibirlos con un clic en el enlace del correo.</li>
       </ul>
 

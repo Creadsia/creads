@@ -317,18 +317,35 @@ export const es: Content = {
     ],
     compare: {
       title: "Compara los planes",
+      lead: "Todos incluyen todos los modelos de IA y la revisión de calidad. Cambias de plan cuando quieras.",
       cols: ["", "Starter", "Plus", "Studio"],
-      rows: [
-        ["Créditos al mes", "1.000", "3.000", "8.000"],
-        ["Anuncios UGC de 30 s", "≈ 3", "≈ 10", "≈ 26"],
-        ["Imágenes de producto", "≈ 125", "≈ 375", "≈ 1.000"],
-        ["Todos los modelos de IA y estudios", "yes", "yes", "yes"],
-        ["Revisión automática y rehechos gratis de errores graves", "yes", "yes", "yes"],
-        ["Avatares con tu cara", "1", "3", "Ilimitados"],
-        ["Voces clonadas", "1", "3", "Ilimitadas"],
-        ["Producción automática: 3 versiones por guion", "no", "yes", "yes"],
-        ["Usuarios del equipo", "1", "1", "3"],
-        ["Cola de generación", "Normal", "Prioritaria", "La más rápida"],
+      groups: [
+        {
+          title: "Producción",
+          rows: [
+            ["Créditos al mes", "1.000", "3.000", "8.000"],
+            ["Anuncios UGC de 30 s", "≈ 3", "≈ 10", "≈ 26"],
+            ["Imágenes de producto", "≈ 125", "≈ 375", "≈ 1.000"],
+            ["Producción automática", "no", "3 versiones por guion", "3 versiones por guion"],
+          ],
+        },
+        {
+          title: "Estudio",
+          rows: [
+            ["Todos los modelos de IA y estudios", "yes", "yes", "yes"],
+            ["Revisión de calidad y rehechos gratis", "yes", "yes", "yes"],
+            ["Avatares con tu cara", "1", "3", "Ilimitados"],
+            ["Voces clonadas", "1", "3", "Ilimitadas"],
+          ],
+        },
+        {
+          title: "Equipo y velocidad",
+          rows: [
+            ["Usuarios del equipo", "1", "1", "3"],
+            ["Cola de generación", "Normal", "Prioritaria", "La más rápida"],
+            ["Soporte", "Asistente 24/7", "Asistente 24/7", "Asistente 24/7 + directo"],
+          ],
+        },
       ],
     },
     payFaq: [

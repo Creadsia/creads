@@ -3,6 +3,7 @@ import { overview } from "./balances";
 import { usdClpRate } from "./usd-clp";
 import type { DailyReport } from "./emails";
 import { modelWarnings } from "./model-check";
+import { supportDay } from "./support";
 
 // Yesterday's numbers for the owner's morning email. Every part is best-effort: a part that can't be
 // read shows 0 and the rest still goes out.
@@ -20,6 +21,7 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
     overview(false).catch(() => null),
     modelWarnings().catch(() => [] as string[]),
   ]);
+  const support = await supportDay(from).catch(() => undefined);
   const installs = ((await readPrivateJSON<Record<string, number>>("instalaciones.json").catch(() => null)) ?? {})[from] ?? 0;
   const leaves = ((await readPrivateJSON<{ at: string; reason: string; detail: string }[]>("cancelaciones.json").catch(() => null)) ?? []).filter((l) => l.at >= from && l.at < to);
   const clp = pays.filter((p) => p.currency === "CLP").reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -34,6 +36,7 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
     aiUsd: +clips.reduce((s, c) => s + Number(c.usd ?? 0), 0).toFixed(2),
     expired: extra.expired,
     ending: extra.ending,
+    support,
     alerts: [...(money?.alerts ?? []).map((a) => a.text), ...models, ...leaves.map((l) => `Un cliente canceló la renovación: ${l.reason}${l.detail ? ` («${l.detail.slice(0, 160)}»)` : ""}.`)],
   };
 }

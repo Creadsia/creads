@@ -316,18 +316,35 @@ export const en = {
     ],
     compare: {
       title: "Compare plans",
+      lead: "Every plan includes every AI model and automatic QA. Switch plans anytime.",
       cols: ["", "Starter", "Plus", "Studio"],
-      rows: [
-        ["Credits per month", "1,000", "3,000", "8,000"],
-        ["30-second UGC ads", "≈ 3", "≈ 10", "≈ 26"],
-        ["Product images", "≈ 125", "≈ 375", "≈ 1,000"],
-        ["Every AI model and studio", "yes", "yes", "yes"],
-        ["Automatic QA and free redos of severe errors", "yes", "yes", "yes"],
-        ["Avatars with your face", "1", "3", "Unlimited"],
-        ["Cloned voices", "1", "3", "Unlimited"],
-        ["Auto production: 3 versions per script", "no", "yes", "yes"],
-        ["Team seats", "1", "1", "3"],
-        ["Queue", "Standard", "Priority", "Fastest"],
+      groups: [
+        {
+          title: "Production",
+          rows: [
+            ["Credits per month", "1,000", "3,000", "8,000"],
+            ["30-second UGC ads", "≈ 3", "≈ 10", "≈ 26"],
+            ["Product images", "≈ 125", "≈ 375", "≈ 1,000"],
+            ["Auto production", "no", "3 versions per script", "3 versions per script"],
+          ],
+        },
+        {
+          title: "Studio",
+          rows: [
+            ["Every AI model and studio", "yes", "yes", "yes"],
+            ["Automatic QA and free redos", "yes", "yes", "yes"],
+            ["Avatars with your face", "1", "3", "Unlimited"],
+            ["Cloned voices", "1", "3", "Unlimited"],
+          ],
+        },
+        {
+          title: "Team and speed",
+          rows: [
+            ["Team seats", "1", "1", "3"],
+            ["Generation queue", "Standard", "Priority", "Fastest"],
+            ["Support", "24/7 assistant", "24/7 assistant", "24/7 assistant + direct"],
+          ],
+        },
       ],
     },
     payFaq: [

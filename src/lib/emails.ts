@@ -134,7 +134,11 @@ export interface DailyReport {
   expired: number;
   ending: number;
   alerts: string[];
+  /** What the in-app assistant handled. */
+  support?: { chats: number; people: number; solved: number; topics: [string, number][]; unsolved: string[] };
 }
+
+const TOPIC_ES: Record<string, string> = { creditos: "créditos", planes_pago: "planes y pagos", crear: "crear anuncios", marca: "voces y avatares", herramientas: "herramientas", falla: "fallas", cuenta: "cuenta", otro: "otros" };
 
 /** The owner's 9:00 summary: money in, AI spent, new accounts and anything to look at. */
 export function ownerReportEmail(to: string, r: DailyReport): Email {
@@ -149,6 +153,10 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
     ["Planes que vencen en 3 días", String(r.ending)],
     ["Créditos vencidos hoy", r.expired.toLocaleString("es-CL")],
   ];
+  const sp = r.support;
+  if (sp) rows.push(["Asistente Creads", sp.chats ? `${sp.chats} pregunta${sp.chats === 1 ? "" : "s"} de ${sp.people} cliente${sp.people === 1 ? "" : "s"} · ${Math.round((sp.solved / sp.chats) * 100)}% resueltas` : "Sin preguntas"]);
+  const topics = sp?.topics.length ? `Temas: ${sp.topics.map(([t, n]) => `${TOPIC_ES[t] ?? t} (${n})`).join(", ")}.` : "";
+  const unsolved = sp?.unsolved ?? [];
   const date = longDate(r.day);
   const ok = !r.alerts.length;
   return {
@@ -160,9 +168,13 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
       paragraphs: [ok ? "Todo anduvo en orden. Estos son los números de ayer:" : "Hay algo para revisar (abajo). Estos son los números de ayer:"],
       rows,
       cta: { label: "Abrir el Panel", href: `${SITE}/admin` },
-      after: r.alerts.length ? [`<b>Para revisar:</b><br>${r.alerts.map((a) => `• ${esc(a)}`).join("<br>")}`] : [],
+      after: [
+        ...(r.alerts.length ? [`<b>Para revisar:</b><br>${r.alerts.map((a) => `• ${esc(a)}`).join("<br>")}`] : []),
+        ...(topics ? [esc(topics)] : []),
+        ...(unsolved.length ? [`<b>Lo que el asistente no supo responder</b> (vale la pena sumarlo al Centro de ayuda o mejorar el producto):<br>${unsolved.map((q) => `• «${esc(q)}»`).join("<br>")}`] : []),
+      ],
     }),
-    text: plain([`Resumen del ${date}`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", ...(r.alerts.length ? ["Para revisar:", ...r.alerts.map((a) => `- ${a}`)] : ["Todo en orden."]), "", `Panel: ${SITE}/admin`]),
+    text: plain([`Resumen del ${date}`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", ...(r.alerts.length ? ["Para revisar:", ...r.alerts.map((a) => `- ${a}`)] : ["Todo en orden."]), ...(topics ? ["", topics] : []), ...(unsolved.length ? ["", "Lo que el asistente no supo responder:", ...unsolved.map((q) => `- «${q}»`)] : []), "", `Panel: ${SITE}/admin`]),
   };
 }
 

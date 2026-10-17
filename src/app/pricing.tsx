@@ -13,11 +13,114 @@ const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFracti
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-function Yes() {
+function Yes({ es }: { es: boolean }) {
   return (
-    <svg viewBox="0 0 20 20" className="mx-auto h-5 w-5 text-good" role="img" aria-label="✓">
-      <path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <span className="mx-auto grid h-6 w-6 place-items-center rounded-full bg-good/15 text-good" role="img" aria-label={es ? "Incluido" : "Included"}>
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" aria-hidden="true">
+        <path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+function Cell({ v, es }: { v: string; es: boolean }) {
+  if (v === "yes") return <Yes es={es} />;
+  if (v === "no") return <span className="text-muted/60" aria-label={es ? "No incluido" : "Not included"}>—</span>;
+  return <span className="font-medium tabular-nums">{v}</span>;
+}
+
+/** The comparison: plans as columns with price and button on top, features grouped below.
+ *  On phones one plan at a time (a table with four columns doesn't fit). */
+function ComparePlans({ t, es, yearly, money, perMonthOfYear }: { t: Content["pricing"]; es: boolean; yearly: boolean; money: (n: number) => string; perMonthOfYear: (n: number) => string }) {
+  const [pick, setPick] = useState(1); // phones: Plus first
+  const plans = t.plans;
+  const price = (p: (typeof plans)[number]) => (yearly ? perMonthOfYear(p.yearly * 12) : money(p.price * (1 - LAUNCH_PCT / 100)));
+  const note = (p: (typeof plans)[number]) => (yearly ? (es ? "al mes, facturado anual" : "per month, billed yearly") : `${t.firstMonth} · ${t.then} ${money(p.price)}`);
+  const hi = (i: number) => (i === 1 ? "bg-accent/[0.06]" : "");
+
+  return (
+    <section aria-labelledby="compare-title" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h3 id="compare-title" className="text-xl font-extrabold">{t.compare.title}</h3>
+        <p className="text-[15px] text-muted">{t.compare.lead}</p>
+      </div>
+
+      {/* computers and tablets */}
+      <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface md:block">
+        <table className="w-full table-fixed border-collapse text-left text-[15px]">
+          <colgroup><col className="w-[34%]" /><col /><col /><col /></colgroup>
+          <thead>
+            <tr>
+              <th scope="col" className="p-5 align-bottom text-sm font-normal text-muted">{es ? "Precios en US$" : "Prices in US$"}</th>
+              {plans.map((p, i) => (
+                <th key={p.id} scope="col" className={`relative p-5 align-top font-normal ${hi(i)}`}>
+                  {i === 1 && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-[image:var(--grad)]" />}
+                  <div className="flex flex-col gap-3">
+                    <span className="flex items-center gap-2">
+                      <b className="text-lg">{p.name}</b>
+                      {i === 1 && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent-text">{t.popular}</span>}
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="font-display text-[1.9rem] leading-none font-semibold tabular-nums">{price(p)}</span>
+                      <span className="mt-1 text-xs text-muted">{note(p)}</span>
+                    </span>
+                    <a href={startHref(p.id, yearly)}
+                      className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors ${i === 1 ? "bg-[image:var(--grad)] text-white" : "border border-line hover:border-muted"}`}>
+                      {t.cta} {p.name}
+                    </a>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          {t.compare.groups.map((g) => (
+            <tbody key={g.title}>
+              <tr>
+                <th scope="colgroup" colSpan={4} className="border-t border-line bg-surface-2/60 px-5 py-2.5 text-[13px] font-semibold text-muted">{g.title}</th>
+              </tr>
+              {g.rows.map(([row, ...vals]) => (
+                <tr key={row} className="border-t border-line/70 transition-colors hover:bg-surface-2/40">
+                  <th scope="row" className="px-5 py-3.5 font-normal">{row}</th>
+                  {vals.map((v, i) => (
+                    <td key={i} className={`px-5 py-3.5 text-center ${hi(i)}`}><Cell v={v} es={es} /></td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+
+      {/* phones: one plan at a time */}
+      <div className="flex flex-col gap-3 md:hidden">
+        <div role="tablist" aria-label={t.compare.title} className="grid grid-cols-3 rounded-xl border border-line bg-surface p-1">
+          {plans.map((p, i) => (
+            <button key={p.id} type="button" role="tab" aria-selected={pick === i} onClick={() => setPick(i)}
+              className={`rounded-lg py-2 text-sm font-semibold transition-colors ${pick === i ? "bg-ink text-bg" : "text-muted"}`}>{p.name}</button>
+          ))}
+        </div>
+        <div role="tabpanel" className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="flex flex-col gap-3 p-4">
+            <span className="flex flex-col">
+              <span className="font-display text-[1.8rem] leading-none font-semibold tabular-nums">{price(plans[pick])}</span>
+              <span className="mt-1 text-xs text-muted">{note(plans[pick])}</span>
+            </span>
+            <a href={startHref(plans[pick].id, yearly)} className={`rounded-lg px-4 py-2.5 text-center text-sm font-semibold ${pick === 1 ? "bg-[image:var(--grad)] text-white" : "bg-ink text-bg"}`}>{t.cta} {plans[pick].name}</a>
+          </div>
+          {t.compare.groups.map((g) => (
+            <dl key={g.title}>
+              <dt className="border-t border-line bg-surface-2/60 px-4 py-2 text-[13px] font-semibold text-muted">{g.title}</dt>
+              {g.rows.map(([row, ...vals]) => (
+                <dd key={row} className="flex items-center justify-between gap-4 border-t border-line/70 px-4 py-3 text-[15px]">
+                  <span>{row}</span>
+                  <span className="shrink-0 text-right"><Cell v={vals[pick]} es={es} /></span>
+                </dd>
+              ))}
+            </dl>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -145,44 +248,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
       </div>
 
       {/* plan comparison */}
-      <div className="flex flex-col gap-3">
-        <h3 className="text-xl font-extrabold">{t.compare.title}</h3>
-        <div className="min-w-0 overflow-x-auto rounded-2xl border border-line bg-surface">
-          <table className="w-full min-w-[620px] text-left text-[15px]">
-            <thead>
-              <tr className="border-b border-line">
-                {t.compare.cols.map((c, i) => (
-                  <th key={c || "x"} scope="col" className={`p-4 ${i ? "w-[19%] text-center" : ""} ${i === 2 ? "bg-surface-2" : ""}`}>
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {t.compare.rows.map(([row, ...vals]) => (
-                <tr key={row} className="border-b border-line last:border-0">
-                  <th scope="row" className="p-4 font-medium">{row}</th>
-                  {vals.map((v, i) => (
-                    <td key={i} className={`p-4 text-center ${i === 1 ? "bg-surface-2 font-semibold" : ""}`}>
-                      {v === "yes" ? <Yes /> : v === "no" ? <span className="text-muted" aria-label={es ? "No incluido" : "Not included"}>—</span> : v}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              <tr>
-                <td className="p-4" />
-                {t.plans.map((p) => (
-                  <td key={p.id} className={`p-3 text-center ${p.id === "plus" ? "bg-surface-2" : ""}`}>
-                    <a href={startHref(p.id, yearly)} className={`inline-block rounded-lg px-3 py-2 text-sm font-semibold ${p.id === "plus" ? "bg-[image:var(--grad)] text-white" : "border border-line hover:bg-surface-2"}`}>
-                      {t.cta} {p.name}
-                    </a>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ComparePlans t={t} es={es} yearly={yearly} money={money} perMonthOfYear={perMonthOfYear} />
 
       {/* top-ups and payment questions */}
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

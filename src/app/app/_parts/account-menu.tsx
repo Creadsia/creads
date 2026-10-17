@@ -144,7 +144,8 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y créditos</Link>
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
-          <a href={whatsappLink("Hola, necesito ayuda con Creads IA") || "mailto:hola@creadsia.com?subject=Ayuda%20con%20Creads"} target={WHATSAPP ? "_blank" : undefined} rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.help} />{WHATSAPP ? "Ayuda por WhatsApp" : "Ayuda y soporte"}</a>
+          <Link href="/app/ayuda" role="menuitem" onClick={close} className={item}><Svg d={D.help} />Centro de ayuda</Link>
+          {WHATSAPP && <a href={whatsappLink("Hola, necesito ayuda con Creads IA")} target="_blank" rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.phone} />Ayuda por WhatsApp</a>}
           {(app.mode === "prompt" || app.mode === "ios") && (
             <button type="button" role="menuitem" onClick={() => (app.mode === "prompt" ? app.install().then(close) : setIos((v) => !v))} className={item}>
               <Svg d={D.phone} />Instalar la app
