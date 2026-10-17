@@ -250,3 +250,22 @@ export function alarmEmail(to: string, a: { title: string; detail: string; rows?
     text: plain([`⚠ ${a.title}`, "", a.detail, ...(a.rows ?? []).map(([k, v]) => `${k}: ${v}`), "", `Panel: ${SITE}/admin?tab=errores`]),
   };
 }
+
+/** The office CEO's morning brief (Panel → Oficina). The text comes from an AI agent: escaped, no links. */
+export function officeEmail(to: string, b: { resumen: string; prioridades: string[]; informe: string; estado: string; alertas: [string, string][] }): Email {
+  const mark = b.estado === "urgente" ? "🔴" : b.estado === "atencion" ? "🟡" : "🟢";
+  const para = b.informe.split(/\n{2,}/).map((t) => esc(t.trim()).replace(/\n/g, "<br>")).filter(Boolean).slice(0, 12);
+  return {
+    to, tag: "oficina",
+    subject: `${mark} Oficina Creads: ${b.resumen}`.replace(/\s+/g, " ").slice(0, 140),
+    html: layout({
+      preview: b.resumen,
+      title: "Resumen del día de tu oficina",
+      paragraphs: [`<b>${esc(b.resumen)}</b>`, ...(b.prioridades.length ? [`<b>Lo primero hoy:</b><br>${b.prioridades.map((p, i) => `${i + 1}. ${esc(p)}`).join("<br>")}`] : []), ...para],
+      rows: b.alertas,
+      cta: { label: "Abrir la Oficina", href: `${SITE}/admin?tab=oficina` },
+      after: ["Lo escribió el agente CEO con los informes de los demás agentes. Revisa los detalles en el Panel antes de actuar."],
+    }),
+    text: plain([`${mark} ${b.resumen}`, "", ...b.prioridades.map((p, i) => `${i + 1}. ${p}`), "", b.informe, "", ...b.alertas.map(([k, v]) => `${k}: ${v}`), "", `Oficina: ${SITE}/admin?tab=oficina`]),
+  };
+}

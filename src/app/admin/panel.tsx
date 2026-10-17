@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Estadisticas from "./estadisticas";
+import Oficina from "./oficina";
 import {
   type Config,
   type CostoFijo,
@@ -18,10 +19,11 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "lanzamiento" | "estadisticas" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "lanzamiento" | "estadisticas" | "oficina" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["lanzamiento", "Lanzamiento"],
   ["estadisticas", "Estadísticas"],
+  ["oficina", "Oficina"],
   ["errores", "Errores y alarmas"],
   ["resumen", "Resumen"],
   ["saldos", "Saldos y alertas"],
@@ -169,7 +171,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>

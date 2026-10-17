@@ -62,7 +62,14 @@ export async function readPrivateJSON<T>(path: string): Promise<T | null> {
   await ensureBucket(PRIVATE, false);
   const { url, key } = env();
   const res = await fetch(`${url}/storage/v1/object/${PRIVATE}/${path}`, { headers: sbHeaders(key), cache: "no-store" });
-  if (res.status === 404 || res.status === 400) return null;
+  if (res.status === 404) return null;
+  // Storage answers a missing file with 400 + {"statusCode":"404","error":"not_found"}; any other 400
+  // (bad key, bad path) is an error, so callers never mistake it for "empty" and overwrite the file.
+  if (res.status === 400) {
+    const body = await res.text().catch(() => "");
+    if (/not.?found|"404"/i.test(body)) return null;
+    throw new Error(`Storage: no se pudo leer ${path} (400).`);
+  }
   if (!res.ok) throw new Error(`Storage: no se pudo leer ${path} (${res.status}).`);
   return (await res.json()) as T;
 }

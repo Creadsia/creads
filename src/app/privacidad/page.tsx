@@ -37,7 +37,7 @@ export default function Privacidad() {
       <p>Solo con proveedores que necesitamos para darte el servicio, y solo lo necesario:</p>
       <ul>
         <li><b>Infraestructura:</b> Vercel (sitio y servidores) y Supabase (base de datos y archivos privados).</li>
-        <li><b>Modelos de IA:</b> Google (Veo, Gemini), fal.ai (Kling, Seedance y otros), ElevenLabs (voces) y Anthropic (Claude), que procesan tu contenido para generarlo.</li>
+        <li><b>Modelos de IA:</b> Google (Veo, Gemini), fal.ai (Kling, Seedance y otros), ElevenLabs (voces) y Anthropic (Claude), que procesan tu contenido para generarlo. Para revisar internamente cómo funciona el servicio usamos además xAI (Grok), solo con resúmenes de los que quitamos correos, teléfonos y otros datos que te identifiquen.</li>
         <li><b>Pagos:</b> Mercado Pago.</li>
         <li><b>Correos:</b> Resend, que envía los correos de la cuenta (bienvenida, comprobantes de pago, cambio de clave y avisos de tu plan).</li>
         <li><b>Medición:</b> Meta, solo si aceptas las cookies de medición.</li>
