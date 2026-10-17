@@ -40,7 +40,7 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number };
+type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
 // The menu follows the order a new customer works in: set up the brand once (voice → avatar →
 // product), then every ad is script → ad. Extra tools stay folded away so nobody is overwhelmed.
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
@@ -58,7 +58,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     items: [
       { href: "/app/voces", label: "Voces", icon: I.mic, step: 1 },
       { href: "/app/avatares", label: "Avatares", icon: I.user, step: 2 },
-      { href: "/app/productos", label: "Productos", icon: I.box, step: 3 },
+      { href: "/app/productos", label: "Productos", icon: I.box, step: 3, optional: true },
     ],
   },
   {
@@ -118,7 +118,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
                 <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
                   {it.step ? <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border text-[10px] font-bold ${on ? "border-current" : "border-line"}`}>{it.step}</span> : <Icon d={it.icon} />}
-                  <span className="flex-1">{it.step ? <span className="sr-only">Paso {it.step}: </span> : null}{it.label}</span>
+                  <span className="flex-1">{it.step ? <span className="sr-only">Paso {it.step}: </span> : null}{it.label}{it.optional && <span className="ml-1.5 text-[11px] font-medium text-muted">(opcional)</span>}</span>
                   {it.soon && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted">PRONTO</span>}
                   {it.badge && <span className="rounded bg-[image:var(--grad)] px-1.5 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>}
                 </Link>

@@ -142,7 +142,7 @@ export function DeleteButton({ onDelete, label = "Borrar" }: { onDelete: () => v
 
 // The two paths a customer follows, always in the same order: set up the brand once, then make ads.
 const FLOWS = {
-  marca: { label: "Tu marca (se hace una vez)", steps: [["Voces", "/app/voces"], ["Avatares", "/app/avatares"], ["Productos", "/app/productos"]] },
+  marca: { label: "Tu marca (se hace una vez)", steps: [["Voces", "/app/voces"], ["Avatares", "/app/avatares"], ["Productos (opcional)", "/app/productos"]] },
   anuncio: { label: "Crear un anuncio", steps: [["Crear guion", "/app/guiones"], ["Crear anuncio", "/app/crear"]] },
 } as const;
 
