@@ -211,6 +211,7 @@ function Resumen({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
           <p className="text-sm text-muted">Cambia cuántos suscriptores tienes y mira cuánto queda de verdad, después de modelos, Stripe, afiliados y costos fijos.</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
+          <Field label="% en su primer mes (−50%)"><Num id="p-promo" value={c.proyeccion.pctPromo ?? 100} step={10} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctPromo = v; })} /></Field>
           {c.planes.map((pl) => (
             <Field key={pl.id} label={pl.nombre}><Num id={`p-${pl.id}`} value={c.proyeccion[pl.id] ?? 0} onChange={(v) => setCfg((x) => { x.proyeccion[pl.id] = v; })} /></Field>
           ))}
@@ -237,7 +238,7 @@ function Resumen({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
           <div className="flex flex-col gap-3">
             <Stat label="Margen neto real" value={fmtPct(p.margen)} sub={`${p.subs} suscriptores · ${fmtUsd(p.neto * 12)} al año`} t={tone(p.margen)} />
             <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">
-              Supone que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
+              Supone que el {c.proyeccion.pctPromo ?? 100}% está en su primer mes pagando la mitad (al lanzar son todos; después baja a los nuevos de cada mes), que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
               {c.afiliado.tipo === "recurrente" ? `de ${c.afiliado.pct}% mensual` : "única (no entra en el mes a mes)"}.
             </p>
           </div>

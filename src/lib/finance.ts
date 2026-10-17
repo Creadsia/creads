@@ -64,7 +64,7 @@ export interface Config {
   stripeFijo: number;
   planes: Plan[];
   afiliado: { tipo: "recurrente" | "cpa"; pct: number; meses: number; cpa: number; vida: number };
-  proyeccion: Record<string, number> & { pctAfiliado: number };
+  proyeccion: Record<string, number> & { pctAfiliado: number; pctPromo?: number };
 }
 
 export interface Finanzas {
@@ -153,7 +153,7 @@ export const DEFAULT_FINANZAS: Finanzas = {
       { id: "studio", nombre: "Studio", mensual: 449, anual: 374, creditos: 8000 },
     ],
     afiliado: { tipo: "recurrente", pct: 30, meses: 12, cpa: 50, vida: 8 },
-    proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30 },
+    proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30, pctPromo: 100 },
   },
 };
 
@@ -195,13 +195,19 @@ export function proyectar(f: Finanzas) {
   for (const p of c.planes) {
     const n = Number(c.proyeccion[p.id] || 0);
     if (!n) continue;
-    const r = planMonth(c, p, {});
-    const ra = planMonth(c, p, { viaAf: true });
+    // part of them in their first month, paying 50% (all of them right after launch)
+    const promo = Math.min(100, Math.max(0, Number(c.proyeccion.pctPromo ?? 100))) / 100;
     subs += n;
-    mrr += n * r.precio;
-    modelos += n * r.modelos;
-    stripe += n * r.stripe;
-    afiliados += ((n * c.proyeccion.pctAfiliado) / 100) * ra.afiliado;
+    for (const [share, o] of [[1 - promo, {}], [promo, { promo: true }]] as const) {
+      if (!share) continue;
+      const k = n * share;
+      const r = planMonth(c, p, o);
+      const ra = planMonth(c, p, { ...o, viaAf: true });
+      mrr += k * r.precio;
+      modelos += k * r.modelos;
+      stripe += k * r.stripe;
+      afiliados += ((k * c.proyeccion.pctAfiliado) / 100) * ra.afiliado;
+    }
   }
   const fijos = fijoMensual(f.fijos);
   const neto = mrr - modelos - stripe - afiliados - fijos;
