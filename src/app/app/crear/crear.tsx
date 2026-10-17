@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FORMATS, type FormatId, formatById } from "@/lib/formats";
 import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import { NICHES } from "@/lib/niches";
-import { TO_CREAR_KEY } from "@/lib/guiones";
+import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
@@ -49,6 +49,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
   const [scriptId, setScriptId] = useState<string | null>(null);
   const [saved, setSaved] = useState("");
   const [niche, setNiche] = useState("");
+  const [fromGuion, setFromGuion] = useState(false);
   useEffect(() => { try { const v = localStorage.getItem("creads-niche"); if (v) setNiche(v); } catch {} }, []);
   const pickNiche = (v: string) => { setNiche(v); try { localStorage.setItem("creads-niche", v); } catch {} };
 
@@ -56,10 +57,17 @@ export default function Crear({ full = true }: { full?: boolean }) {
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(TO_CREAR_KEY);
-      if (!raw) return;
+      if (!raw) {
+        // arriving from the menu: bring the script being worked on in «Crear guion», if there is one
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") as { script?: string; lang?: string } | null;
+        if (draft?.script && draft.script.trim().split(/\s+/).length >= 12) {
+          setText(draft.script.trim()); setLang(draft.lang === "en" ? "en" : "es-CL"); setFromGuion(true);
+        }
+        return;
+      }
       sessionStorage.removeItem(TO_CREAR_KEY);
       const d = JSON.parse(raw) as { text?: string; lang?: string; title?: string };
-      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setStep(0); }
+      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setStep(0); setFromGuion(true); }
     } catch {}
   }, []);
 
@@ -149,6 +157,12 @@ export default function Crear({ full = true }: { full?: boolean }) {
             </Field>
             </div>
           </div>
+          {fromGuion && step === 0 && (
+            <p role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-good/40 bg-good/10 px-3 py-2 text-sm">
+              <span>✓ Trajimos tu guion de «Crear guion». Revísalo, elige el formato y divídelo en cortes.</span>
+              <button type="button" onClick={() => { setText(""); setFromGuion(false); }} className="text-xs font-semibold text-muted underline hover:text-ink">Empezar con uno en blanco</button>
+            </p>
+          )}
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
           <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en <a href="/app/guiones" className="font-semibold text-accent-text underline">Crear guion</a> (paso 1).</p>

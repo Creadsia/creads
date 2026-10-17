@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { BLOCKS, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
+import { BLOCKS, DRAFT_KEY, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 
@@ -13,7 +13,6 @@ interface SavedScript extends Row { title: string | null; lang: string; text: st
 interface Version { id: string; label: string; text: string; at: number }
 interface Draft { script: string; lang: ScriptLang; niche: string; context: string; versions: Version[] }
 
-const DRAFT_KEY = "creads-guion-draft";
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const newId = () => Math.random().toString(36).slice(2, 10);
 
@@ -300,6 +299,19 @@ export default function Guiones() {
               </div>
             </>
           )}
+        </section>
+      )}
+
+      {w >= 12 && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]" aria-labelledby="siguiente">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-[15px] bg-surface p-5">
+            <div className="flex max-w-xl flex-col gap-1">
+              <span className="text-xs font-semibold text-muted">Siguiente paso</span>
+              <h2 id="siguiente" className="font-display text-xl font-bold">¿Tu guion está listo? Créalo en video</h2>
+              <p className="text-sm text-muted">Pasamos tu guion ({w} palabras, ≈ {spokenSeconds(script)} s) a «Crear anuncio», ya pegado. Ahí eliges el formato, quién habla y lo divides en cortes.</p>
+            </div>
+            <button type="button" onClick={() => toCrear(script, current?.titulo)} className="rounded-xl bg-accent px-5 py-3 font-semibold text-accent-ink">Pasar a crear mi anuncio →</button>
+          </div>
         </section>
       )}
     </>
