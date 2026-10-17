@@ -42,7 +42,7 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
 
 type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
 // The menu follows the order a new customer works in: set up the brand once (voice → avatar →
-// product), then every ad is script → ad. Extra tools stay folded away so nobody is overwhelmed.
+// product), then every ad is script → ad. The other creative tools come after, in their own group.
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   {
@@ -70,12 +70,12 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     ],
   },
   {
-    group: "Más herramientas",
+    group: "Más formas de crear",
     more: true,
     items: [
       { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true, badge: "NUEVO" },
-      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
       { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
+      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
       { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, soon: true, full: true },
     ],
   },
@@ -97,8 +97,10 @@ function navFor(user: ShellUser) {
 function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: () => void }) {
   const groups = navFor(user);
   const inMore = groups.some((g) => g.more && g.items.some((it) => path.startsWith(it.href)));
-  const [moreOpen, setMoreOpen] = useState(inMore);
-  useEffect(() => { if (inMore) setMoreOpen(true); }, [inMore]);
+  // open unless the customer folded it (remembered on this browser)
+  const [moreOpen, setMoreOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("creads-more") === "0" && !inMore) setMoreOpen(false); } catch {} }, [inMore]);
+  const toggleMore = () => setMoreOpen((v) => { try { localStorage.setItem("creads-more", v ? "0" : "1"); } catch {} return !v; });
   return (
     <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
       {groups.map((g, i) => {
@@ -106,7 +108,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
         return (
           <div key={i} className="flex flex-col gap-0.5">
             {g.group && (g.more ? (
-              <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={open} className="flex items-center justify-between px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase hover:text-ink">
+              <button type="button" onClick={toggleMore} aria-expanded={open} className="flex items-center justify-between px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase hover:text-ink">
                 {g.group}<span aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
               </button>
             ) : (

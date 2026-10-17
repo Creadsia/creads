@@ -74,6 +74,7 @@ export default function Home({ full = true }: { full?: boolean }) {
               );
             })}
           </ol>
+          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Están siempre en el menú, en «Más formas de crear».</p>}
         </section>
       ) : (
         c && (
@@ -109,7 +110,7 @@ export default function Home({ full = true }: { full?: boolean }) {
       {full && !starting && c && (
         <section className={cardCls} aria-labelledby="quick">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="quick" className="font-display text-lg font-bold">Más herramientas</h2>
+            <h2 id="quick" className="font-display text-lg font-bold">Más formas de crear</h2>
             <Link href="/app/herramientas" className="text-sm text-accent-text">Ver todas →</Link>
           </div>
           <div className="flex flex-wrap gap-2">
