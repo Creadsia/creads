@@ -9,7 +9,6 @@ import PayBadges from "./pay-badges";
 // The plans, front and center: the launch price is the big number, the regular price is crossed out,
 // and every button goes straight to checkout (/empezar) with that plan already chosen.
 
-const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
@@ -22,7 +21,7 @@ function Yes() {
   );
 }
 
-export default function Pricing({ t, lang, rate, renews = true }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean }) {
+export default function Pricing({ t, lang, renews = true }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);

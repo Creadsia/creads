@@ -17,7 +17,7 @@ const seenRecently = () => {
 };
 const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); } catch { /* private mode */ } };
 
-export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate: number }) {
+export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: string; rate?: number }) {
   const es = lang === "es";
   const plus = PLANS.find((p) => p.id === "plus")!;
   const first = plus.monthly * (1 - LAUNCH_PCT / 100);

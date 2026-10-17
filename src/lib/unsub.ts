@@ -22,8 +22,9 @@ export function unsubOk(email: string, token: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Addresses that opted out. A read error throws (callers must not treat it as "nobody"). */
 export async function optedOut(): Promise<Set<string>> {
-  return new Set(((await readPrivateJSON<string[]>(FILE).catch(() => null)) ?? []).map((e) => e.toLowerCase()));
+  return new Set(((await readPrivateJSON<string[]>(FILE)) ?? []).map((e) => e.toLowerCase()));
 }
 
 export async function optOut(email: string) {

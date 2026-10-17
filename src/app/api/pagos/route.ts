@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     const [w, paid, rate, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), usdClp(), ordersOf(ws)]);
     // one monthly subscription at a time: two would both charge the card every month
     const active = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
-    if (active && period === "mensual" && PLANS.some((p) => p.id === b?.item) && !oneTimeOnly()) {
+    if (active && PLANS.some((p) => p.id === b?.item)) {
       return NextResponse.json({ error: `Ya tienes la renovación automática de ${active.quote.label}. Para cambiar de plan, primero cancela esa renovación aquí mismo (tu plan sigue activo hasta la fecha pagada) y luego elige el nuevo.` }, { status: 409 });
     }
     // top-ups add to an active plan: on their own they couldn't be used (an ended plan blocks jobs)

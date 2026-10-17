@@ -30,7 +30,7 @@ interface U { email: string; name: string | null; workspace: string }
 /** First-week tips (day 1, 3 and 7 after signing up), unless the person opted out. */
 async function activation(): Promise<number> {
   let sent = 0;
-  const out = await optedOut().catch(() => new Set<string>());
+  const out = await optedOut(); // can't read who opted out → no tips today (the caller logs it)
   for (const step of [1, 3, 7] as ActivationStep[]) {
     const from = day(-step), to = day(-step + 1);
     const users = await sbRest<{ email: string; name: string | null; workspace: string }[]>(`users?created_at=gte.${from}&created_at=lt.${to}&workspace=neq.main&active=eq.true&select=email,name,workspace&limit=1000`).catch(() => []);

@@ -1,5 +1,5 @@
 import { sbRest, readPrivateJSON, writePrivateJSON } from "./supabase";
-import { balanceOf, grant } from "./credits";
+import { AlreadyDone, balanceOf, grant } from "./credits";
 
 // Credits last for the period that was paid (a month, or a year on the annual plan): what isn't used
 // by the end of the period expires, like on every platform. Three moments:
@@ -23,8 +23,20 @@ async function expire(ws: string, credits: number, note: string, ref: string) {
   const done = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(ref)}&select=id&limit=1`);
   if (done.length) return 0;
   const n = Math.min(Math.floor(credits), await balanceOf(ws));
-  if (n > 0) await grant(ws, -n, "adjust", note, "sistema", ref);
-  return Math.max(0, n);
+  if (n <= 0) return 0;
+  try {
+    await grant(ws, -n, "adjust", note, "sistema", ref);
+  } catch (err) {
+    if (err instanceof AlreadyDone) return 0; // another run did it a moment ago (unique ref)
+    throw err;
+  }
+  return n;
+}
+
+/** Top-ups paid after the period ended: they wait for the next plan instead of expiring with the old one. */
+async function lateTopups(ws: string, periodEnd: string) {
+  const rows = await sbRest<{ delta: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.topup&created_at=gt.${periodEnd}T23:59:59.999Z&select=delta&limit=1000`);
+  return rows.reduce((s, r) => s + Math.max(0, Number(r.delta || 0)), 0);
 }
 
 /** The pending list; a read error stops the caller (never mistaken for an empty list). */
@@ -38,7 +50,8 @@ export async function beforeNewPeriod(ws: string) {
   const balance = await balanceOf(ws);
   if (balance <= 0) return;
   if (w.paid_until < today()) {
-    await expire(ws, balance, "Vencieron los créditos del período anterior", `exp:${ws}:${w.paid_until}`);
+    const keep = await lateTopups(ws, w.paid_until);
+    if (balance - keep > 0) await expire(ws, balance - keep, "Vencieron los créditos del período anterior", `exp:${ws}:${w.paid_until}`);
     return;
   }
   const list = await readPending();
@@ -64,26 +77,30 @@ export async function runExpiry(): Promise<{ expired: number; accounts: number }
   const day = today();
   // early renewals whose old period is over
   const list = await readPending();
-  const keep: Pending[] = [];
+  const done = new Set<string>();
   for (const p of list) {
-    if (p.at >= day) { keep.push(p); continue; }
+    if (p.at >= day) continue;
     try {
       const left = Math.max(0, p.amount - (await usedSince(p.ws, p.since)));
       const n = left > 0 ? await expire(p.ws, left, "Vencieron los créditos que no usaste del período anterior", `exp:${p.ws}:${p.at}:renovado`) : 0;
       if (n) { expired += n; accounts++; }
+      done.add(`${p.ws}|${p.at}|${p.since}`);
     } catch (err) {
-      console.error("expiry (renewal)", p.ws, err instanceof Error ? err.message : err);
-      keep.push(p); // try again tomorrow
+      console.error("expiry (renewal)", p.ws, err instanceof Error ? err.message : err); // stays: tried again tomorrow
     }
   }
-  if (keep.length !== list.length) await writePrivateJSON(FILE, keep);
+  if (done.size) {
+    // re-read before writing: a payment may have added an entry while this ran
+    const now = await readPending();
+    await writePrivateJSON(FILE, now.filter((p) => !done.has(`${p.ws}|${p.at}|${p.since}`)));
+  }
   // periods that ended without a renewal (the last two weeks: older ones were already handled; a
   // refund that lands later is handled when they renew)
   const twoWeeks = new Date(Date.now() - 14 * 86400_000).toISOString().slice(0, 10);
   const ended = await sbRest<{ id: string; paid_until: string }[]>(`workspaces?paid_until=lt.${day}&paid_until=gte.${twoWeeks}&id=neq.main&select=id,paid_until&limit=10000`);
   for (const w of ended) {
     try {
-      const b = await balanceOf(w.id);
+      const b = (await balanceOf(w.id)) - (await lateTopups(w.id, w.paid_until));
       const n = b > 0 ? await expire(w.id, b, "Vencieron los créditos: terminó el período de tu plan", `exp:${w.id}:${w.paid_until}:${day}`) : 0;
       if (n) { expired += n; accounts++; }
     } catch (err) {

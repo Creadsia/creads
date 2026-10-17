@@ -64,7 +64,7 @@ export default function Planes() {
     if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
       if (PACKS.some((x) => x.id === want)) setTab("creditos");
       if (sp.get("periodo") === "anual") setPeriod("anual");
-      setItem(want);
+      if (PLANS.some((x) => x.id === want)) setItem(want); // a top-up is picked on the tab (it needs an active plan)
       requestAnimationFrame(() => setTimeout(() => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300));
       window.history.replaceState(null, "", "/app/planes");
     }
@@ -250,8 +250,8 @@ export default function Planes() {
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>
-                  {mine && pay?.subscription && period === "mensual" ? (
-                    <p className="mt-auto rounded-lg bg-surface-2 px-3 py-2.5 text-center text-sm text-muted">Se renueva solo{info?.paidUntil ? ` el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}` : ""}</p>
+                  {pay?.subscription ? (
+                    <p className="mt-auto rounded-lg bg-surface-2 px-3 py-2.5 text-center text-sm text-muted">{mine ? `Se renueva solo${info?.paidUntil ? ` el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}` : ""}` : "Para cambiar de plan, primero cancela tu renovación automática (arriba)."}</p>
                   ) : (
                     <button type="button" onClick={() => choose(p.id)} disabled={info?.unlimited && !pay?.owner}
                       className={`mt-auto ${featured ? btnCls : ghostCls} w-full py-2.5`}>{mine ? "Renovar" : currentPlan ? `Cambiar a ${p.name}` : `Elegir ${p.name}`}</button>

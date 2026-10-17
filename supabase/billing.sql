@@ -31,6 +31,8 @@ create index if not exists credits_ref_idx on public.credits (owner, ref);
 -- a payment gives credits only once, however many times it is notified
 drop index if exists public.credits_payment_once;
 create unique index if not exists credits_paid_once on public.credits (ref) where ref like 'pay:%';
+-- credits that expire at the end of a period are taken once, however many times the job runs
+create unique index if not exists credits_expire_once on public.credits (ref) where ref like 'exp:%';
 alter table public.credits enable row level security; -- no policies: only the service role
 revoke all on table public.credits from anon, authenticated;
 grant all on table public.credits to service_role;
