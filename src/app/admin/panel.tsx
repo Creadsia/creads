@@ -62,7 +62,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 function Num({ id, value, onChange, step = 1, min = 0, max }: { id: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number }) {
   return (
-    <input id={id} type="number" value={value} step={step} min={min} max={max} className={`${input} w-28 ${num}`}
+    <input id={id} type="number" value={value} step={step} min={min} max={max} className={`${input} w-28 ${num}`} onFocus={(e) => e.target.select()}
       onChange={(e) => { const v = Number(e.target.value); if (isFinite(v)) onChange(v); }} />
   );
 }
@@ -166,7 +166,7 @@ export default function AdminPanel() {
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
           {tab === "planes" && <Planes d={data} setCfg={setCfg} />}
           {tab === "movs" && <Movimientos d={data} change={change} />}
-          {tab === "fijos" && <Fijos d={data} change={change} />}
+          {tab === "fijos" && <Fijos d={data} change={change} setCfg={setCfg} />}
           {tab === "modelos" && <Modelos d={data} change={change} />}
           {tab === "cuentas" && <Cuentas d={data} />}
           {tab === "saldos" && <Saldos />}
@@ -192,8 +192,6 @@ function Resumen({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
   const faltan = d.movimientos.filter((m) => m.monto == null).length + d.fijos.filter((x) => x.montoUsd == null && x.estado !== "cancelar").length;
   const avg = c.planes.reduce((a, p) => a + planMonth(c, p, {}).queda, 0) / Math.max(1, c.planes.length);
   const eq = avg > 0 ? Math.ceil(f / avg) : 0;
-  const p = proyectar(d);
-  const rows: [string, number][] = [["Ingresos (MRR)", p.mrr], ["Modelos de IA", -p.modelos], ["Stripe", -p.stripe], ["Afiliados", -p.afiliados], ["Costos fijos", -p.fijos]];
 
   return (
     <div className="flex flex-col gap-4">
@@ -205,46 +203,59 @@ function Resumen({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
         {faltan > 0 && <Stat label="Por completar" value={String(faltan)} sub="montos sin anotar" t="warn" />}
       </div>
 
-      <section className={card}>
-        <div>
-          <h2 className="font-display text-xl font-bold">Proyección mensual</h2>
-          <p className="text-sm text-muted">Cambia cuántos suscriptores tienes y mira cuánto queda de verdad, después de modelos, Stripe, afiliados y costos fijos.</p>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="% en su primer mes (−50%)"><Num id="p-promo" value={c.proyeccion.pctPromo ?? 100} step={10} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctPromo = v; })} /></Field>
-          {c.planes.map((pl) => (
-            <Field key={pl.id} label={pl.nombre}><Num id={`p-${pl.id}`} value={c.proyeccion[pl.id] ?? 0} onChange={(v) => setCfg((x) => { x.proyeccion[pl.id] = v; })} /></Field>
-          ))}
-          <Field label="% de créditos que usan"><Num id="p-uso" value={c.uso} step={5} max={100} onChange={(v) => setCfg((x) => { x.uso = v; })} /></Field>
-          <Field label="% que llegó por afiliado"><Num id="p-af" value={c.proyeccion.pctAfiliado} step={5} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctAfiliado = v; })} /></Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="min-w-0 overflow-x-auto">
-            <table className="w-full text-sm">
-              <tbody>
-                {rows.map(([l, v]) => (
-                  <tr key={l}><td className={td}>{l}</td><td className={`${td} ${num} text-right`}>{fmtUsd(v)}</td><td className={`${td} ${num} text-right text-muted`}>{fmtClp(v * c.usdClp)}</td></tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="font-bold">
-                  <td className="px-3 py-2">Utilidad neta al mes</td>
-                  <td className={`px-3 py-2 text-right ${num} ${p.neto >= 0 ? "text-good" : "text-bad"}`}>{fmtUsd(p.neto)}</td>
-                  <td className={`px-3 py-2 text-right ${num} ${p.neto >= 0 ? "text-good" : "text-bad"}`}>{fmtClp(p.neto * c.usdClp)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Stat label="Margen neto real" value={fmtPct(p.margen)} sub={`${p.subs} suscriptores · ${fmtUsd(p.neto * 12)} al año`} t={tone(p.margen)} />
-            <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">
-              Supone que el {c.proyeccion.pctPromo ?? 100}% está en su primer mes pagando la mitad (al lanzar son todos; después baja a los nuevos de cada mes), que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
-              {c.afiliado.tipo === "recurrente" ? `de ${c.afiliado.pct}% mensual` : "única (no entra en el mes a mes)"}.
-            </p>
-          </div>
-        </div>
-      </section>
+      <Proyeccion d={d} setCfg={setCfg} />
     </div>
+  );
+}
+
+/** Monthly projection: subscribers per plan → what's left. `withFixed` also takes off the fixed costs. */
+function Proyeccion({ d, setCfg, withFixed = false }: { d: Finanzas; setCfg: SetCfg; withFixed?: boolean }) {
+  const c = d.config;
+  const p = proyectar(d);
+  const fijos = withFixed ? fijoMensual(d.fijos) : 0;
+  const neto = p.neto - fijos;
+  const margen = p.mrr ? (neto / p.mrr) * 100 : 0;
+  const rows: [string, number][] = [["Ingresos (MRR)", p.mrr], ["Modelos de IA", -p.modelos], ["Stripe", -p.stripe], ["Afiliados", -p.afiliados], ...(withFixed ? [["Costos fijos", -fijos] as [string, number]] : [])];
+  return (
+      <section className={card}>
+      <div>
+        <h2 className="font-display text-xl font-bold">{withFixed ? "Proyección con costos fijos" : "Proyección mensual"}</h2>
+        <p className="text-sm text-muted">{withFixed ? "Lo mismo que en Resumen, pero restando también los costos fijos: cuánto queda de verdad a fin de mes. Sirve para probar ofertas, afiliados y metas de suscriptores." : "Cambia cuántos suscriptores tienes y mira cuánto dejan las suscripciones después de modelos de IA, Stripe y afiliados. Los costos fijos van aparte (pestaña «Costos fijos»)."}</p>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label="% en su primer mes (−50%)"><Num id="p-promo" value={c.proyeccion.pctPromo ?? 100} step={10} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctPromo = v; })} /></Field>
+        {c.planes.map((pl) => (
+          <Field key={pl.id} label={pl.nombre}><Num id={`p-${pl.id}`} value={c.proyeccion[pl.id] ?? 0} onChange={(v) => setCfg((x) => { x.proyeccion[pl.id] = v; })} /></Field>
+        ))}
+        <Field label="% de créditos que usan"><Num id="p-uso" value={c.uso} step={5} max={100} onChange={(v) => setCfg((x) => { x.uso = v; })} /></Field>
+        <Field label="% que llegó por afiliado"><Num id="p-af" value={c.proyeccion.pctAfiliado} step={5} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctAfiliado = v; })} /></Field>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="min-w-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <tbody>
+              {rows.map(([l, v]) => (
+                <tr key={l}><td className={td}>{l}</td><td className={`${td} ${num} text-right`}>{fmtUsd(v)}</td><td className={`${td} ${num} text-right text-muted`}>{fmtClp(v * c.usdClp)}</td></tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-bold">
+                <td className="px-3 py-2">{withFixed ? "Utilidad neta al mes" : "Te queda al mes (antes de fijos)"}</td>
+                <td className={`px-3 py-2 text-right ${num} ${neto >= 0 ? "text-good" : "text-bad"}`}>{fmtUsd(neto)}</td>
+                <td className={`px-3 py-2 text-right ${num} ${neto >= 0 ? "text-good" : "text-bad"}`}>{fmtClp(neto * c.usdClp)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Stat label={withFixed ? "Margen neto real" : "Margen de las suscripciones"} value={fmtPct(margen)} sub={`${p.subs} suscriptores · ${fmtUsd(neto * 12)} al año`} t={tone(margen)} />
+          <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">
+            Supone que el {c.proyeccion.pctPromo ?? 100}% está en su primer mes pagando la mitad (al lanzar son todos; después baja a los nuevos de cada mes), que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
+            {c.afiliado.tipo === "recurrente" ? `de ${c.afiliado.pct}% mensual` : "única (no entra en el mes a mes)"}.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -431,7 +442,7 @@ function Movimientos({ d, change }: { d: Finanzas; change: Change }) {
 }
 
 // ---------- Costos fijos ----------
-function Fijos({ d, change }: { d: Finanzas; change: Change }) {
+function Fijos({ d, change, setCfg }: { d: Finanzas; change: Change; setCfg: SetCfg }) {
   const c = d.config;
   const blank = { servicio: "", para: "", monto: "", frecuencia: "mensual" as CostoFijo["frecuencia"], estado: "activo" as CostoFijo["estado"] };
   const [f, setF] = useState(blank);
@@ -448,6 +459,8 @@ function Fijos({ d, change }: { d: Finanzas; change: Change }) {
   }
 
   return (
+    <div className="flex flex-col gap-4">
+    <Proyeccion d={d} setCfg={setCfg} withFixed />
     <section className={card}>
       <div>
         <h2 className="font-display text-xl font-bold">Costos fijos</h2>
@@ -496,6 +509,7 @@ function Fijos({ d, change }: { d: Finanzas; change: Change }) {
         </table>
       </div>
     </section>
+    </div>
   );
 }
 

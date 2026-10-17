@@ -188,7 +188,7 @@ export function planMonth(c: Config, p: Plan, o: { anual?: boolean; promo?: bool
   return { precio, modelos, stripe, afiliado, queda, margen: precio ? (queda / precio) * 100 : 0 };
 }
 
-/** Monthly projection for a number of subscribers per plan. */
+/** Monthly projection for a number of subscribers per plan, before fixed costs. */
 export function proyectar(f: Finanzas) {
   const c = f.config;
   let mrr = 0, modelos = 0, stripe = 0, afiliados = 0, subs = 0;
@@ -209,9 +209,9 @@ export function proyectar(f: Finanzas) {
       afiliados += ((k * c.proyeccion.pctAfiliado) / 100) * ra.afiliado;
     }
   }
-  const fijos = fijoMensual(f.fijos);
-  const neto = mrr - modelos - stripe - afiliados - fijos;
-  return { subs, mrr, modelos, stripe, afiliados, fijos, neto, margen: mrr ? (neto / mrr) * 100 : 0 };
+  // what the subscriptions themselves leave (fixed costs are looked at on their own)
+  const neto = mrr - modelos - stripe - afiliados;
+  return { subs, mrr, modelos, stripe, afiliados, neto, margen: mrr ? (neto / mrr) * 100 : 0 };
 }
 
 /** Plan prices before the October 2026 increase: a saved book that still has them gets today's plans. */
