@@ -29,7 +29,7 @@ export default function Home({ full = true }: { full?: boolean }) {
     { n: 1, title: "Crea tu voz", text: "Graba o sube unos minutos de audio y la IA clona tu voz. Si prefieres, usa una voz de la biblioteca.", href: "/app/voces", cta: "Crear voz", done: (voices ?? 0) > 0, optional: true },
     { n: 2, title: "Crea tu avatar", text: "Una foto de la cara de quien habla, con su voz. Se hace una vez y sirve para todos tus anuncios.", href: "/app/avatares", cta: "Crear avatar", done: (c.avatars ?? 0) > 0 },
     { n: 3, title: "Agrega tu producto", text: "Si vendes algo físico, sube su foto para que aparezca en los videos.", href: "/app/productos", cta: "Agregar producto", done: (c.products ?? 0) > 0, optional: true },
-    { n: 4, title: "Crea tu guion", text: "Pega un anuncio que funcione y mejóralo con la IA: hooks, ángulos y cada línea.", href: "/app/guiones", cta: "Crear guion", done: (c.scripts ?? 0) > 0 || (c.ads ?? 0) > 0 },
+    { n: 4, title: "Crea tu guion", text: "Busca un anuncio que esté funcionando en tu nicho (en «Espiar anuncios»), pégalo y mejóralo con la IA: hooks, ángulos y cada línea.", href: "/app/guiones", cta: "Crear guion", done: (c.scripts ?? 0) > 0 || (c.ads ?? 0) > 0 },
     { n: 5, title: "Crea tu anuncio", text: "Pega el guion, elige tu avatar y genera. Creads revisa cada corte y lo arma con voz y subtítulos.", href: "/app/crear", cta: "Crear anuncio", done: (c.ads ?? 0) > 0 },
   ];
   const required = steps.filter((x) => !x.optional);
@@ -74,7 +74,7 @@ export default function Home({ full = true }: { full?: boolean }) {
               );
             })}
           </ol>
-          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Están siempre en el menú, en «Más formas de crear».</p>}
+          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Están en «Crear anuncio», junto a los formatos UGC y Podcast.</p>}
         </section>
       ) : (
         c && (
@@ -82,11 +82,12 @@ export default function Home({ full = true }: { full?: boolean }) {
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-[15px] bg-surface p-5">
               <div className="flex max-w-xl flex-col gap-1">
                 <h2 className="font-display text-xl font-bold">Haz tu próximo anuncio</h2>
-                <p className="text-sm text-muted">Parte por el guion: pega uno que esté funcionando y pide 3 ángulos o 10 hooks. Después lo llevas a «Crear anuncio».</p>
+                <p className="text-sm text-muted">Mira qué está funcionando en tu nicho, conviértelo en un guion mejor y créalo en el formato que quieras.</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link href="/app/guiones" className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-ink">1 · Crear guion</Link>
-                <Link href="/app/crear" className="rounded-xl border border-line px-5 py-2.5 font-semibold">2 · Crear anuncio</Link>
+                {full && <Link href="/app/spy" className="rounded-xl border border-line px-5 py-2.5 font-semibold">1 · Espiar</Link>}
+                <Link href="/app/guiones" className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-ink">{full ? "2" : "1"} · Crear guion</Link>
+                <Link href="/app/crear" className="rounded-xl border border-line px-5 py-2.5 font-semibold">{full ? "3" : "2"} · Crear anuncio</Link>
               </div>
             </div>
           </section>

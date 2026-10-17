@@ -26,7 +26,14 @@ const SPEAKER: Record<string, string> = { host: "Conductor", guest: "Invitado", 
 
 const STEPS = ["Guion", "Cortes", "Escenas", "Videos"];
 
-export default function Crear() {
+// Other ways to make an ad, next to the formats: each one opens its own studio.
+const MORE_KINDS = [
+  { href: "/app/historias", icon: "🎬", name: "Historias animadas", tag: "Mini película con IA" },
+  { href: "/app/laboratorio", icon: "🧪", name: "Video e imagen IA", tag: "Una toma o una foto" },
+  { href: "/app/herramientas", icon: "✨", name: "Herramientas IA", tag: "Editar, doblar, música" },
+];
+
+export default function Crear({ full = true }: { full?: boolean }) {
   const scripts = useTable<Script>("scripts");
   const [step, setStep] = useState(0);
   const [lang, setLang] = useState<"en" | "es-CL">("en");
@@ -102,7 +109,7 @@ export default function Crear() {
 
   return (
     <>
-      <Stepper flow="anuncio" current={1} />
+      <Stepper flow="anuncio" current={2} />
       <PageHead title="Crear anuncio" lead="Pega tu guion, revisa los cortes, elige quién habla y genera los videos.">
         {scripts.rows && scripts.rows.length > 0 && (
           <select aria-label="Abrir un guion guardado" value="" onChange={(e) => openScript(e.target.value)} className={inputCls}>
@@ -150,7 +157,8 @@ export default function Crear() {
 
           <div className="flex flex-col gap-3">
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>
-            <div role="radiogroup" aria-label="Formato del video" className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div role="radiogroup" aria-label="Formato del video" className="contents">
               {FORMATS.map((x) => (
                 <button key={x.id} type="button" role="radio" aria-checked={x.id === format} onClick={() => pickFormat(x.id)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-colors ${x.id === format ? "border-accent bg-accent/10" : "border-line hover:border-accent/50"}`}>
@@ -158,6 +166,14 @@ export default function Crear() {
                   <b className="text-sm">{x.name}</b>
                   <span className="text-xs text-accent-text">{x.tag}</span>
                 </button>
+              ))}
+            </div>
+              {full && MORE_KINDS.map((k) => (
+                <a key={k.href} href={k.href} className="flex flex-col items-start gap-0.5 rounded-xl border border-dashed border-line p-3 text-left transition-colors hover:border-accent/50">
+                  <span className="text-xl" aria-hidden="true">{k.icon}</span>
+                  <b className="text-sm">{k.name}</b>
+                  <span className="text-xs text-muted">{k.tag} ↗</span>
+                </a>
               ))}
             </div>
             <div className="grid gap-3 rounded-xl bg-surface-2 p-4 text-sm md:grid-cols-2">

@@ -164,7 +164,7 @@ export default function Guiones() {
 
   return (
     <>
-      <Stepper flow="anuncio" current={0} />
+      <Stepper flow="anuncio" current={1} />
       <PageHead title="Crear guion" lead="Todo anuncio parte de un buen guion. Pega uno ganador, desármalo para entender por qué funciona y mejóralo hasta tener la mejor versión. Después llévalo a «Crear anuncio».">
         <button type="button" onClick={() => setLearn((v) => !v)} aria-expanded={learn} className={ghostCls}>{learn ? "Ocultar guía" : "📘 Cómo se arma un guion"}</button>
       </PageHead>

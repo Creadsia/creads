@@ -41,15 +41,16 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
 }
 
 type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
-// The menu follows the order a new customer works in: set up the brand once (voice → avatar →
-// product), then every ad is script → ad. The other creative tools come after, in their own group.
+// The menu follows how a campaign is made: spy what works → write the script → make the ad (its
+// formats include animated stories and the other creative studios). The brand is set up once.
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   {
-    group: "Crear un anuncio",
+    group: "Tu campaña",
     items: [
-      { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 1 },
-      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 2 },
+      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true },
+      { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
+      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 3 },
     ],
   },
   {
@@ -69,16 +70,6 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true },
     ],
   },
-  {
-    group: "Más formas de crear",
-    more: true,
-    items: [
-      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true, badge: "NUEVO" },
-      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
-      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
-      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, soon: true, full: true },
-    ],
-  },
 ];
 
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
@@ -89,9 +80,9 @@ function navFor(user: ShellUser) {
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
   const groups = [...NAV, { group: "Cuenta", items: account }];
-  if (user.access === "full") return groups;
-  // "Solo anuncios": Crear anuncio and what it needs
-  return groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.full) })).filter((g) => g.items.length);
+  const visible = user.access === "full" ? groups : groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.full) })).filter((g) => g.items.length); // "Solo anuncios"
+  // number the steps in the order they're shown
+  return visible.map((g) => { let n = 0; return { ...g, items: g.items.map((i) => (i.step ? { ...i, step: ++n } : i)) }; });
 }
 
 function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: () => void }) {
@@ -115,7 +106,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
               <span className="flex items-baseline justify-between gap-2 px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}{g.hint && <span className="font-medium tracking-normal normal-case">{g.hint}</span>}</span>
             ))}
             {open && g.items.map((it) => {
-              const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
+              const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href) || (it.href === "/app/crear" && /^\/app\/(historias|laboratorio|herramientas)/.test(path));
               return (
                 <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
