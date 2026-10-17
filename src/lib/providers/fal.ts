@@ -252,7 +252,7 @@ export async function falPoll(
 function falVideo(m: FalVideo): VideoProvider {
   return {
     id: m.id,
-    label: `${m.label} (fal.ai)`,
+    label: m.label,
     usdPerSecond: m.usdPerSecond,
     configured: () => Boolean(process.env.FAL_KEY),
     durations: m.durations.filter((d) => [3, 4, 5, 6, 8, 10, 12, 15].includes(d)),
@@ -388,7 +388,7 @@ export const falImageRequest = (id: string, req: ImageRequest) => {
 function falImage(m: FalImage): ImageProvider {
   return {
     id: m.id,
-    label: `${m.label} (fal.ai)`,
+    label: m.label,
     usdPerImage: m.usdPerImage,
     configured: () => Boolean(process.env.FAL_KEY),
     async generate(req) {

@@ -4,6 +4,7 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { sharedRules } from "@/lib/db";
 import { formatById } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
+import { publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 60;
@@ -47,6 +48,6 @@ Reply ONLY JSON: {"prompt":"the full new prompt","cambios":"en español, 1 frase
     const row = await db.update("clips", id, { prompt: r.prompt });
     return NextResponse.json({ clip: row, cambios: r.cambios });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo corregir el corte." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo corregir el corte.") }, { status: 502 });
   }
 }

@@ -7,6 +7,7 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { deleteVoice, elevenlabs } from "@/lib/providers/elevenlabs";
 import type { VoiceSample } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
+import { publicError } from "@/lib/public-error";
 import { download, voiceSample, workdir } from "@/lib/montage";
 
 export const maxDuration = 300;
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ voiceId: id, samples: samples.length });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo clonar la voz.";
+    const msg = publicError(err, "No se pudo clonar la voz.");
     console.error("voices/clone", msg);
     return NextResponse.json({ error: msg }, { status: 502 });
   }

@@ -5,6 +5,7 @@ import { userFromRequest } from "@/lib/auth";
 import { tooMany } from "@/lib/rate";
 import { type FormatId, FORMATS, formatById, rondaPrompt, splitRules } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
+import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 90;
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const script = typeof body?.script === "string" ? body.script.trim() : "";
   if (script.length < 40) return NextResponse.json({ error: "Pega un guion más largo (al menos un par de frases)." }, { status: 400 });
-  if (!textAI.configured()) return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY en Vercel." }, { status: 503 });
+  if (!textAI.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   const format = (FORMATS.some((f) => f.id === body?.format) ? body.format : "ugc") as FormatId;
   const cap = Math.min(8, Math.max(1, Math.round(Number(body?.cap) || 8)));
@@ -97,7 +98,7 @@ export async function POST(req: Request) {
     answer.cortes = answer.cortes.filter((c) => c?.texto).slice(0, cap);
     return NextResponse.json(answer);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo dividir el guion.";
+    const msg = publicError(err, "No se pudo dividir el guion.");
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

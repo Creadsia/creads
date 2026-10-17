@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
+import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { cleanNiche } from "@/lib/niches";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
   const model = findVideo(String(b?.model ?? ""));
   if (!clips.length || clips.some((c) => !c?.prompt || !c?.texto)) return NextResponse.json({ error: "Faltan las escenas." }, { status: 400 });
   if (!model) return NextResponse.json({ error: "Elige un modelo de video." }, { status: 400 });
-  if (!model.configured()) return NextResponse.json({ error: `${model.label}: falta la clave en Vercel.` }, { status: 503 });
+  if (!model.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   try {
     const [avatar, product] = await Promise.all([
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     await db.update("ads", String(ad.id), { settings: { ...(ad.settings as object), frames: clips.map((c) => c.framePrompt ?? "") } });
     return NextResponse.json({ ad, clips: rows });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo crear el anuncio.";
+    const msg = publicError(err, "No se pudo crear el anuncio.");
     return NextResponse.json({ error: msg, missingTable: err instanceof DbError && err.missingTable }, { status: 502 });
   }
 }

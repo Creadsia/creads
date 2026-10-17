@@ -139,7 +139,7 @@ export default function ModelLab({ code }: { code: string }) {
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold">Generar</h2>
         <p className="text-sm text-muted">
-          Cada botón genera de verdad y se cobra en la cuenta del proveedor (Google o fal.ai). El precio aparece en el botón antes de apretarlo.
+          Cada botón genera de verdad y usa créditos. El precio aparece en el botón antes de apretarlo.
         </p>
       </div>
 

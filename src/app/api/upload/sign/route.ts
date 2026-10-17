@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
+import { publicError } from "@/lib/public-error";
 import { signedUploadFor } from "@/lib/media";
 
 // Prepares a direct browser → storage upload for files too big to pass through our server (up to 50 MB).
@@ -26,6 +27,6 @@ export async function POST(req: Request) {
   try {
     return NextResponse.json(await signedUploadFor(s.user.workspace, folder, ext));
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo preparar la subida." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo preparar la subida.") }, { status: 502 });
   }
 }

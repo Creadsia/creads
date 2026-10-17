@@ -10,6 +10,7 @@ import { fetchableUrl } from "@/lib/media";
 import { falPoll, falSubmit } from "@/lib/providers/fal";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { type StorySettings, voiceLang } from "@/lib/historias";
+import { customerText, publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
       const r = await falPoll(String(clip.provider_job).slice(3), "Sincronizar labios");
       if (r.state !== "done" && r.state !== "failed") return NextResponse.json({ clip });
       if (r.state === "failed") {
-        const row = await db.claim("clips", id, { in: ["generating"] }, { status: "failed", error: `La voz no se pudo sincronizar: ${r.error}`.slice(0, 500) });
+        const row = await db.claim("clips", id, { in: ["generating"] }, { status: "failed", error: customerText(`La voz no se pudo sincronizar: ${r.error}`, "La voz no se pudo sincronizar.").slice(0, 500) });
         if (row) await refundJob(ws, id);
         return NextResponse.json({ clip: row ?? (await db.get("clips", id)) });
       }
@@ -120,6 +121,6 @@ export async function GET(req: Request) {
     if (all.length && all.every((c) => c.status === "done")) await db.update("ads", String(clip.ad_id), { status: "review" });
     return NextResponse.json({ clip: row });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo revisar el corte." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo revisar el corte.") }, { status: 502 });
   }
 }

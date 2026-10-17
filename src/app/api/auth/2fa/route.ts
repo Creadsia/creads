@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const action = String(b?.action ?? "");
   const tf = await twoFactorOf(me.id).catch(() => undefined);
   if (tf === undefined) return NextResponse.json({ error: "No se pudo revisar. Intenta de nuevo." }, { status: 502 });
-  if (tf === null) return NextResponse.json({ error: "Falta activar esto en Supabase (billing.sql)." }, { status: 503 });
+  if (tf === null) return NextResponse.json({ error: "Esta opción se activa en los próximos días." }, { status: 503 });
 
   const passwordOk = async () => {
     const full = await findUserByEmail(me.email);

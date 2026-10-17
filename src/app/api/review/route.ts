@@ -11,6 +11,7 @@ import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { compare, type Word } from "@/lib/textmatch";
+import { publicError } from "@/lib/public-error";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 
 export const maxDuration = 300;
@@ -103,6 +104,6 @@ Responde SOLO JSON: {"cortes":[{"corte":número,"problema":"en español, corto",
     for (const r of results) await db.update("clips", r.clipId, { error: r.issues.length ? r.issues.join(" · ").slice(0, 500) : null }).catch(() => {});
     return NextResponse.json({ results: results.map(({ words, ...r }) => ({ ...r, words: words.length, freeRedo: Boolean(freeRedo[r.clipId]) })), learned });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo revisar." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo revisar.") }, { status: 502 });
   }
 }

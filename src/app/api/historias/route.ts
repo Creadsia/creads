@@ -6,6 +6,7 @@ import { textAI, findVideo } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { LANGS, LENGTHS, type StoryPlan, type StorySettings, STYLES, motionPrompt, planPrompt, tidyPlan } from "@/lib/historias";
 import { loadStory, updateStory } from "@/lib/historia-db";
+import { publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 300;
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     await Promise.all(plan.shots.map((sh) => s.db.insert("clips", { ad_id: ad.id, idx: sh.idx, kind: "shot", text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, style, plan, lang), model, status: "pending" })));
     return NextResponse.json({ id: ad.id });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo escribir la historia." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo escribir la historia.") }, { status: 502 });
   }
 }
 
@@ -91,6 +92,6 @@ export async function PATCH(req: Request) {
     const row = Object.keys(patch).length ? await s.db.update("ads", adId, patch) : await s.db.get("ads", adId);
     return NextResponse.json({ ad: row });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo guardar.") }, { status: 502 });
   }
 }

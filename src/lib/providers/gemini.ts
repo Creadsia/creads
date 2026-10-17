@@ -33,7 +33,7 @@ async function inline(ref: MediaRef) {
 
 export const nanoBananaPro: ImageProvider = {
   id: "nano-banana-pro",
-  label: "Nano Banana Pro (Gemini API)",
+  label: "Nano Banana Pro",
   usdPerImage: 0.134, // 1K/2K
   configured: () => Boolean(process.env.GEMINI_API_KEY),
 

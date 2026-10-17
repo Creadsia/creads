@@ -8,6 +8,7 @@ import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
 import { explainFailure, serviceOf } from "@/lib/balances";
 import { chargedSince, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
+import { publicError } from "@/lib/public-error";
 import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
@@ -112,7 +113,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
       usd,
     });
   } catch (err) {
-    return bad(err instanceof Error ? err.message : "No se pudo guardar el trabajo.", 502);
+    return bad(publicError(err, "No se pudo guardar el trabajo."), 502);
   }
   const id = String(row.id);
   try {
@@ -184,7 +185,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     if (t.output === "image") await db.insert("images", { prompt: `${t.name}${row.prompt ? `: ${row.prompt}` : ""}`, url, model: t.model }).catch(() => null);
     return NextResponse.json({ state: "done", url });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo revisar.";
+    const msg = publicError(err, "No se pudo revisar.");
     console.error("tools check", t.id, msg);
     return bad(msg, 502);
   }

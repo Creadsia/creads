@@ -115,7 +115,7 @@ function TwoFactor() {
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.on ? "bg-good/15 text-good" : "bg-surface-2 text-muted"}`}>{st.on ? "Activada" : "Apagada"}</span>
       </div>
       <p className="text-sm text-muted">Además de tu clave, al entrar se pide un código de 6 números de una app en tu teléfono (Google Authenticator, Authy o 1Password). Así, aunque alguien sepa tu clave, no puede entrar.</p>
-      {!st.ready && <p className="text-sm text-warn">Falta un paso en Supabase para activarla (billing.sql).</p>}
+      {!st.ready && <p className="text-sm text-warn">Esta opción se activa en los próximos días.</p>}
 
       {st.ready && !st.on && step === "idle" && <button type="button" onClick={() => setStep("password")} className={`${btnCls} self-start`}>Activar</button>}
       {step === "password" && (

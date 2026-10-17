@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { canManageTeam, deleteUser, getUserIn, isOwner, moveUser, updateUser, userFromRequest } from "@/lib/auth";
+import { publicError } from "@/lib/public-error";
 import { createClientWorkspace } from "@/lib/signup";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -24,7 +25,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
       await moveUser(target.id, ws);
       return NextResponse.json({ moved: true, workspace: ws });
     } catch (err) {
-      return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo mover." }, { status: 502 });
+      return NextResponse.json({ error: publicError(err, "No se pudo mover.") }, { status: 502 });
     }
   }
   const patch: Parameters<typeof updateUser>[1] = {};

@@ -10,6 +10,7 @@ import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { loadStory, updateStory } from "@/lib/historia-db";
 import { speaks, voiceLang } from "@/lib/historias";
+import { publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 export const maxDuration = 300;
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     console.error("historias/montar", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo armar la historia." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo armar la historia.") }, { status: 502 });
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => null);
   }

@@ -1,4 +1,5 @@
 import { DEFAULT_FINANZAS, type Finanzas, toUsd } from "./finance";
+import { customerText } from "./public-error";
 import { readPrivateJSON, selectRows, writePrivateJSON } from "./supabase";
 
 // Money left in each outside service, alerts for the owner, and a check before spending so a job
@@ -233,7 +234,7 @@ export async function explainFailure(err: unknown, owner: boolean, hint?: Servic
     return owner ? `Creads llegó al tope diario de gasto (US$${err.cap}). Súbelo en Panel interno → Saldos y alertas si quieres seguir hoy.` : CUSTOMER_UNAVAILABLE;
   }
   const svc = outOfFundsService(err, hint);
-  if (!svc) return raw;
+  if (!svc) return owner ? raw : customerText(raw);
   if (!(err instanceof NoFundsError)) await noteOutage(svc, raw);
   const s = SERVICE_INFO[svc];
   return owner ? `${s.name} se quedó sin saldo. Carga saldo (Panel interno → Saldos y alertas) y vuelve a intentar.` : CUSTOMER_UNAVAILABLE;
@@ -358,6 +359,11 @@ export async function overview(fresh = true): Promise<{ services: ServiceStatus[
   const recent = (i: Incident | null) => i && Date.now() - Date.parse(i.at) < 24 * 3600_000;
   const alerts: { service: Service; name: string; text: string }[] = [];
   for (const s of services) {
+    // topped up since that failure: the live balance is fine now, so the old warning goes away
+    if (s.lastFailure && s.level === "ok") {
+      await clearOutage(s.id).catch(() => {});
+      s.lastFailure = null;
+    }
     if (recent(s.lastFailure)) {
       alerts.push({ service: s.id, name: s.name, text: `${s.name} rechazó un trabajo por falta de saldo (${new Date(s.lastFailure!.at).toLocaleString("es-CL", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}).` });
     } else if (s.level === "agotado") alerts.push({ service: s.id, name: s.name, text: `${s.name} está sin saldo: ${s.what.toLowerCase()} no van a funcionar.` });

@@ -8,6 +8,7 @@ import path from "node:path";
 import { fetchableUrl } from "@/lib/media";
 import { download, thumbnail, workdir } from "@/lib/montage";
 import { dialoguePrompt, lineSeconds, motionPrompt, shortLine } from "@/lib/historias";
+import { publicError } from "@/lib/public-error";
 import { loadStory, updateStory } from "@/lib/historia-db";
 
 export const maxDuration = 300;
@@ -71,6 +72,6 @@ export async function POST(req: Request) {
     }));
     return NextResponse.json({ plan: saved.plan, changed });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudieron escribir los diálogos." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudieron escribir los diálogos.") }, { status: 502 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { clientIp, tooMany } from "@/lib/rate";
 import { timingSafeEqual } from "node:crypto";
+import { publicError } from "@/lib/public-error";
 import { SESSION_COOKIE, cookieOptions, countUsers, createSession, createUser, passwordProblem } from "@/lib/auth";
 
 // First run only: creates the owner account. Requires the admin code from Vercel (ADMIN_ACCESS_CODE),
@@ -30,6 +31,6 @@ export async function POST(req: Request) {
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo crear la cuenta." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo crear la cuenta.") }, { status: 502 });
   }
 }

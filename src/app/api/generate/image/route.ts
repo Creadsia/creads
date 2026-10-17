@@ -6,6 +6,7 @@ import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
 import { refundJob } from "@/lib/credits";
+import { UNAVAILABLE as UNAVAILABLE_TEXT } from "@/lib/public-error";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 
 export const maxDuration = 120;
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   const provider = findImage(body?.model || "nano-banana-pro");
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
-  if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
+  if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   const svc = serviceOfModel(provider.id);
   let ref = "";

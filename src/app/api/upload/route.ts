@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { randomUUID } from "node:crypto";
 import { SESSION_ENDED, session } from "@/lib/access";
+import { publicError } from "@/lib/public-error";
 import { saveMedia } from "@/lib/media";
 
 export const maxDuration = 30;
@@ -29,6 +30,6 @@ export async function POST(req: Request) {
     const url = await saveMedia(s.user.workspace, folder, new Uint8Array(await file.arrayBuffer()), file.type, `${randomUUID()}.${ext}`);
     return NextResponse.json({ url });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo subir." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo subir.") }, { status: 502 });
   }
 }

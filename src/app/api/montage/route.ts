@@ -7,6 +7,7 @@ import { normalizeStyle } from "@/lib/caption-style";
 import { type BuildClip, build, captions, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
+import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
 
 export const maxDuration = 300;
@@ -75,6 +76,6 @@ export async function POST(req: Request) {
     const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap ? style : null } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration: offset });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo armar el anuncio." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo armar el anuncio.") }, { status: 502 });
   }
 }

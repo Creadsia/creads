@@ -9,6 +9,7 @@ import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/li
 import { explainFailure, serviceOfModel } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
 import { refundJob } from "@/lib/credits";
+import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 
 export const maxDuration = 120;
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
 
   const provider = findVideo(String(body?.model ?? ""));
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
-  if (!provider.configured()) return NextResponse.json({ error: `${provider.label}: falta la clave en Vercel.` }, { status: 503 });
+  if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   // charge for (and ask) the length the model really makes
   const seconds = billedSeconds(asked, provider.durations, provider.id.startsWith("veo"));
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
   try {
     row = await db.insert("clips", { kind: "gen:video", prompt, model: provider.id, status: "running", image_url: firstFrame || null, text: `${seconds} s`, usd });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar el trabajo." }, { status: 502 });
+    return NextResponse.json({ error: publicError(err, "No se pudo guardar el trabajo.") }, { status: 502 });
   }
   const id = String(row.id);
   try {
@@ -101,7 +102,7 @@ export async function GET(req: Request) {
     await db.update("clips", String(row.id), { status: "done", url }).catch(() => null);
     return NextResponse.json({ state: "done", url });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudo revisar el video.";
+    const msg = publicError(err, "No se pudo revisar el video.");
     console.error("generate/video status", provider.id, msg);
     return NextResponse.json({ error: msg }, { status: 502 });
   }

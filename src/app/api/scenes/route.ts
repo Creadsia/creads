@@ -6,6 +6,7 @@ import { sharedRules } from "@/lib/db";
 import { type CutIn, type Direction, type SceneContext, directorPrompt, scenePrompt } from "@/lib/director";
 import { FORMATS, type FormatId } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
+import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 120;
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   const broke = await needsCredits(s.user);
   if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   const { db } = s;
-  if (!textAI.configured()) return NextResponse.json({ error: "Falta ANTHROPIC_API_KEY en Vercel." }, { status: 503 });
+  if (!textAI.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   const b = await req.json().catch(() => null);
   const cuts: CutIn[] = Array.isArray(b?.cuts) ? b.cuts.filter((c: CutIn) => typeof c?.texto === "string" && c.texto.trim()).slice(0, 8) : [];
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ scenes, rulesUsed: ctx.rules?.length ?? 0 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "No se pudieron dirigir las escenas.";
+    const msg = publicError(err, "No se pudieron dirigir las escenas.");
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

@@ -169,7 +169,7 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
             <button type="button" onClick={speak} disabled={busy || !voiceId || text.trim().length < 2} className={ghostCls}>
               {busy ? "Generando voz…" : "Generar voz"}
             </button>
-            {text.trim() && <span className="text-xs text-muted">≈ {est} s · usa caracteres de tu plan de ElevenLabs</span>}
+            {text.trim() && <span className="text-xs text-muted">≈ {est} s de audio</span>}
           </div>
           {err && <p className="text-sm text-bad">{err}</p>}
           {value && <audio src={value.url} controls className="w-full max-w-md" />}
