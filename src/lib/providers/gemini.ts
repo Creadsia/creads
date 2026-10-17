@@ -64,6 +64,10 @@ export const nanoBananaPro: ImageProvider = {
     const img = out.find((p) => p.inlineData?.data)?.inlineData;
     if (!img) {
       const why = data?.candidates?.[0]?.finishReason || data?.promptFeedback?.blockReason || out.find((p) => p.text)?.text;
+      // a safety refusal: say what usually causes it and how to fix it (the credits go back by themselves)
+      if (/PROHIBITED|SAFETY|BLOCK|IMAGE_SAFETY|RECITATION/i.test(String(why ?? ""))) {
+        throw new Error("Nano Banana Pro no dibujó esta imagen porque la escena choca con sus reglas de seguridad. Suele pasar con un niño a solas con un adulto que no es de su familia (por ejemplo, subiéndose a su auto), violencia, armas, marcas o personas famosas. Cambia la descripción de la toma y vuelve a intentarlo. No se usaron tus créditos.");
+      }
       throw new Error(`Nano Banana Pro no devolvió imagen${why ? `: ${String(why).slice(0, 200)}` : "."}`);
     }
     return { bytes: Buffer.from(img.data, "base64"), mime: img.mimeType || "image/png" };

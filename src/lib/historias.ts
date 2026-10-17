@@ -260,7 +260,7 @@ Rules:
 - 1 to 4 main characters, all ORIGINAL (never a famous person, brand mascot or existing character). Give each one a fixed look in English: age, ethnicity, face, hairstyle, body, and the exact clothes they wear in the whole film (only change clothes if the story needs it, and say so in the shot).
 - Every shot's "image" is a self-contained description of the first frame in English: setting, time of day, lighting, composition, who is where and their expression. Name characters by their key in square brackets, e.g. [boy], and do NOT re-describe their faces (the reference sheets do that).
 - "motion" says in English what moves during the shot (camera move + action), simple enough for 4 seconds of video. No text, captions, logos or watermarks in any image.
-- Avoid violence, weapons, real brands and anything unsafe for a general audience.
+- Avoid violence, weapons, real brands and anything unsafe for a general audience. If a child is in the story, an adult who is not family is never alone with them in private or in a vehicle: they meet in public places, at school or with a parent present (image models refuse those scenes).
 - "es" is one short line in Spanish describing the shot for the customer.
 - Be concise: each "image" at most 55 words, each "motion" at most 20 words, each character "look" at most 50 words. Plain JSON, no comments.
 ${o.music === "cancion"
