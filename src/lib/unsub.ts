@@ -7,7 +7,8 @@ import { readPrivateJSON, writePrivateJSON } from "./supabase";
 const FILE = "bajas.json";
 
 function key() {
-  const base = process.env.RESET_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const base = process.env.RESET_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!base) throw new Error("Falta SUPABASE_SERVICE_ROLE_KEY en Vercel.");
   return createHmac("sha256", "creads-unsub-v1").update(base).digest();
 }
 const sign = (email: string) => createHmac("sha256", key()).update(email.trim().toLowerCase()).digest("base64url").slice(0, 32);

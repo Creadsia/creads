@@ -40,7 +40,11 @@ export async function observedDollar(fresh = false): Promise<Cached | null> {
     mem = { at: Date.now(), v: live };
     return live;
   }
-  return saved && sane(saved.valor) ? saved : null;
+  if (saved && sane(saved.valor)) {
+    mem = { at: Date.now(), v: saved }; // don't wait for the dead service again for a few minutes
+    return saved;
+  }
+  return null;
 }
 
 /** The rate used to turn US$ prices into the pesos charged (server only). */

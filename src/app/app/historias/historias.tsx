@@ -161,7 +161,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
 
         {est && (
           <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">
-            Escribir la historia es gratis con un plan activo. La película completa cuesta aprox. <b>{price(est.total)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}, música {price(est.music)}. Pagas cada paso cuando lo apruebas.
+            Escribir la historia es gratis mientras tengas créditos. La película completa cuesta aprox. <b>{price(est.total)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}, música {price(est.music)}. Pagas cada paso cuando lo apruebas.
           </p>
         )}
         <button type="submit" disabled={busy || idea.trim().length < 15 || (narrator && !voiceId)} className={`${btnCls} self-start py-2.5`}>
@@ -370,7 +370,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
                 const redo = (d.changed as number[]).filter((i) => animated.has(i)).length;
                 setDlgMsg(`Listo: ${d.plan.shots.filter((x: { dialogue?: unknown }) => x.dialogue).length} tomas con diálogo.${redo ? ` ${redo} de ellas ya estaban animadas: aprieta "Re-animar" en las que tienen 🗣 para que hablen.` : ""}`);
               })}>
-              {busy.dlg ? "Escribiendo diálogos… (≈ 30 s)" : plan.shots.some((x) => x.dialogue) ? "Reescribir diálogos con IA (gratis con un plan activo)" : "Escribir diálogos con IA (gratis con un plan activo)"}
+              {busy.dlg ? "Escribiendo diálogos… (≈ 30 s)" : plan.shots.some((x) => x.dialogue) ? "Reescribir diálogos con IA (gratis)" : "Escribir diálogos con IA (gratis)"}
             </button>
             {dlgMsg && <span className="text-sm text-good">{dlgMsg}</span>}
           </div>

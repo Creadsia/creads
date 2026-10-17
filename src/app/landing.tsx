@@ -8,7 +8,7 @@ import LoopVideo from "./loop-video";
 import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
-import { LAUNCH_PCT, PLANS, clpFor } from "@/lib/catalog";
+import { LAUNCH_PCT, PLANS, usd as usdLabel } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -517,8 +517,8 @@ function AppPreview({ t }: { t: Content["preview"] }) {
 /** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
 function fromPrice(lang: string, rate: number) {
   const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100);
-  void rate; void lang;
-  return `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
+  void rate;
+  return lang === "es" ? usdLabel(usd) : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
 }
 
 /** A thin reminder between sections: the price and one button to the plans. */
@@ -644,7 +644,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                 <span>{t.hero.poweredBy}</span>
-                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs", "Creads IA"].map((m) => (
+                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs"].map((m) => (
                   <b key={m} className="font-mono text-[13px] font-medium text-ink/85">
                     {m}
                   </b>

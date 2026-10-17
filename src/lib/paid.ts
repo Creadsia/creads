@@ -53,8 +53,12 @@ export async function ensureNewAccountLimit(ws: string, usd: number) {
     const cap = Number(book?.config?.limiteNuevas ?? DEFAULT_FINANZAS.config.limiteNuevas);
     if (!(cap > 0)) return;
     const day = new Date().toISOString().slice(0, 10);
-    const rows = await sbRest<{ usd: number | null }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&created_at=gte.${day}&select=usd&limit=10000`);
-    const spent = rows.reduce((s, r) => s + Number(r.usd ?? 0), 0);
+    const [charges, refunds] = await Promise.all([
+      sbRest<{ id: number; usd: number | null }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.charge&created_at=gte.${day}&select=id,usd&limit=1000`),
+      sbRest<{ ref: string | null }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.refund&created_at=gte.${day}&select=ref&limit=1000`),
+    ]);
+    const back = new Set(refunds.map((r) => r.ref));
+    const spent = charges.filter((c) => !back.has(`charge:${c.id}`)).reduce((s, r) => s + Number(r.usd ?? 0), 0); // failed jobs that were refunded don't count
     if (spent + usd <= cap) return;
     const credits = Math.floor(cap / (await usdPerCredit()));
     throw new CreditError(`Por seguridad, durante sus primeros 2 días las cuentas nuevas pueden usar hasta ${credits.toLocaleString("es-CL")} créditos por día. Mañana tienes más; si lo necesitas hoy, escríbenos a hola@creadsia.com y lo habilitamos al tiro.`, 429);

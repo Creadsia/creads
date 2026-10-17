@@ -104,7 +104,7 @@ export const en = {
   hero: {
     promo: "Launch offer: 50% off your first month",
     title: "Every AI model. One studio.",
-    lead: "Creads IA is 100% AI: Veo, Kling, Seedance, Nano Banana and ElevenLabs behind one simple studio, with Creads IA as the brain. Paste your script and get finished ads, reels and product photos, checked before they're yours.",
+    lead: "Creads IA is 100% AI: Veo, Kling, Seedance, Nano Banana and ElevenLabs behind one simple studio. Paste your script and get finished ads, reels and product photos, checked before they're yours.",
     poweredBy: "Powered by",
     wall: "Every clip on this page was made with AI. The tag shows the model.",
     cta: "Start with 50% off",
@@ -167,7 +167,7 @@ export const en = {
       scenes: "Scenes",
       scenesValue: "4 × 8 s",
       format: "Format",
-      formatValue: "9:16 · 1080p",
+      formatValue: "9:16 · HD",
       voice: "Voice",
       voiceValue: "Your cloned voice",
       cost: "Cost",
@@ -248,14 +248,14 @@ export const en = {
     title: "Simple credits. No surprises.",
     lead: "Every plan comes with monthly credits. You see the cost before you generate, and Creads doesn't charge you when its own review redoes a scene.",
     examples: [
-      ["30-second UGC ad", "Veo 3.1 Fast, 1080p", "≈ 300 credits"],
+      ["30-second UGC ad", "Veo 3.1 Fast, 720p", "≈ 300 credits"],
       ["10 product photos", "Nano Banana Pro, 4:5", "80 credits"],
       ["Quick hook draft", "Veo 3.1 Lite, 8 seconds", "40 credits"],
       ["Script, scenes and quality review", "Creads IA", "Included"],
     ],
     rules: [
       "Scenes that Creads redoes on its own don't cost you credits.",
-      "Your credits renew every month with your plan: credits you don't use that month expire.",
+      "Credits last for the period you paid (a month, or a year on the annual plan): whatever you don't use expires at the end.",
       "Need more? Top up anytime without changing plans.",
     ],
   },
@@ -315,7 +315,7 @@ export const en = {
         yearly: 49,
         credits: "1,000",
         for: "For creators and small businesses getting started.",
-        features: ["≈ 3 UGC ads of 30 s, or 125 images", "Every studio and model", "1 avatar with your face", "1 cloned voice", "1080p, commercial use"],
+        features: ["≈ 3 UGC ads of 30 s, or 125 images", "Every studio and model", "1 avatar with your face", "1 cloned voice", "AI script generator", "HD, commercial use"],
       },
       {
         id: "plus",
@@ -324,7 +324,7 @@ export const en = {
         yearly: 108,
         credits: "3,000",
         for: "For marketers and creators who publish every week.",
-        features: ["≈ 10 UGC ads of 30 s, or 375 images", "Auto production: 3 versions per script", "3 avatars and 3 cloned voices", "Priority queue", "AI script generator"],
+        features: ["≈ 10 UGC ads of 30 s, or 375 images", "Auto production: 3 versions per script", "3 avatars and 3 cloned voices", "Priority queue"],
       },
       {
         id: "studio",

@@ -153,15 +153,23 @@ export default function AdWork({ adId }: { adId: string }) {
   async function retryFailed() {
     for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
   }
-  // what one clip costs to generate again (same estimate as the server: the model's allowed length)
+  // what one clip costs to generate again: the same rules as the server (api/clips/run). Veo 3.1 and
+  // Veo 3.1 Fast take the face/product photos directly and are then always billed 8 s; other models
+  // first draw an opening frame from those photos (one image) if the clip has none yet.
+  const st = (ad?.settings ?? {}) as { avatar?: { image_url?: string | null } | null; product?: { image_url?: string | null } | null };
+  const hasRefs = Boolean(st.avatar?.image_url || st.product?.image_url);
   const clipUsd = (c: Clip, modelId = c.model) => {
     const m = models.find((x) => x.id === modelId);
     if (!m) return 0;
     const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
     const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
-    return m.usdPerSecond * billedSeconds(asked, m.durations ?? undefined, m.id.startsWith("veo"));
+    const veo = m.id.startsWith("veo");
+    const takesRefs = (m.id === "veo-3.1" || m.id === "veo-3.1-fast") && hasRefs;
+    const secs = veo ? (takesRefs ? 8 : asked <= 4 ? 4 : asked <= 6 ? 6 : 8) : billedSeconds(asked, m.durations ?? undefined);
+    const frame = !takesRefs && hasRefs && !c.image_url ? 0.134 : 0; // Nano Banana Pro opening frame
+    return m.usdPerSecond * secs + frame;
   };
-  const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos");
+  const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos según el modelo");
   const retryAllUsd = failed.reduce((t, c) => t + clipUsd(c, retryModel), 0);
   const waitingUsd = waiting.reduce((t, c) => t + clipUsd(c), 0);
   const ratio = ad.aspect === "16:9" ? "aspect-video" : ad.aspect === "1:1" ? "aspect-square" : ad.aspect === "4:5" ? "aspect-[4/5]" : "aspect-[9/16]";

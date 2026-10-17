@@ -20,7 +20,7 @@ const newId = () => Math.random().toString(36).slice(2, 10);
 function Chip({ tipo }: { tipo: string }) {
   const b = blockOf(tipo);
   return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: `${b.color}22`, color: b.color }}>
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-0.5 text-xs font-bold text-ink">
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: b.color }} />
       {b.id}
     </span>
@@ -106,11 +106,20 @@ export default function Guiones() {
     router.push("/app/crear");
   }
 
+  const [saving, setSaving] = useState(false);
   async function save(text: string, title: string) {
+    if (saving) return;
+    setSaving(true); setErr("");
     try {
+      if (saved.rows?.some((x) => x.text.trim() === text.trim())) { flash("Ese guion ya está guardado."); return; }
       await saved.add({ title: title.slice(0, 80), lang, text, format: "ugc" } as Partial<SavedScript>);
       flash("Guion guardado. Lo encuentras en «Abrir un guion guardado».");
-    } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo guardar."); }
+    } catch (e) {
+      flash("");
+      setErr(e instanceof Error && !/fetch/i.test(e.message) ? e.message : "No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function copy(text: string) {
@@ -212,12 +221,13 @@ export default function Guiones() {
           </div>
         )}
         {note && <p role="status" className="text-sm text-good">{note}</p>}
+        {err && !busy && !mode && <p role="alert" className="text-sm text-bad">{err}</p>}
       </section>
 
       <section className={cardCls} aria-labelledby="que-hacer">
         <div className="flex flex-col gap-1">
           <h2 id="que-hacer" className="font-display text-lg font-bold">2 · ¿Qué quieres hacer?</h2>
-          <p className="text-sm text-muted">Si recién empiezas, parte por <b>Desarmar el guion</b>: vas a ver cada parte y por qué funciona. Gratis con tu plan activo.</p>
+          <p className="text-sm text-muted">Si recién empiezas, parte por <b>Desarmar el guion</b>: vas a ver cada parte y por qué funciona. Gratis mientras tengas créditos: no descuenta nada.</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {MODES.map((m) => (

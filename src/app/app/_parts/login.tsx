@@ -117,7 +117,7 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
           {!(mode === "forgot" && sent) && <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
             {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : mode === "forgot" ? "Enviarme el enlace" : "Entrar"}
           </button>}
-          {error && <p className="text-sm text-bad">{error}</p>}
+          {error && <p role="alert" className="text-sm text-bad">{error}</p>}
           {mode === "login" && (
             <p className="text-xs text-muted">
               <button type="button" onClick={() => { setMode("forgot"); setSent(false); setError(""); }} className="font-semibold text-accent-text underline">¿Olvidaste tu clave?</button>

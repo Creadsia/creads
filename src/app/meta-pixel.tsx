@@ -37,6 +37,7 @@ export default function MetaPixel() {
   // a page view on load and on every page change (the studio changes pages without reloading)
   useEffect(() => {
     if (choice !== "1") return;
+    if (path.startsWith("/clave")) return; // the password-reset link carries a secret: never sent to Meta
     loadPixel();
     const w = window as unknown as { fbq: Fbq; __creadsQ?: unknown[][] };
     w.fbq("track", "PageView");

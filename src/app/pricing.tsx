@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { LAUNCH_PCT, clpFor } from "@/lib/catalog";
+import { LAUNCH_PCT, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 
@@ -10,7 +10,7 @@ import PayBadges from "./pay-badges";
 // and every button goes straight to checkout (/empezar) with that plan already chosen.
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-const dollars = (n: number) => `US$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
@@ -27,12 +27,12 @@ export default function Pricing({ t, lang, rate, renews = true }: { t: Content["
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // money as the visitor reads it: pesos in Spanish (that's what Mercado Pago charges), dollars in English
-  const money = (usd: number) => dollars(usd); // prices are always in US$
+  const dollars = (n: number) => (es ? usd(n) : dollarsEn(n)); // prices are always in US$ (decimal comma in Spanish)
+  const money = dollars;
   // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
   const perMonthOfYear = (usdYear: number) => dollars(Math.round((usdYear / 12) * 100) / 100);
   // without automatic renewal (temporary payment setup) the FAQ must not promise it
   const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes y créditos» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans and credits\" with one click. There are no automatic charges." } : f));
-  const other = (usd: number) => `≈ ${pesos(clpFor(usd, rate))} CLP`;
 
   // Meta "ViewContent": the visitor saw the plans (once per visit)
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function Pricing({ t, lang, rate, renews = true }: { t: Content["
                       <span className="font-display text-[2.6rem] leading-none font-semibold">{perMonthOfYear(p.yearly * 12)}</span>
                       <span className="text-muted">{t.perMonth}</span>
                     </p>
-                    <p className="text-sm text-muted">{money(p.yearly * 12)} {t.yearlyTotal} · {other(p.yearly * 12)}</p>
+                    <p className="text-sm text-muted">{money(p.yearly * 12)} {t.yearlyTotal}</p>
                   </>
                 ) : (
                   <>
@@ -98,7 +98,7 @@ export default function Pricing({ t, lang, rate, renews = true }: { t: Content["
                       <span className="font-display text-[2.6rem] leading-none font-semibold">{money(first)}</span>
                       <span className="text-muted">{t.firstMonth}</span>
                     </p>
-                    <p className="text-sm text-muted">{t.then} {money(p.price)}{t.perMonth} · {other(first)}</p>
+                    <p className="text-sm text-muted">{t.then} {money(p.price)}{t.perMonth}</p>
                   </>
                 )}
               </div>
@@ -200,7 +200,7 @@ export default function Pricing({ t, lang, rate, renews = true }: { t: Content["
                 <div key={c} className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
                   <span className="font-semibold">{c}</span>
                   <span className="font-display text-2xl font-semibold">{money(price)}</span>
-                  <a href={`/empezar?plan=pack-${credits}`} className="mt-auto rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm font-semibold hover:border-accent-text">{t.topups.buy}</a>
+                  <a href={`/app/planes?plan=pack-${credits}`} className="mt-auto rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm font-semibold hover:border-accent-text">{t.topups.buy}</a>
                 </div>
               );
             })}

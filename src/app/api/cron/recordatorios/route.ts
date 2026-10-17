@@ -74,10 +74,13 @@ export async function GET(req: Request) {
   }
   const users = await sbRest<U[]>(`users?workspace=in.(${ws.map((w) => encodeURIComponent(w.id)).join(",")})&active=eq.true&select=email,name,workspace`);
   let sent = 0;
+  // customers with an automatic monthly renewal get "se renueva solo", not "renueva tu plan"
+  const subs = await sbRest<{ owner: string; mp: { kind?: string; cancelled?: boolean } | null }[]>(`orders?owner=in.(${ws.map((w) => encodeURIComponent(w.id)).join(",")})&status=eq.pagado&select=owner,mp&limit=10000`).catch(() => []);
+  const renewing = new Set(subs.filter((o) => o.mp?.kind === "subscription" && !o.mp.cancelled).map((o) => o.owner));
   for (const w of ws) {
     const credits = await balanceOf(w.id).catch(() => null);
     for (const u of users.filter((x) => x.workspace === w.id)) {
-      const ok = await sendEmail(planEndingEmail(u.email, u.name, { plan: w.plan, until: w.paid_until, daysLeft: w.paid_until === today ? 0 : 3, credits }));
+      const ok = await sendEmail(planEndingEmail(u.email, u.name, { plan: w.plan, until: w.paid_until, daysLeft: w.paid_until === today ? 0 : 3, credits, renews: renewing.has(w.id) }));
       if (ok) sent++;
     }
   }

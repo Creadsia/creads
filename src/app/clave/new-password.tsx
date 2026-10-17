@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 
@@ -10,7 +10,10 @@ const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal 
 
 // The page an emailed "forgot my password" link opens: choose a new password, then sign in.
 export default function NewPassword() {
-  const token = useSearchParams()?.get("t") ?? "";
+  const fromUrl = useSearchParams()?.get("t") ?? "";
+  const [token] = useState(fromUrl);
+  // the link's secret leaves the address bar right away (no history, no analytics, no screenshots)
+  useEffect(() => { if (fromUrl) window.history.replaceState(null, "", "/clave"); }, [fromUrl]);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [busy, setBusy] = useState(false);

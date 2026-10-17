@@ -35,6 +35,9 @@ ${o.paragraphs.map(p).join("")}${rows}${cta}${(o.after ?? []).map(p).join("")}
 </table></td></tr></table></body></html>`;
 }
 
+/** HTML fragment → plain text (for the text version of an email). */
+const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").replace(/&(amp|lt|gt|quot|#39);/g, (m) => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'" })[m]!);
+
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
 export function welcomeEmail(to: string, name: string | null): Email {
@@ -91,8 +94,19 @@ export function resetEmail(to: string, name: string | null, link: string): Email
   };
 }
 
-export function planEndingEmail(to: string, name: string | null, o: { plan: string | null; until: string; daysLeft: number; credits: number | null }): Email {
+export function planEndingEmail(to: string, name: string | null, o: { plan: string | null; until: string; daysLeft: number; credits: number | null; renews?: boolean }): Email {
   const link = `${SITE}/app/planes`;
+  if (o.renews) {
+    // automatic renewal: nothing to do, only a heads-up about the credits that will expire
+    const plan = o.plan ? `Tu plan ${o.plan}` : "Tu plan";
+    const left = o.credits && o.credits > 0 ? `Te quedan ${o.credits.toLocaleString("es-CL")} créditos de este período: los que no uses antes de esa fecha vencen.` : "";
+    const title = `${plan} se renueva ${o.daysLeft <= 0 ? "hoy" : `el ${longDate(o.until)}`}`;
+    return {
+      to, tag: "plan-se-renueva", subject: title,
+      html: layout({ preview: "No tienes que hacer nada.", title, paragraphs: [esc(hello(name)), `${esc(plan)} se renueva solo el <b>${esc(longDate(o.until))}</b>: no tienes que hacer nada. ${esc(left)}`], cta: { label: "Seguir creando", href: `${SITE}/app` } }),
+      text: plain([hello(name), "", `${plan} se renueva solo el ${longDate(o.until)}: no tienes que hacer nada. ${left}`, "", `Seguir creando: ${SITE}/app`]),
+    };
+  }
   const when = o.daysLeft <= 0 ? "hoy" : o.daysLeft === 1 ? "mañana" : `en ${o.daysLeft} días`;
   const plan = o.plan ? `Tu plan ${o.plan}` : "Tu plan";
   const left = o.credits && o.credits > 0 ? `Te quedan ${o.credits.toLocaleString("es-CL")} créditos: úsalos antes de esa fecha, porque los créditos vencen con el período del plan.` : "Renueva para seguir generando sin pausa.";
@@ -162,7 +176,7 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       paragraphs: [
         esc(hello(name)),
         "La forma más rápida de partir:",
-        "<b>1.</b> Abre el <b>Generador de guiones</b> y pega un anuncio que esté funcionando (tuyo o de la competencia). Presiona <b>Desarmar el guion</b>: vas a ver su hook, dolor, oferta y CTA, y qué mejorar.<br><b>2.</b> Pide <b>10 hooks</b> o <b>3 ángulos</b> y elige el mejor.<br><b>3.</b> Presiona <b>Crear anuncio con este</b>, elige tu avatar y genera.",
+        "<b>1.</b> Abre el <b>Generador de guiones</b> y pega un anuncio que esté funcionando (tuyo o de la competencia). Presiona <b>Desarmar el guion</b>: vas a ver su hook, dolor, oferta y CTA, y qué mejorar.<br><b>2.</b> Pide <b>10 hooks</b> o <b>3 ángulos</b> y elige el mejor.<br><b>3.</b> Presiona <b>Llevar a Crear anuncio</b>, elige tu avatar y genera.",
         esc(plan.trim()),
       ].filter(Boolean),
       cta: { label: "Abrir el Generador de guiones", href: `${SITE}/app/guiones` },
@@ -177,7 +191,7 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       : {
           subject: "¿Te ayudo con tu primer anuncio?",
           title: "¿Te ayudo con tu primer anuncio?",
-          paragraphs: [esc(hello(name)), "Vi que todavía no creas tu primer anuncio. Si algo no quedó claro o no sabes por dónde partir, <b>responde este correo</b> con qué vendes y a quién, y te ayudamos a armar el guion.", `O parte solo: en el Generador de guiones, «Crear desde cero» escribe 3 guiones con solo contarle qué vendes.${esc(plan)}`],
+          paragraphs: [esc(hello(name)), "Vi que todavía no has creado tu primer anuncio. Si algo no quedó claro o no sabes por dónde partir, <b>responde este correo</b> con qué vendes y a quién, y te ayudamos a armar el guion.", `O parte solo: en el Generador de guiones, «Crear desde cero» escribe 3 guiones con solo contarle qué vendes.${esc(plan)}`],
           cta: { label: "Crear mi primer anuncio", href: `${SITE}/app/guiones` },
         },
     7: {
@@ -196,6 +210,6 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
   return {
     to, tag: `activacion-${o.step}`, subject: v.subject, unsub: o.unsub,
     html: layout({ preview: v.title, title: v.title, paragraphs: v.paragraphs, cta: v.cta, unsub: o.unsub }),
-    text: plain([...v.paragraphs.map((t) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "")), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
+    text: plain([...v.paragraphs.map(unhtml), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
   };
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/admin";
-import { PACKS, PLANS, type ItemId } from "@/lib/catalog";
+import { PLANS, type ItemId } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import Checkout from "./checkout";
 import WhatsAppButton from "../whatsapp";
@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
 export default async function Empezar({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const want = String(sp.plan ?? "plus") as ItemId;
-  const item: ItemId = [...PLANS, ...PACKS].some((x) => x.id === want) ? want : "plus";
+  // new accounts start with a plan (top-ups are added to an active plan, from «Planes y créditos»)
+  const item: ItemId = PLANS.some((x) => x.id === want) ? want : "plus";
   const period = sp.periodo === "anual" ? "anual" : "mensual";
   const user = await currentUser().catch(() => null);
   if (user) redirect(`/app/planes?plan=${item}&periodo=${period}`);

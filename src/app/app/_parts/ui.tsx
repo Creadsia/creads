@@ -83,22 +83,24 @@ export function useTable<T extends Row>(table: string) {
   useEffect(() => { load(); }, [load]);
 
   async function add(data: Partial<T>) {
-    const res = await fetch(`/api/data/${table}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+    const res = await fetch(`/api/data/${table}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) }).catch(() => null);
+    if (!res) throw new Error("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
     const d = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(d.error || "No se pudo guardar.");
     setRows((r) => [d.row as T, ...(r ?? [])]);
     return d.row as T;
   }
   async function update(id: string, data: Partial<T>) {
-    const res = await fetch(`/api/data/${table}/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+    const res = await fetch(`/api/data/${table}/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) }).catch(() => null);
+    if (!res) throw new Error("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
     const d = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(d.error || "No se pudo guardar.");
     setRows((r) => (r ?? []).map((x) => (x.id === id ? (d.row as T) : x)));
     return d.row as T;
   }
   async function remove(id: string) {
-    const res = await fetch(`/api/data/${table}/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("No se pudo borrar.");
+    const res = await fetch(`/api/data/${table}/${id}`, { method: "DELETE" }).catch(() => null);
+    if (!res?.ok) throw new Error("No se pudo borrar.");
     setRows((r) => (r ?? []).filter((x) => x.id !== id));
   }
 

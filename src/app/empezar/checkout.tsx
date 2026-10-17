@@ -100,13 +100,6 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
         <section className="order-2 flex min-w-0 flex-col gap-5 lg:order-1" aria-labelledby="tu-plan">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tus créditos" : "Tu plan"}</h1>
-            <div role="tablist" aria-label="Qué comprar" className="inline-flex rounded-xl border border-line bg-surface p-1 text-sm">
-              {([["plan", "Planes"], ["pack", "Solo créditos"]] as const).map(([k, l]) => (
-                <button key={k} type="button" role="tab" aria-selected={(k === "pack") === isPack}
-                  onClick={() => setItem(k === "pack" ? (isPack ? item : "pack-2000") : isPack ? "plus" : item)}
-                  className={`rounded-lg px-3 py-1.5 font-semibold ${(k === "pack") === isPack ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{l}</button>
-              ))}
-            </div>
           </div>
 
           {!isPack && (
@@ -178,11 +171,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
               {renews ? (
-                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(q.total) : "el precio con descuento"} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
               ) : (
-                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(q.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
+                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}
-              <p>El plan anual y las recargas se pagan una sola vez. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
+              <p>El plan anual se paga una sola vez y sus créditos duran el año. Las recargas se compran después, desde «Planes y créditos», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
           </details>
@@ -245,7 +238,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
             </button>
             <p className="text-center text-xs text-muted">
-              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis); si no usas ningún crédito, te devolvemos el pago dentro de 10 días.
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
             </p>
 
             <div className="flex flex-col items-center gap-2 text-center">

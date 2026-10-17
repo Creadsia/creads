@@ -105,7 +105,7 @@ export const es: Content = {
   hero: {
     promo: "Oferta de lanzamiento: 50% de descuento el primer mes",
     title: "Todos los modelos de IA. Un solo estudio.",
-    lead: "Creads IA es 100% inteligencia artificial: Veo, Kling, Seedance, Nano Banana y ElevenLabs en un estudio simple, con el cerebro de Creads IA. Pega tu guion y recibe anuncios, reels y fotos de producto terminados y revisados.",
+    lead: "Creads IA es 100% inteligencia artificial: Veo, Kling, Seedance, Nano Banana y ElevenLabs en un estudio simple. Pega tu guion y recibe anuncios, reels y fotos de producto terminados y revisados.",
     poweredBy: "Con la tecnología de",
     wall: "Todos los clips de esta página están hechos con IA. La etiqueta dice el modelo.",
     cta: "Empezar con 50% de descuento",
@@ -256,7 +256,7 @@ export const es: Content = {
     ],
     rules: [
       "Las escenas que Creads rehace por su cuenta no te cuestan créditos.",
-      "Tus créditos se renuevan cada mes con tu plan: los que no uses en el mes vencen.",
+      "Los créditos duran el período que pagaste (un mes, o un año en el plan anual): los que no uses vencen al terminar.",
       "¿Necesitas más? Recarga cuando quieras sin cambiar de plan.",
     ],
   },
@@ -316,7 +316,7 @@ export const es: Content = {
         yearly: 49,
         credits: "1.000",
         for: "Para creadores y negocios que están partiendo.",
-        features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "HD, uso comercial"],
+        features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "Generador de guiones con IA", "HD, uso comercial"],
       },
       {
         id: "plus",
@@ -325,7 +325,7 @@ export const es: Content = {
         yearly: 108,
         credits: "3.000",
         for: "Para marketers y creadores que publican todas las semanas.",
-        features: ["≈ 10 anuncios UGC de 30 s, o 375 imágenes", "Producción automática: 3 versiones por guion", "3 avatares y 3 voces clonadas", "Cola prioritaria", "Generador de guiones con IA"],
+        features: ["≈ 10 anuncios UGC de 30 s, o 375 imágenes", "Producción automática: 3 versiones por guion", "3 avatares y 3 voces clonadas", "Cola prioritaria"],
       },
       {
         id: "studio",

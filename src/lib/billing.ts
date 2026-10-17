@@ -51,7 +51,9 @@ export async function recordPlanPayment(ws: string, planId: string, months: numb
   const m = Math.min(12, Math.max(1, Math.round(months)));
   const from = w.paid_until && w.paid_until > today() ? w.paid_until : today();
   const until = addMonths(from, m);
-  await beforeNewPeriod(ws).catch((e) => console.error("expiry before period", ws, e instanceof Error ? e.message : e));
+  // a repeated payment (same ref) must not touch the period again
+  const repeated = opts.ref ? (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(opts.ref)}&select=id&limit=1`).catch(() => [])).length > 0 : false;
+  if (!repeated) await beforeNewPeriod(ws).catch((e) => console.error("expiry before period", ws, e instanceof Error ? e.message : e));
   const what = `Plan ${plan.nombre} · ${m === 1 ? "1 mes" : `${m} meses`}${opts.note ? ` · ${opts.note}` : ""}`;
   await grant(ws, plan.creditos * m, "plan", `Pago ${what}`, opts.by, opts.ref); // first: a repeated payment stops here
   await sbRest(`workspaces?id=eq.${encodeURIComponent(ws)}`, { method: "PATCH", body: JSON.stringify({ plan: plan.nombre, paid_until: until }) });

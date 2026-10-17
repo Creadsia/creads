@@ -53,6 +53,11 @@ export async function POST(req: Request) {
     if (active && period === "mensual" && PLANS.some((p) => p.id === b?.item) && !oneTimeOnly()) {
       return NextResponse.json({ error: `Ya tienes la renovación automática de ${active.quote.label}. Para cambiar de plan, primero cancela esa renovación aquí mismo (tu plan sigue activo hasta la fecha pagada) y luego elige el nuevo.` }, { status: 409 });
     }
+    // top-ups add to an active plan: on their own they couldn't be used (an ended plan blocks jobs)
+    // and would expire with the period that already ended
+    if (String(b?.item ?? "").startsWith("pack-") && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10))) {
+      return NextResponse.json({ error: "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma créditos cuando los necesites." }, { status: 400 });
+    }
     const discountPct = Number(w.discount ?? 0);
     const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct, firstPurchase: !paid });
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });

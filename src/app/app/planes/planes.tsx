@@ -30,6 +30,7 @@ function Check() {
 
 export default function Planes() {
   const { info } = useCredits();
+  const hasPlan = Boolean(info?.unlimited || (info?.paidUntil && !info.expired)); // top-ups need an active plan
   const [pay, setPay] = useState<PayInfo | null>(null);
   const [tab, setTab] = useState<"planes" | "creditos">("planes");
   const [period, setPeriod] = useState<Period>("mensual");
@@ -82,13 +83,18 @@ export default function Planes() {
   const [leaving, setLeaving] = useState(false);
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelled, setCancelled] = useState("");
   async function cancelSub() {
-    setErr("");
+    if (cancelBusy) return;
+    setErr(""); setCancelBusy(true);
     const r = await fetch("/api/pagos/cancelar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason, detail }) }).catch(() => null);
+    setCancelBusy(false);
     if (!r) return setErr("No pudimos conectarnos. Revisa tu conexión e intenta de nuevo.");
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return setErr(d.error || "No se pudo cancelar la renovación. Intenta de nuevo o escríbenos a hola@creadsia.com.");
     setLeaving(false);
+    setCancelled(info?.paidUntil ? `Listo, cancelamos la renovación. Tu plan sigue activo hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}.` : "Listo, cancelamos la renovación.");
     load();
   }
 
@@ -136,7 +142,7 @@ export default function Planes() {
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
           <span className="text-xl font-bold">{info?.unlimited ? "Dueño" : currentPlan ?? "Sin plan todavía"}</span>
-          {info?.paidUntil && <span className={`text-sm ${info.expired ? "text-bad" : "text-muted"}`}>{info.expired ? "Venció" : pay?.renews === false ? "Vigente hasta" : "Se renueva"} el {new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</span>}
+          {info?.paidUntil && <span className={`text-sm ${info.expired ? "text-bad" : "text-muted"}`}>{info.expired ? "Venció" : pay?.subscription ? "Se renueva" : "Vigente hasta"} el {new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</span>}
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
@@ -161,6 +167,8 @@ export default function Planes() {
           {!leaving && <button type="button" onClick={() => setLeaving(true)} className="text-sm font-semibold text-muted underline hover:text-ink">Cancelar renovación</button>}
         </p>
       )}
+      {cancelled && <p role="status" className="rounded-xl border border-good/40 bg-good/10 px-4 py-3 text-sm">{cancelled}</p>}
+      {!leaving && !item && err && <p className="text-sm text-bad" role="alert">{err}</p>}
       {pay?.subscription && leaving && (
         <section className={cardCls} aria-labelledby="leave">
           <h2 id="leave" className="font-display text-lg font-bold">Antes de cancelar, ¿nos cuentas por qué?</h2>
@@ -172,14 +180,15 @@ export default function Planes() {
               </label>
             ))}
           </div>
-          {reason === "Es muy caro" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Starter</b>? Es el más económico, o puedes comprar solo una recarga de créditos cuando la necesites, sin plan mensual.</p>}
+          {reason === "Es muy caro" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Starter</b>? Es el más económico y trae 1.000 créditos al mes.</p>}
           {reason === "La calidad no me convenció" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
           {reason === "No lo estoy usando" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba el <b>Generador de guiones</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
-          <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
+          <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>
-            <button type="button" onClick={cancelSub} disabled={!reason} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">Cancelar la renovación</button>
+            <button type="button" onClick={cancelSub} disabled={!reason || cancelBusy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{cancelBusy ? "Cancelando…" : "Cancelar la renovación"}</button>
           </div>
+          {err && <p className="text-sm text-bad" role="alert">{err}</p>}
         </section>
       )}
 
@@ -237,12 +246,16 @@ export default function Planes() {
                     <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
                     <span className="text-xs text-muted">{period === "anual" ? `${money(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${money(first)}` : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm"><b className="font-mono">{p.credits.toLocaleString("es-CL")}</b> créditos cada mes</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{(p.credits * 12).toLocaleString("es-CL")}</b> créditos para el año</> : <><b className="font-mono">{p.credits.toLocaleString("es-CL")}</b> créditos al mes</>}</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>
-                  <button type="button" onClick={() => choose(p.id)} disabled={info?.unlimited && !pay?.owner}
-                    className={`mt-auto ${featured ? btnCls : ghostCls} w-full py-2.5`}>{mine ? "Renovar" : currentPlan ? `Cambiar a ${p.name}` : `Elegir ${p.name}`}</button>
+                  {mine && pay?.subscription && period === "mensual" ? (
+                    <p className="mt-auto rounded-lg bg-surface-2 px-3 py-2.5 text-center text-sm text-muted">Se renueva solo{info?.paidUntil ? ` el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}` : ""}</p>
+                  ) : (
+                    <button type="button" onClick={() => choose(p.id)} disabled={info?.unlimited && !pay?.owner}
+                      className={`mt-auto ${featured ? btnCls : ghostCls} w-full py-2.5`}>{mine ? "Renovar" : currentPlan ? `Cambiar a ${p.name}` : `Elegir ${p.name}`}</button>
+                  )}
                 </article>
               );
             })}
@@ -250,7 +263,7 @@ export default function Planes() {
         </section>
       ) : (
         <section className="flex flex-col gap-4" aria-label="Recargas de créditos">
-          <p className="text-sm text-muted">Se suman a tu saldo al instante, encima de los créditos de tu plan.</p>
+          <p className="text-sm text-muted">{hasPlan ? "Se suman a tu saldo al instante, encima de los créditos de tu plan, y vencen cuando termina tu período." : "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma créditos cuando los necesites."}</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {PACKS.map((k) => (
               <article key={k.id} className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 ${item === k.id ? "ring-2 ring-accent-text/60" : ""}`}>
@@ -258,7 +271,7 @@ export default function Planes() {
                 <b className="font-mono text-3xl">+{k.credits.toLocaleString("es-CL")}</b>
                 <span className="text-sm text-muted">créditos</span>
                 <span className="font-display text-2xl font-semibold">{money(k.usd)}</span>
-                <button type="button" onClick={() => choose(k.id)} className={`${ghostCls} mt-auto w-full py-2.5`}>Comprar</button>
+                <button type="button" onClick={() => choose(k.id)} disabled={!hasPlan} className={`${ghostCls} mt-auto w-full py-2.5 disabled:opacity-50`}>Comprar</button>
               </article>
             ))}
           </div>
@@ -300,7 +313,7 @@ export default function Planes() {
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
             {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${usd(q.total)} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
-            <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis); si no usas ningún crédito, te devolvemos el pago dentro de 10 días.</p>
+            <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}

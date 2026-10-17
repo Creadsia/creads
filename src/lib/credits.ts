@@ -73,10 +73,11 @@ export async function needsCredits(user: User): Promise<string | null> {
   try {
     const st = await creditStatus(user.workspace);
     if ((st.balance ?? 0) > 0) return null;
+    if (st.paidUntil && !st.expired) return "Te quedaste sin créditos. Suma una recarga en «Planes y créditos» y sigues al tiro.";
   } catch {
     return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas créditos. Elige un plan en «Planes y créditos» (primer mes con 50% de descuento).";
+  return "Para usar esto necesitas un plan activo. Elige uno en «Planes y créditos» (primer mes con 50% de descuento).";
 }
 
 /**
