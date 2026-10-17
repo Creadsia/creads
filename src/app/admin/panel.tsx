@@ -1212,6 +1212,52 @@ const MANUAL: { id: string; title: string; how: string; urgent?: boolean; who?: 
   { id: "inspiracion", title: "Llenar la galería «Recrear video»", how: "Entra a Recrear video (menú Herramientas) y, abajo, «Agregar ejemplo»: sube 8 a 12 anuncios ganadores de tus nichos (hasta 30 s, que tengas permiso para usar), con título, etiqueta (ej. «Seguros · UGC») y una instrucción sugerida. Tus clientes los verán con el botón «Recrear». Antes de lanzar, prueba 1 recreación de cada tipo (gasta créditos reales: unos US$0,85 cambiar elementos de 5 s, US$1,30 copiar movimiento de 10 s)." },
 ];
 
+/**
+ * Order of the red (blocking) work: first what the owner can do alone from his computer (settings and
+ * connections), hardest first, with a rough time; then what needs another person or has to wait;
+ * then Claude's part. Ids not listed here go last in their group.
+ */
+const RED_ORDER: { pc: [string, string][]; otros: [string, string][]; claude: [string, string][] } = {
+  pc: [
+    ["pasarela", "2–3 h + días de aprobación: por eso va primero"],
+    ["staging", "1–2 h"],
+    ["mp-token", "20 min"],
+    ["mp-webhook", "20 min"],
+    ["gasto-real", "45 min (después de la pasarela)"],
+    ["billing", "10 min"],
+    ["meta", "15 min"],
+    ["2fa", "1 h (son varias cuentas)"],
+    ["claves", "1 h"],
+    ["caps", "30 min"],
+    ["mal-uso", "30 min (escribir una página)"],
+    ["compra", "15 min (cuando la pasarela esté lista)"],
+    ["admin", "5 min"],
+    ["email", "10 min"],
+    ["ai", "15 min"],
+    ["cron", "5 min"],
+    ["mp-once", "5 min"],
+    ["dolar", "5 min"],
+    ["vercel-pro", "5 min (pagar)"],
+    ["backups", "5 min (pagar)"],
+    ["monitor", "10 min"],
+    ["alarma-prueba", "2 min (después de los correos)"],
+  ],
+  otros: [
+    ["contador", "una reunión: lleva también IVA y boletas"],
+    ["iva", "se decide en la misma reunión con el contador"],
+    ["boletas", "con el contador"],
+    ["abogado", "pide hora ya: suele tardar"],
+    ["cuota-google", "pedirla 1–2 semanas antes de lanzar"],
+    ["beta", "al final, con todo lo de arriba listo"],
+    ["dia-1", "lo último, justo antes de la primera venta"],
+  ],
+  claude: [
+    ["c-e2e", "parte cuando el ambiente de pruebas esté listo"],
+    ["c-contracargos", "parte cuando la pasarela esté lista"],
+    ["c-gasto", "durante la beta"],
+  ],
+};
+
 function Lanzamiento() {
   const [checks, setChecks] = useState<LaunchCheck[] | null>(null);
   const [err, setErr] = useState("");
@@ -1237,7 +1283,7 @@ function Lanzamiento() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold">Lista de lanzamiento</h2>
-          <p className="text-sm text-muted">Lo de arriba se revisa solo cada vez que abres esta pestaña. Lo de abajo lo marcas tú cuando lo hagas. Después de cambiar algo en Vercel, haz Redeploy y vuelve a revisar.</p>
+          <p className="text-sm text-muted">Arriba, en rojo y en orden, lo que bloquea. Ve de a uno empezando por el número 1. Los que dicen «se marca solo» se ponen verdes al tocar «Revisar de nuevo» (después de cambiar algo en Vercel, haz Redeploy primero); los demás los marcas tú.</p>
         </div>
         <div className="flex items-center gap-2">
           <Pill t={okCount === total ? "good" : "acc"}>{okCount} de {total} listos</Pill>
@@ -1250,52 +1296,99 @@ function Lanzamiento() {
         return blocking > 0 ? (
           <div className="rounded-xl border border-bad/50 bg-bad/10 px-4 py-3">
             <b className="text-bad">🔴 Todavía no se puede lanzar: faltan {blocking} {blocking === 1 ? "cosa que bloquea" : "cosas que bloquean"}.</b>
-            <p className="text-sm text-muted">Están en rojo abajo. Cuando no quede ninguna, este aviso se pone verde.</p>
+            <p className="text-sm text-muted">Están abajo en rojo, ordenadas. Cuando no quede ninguna, este aviso se pone verde.</p>
           </div>
         ) : (
           <div className="rounded-xl border border-good/50 bg-good/10 px-4 py-3"><b className="text-good">🟢 Lista para lanzar: no queda nada que bloquee.</b></div>
         );
       })()}
       {err && <p className="text-sm text-bad">{err}</p>}
-      <h3 className="text-sm font-bold text-muted">Se revisa solo</h3>
-      {!checks ? <p className="text-muted">Revisando…</p> : (
-        <ul className="flex flex-col gap-2">
-          {checks.map((c) => (
-            <li key={c.id} className="flex flex-col gap-1 rounded-xl bg-surface-2 px-4 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <b className="text-sm">{AUTO[c.id]?.title ?? c.id}</b>
-                <Pill t={label[c.state][0]}>{label[c.state][1]}</Pill>
-              </div>
-              <p className="text-sm">{c.detail}</p>
-              {c.state !== "ok" && AUTO[c.id] && <p className="text-xs text-muted">Cómo: {AUTO[c.id].how}</p>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {(() => {
-        const item = (m: (typeof MANUAL)[number]) => (
-          <li key={m.id}>
-            <label className={`flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3 ${m.urgent && !done[m.id] ? "border border-bad/50 bg-bad/10" : "bg-surface-2"}`}>
-              <input type="checkbox" checked={Boolean(done[m.id])} onChange={() => tick(m.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+      {!checks ? <p className="text-muted">Revisando…</p> : (() => {
+        type Row = { id: string; title: string; how: string; auto?: LaunchCheck; time?: string; who?: "tu" | "claude" };
+        const autoRow = (c: LaunchCheck): Row => ({ id: c.id, title: AUTO[c.id]?.title ?? c.id, how: AUTO[c.id]?.how ?? "", auto: c });
+        const red: Row[] = [
+          ...checks.filter((c) => c.state === "falta").map(autoRow),
+          ...MANUAL.filter((m) => m.urgent && !done[m.id]),
+        ];
+        const pick = (list: [string, string][]): Row[] => list.flatMap(([id, time]) => { const r = red.find((x) => x.id === id); return r ? [{ ...r, time }] : []; });
+        const pc = pick(RED_ORDER.pc), otros = pick(RED_ORDER.otros), cl = pick(RED_ORDER.claude);
+        const placed = new Set([...pc, ...otros, ...cl].map((r) => r.id));
+        for (const r of red) if (!placed.has(r.id)) (r.who === "claude" ? cl : r.auto || r.who === "tu" ? pc : otros).push(r);
+
+        const redItem = (r: Row, n?: number, first?: boolean) => (
+          <li key={r.id}>
+            <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${first ? "border-bad bg-bad/20 ring-2 ring-bad/40" : "border-bad/50 bg-bad/10"}`}>
+              {r.auto
+                ? <span className="mt-0.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-bad px-1.5 text-xs font-bold text-white" title="Se pone verde solo cuando esté hecho">{n ?? "!"}</span>
+                : <span className="flex items-center gap-2">
+                    {n !== undefined && <span className="mt-0.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-bad px-1.5 text-xs font-bold text-white">{n}</span>}
+                    <input type="checkbox" checked={Boolean(done[r.id])} onChange={() => tick(r.id)} aria-label={`Marcar «${r.title}» como hecho`} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+                  </span>}
               <span className="flex flex-col gap-0.5">
                 <span className="flex flex-wrap items-center gap-2">
-                  <b className={`text-sm ${done[m.id] ? "text-muted line-through" : m.urgent ? "text-bad" : ""}`}>{m.title}</b>
-                  {m.urgent && !done[m.id] && <span className="rounded-full bg-bad px-2 py-0.5 text-[10px] font-bold text-white">BLOQUEA EL LANZAMIENTO</span>}
+                  <b className="text-sm text-bad">{r.title}</b>
+                  {first && <span className="rounded-full bg-bad px-2 py-0.5 text-[10px] font-bold text-white">EMPIEZA AQUÍ</span>}
+                  {r.time && <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-muted">{r.time}</span>}
+                  {r.auto && <span className="text-[11px] text-muted">se marca solo cuando esté hecho</span>}
                 </span>
+                {r.auto?.detail && <span className="text-sm">{r.auto.detail}</span>}
+                <span className="text-xs text-muted">{r.how}</span>
+              </span>
+            </div>
+          </li>
+        );
+        const restItem = (m: (typeof MANUAL)[number]) => (
+          <li key={m.id}>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 px-4 py-3">
+              <input type="checkbox" checked={Boolean(done[m.id])} onChange={() => tick(m.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+              <span className="flex flex-col gap-0.5">
+                <b className={`text-sm ${done[m.id] ? "text-muted line-through" : ""}`}>{m.title}{m.who === "claude" ? " (Claude)" : ""}</b>
                 <span className="text-xs text-muted">{m.how}</span>
               </span>
             </label>
           </li>
         );
-        const mineLeft = MANUAL.filter((m) => m.who !== "claude");
-        const claude = MANUAL.filter((m) => m.who === "claude");
-        const first = (l: typeof MANUAL) => [...l.filter((m) => m.urgent && !done[m.id]), ...l.filter((m) => !(m.urgent && !done[m.id]))];
+        const rest = MANUAL.filter((m) => !(m.urgent && !done[m.id]));
+        const restOrder = (l: typeof MANUAL) => [...l.filter((m) => !done[m.id]), ...l.filter((m) => done[m.id])];
         return (
           <>
-            <h3 className="text-sm font-bold text-muted">Lo haces tú (y lo marcas)</h3>
-            <ul className="flex flex-col gap-2">{first(mineLeft).map(item)}</ul>
-            <h3 className="text-sm font-bold text-muted">Pendiente de Claude (márcalo cuando te lo entregue)</h3>
-            <ul className="flex flex-col gap-2">{first(claude).map(item)}</ul>
+            {red.length > 0 && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-bad/40 p-3 sm:p-4">
+                <h3 className="font-display text-lg font-bold text-bad">🔴 Lo que bloquea el lanzamiento, en orden</h3>
+                {pc.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-sm font-bold">1. Desde tu computador, sin depender de nadie <span className="font-normal text-muted">(de lo más difícil a lo más fácil)</span></h4>
+                    <ul className="flex flex-col gap-2">{pc.map((r, i) => redItem(r, i + 1, i === 0))}</ul>
+                  </div>
+                )}
+                {otros.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-sm font-bold">2. Necesitas a otra persona o hay que esperar <span className="font-normal text-muted">(pide las horas ya, mientras avanzas con lo de arriba)</span></h4>
+                    <ul className="flex flex-col gap-2">{otros.map((r) => redItem(r))}</ul>
+                  </div>
+                )}
+                {cl.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-sm font-bold">3. Pendiente de Claude <span className="font-normal text-muted">(márcalo cuando te lo entregue)</span></h4>
+                    <ul className="flex flex-col gap-2">{cl.map((r) => redItem(r))}</ul>
+                  </div>
+                )}
+              </div>
+            )}
+            <h3 className="mt-2 text-sm font-bold text-muted">Todo lo demás (no bloquea)</h3>
+            <ul className="flex flex-col gap-2">
+              {checks.filter((c) => c.state !== "falta").map((c) => (
+                <li key={c.id} className="flex flex-col gap-1 rounded-xl bg-surface-2 px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <b className="text-sm">{AUTO[c.id]?.title ?? c.id}</b>
+                    <Pill t={label[c.state][0]}>{label[c.state][1]}</Pill>
+                  </div>
+                  <p className="text-sm">{c.detail}</p>
+                  {c.state !== "ok" && AUTO[c.id] && <p className="text-xs text-muted">Cómo: {AUTO[c.id].how}</p>}
+                </li>
+              ))}
+              {restOrder(rest).map(restItem)}
+            </ul>
           </>
         );
       })()}
