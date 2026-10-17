@@ -17,8 +17,9 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "lanzamiento" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
+  ["lanzamiento", "Lanzamiento"],
   ["resumen", "Resumen"],
   ["saldos", "Saldos y alertas"],
   ["clientes", "Clientes y accesos"],
@@ -96,7 +97,7 @@ function Del({ onDelete }: { onDelete: () => void }) {
 }
 
 export default function AdminPanel() {
-  const [tab, setTab] = useState<Tab>("resumen");
+  const [tab, setTab] = useState<Tab>("lanzamiento");
   const [data, setData] = useState<Finanzas | null>(null);
   const [status, setStatus] = useState("Cargando…");
   const saveT = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,7 +157,7 @@ export default function AdminPanel() {
       </nav>
 
       {!data ? (
-        tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
+        tab === "lanzamiento" ? <Lanzamiento /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -169,6 +170,7 @@ export default function AdminPanel() {
           {tab === "clientes" && <Clientes planes={data.config.planes} />}
           {tab === "registros" && <Registros />}
           {tab === "estado" && <Estado />}
+          {tab === "lanzamiento" && <Lanzamiento />}
         </>
       )}
     </div>
@@ -1018,6 +1020,95 @@ function Estado() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+// ---------- Lanzamiento ----------
+// What's left before selling: the server checks what it can by itself; the rest is ticked by hand
+// (remembered on this browser).
+interface LaunchCheck { id: string; state: "ok" | "falta" | "revisar"; detail: string }
+const AUTO: Record<string, { title: string; how: string }> = {
+  billing: { title: "Base de datos de pagos (billing.sql)", how: "Supabase → SQL Editor → New query → pega todo supabase/billing.sql → Run. Se puede ejecutar más de una vez sin problema." },
+  "mp-token": { title: "Mercado Pago: Access Token", how: "mercadopago.cl/developers → Tus integraciones → tu aplicación → Credenciales de producción → Access Token → Vercel: MP_ACCESS_TOKEN." },
+  "mp-webhook": { title: "Mercado Pago: avisos de pago", how: "En tu aplicación → Webhooks: URL https://www.creadsia.com/api/pagos/mp, eventos Pagos y Planes y suscripciones → copia la clave secreta → Vercel: MP_WEBHOOK_SECRET." },
+  "mp-once": { title: "Modo de cobro de los planes", how: "MP_ONE_TIME=1 cobra cada mes por separado (recomendado mientras uses una cuenta temporal)." },
+  meta: { title: "Meta: API de conversiones", how: "Administrador de eventos → tu píxel → Configuración → Generar token → Vercel: META_CAPI_TOKEN." },
+  admin: { title: "Clave de administrador", how: "Vercel: ADMIN_ACCESS_CODE con 24 caracteres o más. Guárdala en un lugar seguro: sirve para recuperar la cuenta del dueño." },
+  email: { title: "Correos automáticos (Resend)", how: "Resend → API Keys → Vercel: RESEND_API_KEY." },
+  cron: { title: "Avisos de plan por vencer", how: "Vercel: CRON_SECRET con una clave larga inventada." },
+  ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
+};
+const MANUAL: { id: string; title: string; how: string }[] = [
+  { id: "backups", title: "Respaldos diarios de la base de datos", how: "Supabase → Settings → Billing: plan Pro (US$25/mes) incluye un respaldo diario." },
+  { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Correo, Vercel, Supabase, GitHub, Namecheap, Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend." },
+  { id: "caps", title: "Topes de gasto en los servicios de IA", how: "fal.ai, ElevenLabs y Anthropic: límite mensual. Google Cloud: alerta de presupuesto (no tiene tope real)." },
+  { id: "compra", title: "Compra de prueba", how: "Desde una cuenta nueva, compra el pack de 500 créditos: deben llegar los créditos y el correo de pago. Después la puedes devolver en Mercado Pago." },
+  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar si los precios van con IVA incluido, revisar /terminos y el giro de la SpA." },
+];
+
+function Lanzamiento() {
+  const [checks, setChecks] = useState<LaunchCheck[] | null>(null);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState<Record<string, boolean>>({});
+  const load = () => {
+    setErr("");
+    fetch("/api/admin/lanzamiento").then((r) => r.json()).then((d) => (d.checks ? setChecks(d.checks) : setErr(d.error || "No se pudo revisar."))).catch(() => setErr("No se pudo revisar. Revisa tu conexión."));
+  };
+  useEffect(() => {
+    load();
+    try { setDone(JSON.parse(localStorage.getItem("launch-done") || "{}")); } catch {}
+  }, []);
+  const tick = (id: string) => setDone((d) => {
+    const n = { ...d, [id]: !d[id] };
+    try { localStorage.setItem("launch-done", JSON.stringify(n)); } catch {}
+    return n;
+  });
+  const okCount = (checks?.filter((c) => c.state === "ok").length ?? 0) + MANUAL.filter((m) => done[m.id]).length;
+  const total = (checks?.length ?? Object.keys(AUTO).length) + MANUAL.length;
+  const label: Record<LaunchCheck["state"], [string, string]> = { ok: ["good", "Listo"], falta: ["bad", "Falta"], revisar: ["warn", "Revisar"] };
+  return (
+    <section className={card}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">Lista de lanzamiento</h2>
+          <p className="text-sm text-muted">Lo de arriba se revisa solo cada vez que abres esta pestaña. Lo de abajo lo marcas tú cuando lo hagas. Después de cambiar algo en Vercel, haz Redeploy y vuelve a revisar.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Pill t={okCount === total ? "good" : "acc"}>{okCount} de {total} listos</Pill>
+          <button type="button" onClick={load} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Revisar de nuevo</button>
+        </div>
+      </div>
+      {err && <p className="text-sm text-bad">{err}</p>}
+      <h3 className="text-sm font-bold text-muted">Se revisa solo</h3>
+      {!checks ? <p className="text-muted">Revisando…</p> : (
+        <ul className="flex flex-col gap-2">
+          {checks.map((c) => (
+            <li key={c.id} className="flex flex-col gap-1 rounded-xl bg-surface-2 px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <b className="text-sm">{AUTO[c.id]?.title ?? c.id}</b>
+                <Pill t={label[c.state][0]}>{label[c.state][1]}</Pill>
+              </div>
+              <p className="text-sm">{c.detail}</p>
+              {c.state !== "ok" && AUTO[c.id] && <p className="text-xs text-muted">Cómo: {AUTO[c.id].how}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <h3 className="text-sm font-bold text-muted">Lo marcas tú</h3>
+      <ul className="flex flex-col gap-2">
+        {MANUAL.map((m) => (
+          <li key={m.id}>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 px-4 py-3">
+              <input type="checkbox" checked={Boolean(done[m.id])} onChange={() => tick(m.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+              <span className="flex flex-col gap-0.5">
+                <b className={`text-sm ${done[m.id] ? "text-muted line-through" : ""}`}>{m.title}</b>
+                <span className="text-xs text-muted">{m.how}</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
