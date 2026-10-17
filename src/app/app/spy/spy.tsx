@@ -128,7 +128,7 @@ export default function Spy() {
     // no voice in the video: the ad's own text is the script
     const script = [text, !text ? [ad.title, ad.text].filter(Boolean).join("\n\n") : ""].filter(Boolean).join("\n\n").trim();
     if (!script) { setTaking(""); return setErr("Este anuncio no tiene texto ni voz para sacar el guion. Prueba con otro."); }
-    try { sessionStorage.setItem(FROM_SPY_KEY, JSON.stringify({ text: script, page: ad.page })); } catch {}
+    try { sessionStorage.setItem(FROM_SPY_KEY, JSON.stringify({ text: script, page: ad.page, voice: Boolean(text), video: Boolean(ad.video) })); } catch {}
     router.push("/app/guiones");
   }
 

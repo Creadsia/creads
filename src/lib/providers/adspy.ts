@@ -111,9 +111,31 @@ export async function searchAds(s: SpySearch): Promise<{ ads: SpyAd[]; cursor: s
   return { ads, cursor: str(data.cursor, o(data.paging).cursor) };
 }
 
+/** Text out of the shapes transcript services use: a string, a list of segments, or nested in data. */
+export function transcriptText(raw: unknown): string {
+  const d = o(raw);
+  const segs = (v: unknown) => (Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : str(o(x).text) ?? "")).join(" ").replace(/\s+/g, " ").trim() : "");
+  for (const src of [d, o(d.data), o(d.result)]) {
+    const t = str(src.transcript_only_text, src.transcript, src.text) ?? segs(src.transcript) ?? "";
+    if (t) return t;
+    const s2 = segs(src.segments) || segs(src.transcript);
+    if (s2) return s2;
+  }
+  return "";
+}
+
 /** What the person in the ad says (video ads). Empty if there's nothing to transcribe. */
 export async function adTranscript(id: string): Promise<string> {
-  const data = await call("/ad/transcript", { id, cache_max_age: "30" });
-  const segs = Array.isArray(data.segments) ? data.segments.map((x) => str(o(x).text) ?? "").join(" ") : "";
-  return (str(data.transcript, data.text, o(data.data).transcript, segs) ?? "").slice(0, 6000);
+  const tries: Record<string, string>[] = [{ id }, { url: `https://www.facebook.com/ads/library/?id=${id}` }];
+  for (const t of tries) {
+    try {
+      const data = await call("/ad/transcript", { ...t, cache_max_age: "30" });
+      const text = transcriptText(data);
+      if (text) return text.slice(0, 6000);
+      console.error("adspy transcript empty", Object.keys(data).join(","), JSON.stringify(data).slice(0, 300));
+    } catch (err) {
+      console.error("adspy transcript", err instanceof Error ? err.message : err);
+    }
+  }
+  return "";
 }

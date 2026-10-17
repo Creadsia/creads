@@ -32,3 +32,12 @@ test("ad library: carousels, placeholders, stopped ads and unsafe links", () => 
   assert.equal(readAd({ page_name: "sin id" }), null);
   assert.equal(readAd(null), null);
 });
+
+test("ad transcript: strings, segment lists and nested answers", async () => {
+  const { transcriptText } = await import("../src/lib/providers/adspy");
+  assert.equal(transcriptText({ transcript: "Hola mundo" }), "Hola mundo");
+  assert.equal(transcriptText({ transcript: [{ text: "Hola" }, { text: "mundo" }] }), "Hola mundo");
+  assert.equal(transcriptText({ transcript_only_text: "Todo junto", transcript: [{ text: "x" }] }), "Todo junto");
+  assert.equal(transcriptText({ data: { segments: [{ text: "a" }, { text: "b" }] } }), "a b");
+  assert.equal(transcriptText({ success: true }), "");
+});
