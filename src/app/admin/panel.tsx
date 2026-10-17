@@ -1190,6 +1190,9 @@ const MANUAL: { id: string; title: string; how: string; urgent?: boolean; who?: 
   { id: "c-contracargos", title: "Claude: evidencia para contracargos", how: "Por cada pago, guardar qué generó el cliente, cuándo y desde dónde, para defenderte si desconoce el cargo con su banco.", urgent: true, who: "claude" },
   { id: "c-retencion", title: "Claude: borrado automático de archivos viejos", how: "Aplicar la política de retención de los Términos: borrar solo los archivos de cuentas cerradas o vencidas hace más del plazo, para no pagar almacenamiento de más.", who: "claude" },
   { id: "c-analitica", title: "Claude: analítica de producto (dónde abandonan)", how: "Medir cada paso (registro, pago, voz, avatar, primer anuncio) para ver dónde se cae la gente. Necesita que crees una cuenta gratis en posthog.com y pegues la clave en Vercel.", who: "claude" },
+  { id: "c-cola", title: "Claude: fila de generación por proveedor", how: "Que los videos esperen su turno en una fila con un máximo por proveedor (Google, fal.ai, ElevenLabs) en vez de mandarse todos juntos. Así, con cientos de clientes generando a la vez, nadie recibe un error por «demasiadas solicitudes»: solo espera unos segundos más. Se prueba en el ambiente de pruebas.", urgent: true, who: "claude" },
+  { id: "c-carga", title: "Claude: prueba de carga (cientos de clientes a la vez)", how: "Simular 500 a 1.000 clientes usando Creads al mismo tiempo en el ambiente de pruebas, sin generar videos reales (no gasta), para ver qué se pone lento y arreglarlo antes de lanzar.", urgent: true, who: "claude" },
+  { id: "c-tablas", title: "Claude: registros en la base de datos", how: "Mover a tablas de la base de datos lo que hoy se guarda en archivos (errores, soporte, avisos, caché del espía). Con miles de clientes, los archivos se vuelven lentos y se pueden pisar.", who: "claude" },
   { id: "c-auditoria", title: "Revisión de un programador senior humano", how: "Cuando haya ingresos: unas horas de un experto en seguridad que revise el código y las claves, y alguien que pueda responder si algo se cae un domingo.", who: "tu" },
   { id: "pasarela", title: "Automático 1 · Cobro mensual automático (Flow o Stripe)", how: "Lo más importante para escalar: el cliente no tiene que acordarse de renovar. Con la SpA lista: revisa en stripe.com/global si aparece Chile. Recomendado partir con Flow (Webpay, cobro mensual automático): crea la cuenta, saca la API Key y la Secret Key, pégalas en Vercel y avísale a Claude para conectarla.", urgent: true },
   { id: "compra", title: "Compra de prueba", how: "Cuando la pasarela esté conectada: desde una cuenta nueva compra el pack de 500 créditos. Deben llegar los créditos y el correo de pago. Después la puedes devolver.", urgent: true },
@@ -1254,6 +1257,8 @@ const RED_ORDER: { pc: [string, string][]; otros: [string, string][]; claude: [s
   claude: [
     ["c-e2e", "parte cuando el ambiente de pruebas esté listo"],
     ["c-contracargos", "parte cuando la pasarela esté lista"],
+    ["c-cola", "parte cuando el ambiente de pruebas esté listo"],
+    ["c-carga", "después de la fila, antes de la beta"],
     ["c-gasto", "durante la beta"],
   ],
 };
