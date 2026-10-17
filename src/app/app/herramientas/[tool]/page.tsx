@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { findTool } from "@/lib/tools";
 import ToolRun from "../../_parts/tool-run";
@@ -23,7 +22,6 @@ export default async function ToolPage({ params, searchParams }: Props) {
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Link href="/app/herramientas" className="w-fit text-sm text-muted hover:text-ink">← Herramientas IA</Link>
         <PageHead title={t.name} lead={t.lead}>
           <span className="rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.model}</span>
         </PageHead>

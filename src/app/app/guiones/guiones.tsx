@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BLOCKS, DRAFT_KEY, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
 import { NICHES } from "@/lib/niches";
-import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
+import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable, Working } from "../_parts/ui";
 
 // Generador de guiones: paste a winning script, take it apart block by block, learn why it works,
 // and iterate (angles, hooks, better lines, ideas, lengths) until it's ready for "Crear anuncio".
@@ -234,7 +234,7 @@ export default function Guiones() {
             <button key={m.id} type="button" onClick={() => { setMode(m.id); setErr(""); if (m.id !== "idea" && m.id !== "crear" && m.id !== "mejorar" && canRun(m.id)) run(m.id); }}
               aria-pressed={mode === m.id} disabled={Boolean(busy)}
               className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors disabled:opacity-60 ${mode === m.id ? "border-accent bg-accent/10" : "border-line hover:bg-surface-2"}`}>
-              <b className="text-sm">{busy === m.id ? "Trabajando…" : m.title}</b>
+              <b className="text-sm">{busy === m.id ? <Working label="Trabajando…" /> : m.title}</b>
               <span className="text-xs text-muted">{m.short}</span>
             </button>
           ))}

@@ -21,7 +21,7 @@ function pageReady(): Promise<boolean> {
   return ready;
 }
 
-export default function LoopVideo({ src, poster, className }: { src: string; poster: string; className?: string }) {
+export default function LoopVideo({ src, poster, className }: { src: string; poster?: string; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [load, setLoad] = useState(false);
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { findTool, TOOLS } from "@/lib/tools";
-import { cardCls, Empty, SetupNotice } from "./ui";
+import { cardCls, Empty, SetupNotice, Working } from "./ui";
 import { useCredits } from "./use-credits";
 
 // The "Crear" menu: generators first, then the one-click tools, then everything you've made with them.
@@ -146,7 +146,7 @@ export default function ToolsHub() {
                       : <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover" />)}
                     {j.status !== "done" && (
                       <span className={`absolute inset-x-1.5 bottom-1.5 rounded-md bg-black/70 px-2 py-1 text-center text-[11px] font-semibold ${j.status === "failed" ? "text-bad" : "text-white"}`}>
-                        {j.status === "failed" ? "Falló" : "Trabajando…"}
+                        {j.status === "failed" ? "Falló" : <Working since={j.created_at} label="" />}
                       </span>
                     )}
                   </span>

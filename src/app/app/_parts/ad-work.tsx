@@ -6,7 +6,7 @@ import { formatById } from "@/lib/formats";
 import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
 import { billedSeconds } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
-import { btnCls, cardCls, ghostCls, inputCls } from "./ui";
+import { btnCls, cardCls, ghostCls, inputCls, Working } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
 // One ad in production: its clips (with live status), the automatic review, the free automatic redos,
@@ -182,7 +182,7 @@ export default function AdWork({ adId }: { adId: string }) {
             <h2 className="font-display text-xl font-bold">{ad.title || "Anuncio"}</h2>
             <p className="text-sm text-muted">{f.icon} {f.name} · {ad.aspect} · {done} de {clips.length} cortes listos</p>
           </div>
-          {busyClips && <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text">Generando… cada corte tarda 1 a 4 min</span>}
+          {busyClips && <Working label="Generando cortes…" className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text" />}
         </div>
         {waiting.length > 0 && !busyClips && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/50 bg-warn/10 p-3 text-sm">
@@ -224,7 +224,7 @@ export default function AdWork({ adId }: { adId: string }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.image_url} alt="" className="h-full w-full object-cover opacity-60" />
                   ) : null}
-                  {!c.url && <span className="absolute rounded-full bg-surface px-2 py-1 text-xs font-semibold">{c.status === "failed" ? "Falló" : c.status === "pending" ? "En cola" : "Generando…"}</span>}
+                  {!c.url && <span className="absolute rounded-full bg-surface px-2 py-1 text-xs font-semibold">{c.status === "failed" ? "Falló" : c.status === "pending" ? "En cola" : <Working key={c.id} label="Generando…" />}</span>}
                   {rv && c.url && (
                     <span className={`absolute top-2 left-2 rounded-full px-2 py-0.5 text-xs font-bold ${rv.issues.length ? (rv.severe ? "bg-bad text-white" : "bg-warn text-black") : "bg-good text-white"}`}>
                       {rv.issues.length ? (rv.severe ? "Error grave" : "Detalle") : "OK"}

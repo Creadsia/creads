@@ -174,3 +174,47 @@ export function NextStep({ href, title, text }: { href: string; title: string; t
     </Link>
   );
 }
+
+// ---------- "working on it" ----------
+
+/** A small spinning circle that shows something is happening. */
+export function Spinner({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={`h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none ${className}`}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".25" strokeWidth="3" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** "42 s" / "1 min 05 s" */
+export function fmtElapsed(s: number) {
+  const n = Math.max(0, Math.floor(s));
+  return n < 60 ? `${n} s` : `${Math.floor(n / 60)} min ${String(n % 60).padStart(2, "0")} s`;
+}
+
+/** Seconds since `since` (a date, ms, or when the component appeared), ticking every second. */
+export function useElapsed(since?: string | number | null) {
+  const [start] = useState(() => {
+    const t = typeof since === "number" ? since : since ? Date.parse(since) : NaN;
+    // a start in the future or unreadable: count from now
+    return Number.isFinite(t) && t <= Date.now() ? t : Date.now();
+  });
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (now - start) / 1000;
+}
+
+/** Spinner + label + seconds so far, e.g. "Generando… 42 s". */
+export function Working({ since, label = "Generando…", className = "" }: { since?: string | number | null; label?: string; className?: string }) {
+  const s = useElapsed(since);
+  return (
+    <span role="status" className={`inline-flex items-center gap-2 ${className}`}>
+      <Spinner />
+      <span>{label} <span className="font-mono tabular-nums">{fmtElapsed(s)}</span></span>
+    </span>
+  );
+}

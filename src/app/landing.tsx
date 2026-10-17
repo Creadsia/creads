@@ -5,6 +5,7 @@ import AffiliateForm from "./affiliate-form";
 import Composer from "./composer";
 import Pricing from "./pricing";
 import LoopVideo from "./loop-video";
+import RecreateDemos, { type RecreateMedia } from "./recreate-demos";
 import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
@@ -37,6 +38,23 @@ const VIDEOS: Partial<Record<SceneKey, string>> = {
   podcast: `${CLIP}dbf87bbe-75ec-407e-8dfb-b8a48c570644.mp4`,
   coach: `${CLIP}1d1b7dbe-d2c5-4930-a843-2dbe2834c080.mp4`,
 };
+// "Recrea cualquier video": demos made for the site with the same models the studio uses
+// (Kling motion control / object swap, Seedance, lip-synced dubbing). TODO(phase 1): move to our own storage.
+const H = (stamp: string, id: string, ext: "mp4" | "png" = "mp4") => `https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_${stamp}_${id}.${ext}`;
+const thumb = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=128&q=70`;
+const UGC = H("20261017_140356", "5e1d343e-24d1-4b65-8508-c8ec5234f392");
+const DANCE = H("20261017_140356", "416ff2ca-10cf-40bd-8b77-b2094aebfc29");
+const RECREATE: RecreateMedia = {
+  demos: {
+    persona: { before: UGC, after: H("20261017_140835", "0bb466fd-c5ff-4411-a99a-563d461bc55a"), photo: thumb(H("20261017_140348", "357281cd-a698-4542-9485-01641b027ead", "png")) },
+    producto: { before: UGC, after: H("20261017_140830", "0e730dd0-cefb-4d70-ac18-8d72e9af733a"), photo: thumb(H("20261017_140347", "ec509f73-2bec-44c4-9d39-b35927c95775", "png")) },
+    lugar: { before: UGC, after: H("20261017_140830", "93c8c63c-dd8d-4d69-ac0b-7aaa79c2a30b") },
+    capibara: { before: DANCE, after: H("20261017_140830", "92ce32cc-512b-4a02-a8e5-58c6fd1abe8e"), photo: thumb(H("20261017_140347", "4d3f8b89-4fed-4931-8f3e-e90c6eaede18", "png")) },
+    caballero: { before: DANCE, after: H("20261017_140830", "482997fb-e07a-4882-9377-8bb5d37d09b2"), photo: thumb(H("20261017_140347", "25abfb58-68ed-41a8-a47b-58b2564b04cc", "png")) },
+  },
+  voices: { llama: H("20261017_140356", "c56fb9ce-9eed-44db-98c3-fe789cc411db"), llamaEn: H("20261017_141028", "d08ddd05-eb7b-4a4d-a895-1b04640595a8"), cat: H("20261017_141030", "6bd5aa9a-673e-49cf-be26-7ce48bd86404"), viking: H("20261017_141029", "66e7e42e-add7-44cc-a3a2-fe3198ef8972") },
+};
+
 const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=640&q=70`;
 // Every picture and clip appears once on the page: the hero wall uses the clips, "Featured" the four
 // animated scenes, the tool grid the remaining stills and the studio preview the UGC still.
@@ -52,14 +70,19 @@ const MAKER_DOT: Record<Maker, string> = {
   minimax: "#ff8a3d",
   alibaba: "#ffc23d",
 };
-interface WallClip { id: string; still: string; model: string; maker: Maker }
+interface WallClip { id: string; still?: string; model: string; maker: Maker }
 const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
 const C = (video: string, still: string, model: string, maker: Maker): WallClip => ({ id: hf(video, "mp4"), still: hf(still, "jpg"), model, maker });
+// the "Recrear" demos join the wall (no still: they appear when the clip loads)
+const W = (id: string, model: string, maker: Maker): WallClip => ({ id, model, maker });
+const D = RECREATE.demos;
 const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
   {
     dir: "up",
     speed: "70s",
     clips: [
+      W(D.capibara.after, "Kling Motion Control", "kling"),
+      W(RECREATE.voices.cat, "Seedance 2.5", "bytedance"),
       C("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling 3.0 Turbo", "kling"),
       C("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo 3.1 Lite", "google"),
       C("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan 3.0", "alibaba"),
@@ -70,6 +93,8 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
     dir: "down",
     speed: "88s",
     clips: [
+      W(D.persona.after, "Kling Swap", "kling"),
+      W(D.lugar.after, "Seedance 2.5 Edit", "bytedance"),
       C("4017cd54-61b4-43e9-97bc-5271ff328c79", "4f285d47-5240-4a5c-a485-3d0bfc2c9c55", "Seedance 2.0", "bytedance"),
       C("9c9fb74d-c0af-46f9-9d43-211d4783ef90", "d82cb55a-cbb2-41dd-8bc7-209000b0a58d", "Grok Video", "xai"),
       C("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "Kling 3.0 Turbo", "kling"),
@@ -80,6 +105,8 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
     dir: "up",
     speed: "62s",
     clips: [
+      W(D.caballero.after, "Kling Motion Control", "kling"),
+      W(RECREATE.voices.viking, "Seedance 2.5", "bytedance"),
       C("a1310874-fe73-4989-9e6f-7de4d4d96426", "b9c4463c-3d31-414a-a898-2158c8df5112", "Veo 3.1 Lite", "google"),
       C("e5596388-8427-4692-9439-d29b17e7a190", "ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "Gemini Omni", "google"),
       C("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "minimax"),
@@ -90,7 +117,7 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
 function WallTile({ c }: { c: WallClip }) {
   return (
     <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2">
-      <LoopVideo src={c.id} poster={`/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60`} className="absolute inset-0 h-full w-full object-cover" />
+      <LoopVideo src={c.id} poster={c.still ? `/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60` : undefined} className="absolute inset-0 h-full w-full object-cover" />
       <figcaption className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 font-mono text-[10.5px] leading-none text-white backdrop-blur-sm">
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: MAKER_DOT[c.maker] }} />
         {c.model}
@@ -551,7 +578,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
       <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
         <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
           <Logo href={home} />
-          <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] xl:flex">
+          <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] min-[1480px]:flex">
             {t.menu.map((m) => (
               <a key={m.label} href={m.href} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted transition-colors hover:bg-surface hover:text-ink">
                 {m.label}
@@ -601,7 +628,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </div>
         {/* phone: the same menu as a scrollable row */}
-        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm xl:hidden ${gutter}`}>
+        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm min-[1480px]:hidden ${gutter}`}>
           <span className="shrink-0 min-[420px]:hidden"><ThemeToggle lang={t.lang} /></span>
           {t.menu.map((m) => (
             <a key={m.label} href={m.href} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted">
@@ -690,6 +717,15 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                 </div>
               ))}
             </dl>
+          </div>
+        </section>
+
+        {/* Recreate any video */}
+        <section id="recrear" aria-labelledby="recrear-title" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-10">
+            <SectionHead id="recrear-title" title={t.recreate.title} lead={t.recreate.lead} />
+            <RecreateDemos t={t.recreate} media={RECREATE} />
+            <a href="#pricing" className="self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.recreate.cta}</a>
           </div>
         </section>
 

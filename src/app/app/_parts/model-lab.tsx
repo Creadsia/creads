@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImageInput, type Img } from "./tool-run";
-import { useTable } from "./ui";
+import { useTable, Working } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
 // Test bench for the connected models. Every button here spends real money, so the price is always shown first.
@@ -54,7 +54,6 @@ export default function ModelLab({ code }: { code: string }) {
   const [frame, setFrame] = useState(""); // starting image for the video (generated, uploaded or from the library)
   const library = useTable<Img>("images");
   const [video, setVideo] = useState<VideoState>({ s: "idle" });
-  const [tick, setTick] = useState(0);
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => void (poll.current && clearTimeout(poll.current)), []);
@@ -68,11 +67,6 @@ export default function ModelLab({ code }: { code: string }) {
       })
       .catch(() => {});
   }, [code]);
-  useEffect(() => {
-    if (video.s !== "running") return;
-    const t = setInterval(() => setTick((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, [video.s]);
 
   const headers = { "content-type": "application/json", "x-creads-code": code };
   const im = imageModels.find((m) => m.id === imgModel) ?? imageModels[0];
@@ -132,8 +126,6 @@ export default function ModelLab({ code }: { code: string }) {
   }
 
   const ready = Boolean(code) && prompt.trim().length >= 10;
-  const elapsed = video.s === "running" ? Math.floor((Date.now() - video.since) / 1000) : 0;
-  void tick;
 
   const pill = "rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm";
 
@@ -201,7 +193,7 @@ export default function ModelLab({ code }: { code: string }) {
             disabled={!ready || imgBusy || !covers(im.usd)}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
-            {imgBusy ? "Generando… (≈ 30 s)" : `Generar imagen · ${price(im.usd)}`}
+            {imgBusy ? <Working label="Generando…" /> : `Generar imagen · ${price(im.usd)}`}
           </button>
           {imgErr && <p className="text-sm text-bad">{imgErr}</p>}
           {image && (
@@ -244,7 +236,7 @@ export default function ModelLab({ code }: { code: string }) {
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
             {video.s === "running"
-              ? `Generando… ${elapsed} s (suele tardar 1 a 3 min)`
+              ? <Working since={video.since} label="Generando…" />
               : `Generar video · ${price(videoUsd)}`}
           </button>
           {video.s === "error" && <p className="text-sm text-bad">{video.msg}</p>}

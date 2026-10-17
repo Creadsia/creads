@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import AccountMenu, { CreditsPill } from "./account-menu";
@@ -80,6 +80,27 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     ],
   },
 ];
+
+// pages seen in this visit, to know whether "Atrás" can go back inside the studio
+const trail: string[] = [];
+function useTrail(path: string) {
+  useEffect(() => { if (trail[trail.length - 1] !== path) trail.push(path); }, [path]);
+}
+
+/** "← Atrás": the previous page in the studio, or the section's start when there isn't one. */
+function BackButton({ path }: { path: string }) {
+  const router = useRouter();
+  function back() {
+    if (trail.length > 1) { trail.pop(); router.back(); }
+    else router.push(path.split("/").slice(0, -1).join("/") || "/app");
+  }
+  return (
+    <button type="button" onClick={back} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-ink">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+      Atrás
+    </button>
+  );
+}
 
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
@@ -199,6 +220,7 @@ function MoneyAlerts() {
 
 export default function Shell({ children, user }: { children: React.ReactNode; user: ShellUser }) {
   const path = usePathname() ?? "/app";
+  useTrail(path);
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [path]);
 
@@ -243,10 +265,13 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       )}
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:pt-4 lg:pb-8">
-        {/* desktop: the account corner */}
-        <div className="mx-auto mb-4 hidden max-w-6xl items-center justify-end gap-2 lg:flex">
-          <CreditsPill />
-          <AccountMenu user={user} />
+        {/* back, and (desktop) the account corner */}
+        <div className={`mx-auto mb-4 max-w-6xl items-center justify-between gap-2 ${path === "/app" ? "hidden lg:flex" : "flex"}`}>
+          {path !== "/app" ? <BackButton path={path} /> : <span />}
+          <div className="hidden items-center gap-2 lg:flex">
+            <CreditsPill />
+            <AccountMenu user={user} />
+          </div>
         </div>
         <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>

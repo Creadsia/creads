@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DUB_LANGS, findTool, TOOLS, type ToolId } from "@/lib/tools";
-import { btnCls, cardCls, Field, ghostCls, inputCls, uploadFile, useTable, type Row } from "./ui";
+import { btnCls, cardCls, Field, ghostCls, inputCls, Spinner, uploadFile, useTable, Working, type Row } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
 // One "Crear" tool: pick the inputs, see the price, run it, and get the result (kept in "Tus creaciones").
@@ -198,7 +198,12 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 function Result({ job, output }: { job: Job; output: "image" | "video" | "audio" }) {
   if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "No se pudo crear. Si se usaron créditos, ya volvieron a tu saldo."}</p>;
   if (job.status === "stuck") return <p className="text-sm text-warn">{job.error}</p>;
-  if (job.status !== "done" || !job.url) return <p className="text-sm text-muted">Trabajando… puedes cerrar esta página: queda en «Tus creaciones».</p>;
+  if (job.status !== "done" || !job.url) return (
+    <div className="flex flex-col gap-1 text-sm">
+      <Working key={job.id} since={job.created_at} label={output === "image" ? "Creando tu imagen…" : output === "audio" ? "Creando tu audio…" : "Creando tu video…"} className="font-semibold" />
+      <p className="text-muted">Puedes cerrar esta página: queda guardado en «Tus creaciones».</p>
+    </div>
+  );
   const next = output === "audio" ? [] : TOOLS.filter((x) => (output === "image" ? (x.inputs.image || x.inputs.images) && !x.inputs.video : x.inputs.video) && `tool:${x.id}` !== job.kind);
   return (
     <div className="flex flex-col gap-3">
@@ -388,7 +393,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
             {(n.video || n.audio) && !seconds ? ". El precio exacto aparece al subir el archivo." : ""}
           </p>
           <button type="button" onClick={run} disabled={busy || Boolean(missing) || !covers(usd)} className={btnCls}>
-            {busy ? "Iniciando…" : `${t.name} · ${money(usd)}`}
+            {busy ? <span className="inline-flex items-center gap-2"><Spinner />Iniciando…</span> : `${t.name} · ${money(usd)}`}
           </button>
           {missing && <p className="text-xs text-muted">{missing}</p>}
           {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. <a href="/app/planes" className="font-semibold underline">Suma créditos</a>.</p>}
@@ -413,7 +418,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
                   ) : j.url ? (
                     <video src={j.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
                   ) : (
-                    <span className={`grid h-full place-items-center p-1 text-center text-xs ${j.status === "failed" ? "text-bad" : "text-muted"}`}>{j.status === "failed" ? "Falló" : "Trabajando…"}</span>
+                    <span className={`grid h-full place-items-center p-1 text-center text-xs ${j.status === "failed" ? "text-bad" : "text-muted"}`}>{j.status === "failed" ? "Falló" : <Spinner className="h-5 w-5" />}</span>
                   )}
                 </a>
               ))}

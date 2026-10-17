@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import VoiceFromAudios from "./voice-upload";
 import { useCredits } from "./use-credits";
+import { Working } from "./ui";
 
 // Voice bench: pick or clone a voice, then have it read a line. Uses ElevenLabs characters from our plan.
 
@@ -96,7 +97,7 @@ export default function VoiceLab({ code }: { code: string }) {
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} aria-label="Texto a leer"
             placeholder='If you have Medicare Parts A and B, listen up.' className={`${input} leading-relaxed`} />
           <button type="button" onClick={speak} disabled={!code || !voiceId || text.trim().length < 2 || busy} className={btn}>
-            {busy ? "Generando…" : `Generar voz · ${price(text.trim().length * 0.00022)}`}
+            {busy ? <Working label="Generando…" /> : `Generar voz · ${price(text.trim().length * 0.00022)}`}
           </button>
           {err && <p className="text-sm text-bad">{err}</p>}
           {audio && (
