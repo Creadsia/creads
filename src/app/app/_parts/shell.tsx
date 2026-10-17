@@ -40,26 +40,25 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string };
-const NAV: { group?: string; items: Item[] }[] = [
+type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number };
+// The menu follows the order a new customer works in: set up the brand once (voice → avatar →
+// product), then every ad is script → ad. Extra tools stay folded away so nobody is overwhelmed.
+const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
-  { group: "Investigar", items: [{ href: "/app/spy", label: "Espiar anuncios", icon: I.spy, soon: true, full: true }] },
   {
-    group: "Crear",
+    group: "Crear un anuncio",
     items: [
-      { href: "/app/guiones", label: "Generador de guiones", icon: I.pen, badge: "NUEVO" },
-      { href: "/app/crear", label: "Crear anuncio", icon: I.create },
-      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true },
-      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
-      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
+      { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 1 },
+      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 2 },
     ],
   },
   {
     group: "Tu marca",
+    hint: "Se configura una vez",
     items: [
-      { href: "/app/avatares", label: "Avatares", icon: I.user },
-      { href: "/app/productos", label: "Productos", icon: I.box },
-      { href: "/app/voces", label: "Voces", icon: I.mic },
+      { href: "/app/voces", label: "Voces", icon: I.mic, step: 1 },
+      { href: "/app/avatares", label: "Avatares", icon: I.user, step: 2 },
+      { href: "/app/productos", label: "Productos", icon: I.box, step: 3 },
     ],
   },
   {
@@ -68,6 +67,16 @@ const NAV: { group?: string; items: Item[] }[] = [
       { href: "/app/videos", label: "En producción", icon: I.film },
       { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true },
+    ],
+  },
+  {
+    group: "Más herramientas",
+    more: true,
+    items: [
+      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true, badge: "NUEVO" },
+      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
+      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
+      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, soon: true, full: true },
     ],
   },
 ];
@@ -86,25 +95,38 @@ function navFor(user: ShellUser) {
 }
 
 function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: () => void }) {
+  const groups = navFor(user);
+  const inMore = groups.some((g) => g.more && g.items.some((it) => path.startsWith(it.href)));
+  const [moreOpen, setMoreOpen] = useState(inMore);
+  useEffect(() => { if (inMore) setMoreOpen(true); }, [inMore]);
   return (
     <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
-      {navFor(user).map((g, i) => (
-        <div key={i} className="flex flex-col gap-0.5">
-          {g.group && <span className="px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}</span>}
-          {g.items.map((it) => {
-            const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
-            return (
-              <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
-                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
-                <Icon d={it.icon} />
-                <span className="flex-1">{it.label}</span>
-                {it.soon && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted">PRONTO</span>}
-                {it.badge && <span className="rounded bg-[image:var(--grad)] px-1.5 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+      {groups.map((g, i) => {
+        const open = !g.more || moreOpen;
+        return (
+          <div key={i} className="flex flex-col gap-0.5">
+            {g.group && (g.more ? (
+              <button type="button" onClick={() => setMoreOpen((v) => !v)} aria-expanded={open} className="flex items-center justify-between px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase hover:text-ink">
+                {g.group}<span aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
+              </button>
+            ) : (
+              <span className="flex items-baseline justify-between gap-2 px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}{g.hint && <span className="font-medium tracking-normal normal-case">{g.hint}</span>}</span>
+            ))}
+            {open && g.items.map((it) => {
+              const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
+              return (
+                <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
+                  {it.step ? <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border text-[10px] font-bold ${on ? "border-current" : "border-line"}`}>{it.step}</span> : <Icon d={it.icon} />}
+                  <span className="flex-1">{it.step ? <span className="sr-only">Paso {it.step}: </span> : null}{it.label}</span>
+                  {it.soon && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-muted">PRONTO</span>}
+                  {it.badge && <span className="rounded bg-[image:var(--grad)] px-1.5 py-0.5 text-[10px] font-bold text-white">{it.badge}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        );
+      })}
     </nav>
   );
 }

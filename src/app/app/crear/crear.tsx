@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FORMATS, type FormatId, formatById } from "@/lib/formats";
-import { Field, PageHead, type Row, SetupNotice, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
+import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import { NICHES } from "@/lib/niches";
 import { TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
@@ -102,6 +102,7 @@ export default function Crear() {
 
   return (
     <>
+      <Stepper flow="anuncio" current={1} />
       <PageHead title="Crear anuncio" lead="Pega tu guion, revisa los cortes, elige quién habla y genera los videos.">
         {scripts.rows && scripts.rows.length > 0 && (
           <select aria-label="Abrir un guion guardado" value="" onChange={(e) => openScript(e.target.value)} className={inputCls}>
@@ -145,7 +146,7 @@ export default function Crear() {
           </div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
-          <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en el <a href="/app/guiones" className="font-semibold text-accent-text underline">Generador de guiones</a>.</p>
+          <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en <a href="/app/guiones" className="font-semibold text-accent-text underline">Crear guion</a> (paso 1).</p>
 
           <div className="flex flex-col gap-3">
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>

@@ -178,10 +178,10 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       paragraphs: [
         esc(hello(name)),
         "La forma más rápida de partir:",
-        "<b>1.</b> Abre el <b>Generador de guiones</b> y pega un anuncio que esté funcionando (tuyo o de la competencia). Presiona <b>Desarmar el guion</b>: vas a ver su hook, dolor, oferta y CTA, y qué mejorar.<br><b>2.</b> Pide <b>10 hooks</b> o <b>3 ángulos</b> y elige el mejor.<br><b>3.</b> Presiona <b>Llevar a Crear anuncio</b>, elige tu avatar y genera.",
+        "<b>1.</b> Entra a <b>Crear guion</b> y pega un anuncio que esté funcionando (tuyo o de la competencia). Presiona <b>Desarmar el guion</b>: vas a ver su hook, dolor, oferta y CTA, y qué mejorar.<br><b>2.</b> Pide <b>10 hooks</b> o <b>3 ángulos</b> y elige el mejor.<br><b>3.</b> Presiona <b>Llevar a Crear anuncio</b>, elige tu avatar y genera.",
         esc(plan.trim()),
       ].filter(Boolean),
-      cta: { label: "Abrir el Generador de guiones", href: `${SITE}/app/guiones` },
+      cta: { label: "Crear mi guion", href: `${SITE}/app/guiones` },
     },
     3: o.ads > 0
       ? {
@@ -193,7 +193,7 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       : {
           subject: "¿Te ayudo con tu primer anuncio?",
           title: "¿Te ayudo con tu primer anuncio?",
-          paragraphs: [esc(hello(name)), "Vi que todavía no has creado tu primer anuncio. Si algo no quedó claro o no sabes por dónde partir, <b>responde este correo</b> con qué vendes y a quién, y te ayudamos a armar el guion.", `O parte solo: en el Generador de guiones, «Crear desde cero» escribe 3 guiones con solo contarle qué vendes.${esc(plan)}`],
+          paragraphs: [esc(hello(name)), "Vi que todavía no has creado tu primer anuncio. Si algo no quedó claro o no sabes por dónde partir, <b>responde este correo</b> con qué vendes y a quién, y te ayudamos a armar el guion.", `O parte solo: en «Crear guion», la opción «Crear desde cero» escribe 3 guiones con solo contarle qué vendes.${esc(plan)}`],
           cta: { label: "Crear mi primer anuncio", href: `${SITE}/app/guiones` },
         },
     7: {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCredits } from "./use-credits";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 // Small building blocks shared by the platform pages.
@@ -136,5 +137,40 @@ export function DeleteButton({ onDelete, label = "Borrar" }: { onDelete: () => v
     <button type="button" onClick={() => (armed ? onDelete() : setArmed(true))} className={`text-xs ${armed ? "font-semibold text-bad" : "text-muted hover:text-bad"}`}>
       {armed ? "¿Seguro?" : label}
     </button>
+  );
+}
+
+// The two paths a customer follows, always in the same order: set up the brand once, then make ads.
+const FLOWS = {
+  marca: { label: "Tu marca (se hace una vez)", steps: [["Voces", "/app/voces"], ["Avatares", "/app/avatares"], ["Productos", "/app/productos"]] },
+  anuncio: { label: "Crear un anuncio", steps: [["Crear guion", "/app/guiones"], ["Crear anuncio", "/app/crear"]] },
+} as const;
+
+/** "Paso 2 de 3" strip at the top of a page, so the customer always knows where they are. */
+export function Stepper({ flow, current }: { flow: keyof typeof FLOWS; current: number }) {
+  const f = FLOWS[flow];
+  return (
+    <nav aria-label={f.label} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <span className="font-semibold text-muted">{f.label}:</span>
+      {f.steps.map(([label, href], i) => (
+        <span key={href} className="flex items-center gap-2">
+          {i > 0 && <span aria-hidden="true" className="text-muted">→</span>}
+          <Link href={href} aria-current={i === current ? "step" : undefined}
+            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold ${i === current ? "bg-accent/12 text-accent-text" : "text-muted hover:text-ink"}`}>
+            <span aria-hidden="true" className={`grid h-4 w-4 place-items-center rounded-full border text-[9px] ${i === current ? "border-current" : "border-line"}`}>{i + 1}</span>{label}
+          </Link>
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+/** The next step, at the bottom of a page. */
+export function NextStep({ href, title, text }: { href: string; title: string; text: string }) {
+  return (
+    <Link href={href} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line p-4 hover:border-accent-text/60">
+      <span className="flex flex-col"><span className="text-xs font-semibold text-muted">Siguiente paso</span><b>{title}</b><span className="text-sm text-muted">{text}</span></span>
+      <span aria-hidden="true" className="text-xl text-accent-text">→</span>
+    </Link>
   );
 }

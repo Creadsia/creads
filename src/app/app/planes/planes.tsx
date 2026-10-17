@@ -183,7 +183,7 @@ export default function Planes() {
           </div>
           {reason === "Es muy caro" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Starter</b>? Es el más económico y trae 1.000 créditos al mes.</p>}
           {reason === "La calidad no me convenció" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
-          {reason === "No lo estoy usando" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba el <b>Generador de guiones</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
+          {reason === "No lo estoy usando" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>

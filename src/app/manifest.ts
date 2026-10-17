@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       { name: "Crear anuncio", url: "/app/crear", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
-      { name: "Generador de guiones", url: "/app/guiones", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
+      { name: "Crear guion", url: "/app/guiones", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
     ],
   };
 }

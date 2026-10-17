@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DeleteButton, Empty, Field, PageHead, type Row, SetupNotice, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
+import { DeleteButton, Empty, Field, NextStep, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
 
 interface Avatar extends Row {
   name: string;
@@ -60,10 +60,14 @@ export default function Avatares() {
 
   return (
     <>
-      <PageHead title="Avatares" lead="Tus presentadores fijos. Los cargas una vez y después solo eliges quién habla: misma cara y misma voz en todos los cortes.">
+      <Stepper flow="marca" current={1} />
+      <PageHead title="Avatares" lead="Tus presentadores fijos: la cara y la voz de quien habla. Los cargas una vez y sirven para todos tus anuncios.">
         {!form && <button type="button" onClick={() => open()} className={btnCls}>+ Nuevo avatar</button>}
       </PageHead>
       {t.missing && <SetupNotice />}
+      {voices.length > 0 && own.length === 0 && (
+        <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">¿Quieres que el avatar hable con <b>tu voz</b>? Créala primero en <a href="/app/voces" className="font-semibold text-accent-text underline">Voces</a> (paso 1). Si no, puedes elegir una voz de la biblioteca al crear el avatar.</p>
+      )}
 
       {form && (
         <form onSubmit={save} className={cardCls}>
@@ -156,6 +160,7 @@ export default function Avatares() {
           ))}
         </ul>
       )}
+      {(t.rows?.length ?? 0) > 0 && !form && <NextStep href="/app/productos" title="Agrega tu producto (opcional)" text="Si vendes algo físico, súbelo para que aparezca en los videos. Si no, ve directo a crear tu guion." />}
     </>
   );
 }

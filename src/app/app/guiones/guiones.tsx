@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BLOCKS, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
 import { NICHES } from "@/lib/niches";
-import { Field, PageHead, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
+import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 
 // Generador de guiones: paste a winning script, take it apart block by block, learn why it works,
 // and iterate (angles, hooks, better lines, ideas, lengths) until it's ready for "Crear anuncio".
@@ -164,7 +164,8 @@ export default function Guiones() {
 
   return (
     <>
-      <PageHead title="Generador de guiones" lead="Todo anuncio parte de un buen guion. Pega uno ganador, desármalo para entender por qué funciona y mejóralo hasta tener la mejor versión. Después llévalo a «Crear anuncio».">
+      <Stepper flow="anuncio" current={0} />
+      <PageHead title="Crear guion" lead="Todo anuncio parte de un buen guion. Pega uno ganador, desármalo para entender por qué funciona y mejóralo hasta tener la mejor versión. Después llévalo a «Crear anuncio».">
         <button type="button" onClick={() => setLearn((v) => !v)} aria-expanded={learn} className={ghostCls}>{learn ? "Ocultar guía" : "📘 Cómo se arma un guion"}</button>
       </PageHead>
 

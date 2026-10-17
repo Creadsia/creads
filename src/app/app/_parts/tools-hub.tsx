@@ -13,7 +13,7 @@ interface Job { id: string; kind: string; status: string; url: string | null; im
 const GENERATE = [
   { href: "/app/laboratorio", name: "Video IA", short: "Un clip desde texto o desde una imagen.", models: "Veo 3.1 · Kling 3.0 · Seedance 2.5 · Hailuo 2.3 · Wan 3.0 · Grok" },
   { href: "/app/laboratorio", name: "Imagen IA", short: "Fotos realistas, producto y escenas.", models: "Nano Banana Pro · Nano Banana 2 · Seedream 5 · FLUX 3" },
-  { href: "/app/guiones", name: "Generador de guiones", short: "Desarma un guion ganador, pide ángulos y hooks, y mejóralo línea por línea.", models: "IA de guiones Creads" },
+  { href: "/app/guiones", name: "Crear guion", short: "Desarma un guion ganador, pide ángulos y hooks, y mejóralo línea por línea.", models: "IA de guiones Creads" },
   { href: "/app/crear", name: "Anuncio completo", short: "Pega un guion y recibe el anuncio terminado y revisado.", models: "El modelo de video que elijas" },
   { href: "/app/voces", name: "Voz IA", short: "Clona tu voz o elige una y haz que lea tu texto.", models: "ElevenLabs" },
 ];

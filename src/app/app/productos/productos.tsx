@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DeleteButton, Empty, Field, PageHead, type Row, SetupNotice, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
+import { DeleteButton, Empty, Field, NextStep, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
 
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 const blank = { name: "", description: "", image_url: "" };
@@ -34,7 +34,8 @@ export default function Productos() {
 
   return (
     <>
-      <PageHead title="Productos" lead="Lo que tus avatares muestran en cámara: un frasco, un espejo, una app. La foto se usa como referencia para que se vea igual en cada escena.">
+      <Stepper flow="marca" current={2} />
+      <PageHead title="Productos" lead="Opcional. Lo que tus avatares muestran en cámara: un frasco, un espejo, una app. La foto sirve para que se vea igual en cada escena.">
         {!form && <button type="button" onClick={() => open()} className={btnCls}>+ Nuevo producto</button>}
       </PageHead>
       {t.missing && <SetupNotice />}
@@ -94,6 +95,7 @@ export default function Productos() {
           ))}
         </ul>
       )}
+      {!form && <NextStep href="/app/guiones" title="Crea tu guion" text="Tu marca está lista. Ahora, cada anuncio parte por el guion." />}
     </>
   );
 }
