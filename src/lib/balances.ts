@@ -359,8 +359,12 @@ export async function overview(fresh = true): Promise<{ services: ServiceStatus[
   const recent = (i: Incident | null) => i && Date.now() - Date.parse(i.at) < 24 * 3600_000;
   const alerts: { service: Service; name: string; text: string }[] = [];
   for (const s of services) {
-    // topped up since that failure: the live balance is fine now, so the old warning goes away
-    if (s.lastFailure && s.level === "ok") {
+    // resolved since that failure: the live balance is fine now, or a job on that service has worked
+    // since (the balance of some services can't be read), so the old warning goes away
+    const workedSince = s.lastFailure && s.level !== "ok"
+      ? (await selectRows<{ kind: string | null; model: string | null }>("clips", `select=kind,model&status=eq.done&created_at=gt.${encodeURIComponent(s.lastFailure.at)}&limit=300`).catch(() => [])).some((c) => serviceOf(c.kind, c.model) === s.id)
+      : false;
+    if (s.lastFailure && (s.level === "ok" || workedSince)) {
       await clearOutage(s.id).catch(() => {});
       s.lastFailure = null;
     }

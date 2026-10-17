@@ -174,14 +174,22 @@ function ActivatePlan() {
 /** Owner only: a thin warning when a service is running out of money. */
 function MoneyAlerts() {
   const [alerts, setAlerts] = useState<{ service: string; name: string; text: string }[]>([]);
-  useEffect(() => {
-    fetch("/api/admin/saldos?alertas=1").then((r) => (r.ok ? r.json() : null)).then((d) => setAlerts(d?.alerts ?? [])).catch(() => {});
-  }, []);
+  const load = () => fetch("/api/admin/saldos?alertas=1").then((r) => (r.ok ? r.json() : null)).then((d) => setAlerts(d?.alerts ?? [])).catch(() => {});
+  useEffect(() => { load(); }, []);
+  // "ya lo resolví": forgets the recorded failures (a balance that is still low shows up again by itself)
+  async function solved() {
+    await Promise.all([...new Set(alerts.map((a) => a.service))].map((svc) => fetch("/api/admin/saldos", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ listo: svc }) }).catch(() => null)));
+    setAlerts([]);
+    setTimeout(load, 1500);
+  }
   if (!alerts.length) return null;
   return (
     <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-warn/40 bg-warn/10 px-4 py-2.5 text-sm">
       <span className="font-semibold">{alerts.length === 1 ? alerts[0].text : `Revisa el saldo de ${alerts.map((a) => a.name).join(", ").replace(/, ([^,]*)$/, " y $1")}.`}</span>
-      <a href="/admin" className="font-semibold text-accent-text hover:underline">Ver saldos</a>
+      <span className="flex gap-3">
+        <button type="button" onClick={solved} className="font-semibold text-muted hover:text-ink hover:underline">Ya lo resolví</button>
+        <a href="/admin" className="font-semibold text-accent-text hover:underline">Ver saldos</a>
+      </span>
     </div>
   );
 }
