@@ -218,7 +218,13 @@ export default function Oficina() {
   useEffect(() => { call("GET", undefined, true); }, [call]);
   const refresh = useCallback(() => { api<View>("/api/admin/oficina", "GET").then((x) => setV((old) => ({ ...x, memory: old?.memory ?? x.memory }))).catch(() => {}); }, []);
 
-  const run = async (agent: string) => { setBusy(agent); await call("POST", { agent }); setBusy(null); };
+  const run = async (agent: string) => {
+    setBusy(agent);
+    // the whole office in two steps (each well inside the server's time limit): the team, then the CEO
+    if (agent === "todos") { if (await call("POST", { agent: "equipo" })) await call("POST", { agent: "ceo" }); }
+    else await call("POST", { agent });
+    setBusy(null);
+  };
   const remove = async (a: AgentView) => {
     if (!confirm(`¿Eliminar a ${a.name}? Se borran sus informes y su conversación.`)) return;
     try { apply(await api<View>("/api/admin/oficina/agentes", "DELETE", { id: a.id })); if (talk === a.id) setTalk("ceo"); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
@@ -245,7 +251,7 @@ export default function Oficina() {
           </div>
           <span className="flex flex-wrap items-center gap-2"><Badge r={ceo} />
             <button type="button" disabled={!!busy || !v.ready || !st.on} onClick={() => run("todos")} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">
-              {busy === "todos" ? "Trabajando… (2 a 4 min)" : "Hacer trabajar a todos ahora"}
+              {busy === "todos" ? "Trabajando… (2 a 4 min)" : busy === "ceo" ? "El CEO está escribiendo…" : "Hacer trabajar a todos ahora"}
             </button>
           </span>
         </div>
@@ -259,7 +265,13 @@ export default function Oficina() {
             )}
             <details><summary className="cursor-pointer text-sm font-semibold text-accent-text">Ver el resumen completo</summary><div className="pt-3"><Body r={ceo} /></div></details>
           </>
-        ) : ceo?.error ? <p className="text-sm text-warn">{ceo.resumen}</p> : (
+        ) : ceo?.error ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-warn">{ceo.resumen}</p>
+            <button type="button" disabled={!!busy || !v.ready} onClick={() => run("ceo")} className={`${btn} text-ink`}>{busy === "ceo" ? "Trabajando…" : "Que el CEO lo intente de nuevo"}</button>
+            <button type="button" onClick={() => call("PATCH", { dismiss: "ceo" })} className={`${btn} text-ink`}>Quitar aviso</button>
+          </div>
+        ) : (
           <p className="text-sm text-muted">Todavía no hay resumen. Toca «Hacer trabajar a todos ahora» para la primera ronda (cuesta unos centavos) o espera a mañana a las 8:00.</p>
         )}
       </section>
@@ -303,7 +315,8 @@ export default function Oficina() {
                   <button type="button" onClick={() => talkTo(a.id)} className={`${btn} text-xs text-ink`}>Hablar</button>
                   <button type="button" onClick={() => setEdit(edit === a.id ? null : a.id)} className={`${btn} text-xs text-ink`}>Editar</button>
                   {!a.builtin && <button type="button" onClick={() => remove(a)} className={`${btn} text-xs text-bad`}>Eliminar</button>}
-                  {a.id !== "ceo" && <button type="button" disabled={!!busy || !v.ready || !a.on} onClick={() => run(a.id)} className={`${btn} text-xs text-ink`}>{busy === a.id ? "Trabajando…" : "Trabajar ahora"}</button>}
+                  {r?.error && <button type="button" onClick={() => call("PATCH", { dismiss: a.id })} className={`${btn} text-xs text-ink`}>Quitar aviso</button>}
+                  {<button type="button" disabled={!!busy || !v.ready || !a.on} onClick={() => run(a.id)} className={`${btn} text-xs text-ink`}>{busy === a.id ? "Trabajando…" : "Trabajar ahora"}</button>}
                 </span>
               </div>
             </section>

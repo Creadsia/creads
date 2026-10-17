@@ -382,6 +382,16 @@ export async function runOne(id: string): Promise<Report> {
  * The daily round, within Vercel's 300 s: every worker that is on (in parallel, up to ~150 s), then the
  * CEO with their reports in the time left.
  */
+/** Every worker that is on, in parallel (the panel runs this, then the CEO in a second request). */
+export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]> {
+  const st = await loadState();
+  const memory = (await loadMemory()).text;
+  const on = workersOf(st).filter((w) => w.on);
+  const outs = await Promise.all(on.map((w) => work(st, w, memory, deadline)));
+  await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
+  return on.map((w) => w.id);
+}
+
 export async function runAll(): Promise<{ ceo: Report | null; ran: string[] }> {
   const start = Date.now();
   const st = await loadState();
@@ -396,6 +406,9 @@ export async function runAll(): Promise<{ ceo: Report | null; ran: string[] }> {
   await commit((s) => save(s, "ceo", out));
   return { ceo: out.report, ran: [...on.map((w) => w.id), "ceo"] };
 }
+
+/** Removes a «No pudo trabajar» notice (only reports that are failures). */
+export const dismiss = (id: string) => commit((s) => { if (s.last[id]?.error) delete s.last[id]; });
 
 // ---------------------------------------------------------------- chat
 

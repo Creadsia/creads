@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { BUILTIN_IDS, commit, findAgent, loadState, officeView, runAll, runOne, saveMemory } from "@/lib/oficina";
+import { BUILTIN_IDS, commit, dismiss, findAgent, loadState, officeView, runAll, runOne, runTeam, saveMemory } from "@/lib/oficina";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -27,6 +27,9 @@ export async function POST(req: Request) {
     if (agent === "todos") {
       if (!st.on) return NextResponse.json({ error: "La oficina está apagada: enciéndela primero." }, { status: 400 });
       await runAll();
+    } else if (agent === "equipo") {
+      if (!st.on) return NextResponse.json({ error: "La oficina está apagada: enciéndela primero." }, { status: 400 });
+      await runTeam();
     } else if (findAgent(st, agent)) await runOne(agent);
     else return NextResponse.json({ error: "Agente desconocido." }, { status: 400 });
     return NextResponse.json(await officeView());
@@ -43,6 +46,7 @@ export async function PATCH(req: Request) {
   if (typeof b?.mission === "string" && b.mission.trim().length < 20) return NextResponse.json({ error: "Las instrucciones son muy cortas: escribe al menos una oración." }, { status: 400 });
   try {
     if (typeof b?.memoria === "string") await saveMemory(b.memoria);
+    if (typeof b?.dismiss === "string") { await dismiss(b.dismiss); return NextResponse.json(await officeView()); }
     await commit((s) => {
       if (typeof b?.on === "boolean") s.on = b.on;
       if (b?.budgetUsd !== undefined) s.budgetUsd = Math.round(Number(b.budgetUsd) * 100) / 100;
