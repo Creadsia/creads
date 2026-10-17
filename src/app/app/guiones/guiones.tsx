@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { BLOCKS, DRAFT_KEY, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
+import { BLOCKS, DRAFT_KEY, FROM_SPY_KEY, TO_CREAR_KEY, type Analysis, type Block, type GuionAnswer, type Hook, MODES, type Mode, SCRIPT_LANGS, type ScriptLang, type ScriptOut, blockOf, scriptText, spokenSeconds } from "@/lib/guiones";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable, Working } from "../_parts/ui";
 
@@ -74,6 +74,15 @@ export default function Guiones() {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") as Draft | null;
       if (d) { setScript(d.script || ""); setLang(d.lang === "en" ? "en" : "es-CL"); setNiche(d.niche || ""); setContext(d.context || ""); setVersions(Array.isArray(d.versions) ? d.versions.slice(0, 20) : []); }
       else { const n = localStorage.getItem("creads-niche"); if (n) setNiche(n); }
+      // a winning ad brought from «Espiar anuncios»: it becomes the script to take apart (the previous one is kept as a version)
+      const spy = JSON.parse(sessionStorage.getItem(FROM_SPY_KEY) || "null") as { text?: string; page?: string } | null;
+      sessionStorage.removeItem(FROM_SPY_KEY);
+      if (spy?.text?.trim()) {
+        const prev = d?.script?.trim();
+        if (prev) setVersions((v) => (v.some((x) => x.text === prev) ? v : [{ id: newId(), label: "Mi versión", text: prev, at: Date.now() }, ...v].slice(0, 20)));
+        setScript(spy.text.trim());
+        setNote(`Trajimos el guion del anuncio de ${spy.page || "la competencia"}. Toca «Desarmar» para ver por qué funciona.`);
+      }
     } catch {}
     setLoaded(true);
   }, []);

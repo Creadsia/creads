@@ -7,6 +7,8 @@ export type ScriptLang = "es-CL" | "en";
 export const TO_CREAR_KEY = "creads-guion-to-crear";
 /** localStorage key: the script being worked on in «Crear guion» (Crear anuncio picks it up). */
 export const DRAFT_KEY = "creads-guion-draft";
+/** sessionStorage: a script brought from «Espiar anuncios» ({ text, page }), read once by «Crear guion». */
+export const FROM_SPY_KEY = "creads-guion-from-spy";
 export const SCRIPT_LANGS: { id: ScriptLang; label: string; spoken: string }[] = [
   { id: "es-CL", label: "Español (Chile)", spoken: "español de Chile hablado y natural (chileno, sin exagerar modismos), tuteando" },
   { id: "en", label: "Inglés (EE. UU.)", spoken: "natural spoken US English, the way a real person says it to camera" },

@@ -29,15 +29,15 @@ export const HELP: HelpArticle[] = [
   {
     id: "primer-anuncio", cat: "empezar",
     q: "¿Cómo hago mi primer anuncio?",
-    a: "Son 3 pasos. 1) Espiar anuncios: busca en la Biblioteca de anuncios de Meta uno que lleve semanas activo en tu nicho. 2) Crear guion: pégalo y pide «Desarmar», «10 hooks» o «3 ángulos»; al final toca «Pasar a crear mi anuncio» y el guion se copia solo. 3) Crear anuncio: elige el formato, tu avatar y tu voz, revisa el precio y genera.",
+    a: "Son 3 pasos. 1) Espiar anuncios: busca tu nicho y elige uno que lleve semanas activo. 2) Crear guion: pégalo y pide «Desarmar», «10 hooks» o «3 ángulos»; al final toca «Pasar a crear mi anuncio» y el guion se copia solo. 3) Crear anuncio: elige el formato, tu avatar y tu voz, revisa el precio y genera.",
     link: { label: "Crear mi guion", href: "/app/guiones" },
     tags: "empezar inicio partir tutorial pasos",
   },
   {
     id: "espiar", cat: "empezar",
     q: "¿Cómo encuentro anuncios que funcionan?",
-    a: "En la Biblioteca de anuncios de Meta (gratis) busca tu nicho y tu país. Un anuncio que lleva 30 días o más activo está vendiendo: nadie paga semanas por un anuncio que no funciona. Copia su guion y llévalo a «Crear guion».",
-    link: { label: "Ver la guía", href: "/app/spy" },
+    a: "En «Espiar anuncios» escribe qué vendes y elige tu país: ves los anuncios activos de Facebook e Instagram ordenados por días activo. Un anuncio que lleva 30 días o más está vendiendo. Toca «Desarmar este guion» y lo llevamos a «Crear guion» para hacer tu versión.",
+    link: { label: "Espiar anuncios", href: "/app/spy" },
     tags: "espiar competencia biblioteca meta facebook ads library ganadores",
   },
   {

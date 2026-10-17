@@ -21,6 +21,8 @@ const BUCKETS = {
   forgotEmail: [60 * 60, 3], // ... and to one address per hour
   forgotAll: [60 * 60, 200], // ... and in total (keeps the email account from being used for spam)
   resetIp: [60 * 60, 20], // new-password attempts with an emailed link
+  spy: [10 * 60, 30], // ad-library searches and transcripts per person in 10 min (each is a paid call)
+  spyDay: [24 * 60 * 60, 200], // ... and per day
   assist: [10 * 60, 25], // messages to the in-app assistant per person in 10 min
   assistDay: [24 * 60 * 60, 150], // ... and per day (each one is a paid AI call)
   assistFree: [24 * 60 * 60, 10], // ... per day for accounts without an active plan
@@ -70,6 +72,8 @@ const MSG: Record<Bucket, string> = {
   forgotEmail: "Ya te enviamos un enlace a ese correo. Revisa también la carpeta de spam, o espera una hora para pedir otro.",
   forgotAll: "No podemos enviar más correos por ahora. Escríbenos a hola@creadsia.com.",
   resetIp: "Demasiados intentos. Espera una hora.",
+  spy: "Vas muy rápido: espera unos minutos y vuelve a buscar.",
+  spyDay: "Llegaste al máximo de búsquedas de hoy. Mañana puedes seguir espiando.",
   assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
   assistFree: "Ya hiciste varias preguntas hoy. Para seguir, revisa el Centro de ayuda; con un plan activo el asistente responde mucho más.",
   assistIp: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
