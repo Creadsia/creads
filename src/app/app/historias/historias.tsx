@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LANGS, LENGTHS, STYLES, type StoryLang, type StoryPlan, type StorySettings, billedSeconds, estimateStory, storyShotUsd } from "@/lib/historias";
+import { LANGS, LENGTHS, MUSIC_MODES, SOUND_PRESETS, STORY_TEMPLATES, STYLES, type SoundSetup, type StoryLang, type StoryPlan, type StorySettings, type StyleId, billedSeconds, estimateStory, musicModeOf, presetOf, shotsFor, storyScript, storyShotUsd } from "@/lib/historias";
 import { NICHES } from "@/lib/niches";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
@@ -36,7 +36,7 @@ export default function Historias() {
   };
   return (
     <>
-      <PageHead title="Historias animadas" lead="Cuenta una idea y recibe una mini película animada con los mismos personajes de principio a fin, música y cortes de cine. Ideal para Reels y TikTok." />
+      <PageHead title="Historias animadas" lead="Cuenta una idea y recibe una mini película animada: los mismos personajes de principio a fin, diálogos con labios sincronizados, narrador, música o canción, como tú quieras. Ideal para Reels y TikTok." />
       {id ? <Story id={id} onBack={() => open(null)} /> : <NewStory onOpen={open} />}
     </>
   );
@@ -46,13 +46,16 @@ export default function Historias() {
 
 function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
   const [idea, setIdea] = useState("");
-  const [style, setStyle] = useState("cine3d");
+  const [context, setContext] = useState("");
+  const [picked, setPicked] = useState("");
+  const [style, setStyle] = useState<StyleId>("cine3d");
   const [seconds, setSeconds] = useState(30);
   const [aspect, setAspect] = useState("9:16");
   const [lang, setLang] = useState<StoryLang>("es-CL");
-  const [narrator, setNarrator] = useState(false);
-  const [dialogue, setDialogue] = useState(true);
+  const [sound, setSound] = useState<SoundSetup>({ dialogue: true, narrator: false, music: "ia", ambient: true });
   const [voiceId, setVoiceId] = useState("");
+  const [own, setOwn] = useState<{ url: string; name: string } | null>(null);
+  const [upBusy, setUpBusy] = useState(false);
   const [niche, setNiche] = useState("");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<VideoModel[]>([]);
@@ -75,15 +78,39 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
     fetch("/api/data/ads").then((r) => r.json()).then((d) => setList((d.rows ?? []).filter((a: Ad) => a.settings?.kind === "historia"))).catch(() => setList([]));
   }, []);
 
+  // characters that talk need a model that makes voices
+  const usable = models.filter((x) => !sound.dialogue || !x.silent);
+  useEffect(() => { if (model && usable.length && !usable.some((x) => x.id === model)) setModel(usable[0].id); }, [sound.dialogue, models]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = models.find((x) => x.id === model);
-  const n = Math.max(8, Math.min(24, Math.round(seconds / 2.6)));
+  const n = shotsFor(seconds);
   const est = m ? estimateStory({ characters: 3, shots: n, videoSecondsPerShot: billedSeconds(shotSecs(seconds / n), m.durations ?? undefined, m.id.startsWith("veo")), usdPerSecond: m.usdPerSecond, usdPerImage: imgUsd, seconds }) : null;
+  const musicUsd = sound.music === "ia" || sound.music === "cancion" ? est?.music ?? 0 : 0;
+  const preset = presetOf(sound);
+
+  function applyTemplate(id: string) {
+    const t = STORY_TEMPLATES.find((x) => x.id === id);
+    const p = SOUND_PRESETS.find((x) => x.id === t?.preset);
+    if (!t) return;
+    setPicked(id); setIdea(t.idea); setContext(t.context); setStyle(t.style);
+    if (p) setSound({ dialogue: p.dialogue, narrator: p.narrator, music: p.music, ambient: p.ambient });
+  }
+  async function upload(f?: File) {
+    if (!f) return;
+    setUpBusy(true); setErr("");
+    try { setOwn({ url: await uploadFile(f), name: f.name }); } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo subir la música."); } finally { setUpBusy(false); }
+  }
+  const missing = idea.trim().length < 15 ? "Cuenta tu historia (al menos una o dos frases)." : sound.narrator && !voiceId ? "Elige la voz del narrador." : sound.music === "propia" && !own ? "Sube tu música o elige otra opción." : "";
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
+    if (missing) return setErr(missing);
     setBusy(true); setErr("");
     try {
-      const d = await post("/api/historias", { idea, style, seconds, aspect, lang, narrator, dialogue, voiceId: narrator ? voiceId : null, model, niche });
+      const d = await post("/api/historias", {
+        idea, context, style, seconds, aspect, lang, niche, model,
+        narrator: sound.narrator, dialogue: sound.dialogue, voiceId: sound.narrator ? voiceId : null,
+        music: sound.music, ambient: sound.ambient, musicUrl: sound.music === "propia" ? own?.url : undefined,
+      });
       onOpen(d.id);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "No se pudo escribir la historia.");
@@ -93,14 +120,32 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={create} className={cardCls}>
-        <h2 className="font-display text-lg font-bold">1. Tu idea</h2>
-        <Field label="¿De qué se trata la historia?" hint="Quién es el protagonista, qué le pasa, qué cambia y cómo termina. Puede ser tu propia historia o la de tu cliente.">
-          <textarea value={idea} onChange={(e) => setIdea(e.target.value)} rows={4} className={inputCls}
-            placeholder="Un niño de 15 años al que todos subestimaban en el colegio. Una noche conoce a un mentor que le enseña a invertir. Con disciplina, a los 18 se compra el auto de sus sueños y vuelve a su colegio a dar una charla." />
-        </Field>
+      <form onSubmit={create} className="flex flex-col gap-6">
+        <section className={cardCls} aria-labelledby="h-idea">
+          <div className="flex flex-col gap-1">
+            <h2 id="h-idea" className="font-display text-lg font-bold">1. Tu historia</h2>
+            <p className="text-sm text-muted">Parte de cero o toca una idea para verla armada y cámbiala a tu gusto.</p>
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Ideas para empezar" data-tour="hist-ideas">
+            {STORY_TEMPLATES.map((t) => (
+              <button key={t.id} type="button" onClick={() => applyTemplate(t.id)} aria-pressed={picked === t.id}
+                className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${picked === t.id ? "border-accent-text bg-accent/10 text-ink" : "border-line text-muted hover:text-ink"}`}>
+                {t.name}
+              </button>
+            ))}
+          </div>
+          <Field label="¿De qué se trata?" hint="Quién es el protagonista, qué le pasa, qué cambia y cómo termina. Mientras más concreto, mejor queda.">
+            <textarea value={idea} onChange={(e) => { setIdea(e.target.value); setPicked(""); }} rows={5} className={inputCls}
+              placeholder="Un niño de 12 años siente que el colegio no le enseña lo que necesita. Conoce a Pancho, un emprendedor que le enseña a vender… Al final, le agradece frente a todos." />
+          </Field>
+          <Field label="Cómo hablan los personajes y frases que no pueden faltar (opcional)" hint="Con esto los diálogos suenan como tú quieres.">
+            <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={3} className={inputCls}
+              placeholder="Pancho habla relajado y seguro, como mentor. Frase final: «Gracias por creer en mí antes que yo»." />
+          </Field>
+        </section>
 
-        <Field label="Estilo">
+        <section className={cardCls} aria-labelledby="h-style">
+          <h2 id="h-style" className="font-display text-lg font-bold">2. Estilo</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {STYLES.map((s) => (
               <button key={s.id} type="button" onClick={() => setStyle(s.id)} aria-pressed={style === s.id}
@@ -110,64 +155,70 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
               </button>
             ))}
           </div>
-        </Field>
+        </section>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Duración">
-            <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className={inputCls}>
-              {LENGTHS.map((l) => <option key={l} value={l}>{l} segundos (≈ {Math.max(8, Math.min(24, Math.round(l / 2.6)))} tomas)</option>)}
-            </select>
-          </Field>
-          <Field label="Formato">
-            <select value={aspect} onChange={(e) => setAspect(e.target.value)} className={inputCls}>
-              <option value="9:16">Vertical 9:16 (Reels, TikTok)</option>
-              <option value="16:9">Horizontal 16:9 (YouTube)</option>
-              <option value="1:1">Cuadrado 1:1</option>
-            </select>
-          </Field>
-          <Field label="Idioma">
-            <select value={lang} onChange={(e) => setLang(e.target.value as StoryLang)} className={inputCls}>
-              {LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
-          </Field>
-          <Field label="Nicho (para ordenar)">
-            <select value={niche} onChange={(e) => setNiche(e.target.value)} className={inputCls}>
-              <option value="">Sin nicho</option>
-              {NICHES.map((x) => <option key={x} value={x}>{x}</option>)}
-            </select>
-          </Field>
-        </div>
+        <section className={cardCls} aria-labelledby="h-sound" data-tour="hist-sound">
+          <div className="flex flex-col gap-1">
+            <h2 id="h-sound" className="font-display text-lg font-bold">3. ¿Cómo suena?</h2>
+            <p className="text-sm text-muted">Elige una forma rápida o arma la tuya abajo. Todo se puede cambiar después, antes de armar la película.</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {SOUND_PRESETS.map((p) => (
+              <button key={p.id} type="button" aria-pressed={preset === p.id}
+                onClick={() => setSound({ dialogue: p.dialogue, narrator: p.narrator, music: p.music, ambient: p.ambient })}
+                className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left ${preset === p.id ? "border-accent-text bg-accent/10" : "border-line hover:bg-surface-2"}`}>
+                <b className="text-sm">{p.name}</b>
+                <span className="text-xs text-muted">{p.hint}</span>
+              </button>
+            ))}
+          </div>
+          <SoundControls sound={sound} onChange={setSound} voices={voices} voiceId={voiceId} onVoice={setVoiceId}
+            ownName={own?.name ?? ""} upBusy={upBusy} onUpload={upload} />
+        </section>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Sonido">
-            <div className="flex flex-col gap-2">
-              <label className="flex items-start gap-2 text-sm font-semibold"><input type="checkbox" checked={dialogue} onChange={(e) => setDialogue(e.target.checked)} className="mt-1" /> <span>Los personajes hablan <span className="font-normal text-muted">(diálogos con voz y labios sincronizados, en los momentos clave)</span></span></label>
-              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={!narrator} onChange={() => setNarrator(false)} /> {dialogue ? "Sin narrador" : "Solo música (como los videos virales)"}</label>
-              <label className="flex items-center gap-2 text-sm"><input type="radio" checked={narrator} onChange={() => setNarrator(true)} /> Con narrador (voz en off)</label>
-              {narrator && (
-                <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} className={inputCls} aria-label="Voz del narrador">
-                  <option value="">Elige la voz del narrador</option>
-                  {voices.map((v) => <option key={v.id} value={v.id}>{v.category === "cloned" ? "★ " : ""}{v.name}</option>)}
-                </select>
-              )}
-            </div>
-          </Field>
-          <Field label="Modelo de animación" hint={dialogue ? "Para que hablen, usa un modelo con voz: Kling 3.0, Seedance o Veo." : "Puedes cambiarlo después, antes de animar."}>
-            <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-              {models.filter((x) => !dialogue || !x.silent).map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        {est && (
-          <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">
-            Escribir la historia es gratis mientras tengas créditos. La película completa cuesta aprox. <b>{price(est.total)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}, música {price(est.music)}. Pagas cada paso cuando lo apruebas.
-          </p>
-        )}
-        <button type="submit" disabled={busy || idea.trim().length < 15 || (narrator && !voiceId)} className={`${btnCls} self-start py-2.5`}>
-          {busy ? "Escribiendo la historia… (≈ 30 s)" : "Escribir la historia"}
-        </button>
-        {err && <p role="alert" className="text-sm text-bad">{err}</p>}
+        <section className={cardCls} aria-labelledby="h-more">
+          <h2 id="h-more" className="font-display text-lg font-bold">4. Detalles</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Duración">
+              <select value={seconds} onChange={(e) => setSeconds(Number(e.target.value))} className={inputCls}>
+                {LENGTHS.map((l) => <option key={l} value={l}>{l} segundos (≈ {shotsFor(l)} tomas)</option>)}
+              </select>
+            </Field>
+            <Field label="Formato">
+              <select value={aspect} onChange={(e) => setAspect(e.target.value)} className={inputCls}>
+                <option value="9:16">Vertical 9:16 (Reels, TikTok)</option>
+                <option value="16:9">Horizontal 16:9 (YouTube)</option>
+                <option value="1:1">Cuadrado 1:1</option>
+              </select>
+            </Field>
+            <Field label="Cómo hablan">
+              <select value={lang} onChange={(e) => setLang(e.target.value as StoryLang)} className={inputCls}>
+                {LANGS.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Modelo de animación" hint={sound.dialogue ? "Solo modelos que hacen voz y labios." : "Puedes cambiarlo antes de animar."}>
+              <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
+                {usable.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Nicho (para ordenar)">
+              <select value={niche} onChange={(e) => setNiche(e.target.value)} className={inputCls}>
+                <option value="">Sin nicho</option>
+                {NICHES.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
+            </Field>
+          </div>
+          {est && (
+            <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">
+              Escribir el guion es gratis. La película completa cuesta aprox. <b>{price(est.images + est.video + musicUsd)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}{musicUsd ? `, ${sound.music === "cancion" ? "canción" : "música"} ${price(musicUsd)}` : ""}. Pagas cada paso cuando lo apruebas.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" disabled={busy} data-tour="hist-crear" className={`${btnCls} py-2.5`}>{busy ? "Escribiendo el guion… (≈ 30 s)" : "Escribir el guion"}</button>
+            {missing && !busy && <span className="text-sm text-muted">{missing}</span>}
+          </div>
+          {err && <p role="alert" className="text-sm text-bad">{err}</p>}
+        </section>
       </form>
 
       <section className={cardCls}>
@@ -190,6 +241,63 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
   );
 }
 
+/** Voices, music and ambient sound: the same controls when creating and when finishing a story. */
+function SoundControls({ sound, onChange, voices, voiceId, onVoice, ownName, upBusy, onUpload, disabled, dialogueLabel }: {
+  sound: SoundSetup; onChange: (s: SoundSetup) => void;
+  voices: Voice[]; voiceId: string; onVoice: (id: string) => void;
+  ownName: string; upBusy: boolean; onUpload: (f?: File) => void; disabled?: boolean; dialogueLabel?: string;
+}) {
+  const set = (p: Partial<SoundSetup>) => onChange({ ...sound, ...p });
+  const toggle = "flex items-start gap-2.5 rounded-xl border border-line p-3 text-sm";
+  return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold text-muted">Voces</span>
+        <label className={toggle}>
+          <input type="checkbox" checked={sound.dialogue} disabled={disabled} onChange={(e) => set({ dialogue: e.target.checked })} className="mt-1" />
+          <span><b>{dialogueLabel ?? "Los personajes hablan"}</b><span className="block text-xs text-muted">Dicen lo del guion con los labios sincronizados. Funciona con o sin música.</span></span>
+        </label>
+        <label className={toggle}>
+          <input type="checkbox" checked={sound.narrator} disabled={disabled} onChange={(e) => set({ narrator: e.target.checked })} className="mt-1" />
+          <span className="flex min-w-0 flex-1 flex-col gap-1.5"><span><b>Narrador</b><span className="block text-xs text-muted">Una voz en off cuenta la historia entre escenas.</span></span>
+            {sound.narrator && (
+              <select value={voiceId} disabled={disabled} onChange={(e) => onVoice(e.target.value)} className={inputCls} aria-label="Voz del narrador">
+                <option value="">Elige la voz del narrador</option>
+                {voices.map((v) => <option key={v.id} value={v.id}>{v.category === "cloned" ? "★ " : ""}{v.name}</option>)}
+              </select>
+            )}
+          </span>
+        </label>
+        <label className={toggle}>
+          <input type="checkbox" checked={sound.ambient} disabled={disabled} onChange={(e) => set({ ambient: e.target.checked })} className="mt-1" />
+          <span><b>Sonido ambiente</b><span className="block text-xs text-muted">Calle, viento, cocina, pasos: el sonido real de cada escena, suave.</span></span>
+        </label>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold text-muted">Música</span>
+        <div role="radiogroup" aria-label="Música" className="grid grid-cols-2 gap-2">
+          {MUSIC_MODES.map((x) => (
+            <button key={x.id} type="button" role="radio" aria-checked={sound.music === x.id} disabled={disabled} onClick={() => set({ music: x.id })}
+              className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left ${sound.music === x.id ? "border-accent-text bg-accent/10" : "border-line hover:bg-surface-2"}`}>
+              <b className="text-sm">{x.name}</b>
+              <span className="text-xs text-muted">{x.hint}</span>
+            </button>
+          ))}
+        </div>
+        {sound.music === "propia" && (
+          <label className={`${ghostCls} cursor-pointer self-start`}>
+            {upBusy ? "Subiendo…" : ownName ? `✓ ${ownName} · cambiar` : "Subir mi música"}
+            <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav,audio/aac,audio/ogg" className="sr-only" disabled={disabled || upBusy} onChange={(e) => { onUpload(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+        )}
+        {sound.music === "propia" && <p className="text-xs text-muted">Usa música que tengas derecho a usar. Se ajusta al largo de la película.</p>}
+        {sound.music === "cancion" && <p className="text-xs text-muted">La IA escribe la letra sobre tu historia; la puedes leer y cambiar antes de crear la canción.</p>}
+        {sound.music === "ninguna" && !sound.dialogue && !sound.narrator && !sound.ambient && <p className="text-xs text-warn">Así la película queda en silencio total. Suma voces, ambiente o música.</p>}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- one story
 
 function Story({ id, onBack }: { id: string; onBack: () => void }) {
@@ -205,7 +313,10 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [music, setMusic] = useState("");
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [subtitles, setSubtitles] = useState(true);
-  const [context, setContext] = useState("");
+  const [context, setContext] = useState<string | null>(null);
+  const [lyrics, setLyrics] = useState<string | null>(null);
+  const [upBusy, setUpBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [dlgMsg, setDlgMsg] = useState("");
   const [dlgAll, setDlgAll] = useState(true);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -315,7 +426,8 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
     const idxs = (partial ? clips.filter((c) => c.status === "done" && c.url) : clips).map((c) => c.idx);
     const total = idxs.reduce((a, i) => a + (Number(plan.shots[i]?.seconds) || 2.5), 0);
     const st0 = ad.settings;
-    const music = !st0.music_url || newMusic || (st0.music_secs ?? 0) < total - 0.5 ? (0.15 * Math.max(total, 15)) / 60 : 0;
+    const m0 = musicModeOf(st0);
+    const music = (m0 === "ia" || m0 === "cancion") && (!st0.music_url || newMusic || (st0.music_secs ?? 0) < total - 0.5 || (st0.music_made ?? "ia") !== m0) ? (0.15 * Math.max(total, 15)) / 60 : 0;
     const cache = st0.narration_cache ?? {};
     const chars = st0.narrator && st0.voiceId
       ? idxs.map((i) => plan.shots[i]?.narration?.trim() ?? "").filter((t) => t && !cache[`${st0.voiceId}|${t}`]).reduce((a, t) => a + t.length, 0)
@@ -323,6 +435,25 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
     return music + chars * 0.00022;
   };
   const filmCost = (newMusic: boolean, partial = false) => { const u = filmUsd(newMusic, partial); return u > 0 ? ` · ≈ ${price(u)}` : ""; };
+  // sound options are saved right away (they don't change the shots already animated)
+  const mode = musicModeOf(st);
+  const sound: SoundSetup = { dialogue: !st.mute_dialogue, narrator: Boolean(st.narrator), music: mode, ambient: Boolean(st.ambient) };
+  const setSound = (next: SoundSetup, extra: Record<string, unknown> = {}) => run("sound", async () => {
+    if (next.narrator && !st.voiceId && !extra.voiceId) throw new Error("Elige la voz del narrador.");
+    await saved();
+    await post("/api/historias", { adId: id, voiceId: extra.voiceId, sound: { music: next.music, ambient: next.ambient, narrator: next.narrator, mute: !next.dialogue, ...extra } }, "PATCH");
+  });
+  const uploadMusic = async (f?: File) => {
+    if (!f) return;
+    setUpBusy(true); setErr("");
+    try { const url = await uploadFile(f); await post("/api/historias", { adId: id, sound: { music: "propia", musicUrl: url } }, "PATCH"); await load(); }
+    catch (e) { setErr(e instanceof Error ? e.message : "No se pudo subir la música."); }
+    finally { setUpBusy(false); }
+  };
+  const copyScript = async () => {
+    try { await navigator.clipboard.writeText(storyScript(plan, { narrator: st.narrator, music_mode: mode })); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { setErr("No se pudo copiar. Intenta de nuevo."); }
+  };
   const montar = (newMusic = false, partial = false) => run("film", async () => {
     const d = await post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial });
     if (d.note) setTimeout(() => setErr(d.note), 0); // e.g. the music couldn't be made this time
@@ -330,7 +461,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const est = m ? (() => {
     const video = plan.shots.reduce((a, _, i) => a + shotUsd(i), 0);
     const images = (plan.characters.length + plan.shots.length) * imgUsd;
-    const music = (0.15 * Math.max(st.seconds, 15)) / 60;
+    const music = mode === "ia" || mode === "cancion" ? (0.15 * Math.max(st.seconds, 15)) / 60 : 0;
     return { total: +(video + images + music).toFixed(2) };
   })() : null;
 
@@ -350,6 +481,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             <textarea value={plan.logline} onChange={(e) => edit((p) => ({ ...p, logline: e.target.value }))} rows={2} className="resize-none bg-transparent text-muted outline-none" aria-label="Resumen" />
           </div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={copyScript} className={ghostCls}>{copied ? "Guion copiado ✓" : "Copiar guion"}</button>
             <label className="flex items-center gap-1.5 text-xs text-muted"><input type="checkbox" checked={tech} onChange={(e) => setTech(e.target.checked)} /> Ver instrucciones técnicas</label>
             {dirty && <button type="button" onClick={save} disabled={busy.save} className={btnCls}>{busy.save ? "Guardando…" : "Guardar cambios"}</button>}
           </div>
@@ -357,14 +489,14 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         <div className="flex flex-col gap-2 rounded-xl border border-accent-text/40 bg-accent/5 p-3">
           <b className="text-sm">Diálogos con IA</b>
           <p className="text-xs text-muted">Creads lee tu idea, mira las imágenes de las tomas que ya creaste y escribe qué dice cada personaje en los momentos clave. Dale contexto si quieres: cómo habla Pancho, qué le enseña, frases que no pueden faltar.</p>
-          <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={2} className={`${inputCls} text-sm`}
+          <textarea value={context ?? st.context ?? ""} onChange={(e) => setContext(e.target.value)} rows={2} className={`${inputCls} text-sm`}
             placeholder="Ej: Pancho habla relajado y seguro, como mentor. Le dice que el colegio no le enseña a ganar plata. Al final el niño le agradece frente a todos." />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dlgAll} onChange={(e) => setDlgAll(e.target.checked)} /> Como película: diálogo en todas las tomas donde aparece alguien</label>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={busy.dlg} className={btnCls}
               onClick={() => run("dlg", async () => {
                 await saved();
-                const d = await post("/api/historias/dialogos", { adId: id, context, all: dlgAll });
+                const d = await post("/api/historias/dialogos", { adId: id, context: context ?? st.context ?? "", all: dlgAll });
                 setPlan(d.plan); setDirty(false);
                 const animated = new Set(clips.filter((c) => c.status === "done").map((c) => c.idx));
                 const redo = (d.changed as number[]).filter((i) => animated.has(i)).length;
@@ -490,20 +622,54 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         </ol>
       </section>
 
-      {/* 4. film */}
+      {/* 4. sound + film */}
       <section className={cardCls}>
-        <h2 className="font-display text-lg font-bold">4. Música y película</h2>
-        <Field label="Música" hint="Descríbela en inglés o español: estilo, ánimo, cómo crece.">
-          <textarea value={music} onChange={(e) => setMusic(e.target.value)} rows={2} className={inputCls} />
-        </Field>
-        {plan.shots.some((x) => x.dialogue?.line || x.narration) && (
+        <div className="flex flex-col gap-1">
+          <h2 className="font-display text-lg font-bold">4. Sonido y película</h2>
+          <p className="text-sm text-muted">Combina como quieras: personajes que hablan con sus labios, narrador, sonido ambiente y música, una canción con letra o tu propia música. Los cambios se guardan solos.</p>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Formas rápidas">
+          {SOUND_PRESETS.map((p) => (
+            <button key={p.id} type="button" disabled={busy.sound} aria-pressed={presetOf(sound) === p.id} title={p.hint}
+              onClick={() => setSound({ dialogue: p.dialogue, narrator: p.narrator, music: p.music, ambient: p.ambient })}
+              className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${presetOf(sound) === p.id ? "border-accent-text bg-accent/10 text-ink" : "border-line text-muted hover:text-ink"}`}>
+              {p.name}
+            </button>
+          ))}
+        </div>
+        <SoundControls sound={sound} disabled={busy.sound} onChange={(x) => setSound(x)} voices={voices} voiceId={st.voiceId ?? ""}
+          onVoice={(v) => v && setSound({ ...sound, narrator: true }, { voiceId: v })}
+          ownName={st.own_music_url ? "Tu música" : ""} upBusy={upBusy} onUpload={uploadMusic} dialogueLabel="Se escuchan los diálogos" />
+        {sound.dialogue && !plan.shots.some((x) => x.dialogue?.line) && <p className="text-sm text-warn">Esta historia todavía no tiene diálogos: escríbelos arriba con «Diálogos con IA» y anima esas tomas.</p>}
+        {sound.narrator && !plan.shots.some((x) => x.narration?.trim()) && <p className="text-sm text-warn">Escribe lo que dice el narrador en cada toma, arriba en el guion (debajo de cada toma).</p>}
+        {sound.ambient && clips.some((c) => c.status === "done" && !plan.shots[c.idx]?.dialogue?.line) && <p className="text-xs text-muted">El sonido ambiente se graba al animar: las tomas que ya estaban animadas sin él siguen en silencio hasta que las re-animes.</p>}
+        {(mode === "ia" || mode === "cancion") && (
+          <Field label={mode === "cancion" ? "Estilo de la canción" : "Música"} hint="Descríbela en inglés o español: estilo, ánimo, cómo crece.">
+            <textarea value={music} onChange={(e) => setMusic(e.target.value)} rows={2} className={inputCls} />
+          </Field>
+        )}
+        {mode === "cancion" && (
+          <div className="flex flex-col gap-2">
+            <Field label="Letra de la canción" hint="Léela y cámbiala a tu gusto antes de crear la canción.">
+              <textarea value={lyrics ?? plan.lyrics ?? ""} onChange={(e) => setLyrics(e.target.value)} rows={7} className={`${inputCls} leading-relaxed`}
+                onBlur={() => lyrics !== null && run("lyrics", async () => { await post("/api/historias", { adId: id, sound: { lyrics } }, "PATCH"); })}
+                placeholder="Aquí va la letra. Si está vacía, toca «Escribir la letra con IA»." />
+            </Field>
+            <button type="button" disabled={busy.lyr} className={`${ghostCls} self-start`}
+              onClick={() => run("lyr", async () => { await saved(); const d = await post("/api/historias/letra", { adId: id }); setLyrics(d.lyrics); if (d.music) setMusic(d.music); })}>
+              {busy.lyr ? "Escribiendo la letra…" : plan.lyrics?.trim() ? "Reescribir la letra con IA (gratis)" : "Escribir la letra con IA (gratis)"}
+            </button>
+          </div>
+        )}
+        {st.own_music_url && mode === "propia" && <OwnMusic refUrl={st.own_music_url} />}
+        {(plan.shots.some((x) => x.dialogue?.line) || st.narrator) && (
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={subtitles} onChange={(e) => setSubtitles(e.target.checked)} /> Subtítulos en pantalla con lo que dicen</label>
         )}
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={!allDone || busy.film} onClick={() => montar(false)} className={btnCls}>
             {busy.film ? "Armando la película… (≈ 1 min)" : `${ad.final_url ? "Volver a armar" : "Armar la película"}${filmCost(false)}`}
           </button>
-          {st.music_url && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>Otra música{filmCost(true)}</button>}
+          {st.music_url && (mode === "ia" || mode === "cancion") && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>{mode === "cancion" ? "Otra versión de la canción" : "Otra música"}{filmCost(true)}</button>}
           {!allDone && clips.filter((c) => c.status === "done" && c.url).length >= 2 && (
             <button type="button" disabled={busy.film} onClick={() => montar(false, true)} className={ghostCls}>Armar solo con las {clips.filter((c) => c.status === "done" && c.url).length} tomas listas{filmCost(false, true)}</button>
           )}
@@ -518,8 +684,6 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
             </ul>
           </div>
         )}
-        <div className="hidden">
-        </div>
         {ad.final_url && <FinalFilm refUrl={ad.final_url} aspect={ad.aspect} />}
       </section>
 
@@ -620,6 +784,15 @@ function ShotCard({ n, aspect, text, line, secs, clip, busy, canFrame, framePric
         </div>
       )}
     </li>
+  );
+}
+
+function OwnMusic({ refUrl }: { refUrl: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-xl bg-surface-2 p-3 text-sm">
+      <b>Tu música</b>
+      <audio src={refUrl} controls className="w-full" aria-label="Tu música" />
+    </div>
   );
 }
 

@@ -106,6 +106,14 @@ export const TOURS: Tour[] = [
     ],
   },
   {
+    id: "historias", path: "/app/historias", when: "hist-ideas", title: "Cómo crear una historia animada", listed: true,
+    steps: [
+      { target: "hist-ideas", title: "Parte de una idea", text: "Toca una de estas ideas y la ves armada: historia, cómo hablan los personajes, estilo y sonido. Después la cambias a tu gusto." },
+      { target: "hist-sound", title: "Elige cómo suena", text: "Personajes que hablan con sus labios, narrador, música IA, una canción con letra, tu propia música o nada. Se combinan como quieras." },
+      { target: "hist-crear", title: "Escribe el guion", text: "Es gratis. Después revisas el guion toma por toma, creas los personajes, las imágenes, las animas y armas la película. Pagas cada paso cuando lo apruebas." },
+    ],
+  },
+  {
     id: "recrear", path: "/app/recrear", title: "Cómo recrear un video", video: "recrear-video", listed: true,
     steps: [
       { target: "recrear-modos", title: "Sube un video que te guste", text: "Elige: cambiar la persona, el producto, la ropa o el lugar con tus fotos (mismo movimiento y audio), o que tu personaje en una foto copie los mismos gestos y movimientos." },

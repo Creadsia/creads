@@ -108,7 +108,9 @@ export async function POST(req: Request) {
     }
     if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
 
-    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story || (talks && !ownVoice), refs });
+    // story shots: sound only where a character speaks with the model's voice, or for the scene's
+    // ambient sound when the story keeps it (the price is the same: we always charge the audio rate)
+    const job = await provider.submit({ prompt: String(clip.prompt), seconds, aspect, resolution: "720p", withAudio: !story || (talks && !ownVoice) || Boolean(story.ambient && !talks), refs });
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
     // what was paid for travels with the clip: the lip-sync step reads it from here, not from the
     // story (which the customer may edit while the clip renders)

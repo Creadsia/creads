@@ -25,11 +25,12 @@ export async function POST(req: Request) {
   if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   const b = await req.json().catch(() => null);
   const adId = String(b?.adId ?? "");
-  const context = typeof b?.context === "string" ? b.context.slice(0, 2000) : "";
+  const typed = typeof b?.context === "string" ? b.context.slice(0, 2000) : "";
   const all = b?.all === true;
   const found = await loadStory(s.db, adId).catch(() => null);
   if (!found) return NextResponse.json({ error: "Historia no encontrada." }, { status: 404 });
   const { st } = found;
+  const context = typed.trim() || st.context || "";
   try {
     const clips = await s.db.list("clips", `ad_id=eq.${adId}&order=idx.asc`);
     const frames = st.plan.shots.map((_, i) => clips.find((c) => Number(c.idx) === i)?.image_url as string | null | undefined);
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
     // shots being animated keep what they were started (and paid) with
     await Promise.all(clips.filter((c) => !["generating", "starting", "syncing"].includes(String(c.status))).map((c) => {
       const sh = saved.plan.shots[Number(c.idx)];
-      return sh ? s.db.update("clips", String(c.id), { text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, saved.style, saved.plan, saved.lang) }) : null;
+      return sh ? s.db.update("clips", String(c.id), { text: sh.dialogue?.line || sh.narration || sh.es, prompt: motionPrompt(sh, saved.style, saved.plan, saved.lang, Boolean(saved.ambient)) }) : null;
     }));
     return NextResponse.json({ plan: saved.plan, changed });
   } catch (err) {

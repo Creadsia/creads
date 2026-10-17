@@ -257,7 +257,7 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
  * under it; narrator lines start with their shot. Optional subtitles (one line per shot) and a short
  * fade at the end.
  */
-export interface StoryCut { file: string; secs: number; voice?: boolean; text?: string }
+export interface StoryCut { file: string; secs: number; voice?: boolean; text?: string; ambient?: boolean }
 export async function buildStory(dir: string, shots: StoryCut[], aspect: string, music: string | null, narration: { file: string; at: number; secs?: number; text?: string }[] = [], subtitles = false) {
   const [W, H] = frameSize(aspect);
   const args: string[] = ["-y", "-v", "error"];
@@ -314,9 +314,12 @@ export async function buildStory(dir: string, shots: StoryCut[], aspect: string,
     tracks.push("[mus]");
   }
   shots.forEach((sh, i) => {
-    if (!sh.voice) return;
+    if (!sh.voice && !sh.ambient) return;
     const ms = Math.round(starts[i] * 1000);
-    parts.push(`[${vin[i]}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${sh.secs.toFixed(3)},afade=t=out:st=${Math.max(0, sh.secs - 0.15).toFixed(3)}:d=0.15,adelay=${ms}|${ms}[d${i}]`);
+    // a spoken line at full volume; the scene's ambient sound softer, faded in and out between cuts
+    const vol = sh.voice ? "" : ",volume=0.45";
+    const fin = sh.voice ? "" : ",afade=t=in:st=0:d=0.12";
+    parts.push(`[${vin[i]}:a]aresample=44100,aformat=channel_layouts=stereo,atrim=duration=${sh.secs.toFixed(3)}${vol}${fin},afade=t=out:st=${Math.max(0, sh.secs - 0.15).toFixed(3)}:d=0.15,adelay=${ms}|${ms}[d${i}]`);
     tracks.push(`[d${i}]`);
   });
   narration.forEach((l, i) => {

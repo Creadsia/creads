@@ -7,7 +7,9 @@
 //  2. One reference sheet per character (Nano Banana Pro). The customer approves or replaces it.
 //  3. One keyframe per shot, drawn from the character sheets (keeps every face the same).
 //  4. Each keyframe is animated by the chosen video model (no sound: music goes on top).
-//  5. Music (ElevenLabs) and, optionally, a narrator; the montage cuts every shot to its length.
+//  5. Sound, all optional and combinable: characters speaking on camera with their lips in sync, a
+//     narrator, the scene's ambient sound, and music: made by AI (instrumental), a song with lyrics,
+//     the customer's own track, or none. The montage cuts every shot to its length and mixes it all.
 
 export type StyleId = "cine3d" | "anime" | "realista" | "plastilina" | "comic" | "acuarela";
 
@@ -110,13 +112,75 @@ export interface StoryPlan {
   title: string;
   logline: string; // one sentence, Spanish
   music: string; // music prompt in English
+  lyrics?: string; // song lyrics (when the soundtrack is a song), in the story's language
   characters: StoryCharacter[];
   shots: StoryShot[];
 }
 
+/** The soundtrack: AI instrumental music, an AI song with lyrics, the customer's own track, or none. */
+export type MusicMode = "ia" | "cancion" | "propia" | "ninguna";
+export const MUSIC_MODES: { id: MusicMode; name: string; hint: string }[] = [
+  { id: "ia", name: "Música IA", hint: "Instrumental, hecha a la medida de la película." },
+  { id: "cancion", name: "Canción con letra", hint: "Una canción cantada sobre tu historia." },
+  { id: "propia", name: "Mi música", hint: "Sube tu canción o audio (mp3, m4a, wav)." },
+  { id: "ninguna", name: "Sin música", hint: "Solo voces y sonido ambiente." },
+];
+export const musicModeOf = (st: { music_mode?: string } | null | undefined): MusicMode =>
+  (["ia", "cancion", "propia", "ninguna"].includes(String(st?.music_mode)) ? (st!.music_mode as MusicMode) : "ia");
+
+/** One-tap sound setups (everything stays editable). */
+export interface SoundSetup { dialogue: boolean; narrator: boolean; music: MusicMode; ambient: boolean }
+export const SOUND_PRESETS: ({ id: string; name: string; hint: string } & SoundSetup)[] = [
+  { id: "pelicula", name: "Película con diálogos", hint: "Los personajes hablan con los labios sincronizados, con música suave de fondo.", dialogue: true, narrator: false, music: "ia", ambient: true },
+  { id: "dialogos", name: "Solo diálogos, sin música", hint: "Hablan con los labios sincronizados y se escucha el ambiente, como una escena real.", dialogue: true, narrator: false, music: "ninguna", ambient: true },
+  { id: "narrador", name: "Narrador + música", hint: "Una voz en off cuenta la historia sobre la música.", dialogue: false, narrator: true, music: "ia", ambient: false },
+  { id: "viral", name: "Solo música", hint: "Sin voces: imágenes y música, como los videos virales.", dialogue: false, narrator: false, music: "ia", ambient: false },
+  { id: "cancion", name: "Videoclip con canción", hint: "Una canción con letra que cuenta tu historia.", dialogue: false, narrator: false, music: "cancion", ambient: false },
+  { id: "silencio", name: "Sin música ni voces", hint: "Solo el sonido ambiente de cada escena.", dialogue: false, narrator: false, music: "ninguna", ambient: true },
+];
+export const presetOf = (s: SoundSetup) => SOUND_PRESETS.find((p) => p.dialogue === s.dialogue && p.narrator === s.narrator && p.music === s.music && p.ambient === s.ambient)?.id ?? null;
+
+/** Ideas to start from: they fill the idea, how the characters talk and the sound that fits. */
+export const STORY_TEMPLATES: { id: string; name: string; idea: string; context: string; preset: string; style: StyleId }[] = [
+  {
+    id: "mentor", name: "Mentor y alumno", style: "anime", preset: "pelicula",
+    idea: "Tomás tiene 12 años, vive en un barrio de Santiago y siente que en el colegio le enseñan cosas que no le sirven. Una tarde conoce a Pancho, un emprendedor de unos 30 años, tranquilo y seguro, que tiene un carro de café en la plaza. Pancho le enseña lo que el colegio no enseña: cómo elegir qué vender, cómo hablarle a un cliente y cómo ahorrar. Tomás arma su puesto de limonadas, se equivoca, aprende y vuelve a intentarlo. En la feria de fin de año presenta su emprendimiento frente a todos y le agradece a Pancho, que lo mira orgulloso desde el público.",
+    context: "Pancho habla relajado y seguro, como mentor, con frases cortas. Tomás habla como un niño de 12 años, curioso y tímido al principio. Frases que no pueden faltar: «El colegio te enseña a sumar; la calle te enseña a ganar» y «Gracias, Pancho, por creer en mí antes que yo».",
+  },
+  {
+    id: "superacion", name: "Historia de superación", style: "cine3d", preset: "narrador",
+    idea: "Una mujer de 40 años pierde su trabajo y empieza a vender empanadas desde su cocina. Los primeros días nadie compra y piensa en rendirse. Su hija le arma una página y le saca fotos a sus empanadas. De a poco llegan los pedidos, abre su primer local y el día de la inauguración su hija le dice que es su heroína.",
+    context: "Tono emotivo y esperanzador. Un final que dé ganas de llorar de alegría.",
+  },
+  {
+    id: "cliente", name: "Antes y después de un cliente", style: "realista", preset: "dialogos",
+    idea: "Don Jorge tiene 65 años y su casa tiene grietas en las paredes que empeoran cada invierno. Su vecino le recomienda una empresa de reparación de cimientos. Llegan, revisan sin cobrar y en una semana la casa queda firme. Don Jorge invita a su familia a almorzar y les muestra las paredes sin grietas, orgulloso.",
+    context: "Don Jorge habla con calma y cariño. Que se note el alivio. Sin sonar a comercial.",
+  },
+  {
+    id: "negocio", name: "Un día en mi negocio", style: "cine3d", preset: "viral",
+    idea: "Un día completo en una pastelería de barrio: a las 5 de la mañana se encienden los hornos, el equipo amasa entre risas, los primeros clientes hacen fila, un niño elige su torta de cumpleaños y al cierre la dueña apaga la luz mirando su vitrina vacía, feliz.",
+    context: "Ritmo rápido, mucho detalle de manos, harina y vapor.",
+  },
+  {
+    id: "comercial", name: "Mini comercial divertido", style: "plastilina", preset: "pelicula",
+    idea: "Rocco, un perro, está aburrido porque su dueño trabaja todo el día en el computador haciendo anuncios. Rocco descubre una app que hace los anuncios sola, la abre con la pata, el anuncio queda listo en minutos y por fin salen juntos al parque.",
+    context: "Humor tierno. El dueño le habla con cariño a Rocco. Rocco no habla, solo reacciona.",
+  },
+  {
+    id: "videoclip", name: "Videoclip de marca", style: "acuarela", preset: "cancion",
+    idea: "Una joven recorre su ciudad al amanecer en bicicleta y en cada esquina aparece algo que la inspira: un mural, un músico callejero, una abuela regando flores. Al final llega a su pequeño taller de cerámica y abre la puerta con una sonrisa.",
+    context: "Que la canción hable de empezar de nuevo cada día.",
+  },
+];
+
 export interface StorySettings {
   kind: "historia";
   idea: string;
+  context?: string; // how the characters talk, lines that can't be missing
+  music_mode?: MusicMode; // undefined = "ia" (stories made before the option existed)
+  ambient?: boolean; // keep each shot's natural sound (street, wind, kitchen…)
+  mute_dialogue?: boolean; // the film plays without the characters' voices
   style: StyleId;
   seconds: number; // target length
   lang: StoryLang;
@@ -124,8 +188,10 @@ export interface StorySettings {
   dialogue?: boolean; // characters speak on camera
   voiceId?: string | null;
   plan: StoryPlan;
-  music_url?: string | null;
+  music_url?: string | null; // the music made by AI (instrumental or song)
   music_secs?: number; // how long the saved music is
+  music_made?: "ia" | "cancion"; // what music_url holds (switching kind makes a new one)
+  own_music_url?: string | null; // the customer's own track (music_mode "propia")
   narration_url?: string | null;
   narration_cache?: Record<string, string>; // "<voice>|<line>" → recorded file
   duration?: number;
@@ -135,20 +201,23 @@ export interface StorySettings {
 
 export const LENGTHS = [30, 45, 60];
 
-export type StoryLang = "es-CL" | "es" | "en";
+export type StoryLang = "es-CL" | "es-CL-calle" | "es" | "en";
 export const LANGS: { id: StoryLang; name: string; spoken: string }[] = [
-  { id: "es-CL", name: "Español de Chile", spoken: "Chilean Spanish as people really talk in Chile: natural Chilean expressions and rhythm (\"po\", \"cachai\", \"al tiro\", \"bacán\" only where they sound natural, never forced), tuteo, no Spain or Mexico slang" },
+  { id: "es-CL", name: "Chileno, bien hablado", spoken: "Chilean Spanish spoken well and naturally: Chilean rhythm, vocabulary and tuteo, warm and clear, but NO slang or fillers at all (never \"po\", \"cachai\", \"weón\", \"al tiro\", \"bacán\", \"fome\" or similar), no Spain or Mexico expressions" },
+  { id: "es-CL-calle", name: "Chileno con modismos", spoken: "Chilean Spanish as people really talk on the street: natural Chilean expressions and rhythm (\"po\", \"cachai\", \"al tiro\", \"bacán\" only where they sound natural, never forced), tuteo, no Spain or Mexico slang" },
   { id: "es", name: "Español latino neutro", spoken: "neutral Latin American Spanish, no regional slang" },
   { id: "en", name: "Inglés (EE. UU.)", spoken: "natural US English" },
 ];
 export const langById = (id: string) => LANGS.find((l) => l.id === id) ?? LANGS[0];
+/** The story happens in Chile and is told in Chilean Spanish (with or without slang). */
+export const isChile = (l: string) => l === "es-CL" || l === "es-CL-calle";
 /** ElevenLabs language code for the narrator. */
 export const voiceLang = (l: StoryLang) => (l === "en" ? "en" : "es");
 
 /** How many shots for a film of this length (the reference films cut every 2–3 s). */
 export const shotsFor = (seconds: number) => Math.max(8, Math.min(24, Math.round(seconds / 2.6)));
 
-export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: StoryLang; narrator: boolean; dialogue?: boolean; aspect: string }) {
+export function planPrompt(o: { idea: string; style: StyleId; seconds: number; lang: StoryLang; narrator: boolean; dialogue?: boolean; aspect: string; context?: string; music?: MusicMode }) {
   const st = styleById(o.style);
   const n = shotsFor(o.seconds);
   const spoken = langById(o.lang).spoken;
@@ -158,7 +227,7 @@ IDEA (from the customer, may be in Spanish):
 """
 ${o.idea.slice(0, 3000)}
 """
-
+${o.context?.trim() ? `How the characters talk, and lines that can't be missing (follow this exactly):\n"""\n${o.context.slice(0, 1500)}\n"""\n` : ""}
 Visual style: ${st.name} — ${st.prompt}.
 Target length: ${o.seconds} seconds, in exactly ${n} shots of 1.5 to 4 seconds each (the seconds must add up to about ${o.seconds}).
 ${o.narrator ? `There is a narrator. Write short narrator lines in ${spoken}: at most 2.3 words per second of each shot, and leave some shots without narration so the music breathes.` : "There is NO narrator: leave every \"narration\" empty."}
@@ -173,11 +242,13 @@ Rules:
 - Avoid violence, weapons, real brands and anything unsafe for a general audience.
 - "es" is one short line in Spanish describing the shot for the customer.
 - Be concise: each "image" at most 55 words, each "motion" at most 20 words, each character "look" at most 50 words. Plain JSON, no comments.
-- "music" is a music prompt in English for the soundtrack (genre, mood, tempo, instruments, how it builds), instrumental.
-- "title" and "logline" in Spanish${o.lang === "es-CL" ? " from Chile" : ""}.${o.lang === "es-CL" ? "\n- The story happens in Chile unless the idea says otherwise: Chilean places, streets, schools, homes and faces, so a Chilean audience feels it is theirs." : ""}
+${o.music === "cancion"
+    ? `- "music" is a prompt in English for an original SONG with vocals that tells this story (genre, mood, tempo, voice type, how it builds to a chorus). "lyrics": the song's lyrics in ${spoken}, original, 6 to 10 short singable lines with a chorus, following the story's emotion (never name brands or real artists).`
+    : `- "music" is a music prompt in English for the soundtrack (genre, mood, tempo, instruments, how it builds), instrumental. "lyrics": "".`}
+- "title" and "logline" in Spanish${isChile(o.lang) ? " from Chile" : ""}.${isChile(o.lang) ? "\n- The story happens in Chile unless the idea says otherwise: Chilean places, streets, schools, homes and faces, so a Chilean audience feels it is theirs." : ""}
 
 JSON shape:
-{"title":"","logline":"","music":"","characters":[{"key":"boy","name":"","look":""}],"shots":[{"idx":0,"seconds":2.5,"shot":"","characters":["boy"],"image":"","motion":"","narration":"","dialogue":null,"es":""}]}`;
+{"title":"","logline":"","music":"","lyrics":"","characters":[{"key":"boy","name":"","look":""}],"shots":[{"idx":0,"seconds":2.5,"shot":"","characters":["boy"],"image":"","motion":"","narration":"","dialogue":null,"es":""}]}`;
 }
 
 /** Cleans what Claude sends back: valid keys, lengths that add up, at most 24 shots. */
@@ -224,7 +295,7 @@ export function tidyPlan(p0: StoryPlan | null | undefined, seconds: number, resc
   }
   // a spoken line needs its time (up to 8 s; the film gets a bit longer rather than cutting words)
   shots = shots.map((s) => (s.dialogue ? { ...s, seconds: Math.min(8, Math.max(s.seconds, lineSeconds(s.dialogue.line))) } : s));
-  return { title: String(p.title ?? "Historia").slice(0, 80), logline: String(p.logline ?? "").slice(0, 300), music: String(p.music ?? "").slice(0, 600), characters, shots };
+  return { title: String(p.title ?? "Historia").slice(0, 80), logline: String(p.logline ?? "").slice(0, 300), music: String(p.music ?? "").slice(0, 600), lyrics: String(p.lyrics ?? "").slice(0, 1200), characters, shots };
 }
 
 export function characterPrompt(c: StoryCharacter, style: StyleId) {
@@ -256,7 +327,7 @@ ${who ? `Characters:\n${who}` : ""}
 Keep every character exactly as in their reference sheet. Cinematic, emotional, high detail. No text, no captions, no logos, no watermark, no split panels.`;
 }
 
-export function motionPrompt(shot: StoryShot, style: StyleId, plan?: StoryPlan, lang: StoryLang = "es-CL") {
+export function motionPrompt(shot: StoryShot, style: StyleId, plan?: StoryPlan, lang: StoryLang = "es-CL", ambient = false) {
   const st = styleById(style);
   const base = `${shot.motion || "Subtle natural movement, slow cinematic camera push-in."} Keep the style (${st.name}: ${st.prompt}) and the characters exactly as in the first frame. Smooth, cinematic motion. No text or captions.`;
   if (shot.dialogue && speaks(shot)) {
@@ -266,7 +337,7 @@ export function motionPrompt(shot: StoryShot, style: StyleId, plan?: StoryPlan, 
 ${name} looks natural and speaks this line out loud, with clear lip sync and a voice that fits their age and gender, in ${langById(lang).spoken}: "${shot.dialogue.line}"
 Only ${who?.name ?? "this character"} speaks; everyone else stays silent. No background music, no other voices.`.slice(0, 2400);
   }
-  return `${base} No dialogue, no lip movement.`.slice(0, 2400);
+  return `${base} No dialogue, no lip movement.${ambient ? " Natural ambient sound of the scene only (no music, no voices)." : ""}`.slice(0, 2400);
 }
 
 /** Rough provider cost of a whole film, to show before starting. */
@@ -305,4 +376,35 @@ ${o.all ? "- This is a full movie with dialogue: EVERY shot where a character is
 - Keep any current line that already works; improve the rest.
 
 JSON: {"shots":[{"idx":0,"dialogue":{"speaker":"key","line":"..."}},{"idx":1,"dialogue":null}]} with every shot index.`;
+}
+
+/** Writes (or rewrites) the lyrics of a story's song. */
+export function lyricsPrompt(o: { idea: string; plan: StoryPlan; lang: StoryLang; context?: string }) {
+  const secs = Math.round(o.plan.shots.reduce((a, s) => a + s.seconds, 0));
+  return `Write the lyrics of an original song for this short animated film. Language: ${langById(o.lang).spoken}.
+Story: ${o.plan.title}: ${o.plan.logline}
+Idea: ${o.idea.slice(0, 1500)}
+${o.context?.trim() ? `Customer's notes: ${o.context.slice(0, 800)}\n` : ""}The film lasts about ${secs} seconds: 6 to 10 short singable lines with a chorus, following the story's emotion. Original; never name brands or real artists.
+Also write a music prompt in English for the song (genre, mood, tempo, voice type).
+JSON: {"lyrics":"line 1\\nline 2","music":"..."}`;
+}
+
+/** The whole story as a readable script (to copy, share or paste anywhere). */
+export function storyScript(plan: StoryPlan, st: { narrator?: boolean; music_mode?: MusicMode }) {
+  const name = (k: string) => plan.characters.find((c) => c.key === k)?.name ?? k;
+  let t = 0;
+  const rows = plan.shots.map((s, i) => {
+    const from = t;
+    t += s.seconds;
+    const say = [s.dialogue?.line ? `${name(s.dialogue.speaker)}: «${s.dialogue.line}»` : "", st.narrator && s.narration?.trim() ? `Narrador: «${s.narration.trim()}»` : ""].filter(Boolean).join(" · ");
+    return `${i + 1}. [${from.toFixed(1)}–${t.toFixed(1)} s] ${s.es}${say ? `\n   ${say}` : ""}`;
+  });
+  const mode = st.music_mode ?? "ia";
+  return [
+    plan.title.toUpperCase(), plan.logline, "",
+    "PERSONAJES", ...plan.characters.map((c) => `- ${c.name}`), "",
+    "GUION", ...rows, "",
+    mode === "ninguna" ? "MÚSICA: sin música." : mode === "propia" ? "MÚSICA: la canción que subiste." : `MÚSICA: ${plan.music}`,
+    ...(mode === "cancion" && plan.lyrics?.trim() ? ["", "LETRA", plan.lyrics.trim()] : []),
+  ].join("\n");
 }

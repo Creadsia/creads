@@ -10,7 +10,7 @@ import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { isOwner } from "@/lib/auth";
 import { loadStory, updateStory } from "@/lib/historia-db";
-import { speaks, voiceLang } from "@/lib/historias";
+import { musicModeOf, speaks, voiceLang } from "@/lib/historias";
 import { publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
@@ -19,8 +19,11 @@ export const maxDuration = 300;
 const USD_PER_CHAR = 0.00022; // same as "Voz IA"
 const musicUsd = (secs: number) => +((0.15 * Math.max(secs, 15)) / 60).toFixed(3);
 
-// POST {adId, newMusic?, music?, subtitles?, partial?}: (partial: leave out the shots that aren't ready) makes the soundtrack (once; again with newMusic), the narrator's lines
-// if the story has a narrator, and cuts the film. The finished film goes to "Anuncios terminados".
+// POST {adId, newMusic?, music?, subtitles?, partial?}: (partial: leave out the shots that aren't ready)
+// makes the soundtrack as the story asks (AI music or a song with lyrics, made once and again with
+// newMusic; the customer's own track; or none), records the narrator's lines if there is a narrator, and
+// cuts the film with the characters' voices (unless muted) and each scene's ambient sound (if kept).
+// The finished film goes to "Anuncios terminados".
 export async function POST(req: Request) {
   const s = await fullSession(req);
   if (s instanceof NextResponse) return s;
@@ -45,10 +48,12 @@ export async function POST(req: Request) {
         await download(await fetchableUrl(c.url!, ws), file);
         const sh = st.plan.shots[c.idx];
         const p = await probe(file);
-        const voice = Boolean(sh && speaks(sh)) && p.audio;
+        const talks = Boolean(sh && speaks(sh)) && p.audio;
         let secs = sh?.seconds ?? 2.5;
-        if (voice) secs = Math.max(secs, Math.min(p.dur, await speechEnd(file, p.dur)));
-        return { idx: c.idx, file, secs: Math.round(secs * 10) / 10, voice, text: sh?.dialogue?.line };
+        if (talks) secs = Math.max(secs, Math.min(p.dur, await speechEnd(file, p.dur)));
+        // muted dialogue: the shot keeps its length but plays without the voice
+        const voice = talks && !st.mute_dialogue;
+        return { idx: c.idx, file, secs: Math.round(secs * 10) / 10, voice, ambient: Boolean(st.ambient) && p.audio && !talks, text: sh?.dialogue?.line };
       }),
     );
     const starts = new Map<number, number>();
@@ -57,19 +62,29 @@ export async function POST(req: Request) {
     // 2. music, made for the real length (paid once; "otra música" or a longer film makes a new one).
     //    If it can't be made, the film goes out without it (and the music isn't charged).
     if (typeof b?.music === "string" && b.music.trim().length > 5) st.plan.music = b.music.trim().slice(0, 600);
+    const mode = musicModeOf(st);
     let musicNote = "";
-    if (!st.music_url || b?.newMusic === true || (st.music_secs ?? 0) < total - 0.5) {
+    // AI music or a song: made once for this length and kind; again when asked, when the film got
+    // longer or when the kind changed (instrumental ↔ song)
+    const made = st.music_made ?? "ia";
+    if ((mode === "ia" || mode === "cancion") && (!st.music_url || b?.newMusic === true || (st.music_secs ?? 0) < total - 0.5 || made !== mode)) {
       let ref = "";
       try {
-        ref = (await payFor(s.user, musicUsd(total), "Historia · música", "eleven")).ref;
-        const bytes = await compose(`${st.plan.music || "cinematic emotional orchestral score that builds to an uplifting climax"}. Instrumental, no vocals.`, Math.ceil(total) + 2, true);
+        ref = (await payFor(s.user, musicUsd(total), mode === "cancion" ? "Historia · canción" : "Historia · música", "eleven")).ref;
+        const lyrics = st.plan.lyrics?.trim();
+        const bytes = mode === "cancion"
+          ? await compose(`${st.plan.music || "uplifting emotional pop song with a catchy chorus"}.${lyrics ? ` Sing exactly these lyrics, in this order:\n${lyrics}` : " With vocals."}`, Math.ceil(total) + 2, false)
+          : await compose(`${st.plan.music || "cinematic emotional orchestral score that builds to an uplifting climax"}. Instrumental, no vocals.`, Math.ceil(total) + 2, true);
         const musicUrl = await saveMedia(ws, "historias", bytes, "audio/mpeg");
         st.music_url = musicUrl;
         st.music_secs = Math.ceil(total) + 2;
-        await updateStory(s.db, adId, (x) => { x.music_url = musicUrl; x.music_secs = Math.ceil(total) + 2; x.plan.music = st.plan.music; });
+        st.music_made = mode;
+        await updateStory(s.db, adId, (x) => { x.music_url = musicUrl; x.music_secs = Math.ceil(total) + 2; x.music_made = mode; x.plan.music = st.plan.music; });
       } catch (err) {
         if (ref) await refundJob(ws, ref);
-        if (!st.music_url) musicNote = isOwner(s.user) ? `La música no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música.` : "La música no se pudo crear esta vez. La película salió sin música; prueba «Otra música» en un rato.";
+        const what = mode === "cancion" ? "La canción" : "La música";
+        if (!st.music_url || made !== mode) musicNote = isOwner(s.user) ? `${what} no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música.` : `${what} no se pudo crear esta vez. La película salió sin música; prueba de nuevo en un rato.`;
+        if (made !== mode) st.music_url = null; // don't play the other kind of music by mistake
       }
     }
 
@@ -105,10 +120,11 @@ export async function POST(req: Request) {
 
     // 4. the film
     let music: string | null = null;
-    if (st.music_url) {
+    const track = mode === "ninguna" ? null : mode === "propia" ? st.own_music_url ?? null : st.music_url ?? null;
+    if (track) {
       music = path.join(dir, "music.mp3");
-      await download(await fetchableUrl(st.music_url, ws), music);
-    }
+      await download(await fetchableUrl(track, ws), music);
+    } else if (mode === "propia") musicNote = "No subiste tu música: la película salió sin música. Súbela en «Sonido» y vuelve a armarla.";
     const subtitles = b?.subtitles === true;
     try {
       const { bytes, seconds } = await buildStory(dir, shots, String(ad.aspect || "9:16"), music, narrFiles, subtitles);

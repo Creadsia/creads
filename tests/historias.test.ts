@@ -58,3 +58,28 @@ test("historias: the dialogue writer sees the idea, the customer's context and w
   assert.match(t, /#3 .*image 2/);
   assert.match(t, /Chilean Spanish/);
 });
+
+test("historias: sound options, song lyrics, context and the readable script", async () => {
+  const h = await import("../src/lib/historias");
+  // every preset is reachable and recognized back
+  for (const p of h.SOUND_PRESETS) assert.equal(h.presetOf(p), p.id);
+  assert.equal(h.musicModeOf({}), "ia"); // stories made before the option keep their AI music
+  assert.equal(h.musicModeOf({ music_mode: "ninguna" }), "ninguna");
+  // Chilean Spanish without slang by default; the plan follows the customer's notes and writes lyrics for a song
+  const t = h.planPrompt({ idea: "Tomás conoce a Pancho, un mentor que le enseña a vender", style: "anime", seconds: 30, lang: "es-CL", narrator: false, dialogue: true, aspect: "9:16", context: "Pancho habla relajado", music: "cancion" });
+  assert.match(t, /never "po", "cachai"/);
+  assert.match(t, /Pancho habla relajado/);
+  assert.match(t, /"lyrics": the song's lyrics/);
+  assert.match(t, /happens in Chile/);
+  assert.doesNotMatch(h.planPrompt({ idea: "x".repeat(20), style: "anime", seconds: 30, lang: "es", narrator: false, aspect: "9:16" }), /happens in Chile/);
+  // ambient sound is asked only for shots where nobody speaks
+  const shot = { idx: 0, seconds: 3, shot: "wide", characters: [], image: "a park", motion: "slow pan", es: "Un parque" };
+  assert.match(h.motionPrompt(shot, "anime", undefined, "es-CL", true), /ambient sound/);
+  assert.doesNotMatch(h.motionPrompt(shot, "anime", undefined, "es-CL", false), /ambient sound/);
+  // the script reads like a film script
+  const plan = h.tidyPlan({ title: "El mentor", logline: "Un niño aprende a vender.", music: "pop", lyrics: "Línea uno\nLínea dos\nCoro", characters: [{ key: "pancho", name: "Pancho", look: "man, 30" }], shots: [{ idx: 0, seconds: 3, shot: "close", characters: ["pancho"], image: "plaza", motion: "push", es: "Pancho sonríe", dialogue: { speaker: "pancho", line: "El colegio te enseña a sumar" } }] } as never, 30);
+  const sc = h.storyScript(plan, { narrator: false, music_mode: "cancion" });
+  assert.match(sc, /Pancho: «El colegio te enseña a sumar»/);
+  assert.match(sc, /LETRA\nLínea uno/);
+  assert.match(h.storyScript(plan, { music_mode: "ninguna" }), /sin música/);
+});
