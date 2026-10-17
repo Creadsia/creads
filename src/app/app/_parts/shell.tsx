@@ -27,6 +27,7 @@ const I = {
   key: "M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7Zm1 2h.01",
   chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
+  pen: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z",
 };
 
@@ -45,8 +46,9 @@ const NAV: { group?: string; items: Item[] }[] = [
   {
     group: "Crear",
     items: [
+      { href: "/app/guiones", label: "Generador de guiones", icon: I.pen, badge: "NUEVO" },
       { href: "/app/crear", label: "Crear anuncio", icon: I.create },
-      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true, badge: "NUEVO" },
+      { href: "/app/historias", label: "Historias animadas", icon: I.film, full: true },
       { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
       { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
     ],

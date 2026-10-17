@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FORMATS, type FormatId, formatById } from "@/lib/formats";
 import { Field, PageHead, type Row, SetupNotice, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import { NICHES } from "@/lib/niches";
+import { TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
@@ -45,6 +46,17 @@ export default function Crear() {
   const [niche, setNiche] = useState("");
   useEffect(() => { try { const v = localStorage.getItem("creads-niche"); if (v) setNiche(v); } catch {} }, []);
   const pickNiche = (v: string) => { setNiche(v); try { localStorage.setItem("creads-niche", v); } catch {} };
+
+  // a script sent from the Generador de guiones
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(TO_CREAR_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(TO_CREAR_KEY);
+      const d = JSON.parse(raw) as { text?: string; lang?: string; title?: string };
+      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setStep(0); }
+    } catch {}
+  }, []);
 
   const f = formatById(format);
   useEffect(() => { try { const v = localStorage.getItem("creads-fmt"); if (v && FORMATS.some((x) => x.id === v)) setFormat(v as FormatId); } catch {} }, []);
@@ -133,6 +145,7 @@ export default function Crear() {
           </div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
+          <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en el <a href="/app/guiones" className="font-semibold text-accent-text underline">Generador de guiones</a>.</p>
 
           <div className="flex flex-col gap-3">
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>

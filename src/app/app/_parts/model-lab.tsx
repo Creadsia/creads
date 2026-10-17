@@ -42,6 +42,9 @@ export default function ModelLab({ code }: { code: string }) {
   const [imgBusy, setImgBusy] = useState(false);
   const [imgErr, setImgErr] = useState("");
   const [image, setImage] = useState<string | null>(null);
+  // optional reference photos for the image: a face and/or a product (uploaded or from the library)
+  const [refFace, setRefFace] = useState("");
+  const [refProduct, setRefProduct] = useState("");
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
@@ -83,7 +86,7 @@ export default function ModelLab({ code }: { code: string }) {
     setImgBusy(true);
     setImgErr("");
     try {
-      const res = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt, aspect, model: im.id }) });
+      const res = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt, aspect, model: im.id, refs: [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])] }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudo generar la imagen.");
       setImage(data.url);
@@ -184,6 +187,14 @@ export default function ModelLab({ code }: { code: string }) {
               </option>
             ))}
           </select>
+          <details className="rounded-lg border border-line px-3 py-2 text-sm" open={Boolean(refFace || refProduct)}>
+            <summary className="cursor-pointer font-semibold text-muted">Fotos de referencia (opcional)</summary>
+            <p className="mt-1 text-xs text-muted">Sube una foto para que la imagen mantenga esa cara o ese producto. Describe en el texto qué quieres que haga o dónde aparece.</p>
+            <div className="mt-2 flex flex-col gap-3">
+              <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-muted">Cara de la persona</span><ImageInput value={refFace} onChange={setRefFace} library={library.rows ?? []} /></div>
+              <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-muted">Producto u objeto</span><ImageInput value={refProduct} onChange={setRefProduct} library={library.rows ?? []} /></div>
+            </div>
+          </details>
           <button
             type="button"
             onClick={makeImage}
