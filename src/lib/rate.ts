@@ -23,6 +23,9 @@ const BUCKETS = {
   resetIp: [60 * 60, 20], // new-password attempts with an emailed link
   assist: [10 * 60, 25], // messages to the in-app assistant per person in 10 min
   assistDay: [24 * 60 * 60, 150], // ... and per day (each one is a paid AI call)
+  assistFree: [24 * 60 * 60, 10], // ... per day for accounts without an active plan
+  assistIp: [10 * 60, 40], // ... per connection in 10 min (many free accounts from one place)
+  assistAll: [24 * 60 * 60, 6000], // ... for everyone together per day (a hard ceiling on the AI bill)
 } as const;
 export type Bucket = keyof typeof BUCKETS;
 
@@ -68,6 +71,9 @@ const MSG: Record<Bucket, string> = {
   forgotAll: "No podemos enviar más correos por ahora. Escríbenos a hola@creadsia.com.",
   resetIp: "Demasiados intentos. Espera una hora.",
   assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
+  assistFree: "Ya hiciste varias preguntas hoy. Para seguir, revisa el Centro de ayuda; con un plan activo el asistente responde mucho más.",
+  assistIp: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
+  assistAll: "El asistente está con mucha demanda. Revisa el Centro de ayuda o escribe a hola@creadsia.com.",
   assistDay: "Llegaste al máximo de preguntas de hoy. Mañana sigo ayudándote; mientras, revisa el Centro de ayuda o escribe a hola@creadsia.com.",
 };
 

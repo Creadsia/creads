@@ -109,9 +109,9 @@ export const HELP: HelpArticle[] = [
   {
     id: "formatos", cat: "crear",
     q: "¿Qué formatos de anuncio puedo hacer?",
-    a: "UGC (una persona hablando a cámara), podcast, entrevista, ronda de testimonios, noticiero, comentario, drive-thru e historias animadas. Elige el que más se use en tu nicho: los ganadores de la Biblioteca de Meta te dan la pista.",
+    a: "UGC selfie (una persona hablando a cámara), Voz en off + escenas, Antes / después, Entrevista callejera, Podcast, Reportaje en terreno, Ronda de testimonios y Respuesta a comentario, además de Historias animadas. Elige el que más se use en tu nicho: los ganadores de la Biblioteca de Meta te dan la pista.",
     link: { label: "Crear anuncio", href: "/app/crear" },
-    tags: "formato ugc podcast noticiero entrevista historias animadas",
+    tags: "formato ugc podcast noticiero reportaje entrevista testimonios voz en off antes despues historias animadas",
   },
   {
     id: "modelo", cat: "crear",
@@ -157,7 +157,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "avatar", cat: "marca",
     q: "¿Cómo creo mi avatar?",
-    a: "En «Avatares», sube una foto clara de la cara (de frente, buena luz) o crea uno con IA. Si es una persona real, necesitas su permiso. Después lo eliges al crear cada anuncio.",
+    a: "En «Avatares», sube una foto clara de la cara (de frente y con buena luz). Necesitas el permiso de esa persona. Después lo eliges al crear cada anuncio.",
     link: { label: "Ir a Avatares", href: "/app/avatares" },
     tags: "avatar cara persona actor foto",
   },
@@ -187,7 +187,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "doblaje", cat: "herramientas",
     q: "¿Puedo pasar un anuncio a otro idioma?",
-    a: "Sí, con «Doblaje»: sube el video y elige el idioma (inglés, portugués o español). Mantiene la voz y sincroniza los labios.",
+    a: "Sí, con «Doblaje»: sube un video o audio de hasta 5 minutos y elige el idioma. Lo traduce y lo dobla con la misma voz. Si quieres que los labios calcen con el nuevo audio, pásalo después por «Sincronizar labios».",
     link: { label: "Doblaje", href: "/app/herramientas/doblaje" },
     tags: "idioma ingles portugues traducir doblar",
   },
@@ -196,7 +196,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "fallo", cat: "problemas",
     q: "Mi video falló, ¿perdí mis créditos?",
-    a: "No. Cuando algo falla, los créditos vuelven solos a tu saldo, sin que tengas que pedirlo. Puedes reintentarlo; si vuelve a fallar, prueba con otro modelo o cambia un poco la instrucción.",
+    a: "No. Si se usaron créditos y el trabajo falla, vuelven solos a tu saldo, sin que tengas que pedirlo (los ves en tus movimientos). Puedes reintentarlo; si vuelve a fallar, prueba con otro modelo o cambia un poco la instrucción.",
     link: { label: "Ver mis movimientos", href: "/app/planes" },
     tags: "fallo error fallo devolvieron creditos perdi cobro",
   },
@@ -236,13 +236,13 @@ export const HELP: HelpArticle[] = [
   {
     id: "correos", cat: "cuenta",
     q: "No quiero recibir correos con consejos",
-    a: "Cada correo de consejos trae abajo el enlace «Darme de baja». Los avisos de tu cuenta (pagos, vencimientos, clave) siempre te llegan.",
+    a: "Cada correo de consejos trae abajo el enlace «No quiero recibir más consejos». Los avisos de tu cuenta (pagos, vencimientos, clave) siempre te llegan.",
     tags: "correos email spam baja desuscribir",
   },
   {
     id: "equipo", cat: "cuenta",
     q: "¿Puede trabajar más gente en mi cuenta?",
-    a: "Sí: el plan Studio incluye 3 usuarios del equipo trabajando en la misma cuenta, con los mismos avatares, voces y créditos.",
+    a: "Sí: el plan Studio incluye 3 usuarios trabajando en la misma cuenta, con los mismos avatares, voces y créditos. Para sumar a alguien, escríbenos a hola@creadsia.com con su correo y lo agregamos.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "equipo usuarios agencia compartir cuenta",
   },

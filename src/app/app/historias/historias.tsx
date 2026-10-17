@@ -524,12 +524,12 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
       </section>
 
       {dirty && (
-        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-text/50 bg-surface px-4 py-3 shadow-lg">
+        <div className="sticky bottom-4 z-10 mr-16 flex flex-wrap items-center justify-between gap-3 rounded-xl sm:mr-40 border border-accent-text/50 bg-surface px-4 py-3 shadow-lg">
           <span className="text-sm">Tienes cambios sin guardar. Se guardan solos cuando crees algo, o guárdalos ahora.</span>
           <button type="button" onClick={save} disabled={busy.save} className={btnCls}>{busy.save ? "Guardando…" : "Guardar cambios"}</button>
         </div>
       )}
-      {err && <p role="alert" className="sticky bottom-4 rounded-xl border border-bad/40 bg-surface px-4 py-3 text-sm text-bad shadow-lg">{err}</p>}
+      {err && <p role="alert" className="sticky bottom-4 mr-16 rounded-xl border border-bad/40 sm:mr-40 bg-surface px-4 py-3 text-sm text-bad shadow-lg">{err}</p>}
     </div>
   );
 }

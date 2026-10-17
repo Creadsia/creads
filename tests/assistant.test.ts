@@ -22,7 +22,8 @@ test("assistant: prompt carries the account and the rules", () => {
   assert.match(p, /Credit balance: 1234/);
   assert.match(p, /\+120 · refund/);
   assert.match(p, /\/app\/herramientas/);
-  assert.match(ASSISTANT_SYSTEM, /Never name the companies/);
+  assert.match(ASSISTANT_SYSTEM, /Never name any company/);
+  assert.ok(!/anthropic|elevenlabs|supabase/i.test(ASSISTANT_SYSTEM));
   assert.match(ASSISTANT_SYSTEM, /Clonar|clono mi voz/i);
 });
 

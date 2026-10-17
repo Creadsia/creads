@@ -3,8 +3,8 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { hasFullStudio, isOwner } from "@/lib/auth";
 import { ordersOf } from "@/lib/billing";
 import { PLANS } from "@/lib/catalog";
-import { creditStatus, history } from "@/lib/credits";
-import { tooMany } from "@/lib/rate";
+import { creditStatus, history, refundedJobs } from "@/lib/credits";
+import { clientIp, tooMany } from "@/lib/rate";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { quietCustomerText } from "@/lib/public-error";
@@ -18,9 +18,10 @@ export const maxDuration = 60;
 // account (also without a plan: "how do I pay?" is a support question). Each message is a paid AI call,
 // so it's limited per person; the answer only links to known pages and never names vendors.
 
-const STATUS: Record<string, string> = { done: "finished", failed: "FAILED (credits refunded automatically)", running: "in progress", pending: "queued", stuck: "unknown" };
+const STATUS: Record<string, string> = { done: "finished", failed: "FAILED", running: "in progress", generating: "in progress", pending: "queued", stuck: "unknown" };
 
 function jobLabel(kind: string | null, adId: unknown) {
+  if (adId && kind?.startsWith("shot")) return "Shot of an animated story (Historias animadas)";
   if (adId) return "Scene of an ad (Crear anuncio)";
   if (kind === "gen:video") return "Video IA (Video e imagen IA)";
   if (kind === "gen:image") return "Imagen IA (Video e imagen IA)";
@@ -38,6 +39,8 @@ async function accountOf(s: NonNullable<Awaited<ReturnType<typeof session>>>): P
     history(ws, 12).catch(() => []),
     isOwner(s.user) ? Promise.resolve([]) : ordersOf(ws).catch(() => []),
   ]);
+  const failed = (jobs as Record<string, unknown>[]).filter((j) => j.status === "failed").map((j) => String(j.id));
+  const back = await refundedJobs(ws, failed).catch(() => new Set<string>());
   const sub = orders.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
   const planName = st?.plan ? PLANS.find((p) => p.id === String(st.plan).toLowerCase())?.name ?? String(st.plan) : null;
   return {
@@ -51,7 +54,7 @@ async function accountOf(s: NonNullable<Awaited<ReturnType<typeof session>>>): P
     adsOnly: !hasFullStudio(s.user),
     jobs: (jobs as Record<string, unknown>[]).map((j) => ({
       what: jobLabel(j.kind as string | null, j.ad_id),
-      status: STATUS[String(j.status)] ?? String(j.status),
+      status: j.status === "failed" ? `FAILED · ${back.has(String(j.id)) ? "its credits were refunded" : "no refund on record (it may have failed before charging anything)"}` : STATUS[String(j.status)] ?? String(j.status),
       when: short(String(j.created_at)),
       error: j.status === "failed" ? quietCustomerText(j.error as string | null) || undefined : undefined,
     })),
@@ -62,8 +65,13 @@ async function accountOf(s: NonNullable<Awaited<ReturnType<typeof session>>>): P
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
-  const limited = (await tooMany("assist", s.user.id)) ?? (await tooMany("assistDay", s.user.id));
+  const limited = (await tooMany("assistIp", clientIp(req))) ?? (await tooMany("assist", s.user.id)) ?? (await tooMany("assistDay", s.user.id));
   if (limited) return limited;
+  // accounts without an active plan get a few answers a day (each one is a paid AI call)
+  const st = await creditStatus(s.user.workspace).catch(() => null);
+  const free = !st?.unlimited && (!st?.plan || st.expired);
+  const capped = (free ? await tooMany("assistFree", s.user.workspace) : null) ?? (await tooMany("assistAll", "all"));
+  if (capped) return capped;
   if (!textAI.configured()) return NextResponse.json({ error: "El asistente no está disponible en este momento. Revisa el Centro de ayuda o escribe a hola@creadsia.com." }, { status: 503 });
 
   const b = await req.json().catch(() => null);

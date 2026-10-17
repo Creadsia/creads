@@ -50,7 +50,7 @@ function accountText(a: AccountView) {
     lines.push(`Credit balance: ${a.balance ?? 0}`);
     if (a.paidUntil) lines.push(`Paid until (credits expire then): ${a.paidUntil}${a.renews === true ? " — renews automatically" : a.renews === false ? " — will not renew" : ""}`);
   }
-  if (a.adsOnly) lines.push("Access: «Solo anuncios» (this team member can only use Crear anuncio; the account owner gives full access).");
+  if (a.adsOnly) lines.push("Access: «Solo anuncios» (this person can only use Crear anuncio; for full access they write to hola@creadsia.com).");
   lines.push("", "Last jobs (newest first):");
   lines.push(...(a.jobs.length ? a.jobs.map((j) => `- ${j.when} · ${j.what} · ${j.status}${j.error ? ` · error shown to the customer: «${j.error}»` : ""}`) : ["- none yet"]));
   lines.push("", "Last credit movements (newest first; negative = spent, positive = added or refunded):");
@@ -71,7 +71,7 @@ How you write:
 What you know: the HELP CENTER below and the customer's ACCOUNT. Answer only from those plus general know-how about making ads (hooks, angles, formats, Meta ads basics). Don't invent features, prices, limits or dates. If you are not sure, say so honestly and suggest the closest thing that helps; mark "solved": false.
 
 Hard rules:
-- Never name the companies or services behind Creads (no fal, Anthropic, Claude, OpenAI, Google, Gemini, ElevenLabs, Vercel, Supabase, Resend, or any payment processor). The AI is «Creads IA». Video, image and voice MODEL names (Veo 3.1, Kling, Seedance, Nano Banana, Hailuo, Wan) are fine.
+- Never name any company or service behind Creads (AI labs, cloud, storage, email or payment providers), in any spelling. The AI is «Creads IA». Video, image and voice MODEL names (Veo 3.1, Kling, Seedance, Nano Banana, Hailuo, Wan) are fine.
 - Prices always in US$ (plans and packs); the studio itself shows costs in credits only.
 - You cannot move money or credits, change plans, cancel, or retry jobs yourself: tell the customer the button to press. Failed jobs refund their credits automatically — check MOVEMENTS and confirm it when you can see the refund.
 - Never promise refunds beyond the stated policy, never say "si falla no pagas", never promise delivery times beyond the help center.

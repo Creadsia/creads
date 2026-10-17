@@ -41,6 +41,10 @@ export default function Assistant() {
   const list = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const sendRef = useRef<(q: string) => void>(() => {});
+  const busyRef = useRef(false);
+  const convo = useRef(0); // bumps on «Nueva»: a late answer from the old chat is dropped
+  const launcher = useRef<HTMLButtonElement>(null);
+  const close = () => { setOpen(false); setTimeout(() => launcher.current?.focus(), 0); };
 
   useEffect(() => { setMsgs(load()); }, []);
   useEffect(() => { save(msgs); list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" }); }, [msgs, busy]);
@@ -51,7 +55,7 @@ export default function Assistant() {
       const q = String((e as CustomEvent).detail ?? "").trim();
       if (q) sendRef.current(q);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen((o) => { if (o) setTimeout(() => launcher.current?.focus(), 0); return false; }); };
     window.addEventListener(ASK_EVENT, onAsk);
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener(ASK_EVENT, onAsk); window.removeEventListener("keydown", onKey); };
@@ -59,7 +63,9 @@ export default function Assistant() {
 
   async function send(q: string) {
     const content = q.trim().slice(0, 1500);
-    if (!content || busy) return;
+    if (!content || busyRef.current) return;
+    busyRef.current = true;
+    const mine = convo.current;
     const next: Msg[] = [...msgs.filter((m) => !m.error), { role: "user", content }];
     setMsgs(next);
     setText("");
@@ -72,10 +78,11 @@ export default function Assistant() {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No pude responder ahora. Vuelve a intentarlo en un momento.");
-      setMsgs((m) => [...m, { role: "assistant", content: d.answer, links: d.links }]);
+      if (mine === convo.current) setMsgs((m) => [...m, { role: "assistant", content: d.answer, links: d.links }]);
     } catch (e) {
-      setMsgs((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : "No pude responder ahora.", error: true }]);
+      if (mine === convo.current) setMsgs((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : "No pude responder ahora.", error: true }]);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -84,7 +91,7 @@ export default function Assistant() {
   return (
     <>
       {!open && (
-        <button type="button" onClick={() => setOpen(true)} aria-label="Abrir el Asistente Creads"
+        <button ref={launcher} type="button" onClick={() => setOpen(true)} aria-label="Abrir el Asistente Creads"
           className="fixed right-4 bottom-4 z-[55] flex items-center gap-2 rounded-full bg-[image:var(--grad)] p-3.5 font-semibold text-white shadow-[0_12px_32px_-10px_rgba(124,58,237,0.7)] transition-transform hover:-translate-y-0.5 sm:px-5 sm:py-3 print:hidden">
           <Icon d={CHAT} />
           <span className="hidden text-sm sm:inline">¿Te ayudo?</span>
@@ -100,8 +107,8 @@ export default function Assistant() {
               <b className="text-sm">Asistente Creads</b>
               <span className="flex items-center gap-1.5 text-xs text-muted"><span className="h-1.5 w-1.5 rounded-full bg-good" aria-hidden="true" />Responde al instante, a toda hora</span>
             </span>
-            {msgs.length > 0 && <button type="button" onClick={() => setMsgs([])} className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-ink">Nueva</button>}
-            <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-ink"><Icon d={CLOSE} /></button>
+            {msgs.length > 0 && <button type="button" onClick={() => { convo.current++; busyRef.current = false; setBusy(false); setMsgs([]); }} className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-ink">Nueva</button>}
+            <button type="button" onClick={close} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-ink"><Icon d={CLOSE} /></button>
           </header>
 
           <div ref={list} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" aria-live="polite">

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
+import { refundedJobs } from "@/lib/credits";
 import { findTool } from "@/lib/tools";
 
 export const dynamic = "force-dynamic";
 
 // Recent failed jobs (last 48 h), so the studio can say so first: "it failed, your credits are back,
-// try again here" — before the customer has to ask. Credits for failed jobs are refunded automatically.
+// try again here" — before the customer has to ask. Only jobs whose credits were refunded are listed.
 
 export interface FailNotice { id: string; what: string; href: string; when: string }
 
@@ -15,12 +16,17 @@ export async function GET(req: Request) {
   try {
     const since = Date.now() - 48 * 3600_000;
     const rows = (await s.db.list("clips", "status=eq.failed&order=created_at.desc&limit=12")) as Record<string, unknown>[];
-    const items: FailNotice[] = rows
-      .filter((r) => Date.parse(String(r.created_at)) >= since)
+    const recent = rows.filter((r) => Date.parse(String(r.created_at)) >= since);
+    // only jobs whose credits actually came back (one that failed before charging isn't news here)
+    const back = await refundedJobs(s.user.workspace, recent.map((r) => String(r.id)));
+    const items: FailNotice[] = recent
+      .filter((r) => back.has(String(r.id)))
       .map((r) => {
         const kind = String(r.kind ?? "");
         const tool = kind.startsWith("tool:") ? findTool(kind.slice(5)) : null;
-        const [what, href] = r.ad_id
+        const [what, href] = r.ad_id && kind.startsWith("shot")
+          ? ["una toma de tu historia animada", `/app/historias?id=${r.ad_id}`]
+          : r.ad_id
           ? ["una escena de tu anuncio", `/app/videos/${r.ad_id}`]
           : tool
             ? [`«${tool.name}»`, `/app/herramientas/${tool.id}`]

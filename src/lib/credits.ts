@@ -185,3 +185,18 @@ export async function allBalances(): Promise<Record<string, number>> {
   for (const r of rows) out[r.owner] = (out[r.owner] ?? 0) + Number(r.delta);
   return out;
 }
+
+/**
+ * Of these jobs (charged with ref = job id), which ones got their credits back. A failed job that was
+ * never charged (no credits, daily limit…) isn't in the set: nothing to give back.
+ */
+export async function refundedJobs(ws: string, jobIds: string[]): Promise<Set<string>> {
+  const ids = jobIds.filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+  if (unlimited(ws) || !ids.length) return new Set();
+  const owner = encodeURIComponent(ws);
+  const charges = await sbRest<{ id: number; ref: string }[]>(`credits?owner=eq.${owner}&kind=eq.charge&delta=lt.0&ref=in.(${ids.join(",")})&select=id,ref&limit=200`);
+  if (!charges.length) return new Set();
+  const refunds = await sbRest<{ ref: string }[]>(`credits?owner=eq.${owner}&kind=eq.refund&ref=in.(${charges.map((c) => `charge:${c.id}`).join(",")})&select=ref&limit=200`);
+  const back = new Set(refunds.map((r) => r.ref));
+  return new Set(charges.filter((c) => back.has(`charge:${c.id}`)).map((c) => c.ref));
+}

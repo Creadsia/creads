@@ -69,12 +69,12 @@ export const es: Content = {
     ],
     voices: {
       title: "Anuncios que hablan, en cualquier idioma",
-      lead: "Podcast, noticiero, entrevista en la calle: eliges el formato, escribes la frase y la voz. Después lo doblas con los labios sincronizados.",
+      lead: "Podcast, noticiero, entrevista en la calle: eliges el formato, escribes la frase y la voz. Después lo doblas a otro idioma con la misma voz.",
       on: "Activar sonido",
       off: "Silenciar",
       items: [
         { k: "llama", title: "Podcast", sub: "Español, acento chileno" },
-        { k: "llamaEn", title: "El mismo anuncio, doblado", sub: "Inglés, labios sincronizados" },
+        { k: "llamaEn", title: "El mismo anuncio, doblado", sub: "Al inglés, con la misma voz" },
         { k: "cat", title: "Noticiero", sub: "Formato última hora" },
         { k: "viking", title: "Entrevista en la calle", sub: "Estilo testimonio real" },
       ],

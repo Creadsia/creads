@@ -68,12 +68,12 @@ export const en = {
     ],
     voices: {
       title: "Ads that talk, in any language",
-      lead: "Podcast, news anchor, street interview: pick a format, write the line and choose the voice. Then dub it with matching lips.",
+      lead: "Podcast, news anchor, street interview: pick a format, write the line and choose the voice. Then dub it into another language with the same voice.",
       on: "Turn sound on",
       off: "Mute",
       items: [
         { k: "llama", title: "Podcast", sub: "Spanish, Chilean accent" },
-        { k: "llamaEn", title: "Same ad, dubbed", sub: "English, lips matched" },
+        { k: "llamaEn", title: "Same ad, dubbed", sub: "Into English, same voice" },
         { k: "cat", title: "News anchor", sub: "Breaking-news format" },
         { k: "viking", title: "Street interview", sub: "Real-testimony style" },
       ],
