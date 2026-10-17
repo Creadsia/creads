@@ -3,7 +3,8 @@ import { es } from "@/content/es";
 import Landing from "./landing";
 import { usdClpRate } from "@/lib/usd-clp";
 
-export const revalidate = 3600; // prices in pesos follow the dollar rate set in Finanzas
+export const revalidate = 3600; // rebuilt hourly (the approximate pesos follow the dollar)
+export const dynamic = "force-static"; // served from cache: fast for every visitor
 
 // Launching in Chile: the home page is in Spanish; English lives at /en.
 export const metadata: Metadata = {

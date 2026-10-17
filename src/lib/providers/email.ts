@@ -9,6 +9,8 @@ export interface Email {
   text: string;
   /** Short label for Resend's dashboard (e.g. "bienvenida"). */
   tag?: string;
+  /** Opt-out link for tips (adds the List-Unsubscribe header mail apps show as a button). */
+  unsub?: string;
 }
 
 export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY);
@@ -31,6 +33,7 @@ export async function sendEmail(e: Email): Promise<boolean> {
         html: e.html,
         text: e.text,
         ...(e.tag ? { tags: [{ name: "tipo", value: e.tag }] } : {}),
+        ...(e.unsub ? { headers: { "List-Unsubscribe": `<${e.unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });

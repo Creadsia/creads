@@ -11,7 +11,7 @@ const hello = (name: string | null | undefined) => (first(name) ? `Hola ${first(
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 const longDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
 
-function layout(o: { preview: string; title: string; paragraphs: string[]; cta?: { label: string; href: string }; after?: string[]; rows?: [string, string][] }) {
+function layout(o: { preview: string; title: string; paragraphs: string[]; cta?: { label: string; href: string }; after?: string[]; rows?: [string, string][]; unsub?: string }) {
   const p = (t: string) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#3b3754">${t}</p>`;
   const rows = o.rows?.length
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 18px;border:1px solid #e7e4f2;border-radius:12px;border-collapse:separate">${o.rows
@@ -31,7 +31,7 @@ function layout(o: { preview: string; title: string; paragraphs: string[]; cta?:
 <h1 style="margin:0 0 16px;font-size:22px;line-height:1.25;color:#1d1a2e">${esc(o.title)}</h1>
 ${o.paragraphs.map(p).join("")}${rows}${cta}${(o.after ?? []).map(p).join("")}
 </td></tr>
-<tr><td style="padding:16px 4px;font-size:12px;line-height:1.5;color:#8a86a3">Creads IA · creadsia.com · ¿Dudas? Responde este correo o escríbenos a hola@creadsia.com.</td></tr>
+<tr><td style="padding:16px 4px;font-size:12px;line-height:1.5;color:#8a86a3">Creads IA · creadsia.com · ¿Dudas? Responde este correo o escríbenos a hola@creadsia.com.${o.unsub ? `<br><a href="${esc(o.unsub)}" style="color:#8a86a3">No quiero recibir más consejos</a>` : ""}</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -147,5 +147,55 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
       after: r.alerts.length ? [`<b>Para revisar:</b><br>${r.alerts.map((a) => `• ${esc(a)}`).join("<br>")}`] : [],
     }),
     text: plain([`Resumen del ${date}`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", ...(r.alerts.length ? ["Para revisar:", ...r.alerts.map((a) => `- ${a}`)] : ["Todo en orden."]), "", `Panel: ${SITE}/admin`]),
+  };
+}
+
+export type ActivationStep = 1 | 3 | 7;
+
+/** Tips in the first week, so new customers get to their first ad (and keep making them). */
+export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
+  const plan = o.hasPlan ? "" : " Para generar videos activa tu plan: el primer mes va con 50% de descuento.";
+  const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
+    1: {
+      subject: "Tu primer anuncio en 10 minutos",
+      title: "Tu primer anuncio en 10 minutos",
+      paragraphs: [
+        esc(hello(name)),
+        "La forma más rápida de partir:",
+        "<b>1.</b> Abre el <b>Generador de guiones</b> y pega un anuncio que esté funcionando (tuyo o de la competencia). Presiona <b>Desarmar el guion</b>: vas a ver su hook, dolor, oferta y CTA, y qué mejorar.<br><b>2.</b> Pide <b>10 hooks</b> o <b>3 ángulos</b> y elige el mejor.<br><b>3.</b> Presiona <b>Crear anuncio con este</b>, elige tu avatar y genera.",
+        esc(plan.trim()),
+      ].filter(Boolean),
+      cta: { label: "Abrir el Generador de guiones", href: `${SITE}/app/guiones` },
+    },
+    3: o.ads > 0
+      ? {
+          subject: "3 formas de sacarle más a Creads",
+          title: "Ya hiciste tu primer anuncio. ¿Y ahora?",
+          paragraphs: [esc(hello(name)), "Los anuncios que más venden casi nunca salen a la primera: salen de testear versiones.", "<b>Cambia solo el hook:</b> pide 10 hooks y haz 3 versiones del mismo anuncio.<br><b>Prueba otro ángulo:</b> la misma oferta contada desde el ahorro, el miedo o una historia.<br><b>Historias animadas:</b> un formato que destaca en el feed y casi nadie está usando."],
+          cta: { label: "Hacer 3 versiones", href: `${SITE}/app/guiones` },
+        }
+      : {
+          subject: "¿Te ayudo con tu primer anuncio?",
+          title: "¿Te ayudo con tu primer anuncio?",
+          paragraphs: [esc(hello(name)), "Vi que todavía no creas tu primer anuncio. Si algo no quedó claro o no sabes por dónde partir, <b>responde este correo</b> con qué vendes y a quién, y te ayudamos a armar el guion.", `O parte solo: en el Generador de guiones, «Crear desde cero» escribe 3 guiones con solo contarle qué vendes.${esc(plan)}`],
+          cta: { label: "Crear mi primer anuncio", href: `${SITE}/app/guiones` },
+        },
+    7: {
+      subject: "Lo que hacen los que más venden con sus anuncios",
+      title: "El método de los anuncios ganadores",
+      paragraphs: [
+        esc(hello(name)),
+        "Después de miles de anuncios, el patrón se repite:",
+        "<b>1. Parte de un guion que ya funciona</b> (el tuyo o uno de la competencia) y desármalo.<br><b>2. Cambia una sola cosa por vez</b>: el hook o el ángulo, no todo junto.<br><b>3. Publica 3 versiones con el mismo presupuesto</b> y compara el costo por lead.<br><b>4. Quédate con la ganadora</b> y vuelve a iterar sobre ella.",
+        `Creads está hecho para hacer ese ciclo en minutos, no en días.${esc(plan)}`,
+      ],
+      cta: { label: "Seguir creando", href: `${SITE}/app` },
+    },
+  };
+  const v = variants[o.step];
+  return {
+    to, tag: `activacion-${o.step}`, subject: v.subject, unsub: o.unsub,
+    html: layout({ preview: v.title, title: v.title, paragraphs: v.paragraphs, cta: v.cta, unsub: o.unsub }),
+    text: plain([...v.paragraphs.map((t) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "")), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
   };
 }

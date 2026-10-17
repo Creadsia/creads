@@ -26,6 +26,7 @@ export default function Privacidad() {
         <li>Mejorar la calidad: la revisión automática compara cada video con su guion. Los aprendizajes que se aplican a todos los usuarios son reglas generales, nunca tu contenido.</li>
         <li>Medir nuestras campañas, solo con tu consentimiento.</li>
         <li>Responder tus consultas y avisarte cambios importantes del servicio.</li>
+        <li>Enviarte consejos para usar la plataforma durante tu primera semana. Puedes dejar de recibirlos con un clic en el enlace del correo.</li>
       </ul>
 
       <h2>3. Caras y voces de personas</h2>

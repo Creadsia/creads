@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/admin";
 import { PACKS, PLANS, type ItemId } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import Checkout from "./checkout";
+import WhatsAppButton from "../whatsapp";
 import { oneTimeOnly } from "@/lib/mercadopago";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default async function Empezar({ searchParams }: { searchParams: Promise<
   return (
     <div lang="es">
       <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} />
+      <WhatsAppButton text="Hola, tengo una pregunta antes de comprar Creads IA" />
     </div>
   );
 }

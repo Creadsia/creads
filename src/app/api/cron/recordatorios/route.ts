@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sbRest } from "@/lib/supabase";
 import { balanceOf } from "@/lib/credits";
-import { ownerReportEmail, planEndingEmail } from "@/lib/emails";
+import { type ActivationStep, SITE, activationEmail, ownerReportEmail, planEndingEmail } from "@/lib/emails";
+import { optedOut, unsubLink } from "@/lib/unsub";
 import { dailyReport } from "@/lib/daily-report";
 import { runExpiry } from "@/lib/expiry";
+import { observedDollar } from "@/lib/usd-clp";
 import { emailConfigured, sendEmail } from "@/lib/providers/email";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,26 @@ function authorized(req: Request) {
 interface Ws { id: string; plan: string | null; paid_until: string }
 interface U { email: string; name: string | null; workspace: string }
 
+/** First-week tips (day 1, 3 and 7 after signing up), unless the person opted out. */
+async function activation(): Promise<number> {
+  let sent = 0;
+  const out = await optedOut().catch(() => new Set<string>());
+  for (const step of [1, 3, 7] as ActivationStep[]) {
+    const from = day(-step), to = day(-step + 1);
+    const users = await sbRest<{ email: string; name: string | null; workspace: string }[]>(`users?created_at=gte.${from}&created_at=lt.${to}&workspace=neq.main&active=eq.true&select=email,name,workspace&limit=1000`).catch(() => []);
+    for (const u of users) {
+      if (out.has(u.email.toLowerCase())) continue;
+      const [ads, ws] = await Promise.all([
+        sbRest<{ id: string }[]>(`ads?owner=eq.${encodeURIComponent(u.workspace)}&select=id&limit=50`).catch(() => []),
+        sbRest<{ paid_until: string | null }[]>(`workspaces?id=eq.${encodeURIComponent(u.workspace)}&select=paid_until&limit=1`).catch(() => []),
+      ]);
+      const hasPlan = Boolean(ws[0]?.paid_until && ws[0].paid_until >= day(0));
+      if (await sendEmail(activationEmail(u.email, u.name, { step, hasPlan, ads: ads.length, unsub: unsubLink(SITE, u.email) }))) sent++;
+    }
+  }
+  return sent;
+}
+
 /** The owner's morning summary (never blocks the customers' emails). */
 async function ownerReport(expired: number, ending: number) {
   try {
@@ -39,14 +61,16 @@ async function ownerReport(expired: number, ending: number) {
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   // credits of periods that ended expire (before the reminders, which mention what's left)
+  await observedDollar(true).catch(() => null); // today's dollar for the prices charged in pesos
   const expiry = await runExpiry().catch((e) => { console.error("expiry", e instanceof Error ? e.message : e); return null; });
   if (!emailConfigured()) return NextResponse.json({ ok: true, expiry, skipped: "sin RESEND_API_KEY" });
+  const tips = await activation().catch((e) => { console.error("activation", e instanceof Error ? e.message : e); return 0; });
   const soon = day(3);
   const today = day(0);
   const ws = await sbRest<Ws[]>(`workspaces?paid_until=in.(${soon},${today})&id=neq.main&select=id,plan,paid_until`);
   if (!ws.length) {
     await ownerReport(expiry?.expired ?? 0, 0);
-    return NextResponse.json({ ok: true, sent: 0, expiry });
+    return NextResponse.json({ ok: true, sent: 0, tips, expiry });
   }
   const users = await sbRest<U[]>(`users?workspace=in.(${ws.map((w) => encodeURIComponent(w.id)).join(",")})&active=eq.true&select=email,name,workspace`);
   let sent = 0;
@@ -58,5 +82,5 @@ export async function GET(req: Request) {
     }
   }
   await ownerReport(expiry?.expired ?? 0, ws.filter((w) => w.paid_until === soon).length);
-  return NextResponse.json({ ok: true, sent, expiry });
+  return NextResponse.json({ ok: true, sent, tips, expiry });
 }

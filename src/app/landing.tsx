@@ -7,6 +7,7 @@ import Pricing from "./pricing";
 import LoopVideo from "./loop-video";
 import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
+import WhatsAppButton from "./whatsapp";
 import { LAUNCH_PCT, PLANS, clpFor } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
@@ -542,6 +543,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
   return (
     <div className="overflow-x-clip pb-20 lg:pb-0">
       <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} />
+      {t.lang === "es" && <WhatsAppButton />}
       {/* Offer bar: offers, news and models sliding sideways */}
       <Ticker t={t.bar} />
 

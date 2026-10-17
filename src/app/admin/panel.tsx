@@ -141,7 +141,10 @@ export default function AdminPanel() {
         </div>
         <div className="flex items-end gap-3">
           {data && (
-            <Field label="Dólar (CLP)"><Num id="usdclp" value={data.config.usdClp} step={5} onChange={(v) => setCfg((c) => { c.usdClp = v || 950; })} /></Field>
+            <>
+              <Field label="Dólar de respaldo (CLP)"><Num id="usdclp" value={data.config.usdClp} step={5} onChange={(v) => setCfg((c) => { c.usdClp = v || 950; })} /></Field>
+              <Field label="Colchón de cambio (%)"><Num id="colchon" value={data.config.cambioColchon ?? 2} step={0.5} max={10} onChange={(v) => setCfg((c) => { c.cambioColchon = v; })} /></Field>
+            </>
           )}
           <button type="button" onClick={logout} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink">Salir</button>
         </div>
@@ -263,6 +266,7 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
         <h2 className="font-display text-xl font-bold">Margen por plan, por cliente</h2>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Costo real por crédito (US$)"><Num id="cc" value={c.costoCredito} step={0.001} onChange={(v) => setCfg((x) => { x.costoCredito = v; })} /></Field>
+          <Field label="Límite diario cuentas nuevas, primeras 48 h (US$, 0 = sin límite)"><Num id="ln" value={c.limiteNuevas ?? 25} step={5} onChange={(v) => setCfg((x) => { x.limiteNuevas = v; })} /></Field>
           <Field label="% de créditos usados"><Num id="uso" value={c.uso} step={5} max={100} onChange={(v) => setCfg((x) => { x.uso = v; })} /></Field>
           <Field label="Comisión Stripe %"><Num id="stp" value={c.stripePct} step={0.1} onChange={(v) => setCfg((x) => { x.stripePct = v; })} /></Field>
           {([["anual", "Pago anual"], ["promo", "Primer mes con 50% dcto."], ["viaAf", "Llegó por afiliado"]] as const).map(([k, l]) => (
@@ -1037,6 +1041,7 @@ const AUTO: Record<string, { title: string; how: string }> = {
   admin: { title: "Clave de administrador (llave maestra)", how: "Sirve para recuperar tu cuenta de dueño si pierdes la clave y el teléfono (en creadsia.com/app?dueno). Vercel → Environment Variables → ADMIN_ACCESS_CODE con 24 caracteres o más → guárdala en un lugar seguro → Redeploy." },
   email: { title: "Correos automáticos (Resend)", how: "Resend → API Keys → Vercel: RESEND_API_KEY." },
   cron: { title: "Avisos de plan por vencer", how: "Vercel: CRON_SECRET con una clave larga inventada." },
+  dolar: { title: "Dólar automático", how: "Se lee solo del Banco Central cada día. Si falla, se usa el «Dólar de respaldo» de arriba en el Panel." },
   ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
 };
 const MANUAL: { id: string; title: string; how: string }[] = [
@@ -1045,8 +1050,14 @@ const MANUAL: { id: string; title: string; how: string }[] = [
   { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Primero las 5 llaves de todo: correo (Google), Vercel, GitHub, Supabase y Namecheap. También tu cuenta de Creads (Mi cuenta). Después: Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend." },
   { id: "recarga", title: "Automático 2 · Recarga automática con tarjeta", how: "Para no quedarte nunca sin saldo. Google AI Studio → Billing → Setup auto-reload (US$50 cuando quede menos de US$15). ElevenLabs → Developers → Top Up → Auto Top Up (US$20 bajo US$10). fal.ai y Anthropic: buscar «Auto top-up» o «Auto reload» en Billing (US$50 bajo US$20 / US$20 bajo US$5)." },
   { id: "caps", title: "Topes de gasto", how: "Límite mensual en fal.ai, ElevenLabs y Anthropic; alerta de presupuesto en Google Cloud. El tope diario de Creads está en Saldos y alertas." },
-  { id: "backups", title: "Respaldos diarios de la base de datos", how: "Supabase → Settings → Billing: el plan Pro (US$25/mes) incluye un respaldo diario." },
-  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar IVA incluido y boletas, giro de la SpA (620100 / 631100), pagos a proveedores extranjeros en US$ y revisar /terminos." },
+  { id: "vercel-pro", title: "Vercel en plan Pro", how: "El plan gratis (Hobby) no permite uso comercial y corta los procesos largos (armar películas, clonar voces). Vercel → Settings → Billing → Pro (US$20/mes)." },
+  { id: "backups", title: "Supabase en plan Pro (no se pausa y tiene respaldo)", how: "El plan gratis se pausa solo si pasa días sin uso y no tiene respaldo. Supabase → Settings → Billing → Pro (US$25/mes): respaldo diario incluido." },
+  { id: "dominio", title: "Dominio y correo con renovación automática", how: "Namecheap → Domain List → creadsia.com → Auto-Renew activado y tarjeta al día. Lo mismo con Google Workspace (tu correo hola@creadsia.com). Si el dominio vence, se cae todo." },
+  { id: "monitor", title: "Aviso si la web se cae", how: "uptimerobot.com (gratis) → crear cuenta → Add New Monitor → HTTP(s) → URL https://www.creadsia.com → cada 5 minutos → avisarte por correo y por la app del celular." },
+  { id: "whatsapp", title: "WhatsApp de ayuda", how: "Vercel → Environment Variables → NEXT_PUBLIC_WHATSAPP = tu número con código de país, sin + ni espacios (ej: 56912345678) → Redeploy. Aparece un botón de WhatsApp en la web, en el checkout y en el menú de cuenta." },
+  { id: "claves", title: "Gestor de contraseñas y acceso de emergencia", how: "Guarda todas las claves (Vercel, Supabase, Namecheap, proveedores, ADMIN_ACCESS_CODE) en 1Password o Bitwarden y deja a una persona de confianza con acceso de emergencia." },
+  { id: "marca", title: "Registrar la marca Creads IA", how: "inapi.cl → solicitud de marca (clase 42: software y servicios en línea; opcional clase 35: publicidad). Cuesta unos $100.000–200.000 CLP. Que nadie te la pueda quitar." },
+  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar IVA incluido y boletas, giro de la SpA (620100 / 631100), pagos a proveedores extranjeros en US$, y revisar /terminos: sobre todo la cláusula de derecho a retracto (no aplica porque los créditos se entregan al instante; devolución si no usó créditos dentro de 10 días)." },
   { id: "gasto-real", title: "Automático 3 · Gasto real de cada proveedor en el Panel", how: "Después de la pasarela: clave de administrador de Anthropic (gasto diario real) y la exportación de facturación de Google Cloud, para comparar lo estimado con lo que cobran de verdad. Pídeselo a Claude." },
   { id: "boletas", title: "Automático 4 · Boletas automáticas", how: "Que cada cobro emita su boleta electrónica sola. Definir con el contador (inicio de actividades en el SII) y activarlo en la pasarela (Flow puede emitirlas) o con un servicio de boletas; después Claude lo conecta." },
   { id: "dia-1", title: "Día 1: borrón y cuenta nueva", how: "Justo antes de la primera venta real: lo de hoy se archiva como «Ensayo» (no se borra) y el Panel parte de cero en movimientos, pedidos y gasto en IA. Claude te muestra antes la lista exacta para tu OK." },

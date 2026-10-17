@@ -3,7 +3,8 @@ import { en } from "@/content/en";
 import Landing from "../landing";
 import { usdClpRate } from "@/lib/usd-clp";
 
-export const revalidate = 3600;
+export const revalidate = 3600; // rebuilt hourly (the approximate pesos follow the dollar)
+export const dynamic = "force-static"; // served from cache: fast for every visitor
 
 export const metadata: Metadata = {
   title: en.meta.title,

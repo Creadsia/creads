@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { sbRest, sbRpc } from "@/lib/supabase";
 import { providerStatus } from "@/lib/providers";
+import { observedDollar, usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,13 @@ export async function GET() {
     admin.length >= 24 ? { id: "admin", state: "ok", detail: "Clave de administrador larga." } : { id: "admin", state: admin ? "revisar" : "falta", detail: admin ? `Es corta (${admin.length} caracteres): usa 24 o más.` : "Falta ADMIN_ACCESS_CODE." },
     env("RESEND_API_KEY") ? { id: "email", state: "ok", detail: "Correos automáticos activos." } : { id: "email", state: "falta", detail: "Falta RESEND_API_KEY." },
     env("CRON_SECRET").length >= 16 ? { id: "cron", state: "ok", detail: "Avisos diarios de vencimiento activos." } : { id: "cron", state: "falta", detail: "Falta CRON_SECRET (16 caracteres o más)." },
+    await (async (): Promise<Check> => {
+      const obs = await observedDollar().catch(() => null);
+      const rate = await usdClpRate().catch(() => 0);
+      return obs
+        ? { id: "dolar", state: "ok", detail: `Dólar observado del ${obs.fecha}: $${Math.round(obs.valor).toLocaleString("es-CL")}. Para cobrar en pesos se usa $${rate.toLocaleString("es-CL")} (con el colchón de cambio). Se actualiza solo cada día.` }
+        : { id: "dolar", state: "revisar", detail: `No se pudo leer el dólar del día; se usa el de respaldo del Panel ($${rate.toLocaleString("es-CL")}).` };
+    })(),
     { id: "ai", state: p.claude && any(p.video) && any(p.image) && any(p.voice) ? "ok" : "falta", detail: [!p.claude && "Claude", !any(p.video) && "video", !any(p.image) && "imagen", !any(p.voice) && "voz"].filter(Boolean).join(", ") ? `Falta conectar: ${[!p.claude && "Claude", !any(p.video) && "video", !any(p.image) && "imagen", !any(p.voice) && "voz"].filter(Boolean).join(", ")}.` : "Claude, video, imagen y voz conectados." },
   ];
   return NextResponse.json({ checks });

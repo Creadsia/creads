@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
+import { WHATSAPP, whatsappLink } from "../../whatsapp";
 import type { ShellUser } from "./shell";
 
 // The account corner every logged-in screen has: credits at a glance and a menu with the account,
@@ -139,7 +140,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y créditos</Link>
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
-          <a href="mailto:hola@creadsia.com?subject=Ayuda%20con%20Creads" role="menuitem" className={item}><Svg d={D.help} />Ayuda y soporte</a>
+          <a href={whatsappLink("Hola, necesito ayuda con Creads IA") || "mailto:hola@creadsia.com?subject=Ayuda%20con%20Creads"} target={WHATSAPP ? "_blank" : undefined} rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.help} />{WHATSAPP ? "Ayuda por WhatsApp" : "Ayuda y soporte"}</a>
           <button type="button" role="menuitem" onClick={flipTheme} className={item}>
             <Svg d={dark ? D.sun : D.moon} />{dark ? "Modo claro" : "Modo oscuro"}
           </button>

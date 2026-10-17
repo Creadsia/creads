@@ -34,3 +34,16 @@ test("owner daily summary", async () => {
   assert.match(e.subject, /2 ventas, US\$59,00 · ⚠ revisar/);
   assert.ok(e.html.includes("US$46,50") && e.text.includes("fal.ai: saldo bajo"));
 });
+
+test("activation tips carry an opt-out and adapt to the customer", async () => {
+  const { activationEmail } = await import("../src/lib/emails");
+  const { unsubLink, unsubOk } = await import("../src/lib/unsub");
+  const link = unsubLink("https://x.cl", "Ana@x.cl");
+  const t = new URL(link).searchParams.get("t")!;
+  assert.ok(unsubOk("ana@x.cl", t) && !unsubOk("otra@x.cl", t));
+  const none = activationEmail("a@x.cl", "Ana", { step: 3, hasPlan: false, ads: 0, unsub: link });
+  assert.match(none.subject, /Te ayudo/);
+  assert.ok(none.html.includes("No quiero recibir más consejos") && none.html.includes("50% de descuento"));
+  assert.match(activationEmail("a@x.cl", null, { step: 3, hasPlan: true, ads: 2, unsub: link }).subject, /3 formas/);
+  assert.ok(!activationEmail("a@x.cl", null, { step: 1, hasPlan: true, ads: 0, unsub: link }).html.includes("50%"));
+});

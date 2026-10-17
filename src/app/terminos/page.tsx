@@ -32,6 +32,7 @@ export default function Terminos() {
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
         <li>La oferta de lanzamiento (descuento en el primer mes) aplica una vez por cuenta.</li>
         <li>Los planes anuales y las recargas se pagan una sola vez.</li>
+        <li><b>Derecho a retracto:</b> conforme al artículo 3 bis de la Ley 19.496, te informamos antes de pagar que en la compra de planes y recargas no aplica el derecho a retracto, porque el servicio es digital y se entrega de inmediato: los créditos quedan disponibles apenas se confirma el pago. Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago.</li>
         <li>Si tienes un problema con un cobro, escríbenos a hola@creadsia.com antes de reclamar en Mercado Pago, y lo resolvemos. Si un pago se devuelve o se desconoce, descontamos los créditos que ese pago entregó. Esto no limita los derechos que te da la Ley 19.496 sobre protección de los derechos de los consumidores.</li>
       </ul>
 
@@ -39,6 +40,7 @@ export default function Terminos() {
       <ul>
         <li>El contenido que subes sigue siendo tuyo. Nos das permiso para procesarlo solo para darte el servicio.</li>
         <li>El contenido que generas en Creads es tuyo y puedes usarlo comercialmente, sujeto a estos términos y a las condiciones de los modelos que lo generaron.</li>
+        <li>Guardamos tus videos, imágenes y audios mientras tengas tu cuenta. Si tu plan lleva más de 6 meses vencido, podemos borrar los archivos generados, avisándote por correo con al menos 15 días de anticipación para que descargues lo que quieras conservar.</li>
         <li>La IA puede equivocarse: revisa siempre el contenido antes de publicarlo. Eres responsable de lo que publicas y de cumplir las reglas de las plataformas donde lo publiques (por ejemplo, Meta y TikTok).</li>
       </ul>
 
@@ -51,6 +53,7 @@ export default function Terminos() {
         <li>Infringir derechos de autor, marcas u otros derechos de terceros.</li>
         <li>Intentar vulnerar la seguridad de la plataforma, abusar de ella con cuentas falsas o automatizaciones no autorizadas, o revender el acceso.</li>
       </ul>
+      <p>Si detectamos un uso prohibido podemos detener la generación, suspender la cuenta sin devolver los créditos ya usados y, cuando la ley lo exija, informar a las autoridades. Por seguridad, las cuentas nuevas tienen un límite diario de uso durante sus primeros dos días.</p>
 
       <h2>7. Disponibilidad y responsabilidad</h2>
       <p>Trabajamos para que Creads funcione siempre y con la mejor calidad, pero dependemos de proveedores externos y no podemos garantizar que el servicio esté libre de interrupciones o errores. En la medida que lo permita la ley, nuestra responsabilidad total frente a ti se limita a lo que pagaste en los últimos tres meses.</p>

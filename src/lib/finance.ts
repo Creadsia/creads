@@ -55,7 +55,9 @@ export interface Plan {
 }
 
 export interface Config {
-  usdClp: number;
+  usdClp: number; // fallback only: the live observed dollar is used when it can be read
+  limiteNuevas?: number; // US$ per day an account can spend in its first 48 h (anti-fraud; 0 = off)
+  cambioColchon?: number; // % added to the observed dollar for the pesos charged (card exchange spread)
   costoCredito: number; // US$ per credit, worst case incl. redos
   uso: number; // % of credits customers use
   stripePct: number;
@@ -139,6 +141,8 @@ export const DEFAULT_FINANZAS: Finanzas = {
   ],
   config: {
     usdClp: 950,
+    cambioColchon: 2,
+    limiteNuevas: 25,
     costoCredito: 0.0193,
     uso: 70,
     stripePct: 4.4,

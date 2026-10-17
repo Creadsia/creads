@@ -79,13 +79,16 @@ export default function Planes() {
   // prices are always in US$; Mercado Pago charges the equivalent in Chilean pesos (same rounding as the server)
   const clp = (n: number) => clpFor(n, rate);
   const money = (n: number) => usd(n);
+  const [leaving, setLeaving] = useState(false);
+  const [reason, setReason] = useState("");
+  const [detail, setDetail] = useState("");
   async function cancelSub() {
-    if (!window.confirm("¿Cancelar la renovación automática? Tu plan sigue activo hasta la fecha ya pagada.")) return;
     setErr("");
-    const r = await fetch("/api/pagos/cancelar", { method: "POST" }).catch(() => null);
+    const r = await fetch("/api/pagos/cancelar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason, detail }) }).catch(() => null);
     if (!r) return setErr("No pudimos conectarnos. Revisa tu conexión e intenta de nuevo.");
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return setErr(d.error || "No se pudo cancelar la renovación. Intenta de nuevo o escríbenos a hola@creadsia.com.");
+    setLeaving(false);
     load();
   }
 
@@ -155,8 +158,29 @@ export default function Planes() {
       {pay?.subscription && (
         <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
           <span>Renovación automática activa: <b>{pay.subscription.label}</b>, con Mercado Pago.</span>
-          <button type="button" onClick={cancelSub} className="text-sm font-semibold text-muted underline hover:text-ink">Cancelar renovación</button>
+          {!leaving && <button type="button" onClick={() => setLeaving(true)} className="text-sm font-semibold text-muted underline hover:text-ink">Cancelar renovación</button>}
         </p>
+      )}
+      {pay?.subscription && leaving && (
+        <section className={cardCls} aria-labelledby="leave">
+          <h2 id="leave" className="font-display text-lg font-bold">Antes de cancelar, ¿nos cuentas por qué?</h2>
+          <p className="text-sm text-muted">Tu plan sigue activo hasta la fecha pagada y tus anuncios quedan guardados. Tu respuesta nos ayuda a mejorar.</p>
+          <div role="radiogroup" aria-label="Motivo" className="grid gap-2 sm:grid-cols-2">
+            {["Es muy caro", "No lo estoy usando", "La calidad no me convenció", "Me faltó una función", "Era solo para probar", "Otro"].map((m) => (
+              <label key={m} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${reason === m ? "border-accent bg-accent/10" : "border-line"}`}>
+                <input type="radio" name="leave" value={m} checked={reason === m} onChange={() => setReason(m)} />{m}
+              </label>
+            ))}
+          </div>
+          {reason === "Es muy caro" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Starter</b>? Es el más económico, o puedes comprar solo una recarga de créditos cuando la necesites, sin plan mensual.</p>}
+          {reason === "La calidad no me convenció" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
+          {reason === "No lo estoy usando" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba el <b>Generador de guiones</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
+          <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>
+            <button type="button" onClick={cancelSub} disabled={!reason} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">Cancelar la renovación</button>
+          </div>
+        </section>
       )}
 
       {done && (
@@ -276,6 +300,7 @@ export default function Planes() {
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
             {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${usd(q.total)} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
+            <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis); si no usas ningún crédito, te devolvemos el pago dentro de 10 días.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}

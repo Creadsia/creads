@@ -245,7 +245,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
             </button>
             <p className="text-center text-xs text-muted">
-              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>.
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis); si no usas ningún crédito, te devolvemos el pago dentro de 10 días.
             </p>
 
             <div className="flex flex-col items-center gap-2 text-center">
