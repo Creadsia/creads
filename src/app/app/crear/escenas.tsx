@@ -6,6 +6,13 @@ import { type FormatId, formatById } from "@/lib/formats";
 import AdWork from "../_parts/ad-work";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
+
+// Our pick for each kind of customer: the best quality for the credits is the default and goes first.
+const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
+  "veo-3.1-fast": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio para anuncios hablados." },
+  "veo-3.1-lite": { pill: "Más económico", rank: 1, note: "Ideal para probar ideas y hacer muchas versiones." },
+  "veo-3.1": { pill: "Máxima calidad", rank: 2, note: "Para el anuncio final que vas a escalar." },
+};
 import type { Cut } from "./crear";
 
 // Steps 3 and 4 of "Crear anuncio": direct the scenes, then generate every cut with the chosen model.
@@ -234,13 +241,43 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
           <h2 className="font-display text-xl font-bold">4 · Videos</h2>
           {starting ? <p className="rounded-lg bg-accent/10 p-3 text-sm">{starting} No cierres esta página.</p> : (
             <>
-              <div className="flex flex-wrap items-end gap-3">
-                <Field label="Modelo de video">
-                  <select value={model} onChange={(e) => setModel(e.target.value)} className={inputCls}>
-                    {models.map((x) => <option key={x.id} value={x.id} disabled={!x.configured || x.needsImage || x.silent || faceRefused(x)}>{x.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {x.needsImage || x.silent ? "sin voz: no sirve para anuncios hablados" : faceRefused(x) ? "no acepta la cara de tu avatar" : `${price(x.usdPerSecond * 8)} por corte de 8 s`}</option>)}
-                  </select>
-                </Field>
-              </div>
+              {(() => {
+                const usable = models.filter((x) => x.configured && !x.needsImage && !x.silent && !faceRefused(x));
+                const other = models.filter((x) => !usable.includes(x));
+                // recommended first, then the cheapest and the best quality, then the rest by price
+                const order = (id: string) => (MODEL_TAGS[id] ? MODEL_TAGS[id].rank : 9);
+                const sorted = [...usable].sort((a, b) => order(a.id) - order(b.id) || a.usdPerSecond - b.usdPerSecond);
+                return (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-muted">Modelo de video</span>
+                    <div role="radiogroup" aria-label="Modelo de video" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {sorted.map((x) => {
+                        const tag = MODEL_TAGS[x.id];
+                        const on = x.id === model;
+                        return (
+                          <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => setModel(x.id)}
+                            className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors ${on ? "border-accent bg-accent/10" : "border-line hover:border-accent/50"}`}>
+                            <span className="flex w-full flex-wrap items-center justify-between gap-2">
+                              <b className="text-sm">{x.label}</b>
+                              {tag && <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tag.rank === 0 ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"}`}>{tag.pill}</span>}
+                            </span>
+                            <span className="text-xs text-muted">{price(x.usdPerSecond * 8)} por corte de 8 s</span>
+                            {tag?.note && <span className="text-xs text-muted">{tag.note}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {other.length > 0 && (
+                      <details className="text-xs text-muted">
+                        <summary className="cursor-pointer">No sirven para este anuncio ({other.length})</summary>
+                        <ul className="mt-1 flex flex-col gap-0.5 pl-4">
+                          {other.map((x) => <li key={x.id}>{x.label} · {!x.configured ? "no disponible por ahora" : x.needsImage || x.silent ? "no genera voz" : "no acepta la cara de tu avatar"}</li>)}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                );
+              })()}
               <p className="rounded-lg bg-surface-2 p-3 text-sm">
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
                 {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}<br />
@@ -256,7 +293,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 </div>
               ) : (
                 <div className="flex flex-col gap-3 rounded-xl border border-warn/50 bg-warn/10 p-4 text-sm">
-                  <p>Vas a generar <b>{cuts.length} videos</b> con <b>{m?.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")}</b>. Esto usa ≈ {price(usd)}.</p>
+                  <p>Vas a generar <b>{cuts.length} videos</b> con <b>{m?.label}</b>. Esto usa ≈ {price(usd)}.</p>
                   <div className="flex gap-2">
                     <button type="button" onClick={generate} className={btnCls}>Sí, generar</button>
                     <button type="button" onClick={() => setConfirm(false)} className={ghostCls}>Cancelar</button>

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { creditsFor, fmtCredits } from "@/lib/credit-math";
 
-// What the signed-in account has and how prices read for it: the owner sees dollars (and credits),
-// customers see credits only.
+// What the signed-in account has and how prices read for it: always in credits (the owner too; real
+// costs in US$ are in the Panel).
 
 export interface CreditInfo {
   unlimited: boolean;
@@ -48,7 +48,7 @@ export function useCredits() {
   const price = (usd: number) => {
     if (!info) return "…";
     const n = creditsFor(usd, info.rate, info.discount);
-    if (info.unlimited) return `US$${usd.toFixed(2).replace(".", ",")} (${fmtCredits(creditsFor(usd, info.rate))} para clientes)`;
+    if (info.unlimited) return fmtCredits(creditsFor(usd, info.rate)); // the owner sees what customers see (costs live in the Panel)
     return fmtCredits(n);
   };
   const credits = (usd: number) => (info ? creditsFor(usd, info.rate, info.unlimited ? 0 : info.discount) : 0);
