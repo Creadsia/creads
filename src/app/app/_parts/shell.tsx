@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
-import ThemeToggle from "../../theme-toggle";
+import AccountMenu, { CreditsPill } from "./account-menu";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -180,11 +180,6 @@ function MoneyAlerts() {
   );
 }
 
-async function logout() {
-  await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/app";
-}
-
 
 export default function Shell({ children, user }: { children: React.ReactNode; user: ShellUser }) {
   const path = usePathname() ?? "/app";
@@ -195,13 +190,6 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
     <div className="flex flex-col gap-3 border-t border-line pt-4">
       <CreditsBox />
       {user.owner && <Status />}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold">{user.name || user.email}</span>
-          <span className="truncate text-xs text-muted">{user.owner ? "Dueño" : user.access === "ads" ? "Solo anuncios" : "Acceso completo"} · <button type="button" onClick={logout} className="hover:text-ink hover:underline">Salir</button></span>
-        </div>
-        <ThemeToggle lang="es" />
-      </div>
     </div>
   );
 
@@ -217,9 +205,13 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       {/* phone top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
         <Logo size={24} href="/app" gid="mark-top" />
-        <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
-          <Icon d={I.menu} />
-        </button>
+        <div className="flex items-center gap-2">
+          <CreditsPill />
+          <AccountMenu user={user} />
+          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
+            <Icon d={I.menu} />
+          </button>
+        </div>
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
@@ -235,7 +227,12 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
         </div>
       )}
 
-      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:pt-4 lg:pb-8">
+        {/* desktop: the account corner */}
+        <div className="mx-auto mb-4 hidden max-w-6xl items-center justify-end gap-2 lg:flex">
+          <CreditsPill />
+          <AccountMenu user={user} />
+        </div>
         <div className="mx-auto flex max-w-6xl flex-col gap-6">{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
     </div>

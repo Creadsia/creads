@@ -37,6 +37,13 @@ export default function Cuenta() {
       </form>
       <TwoFactor />
       </div>
+      <section className={`${cardCls} sm:flex-row sm:items-center sm:justify-between`} aria-labelledby="ses">
+        <div className="flex flex-col gap-1">
+          <h2 id="ses" className="font-display text-lg font-bold">Sesión</h2>
+          <p className="text-sm text-muted">Si usaste un computador que no es tuyo, cierra la sesión al terminar. Para cerrar todas tus sesiones a la vez, cambia la clave.</p>
+        </div>
+        <button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => {}); window.location.href = "/app"; }} className={`${ghostCls} shrink-0 self-start text-bad sm:self-center`}>Cerrar sesión</button>
+      </section>
     </>
   );
 }

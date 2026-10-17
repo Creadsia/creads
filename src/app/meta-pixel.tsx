@@ -49,7 +49,7 @@ export default function MetaPixel() {
   return (
     <div role="dialog" aria-live="polite" aria-label={es ? "Cookies" : "Cookies"}
       className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-2xl backdrop-blur sm:flex-nowrap">
-      <p className="min-w-0 flex-1 text-muted">
+      <p className="min-w-0 flex-1 basis-full text-muted sm:basis-auto">
         {es
           ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
           : <>We use cookies to measure which ads bring visitors (Meta). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
