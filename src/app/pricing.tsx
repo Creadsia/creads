@@ -13,117 +13,6 @@ const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFracti
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-function Yes({ es }: { es: boolean }) {
-  return (
-    <span className="mx-auto grid h-6 w-6 place-items-center rounded-full bg-good/15 text-good" role="img" aria-label={es ? "Incluido" : "Included"}>
-      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" aria-hidden="true">
-        <path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
-  );
-}
-
-function Cell({ v, es }: { v: string; es: boolean }) {
-  if (v === "yes") return <Yes es={es} />;
-  if (v === "no") return <span className="text-muted/60" aria-label={es ? "No incluido" : "Not included"}>—</span>;
-  return <span className="font-medium tabular-nums">{v}</span>;
-}
-
-/** The comparison: plans as columns with price and button on top, features grouped below.
- *  On phones one plan at a time (a table with four columns doesn't fit). */
-function ComparePlans({ t, es, yearly, money, perMonthOfYear }: { t: Content["pricing"]; es: boolean; yearly: boolean; money: (n: number) => string; perMonthOfYear: (n: number) => string }) {
-  const [pick, setPick] = useState(1); // phones: Plus first
-  const plans = t.plans;
-  const price = (p: (typeof plans)[number]) => (yearly ? perMonthOfYear(p.yearly * 12) : money(p.price * (1 - LAUNCH_PCT / 100)));
-  const note = (p: (typeof plans)[number]) => (yearly ? (es ? "al mes, facturado anual" : "per month, billed yearly") : `${t.firstMonth} · ${t.then} ${money(p.price)}`);
-  const hi = (i: number) => (i === 1 ? "bg-accent/[0.06]" : "");
-
-  return (
-    <section aria-labelledby="compare-title" className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h3 id="compare-title" className="text-xl font-extrabold">{t.compare.title}</h3>
-        <p className="text-[15px] text-muted">{t.compare.lead}</p>
-      </div>
-
-      {/* computers and tablets */}
-      <div className="hidden overflow-hidden rounded-2xl border border-line bg-surface md:block">
-        <table className="w-full table-fixed border-collapse text-left text-[15px]">
-          <colgroup><col className="w-[34%]" /><col /><col /><col /></colgroup>
-          <thead>
-            <tr>
-              <th scope="col" className="p-5 align-bottom text-sm font-normal text-muted">{es ? "Precios en US$" : "Prices in US$"}</th>
-              {plans.map((p, i) => (
-                <th key={p.id} scope="col" className={`relative p-5 align-top font-normal ${hi(i)}`}>
-                  {i === 1 && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-[image:var(--grad)]" />}
-                  <div className="flex flex-col gap-3">
-                    <span className="flex items-center gap-2">
-                      <b className="text-lg">{p.name}</b>
-                      {i === 1 && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent-text">{t.popular}</span>}
-                    </span>
-                    <span className="flex flex-col">
-                      <span className="font-display text-[1.9rem] leading-none font-semibold tabular-nums">{price(p)}</span>
-                      <span className="mt-1 text-xs text-muted">{note(p)}</span>
-                    </span>
-                    <a href={startHref(p.id, yearly)}
-                      className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors ${i === 1 ? "bg-[image:var(--grad)] text-white" : "border border-line hover:border-muted"}`}>
-                      {t.cta} {p.name}
-                    </a>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          {t.compare.groups.map((g) => (
-            <tbody key={g.title}>
-              <tr>
-                <th scope="colgroup" colSpan={4} className="border-t border-line bg-surface-2/60 px-5 py-2.5 text-[13px] font-semibold text-muted">{g.title}</th>
-              </tr>
-              {g.rows.map(([row, ...vals]) => (
-                <tr key={row} className="border-t border-line/70 transition-colors hover:bg-surface-2/40">
-                  <th scope="row" className="px-5 py-3.5 font-normal">{row}</th>
-                  {vals.map((v, i) => (
-                    <td key={i} className={`px-5 py-3.5 text-center ${hi(i)}`}><Cell v={v} es={es} /></td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          ))}
-        </table>
-      </div>
-
-      {/* phones: one plan at a time */}
-      <div className="flex flex-col gap-3 md:hidden">
-        <div role="tablist" aria-label={t.compare.title} className="grid grid-cols-3 rounded-xl border border-line bg-surface p-1">
-          {plans.map((p, i) => (
-            <button key={p.id} type="button" role="tab" aria-selected={pick === i} onClick={() => setPick(i)}
-              className={`rounded-lg py-2 text-sm font-semibold transition-colors ${pick === i ? "bg-ink text-bg" : "text-muted"}`}>{p.name}</button>
-          ))}
-        </div>
-        <div role="tabpanel" className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <div className="flex flex-col gap-3 p-4">
-            <span className="flex flex-col">
-              <span className="font-display text-[1.8rem] leading-none font-semibold tabular-nums">{price(plans[pick])}</span>
-              <span className="mt-1 text-xs text-muted">{note(plans[pick])}</span>
-            </span>
-            <a href={startHref(plans[pick].id, yearly)} className={`rounded-lg px-4 py-2.5 text-center text-sm font-semibold ${pick === 1 ? "bg-[image:var(--grad)] text-white" : "bg-ink text-bg"}`}>{t.cta} {plans[pick].name}</a>
-          </div>
-          {t.compare.groups.map((g) => (
-            <dl key={g.title}>
-              <dt className="border-t border-line bg-surface-2/60 px-4 py-2 text-[13px] font-semibold text-muted">{g.title}</dt>
-              {g.rows.map(([row, ...vals]) => (
-                <dd key={row} className="flex items-center justify-between gap-4 border-t border-line/70 px-4 py-3 text-[15px]">
-                  <span>{row}</span>
-                  <span className="shrink-0 text-right"><Cell v={vals[pick]} es={es} /></span>
-                </dd>
-              ))}
-            </dl>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function Pricing({ t, lang, renews = true }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
@@ -166,66 +55,100 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
         </div>
       </div>
 
-      {/* plans */}
-      <div className="grid gap-4 lg:grid-cols-3 lg:items-stretch">
+      {/* plans: three cards, everything about each plan from top to bottom, built to pick one and pay */}
+      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
         {t.plans.map((p) => {
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
-          const first = p.price * (1 - LAUNCH_PCT / 100);
+          const ads = Math.max(1, Math.floor(credits / 300));
+          const monthNow = yearly ? (p.yearly * 12) / 12 : p.price * (1 - LAUNCH_PCT / 100);
+          const perAd = Math.round((monthNow / ads) * 100) / 100;
           return (
             <article key={p.id}
-              className={`relative flex flex-col gap-5 rounded-3xl p-6 sm:p-7 ${featured
-                ? "border-2 border-transparent bg-surface [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_30px_90px_-40px_rgba(224,108,200,0.6)] lg:-my-3 lg:py-9"
+              className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
+                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] lg:order-none lg:-mt-5"
                 : "border border-line bg-surface"}`}>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-2xl font-extrabold">{p.name}</h3>
-                {featured && <span className="rounded-full bg-[image:var(--grad)] px-3 py-1 text-xs font-bold text-white">{t.popular}</span>}
+              {featured && (
+                <div className="flex items-center justify-center gap-2 bg-[image:var(--grad)] px-4 py-2 text-sm font-bold text-white">
+                  <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="m10 1.8 2.5 5.1 5.6.8-4 4 1 5.6L10 14.6l-5.1 2.7 1-5.6-4-4 5.6-.8L10 1.8Z" /></svg>
+                  {t.popular} · {t.bestValue}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-5 p-6 sm:p-7">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-2xl font-extrabold">{p.name}</h3>
+                  <p className="text-[15px] text-muted">{p.for}</p>
+                </div>
+
+                {/* price */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <s className="text-muted">{money(p.price)}{t.perMonth}</s>
+                    <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? t.yearlyBadge : `−${LAUNCH_PCT}% ${t.firstMonth}`}</span>
+                  </div>
+                  <p className="flex flex-wrap items-baseline gap-x-1.5">
+                    <span className={`font-display text-[3rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
+                    <span className="text-muted">{yearly ? t.perMonth : ` ${t.firstMonth}`}</span>
+                  </p>
+                  <p className="text-sm text-muted">
+                    {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : `${t.then} ${money(p.price)}${t.perMonth}`} · {t.cancel}
+                  </p>
+                </div>
+
+                {/* what the money turns into */}
+                <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
+                  <div className="flex flex-col gap-0.5 p-3.5">
+                    <b className="font-display text-2xl font-semibold tabular-nums">{p.credits}</b>
+                    <span className="text-xs text-muted">{t.credits}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5 border-l border-line p-3.5">
+                    <b className="font-display text-2xl font-semibold tabular-nums">≈ {ads}</b>
+                    <span className="text-xs text-muted">{t.adsMonth}</span>
+                  </div>
+                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-sm">
+                    <b className="tabular-nums">≈ {money(perAd)}</b> <span className="text-muted">{t.perAd}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <a href={startHref(p.id, yearly)}
+                    className={`rounded-xl px-5 py-4 text-center text-[17px] font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
+                    {t.cta} {p.name}
+                  </a>
+                  <p className="text-center text-xs text-muted">{t.cardNote}</p>
+                </div>
               </div>
-              <p className="text-[15px] text-muted">{p.for}</p>
 
-              <div className="flex flex-col gap-1">
-                {yearly ? (
-                  <>
-                    <p className="flex flex-wrap items-baseline gap-x-2">
-                      <s className="text-lg text-muted">{money(p.price)}</s>
-                      <span className="font-display text-[2.6rem] leading-none font-semibold">{perMonthOfYear(p.yearly * 12)}</span>
-                      <span className="text-muted">{t.perMonth}</span>
-                    </p>
-                    <p className="text-sm text-muted">{money(p.yearly * 12)} {t.yearlyTotal}</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex flex-wrap items-baseline gap-x-2">
-                      <s className="text-lg text-muted">{money(p.price)}</s>
-                      <span className="font-display text-[2.6rem] leading-none font-semibold">{money(first)}</span>
-                      <span className="text-muted">{t.firstMonth}</span>
-                    </p>
-                    <p className="text-sm text-muted">{t.then} {money(p.price)}{t.perMonth}</p>
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-0.5 rounded-xl bg-surface-2 px-4 py-3">
-                <span><b className="font-display text-xl font-semibold">{p.credits}</b> <span className="text-muted">{t.credits}</span></span>
-                <span className="text-sm text-muted">≈ {Math.floor(credits / 300)} {t.adsMonth}</span>
-              </div>
-
-              <a href={startHref(p.id, yearly)}
-                className={`flex flex-col items-center rounded-xl px-5 py-3.5 text-center font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]" : "bg-ink text-bg"}`}>
-                <span className="text-[17px]">{t.cta} {p.name}</span>
-                <span className={`text-xs font-normal ${featured ? "text-white/85" : "opacity-70"}`}>{t.ctaNote}</span>
-              </a>
-
-              <ul className="flex flex-col gap-2.5 text-[15px]">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-2.5">
-                    <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0 text-good" aria-hidden="true">
-                      <path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span>{f}</span>
-                  </li>
+              {/* everything it includes */}
+              <div className="flex flex-col gap-5 border-t border-line px-6 py-6 sm:px-7">
+                <b className="text-sm">{t.includes}</b>
+                {t.compare.groups.map((g) => (
+                  <div key={g.title} className="flex flex-col gap-2.5">
+                    <span className="text-xs font-semibold text-muted">{g.title}</span>
+                    <ul className="flex flex-col gap-2.5 text-[15px]">
+                      {g.rows.map(([row, ...vals]) => {
+                        const v = vals[t.plans.indexOf(p)];
+                        const off = v === "no";
+                        return (
+                          <li key={row} className={`flex items-center justify-between gap-3 ${off ? "text-muted/60" : ""}`}>
+                            <span className="flex items-center gap-2.5">
+                              {off
+                                ? <span className="grid h-5 w-5 shrink-0 place-items-center text-muted/50" aria-hidden="true">—</span>
+                                : <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good" aria-hidden="true"><svg viewBox="0 0 20 20" className="h-3 w-3"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
+                              <span>{row}{off ? <span className="sr-only"> ({es ? "no incluido" : "not included"})</span> : null}</span>
+                            </span>
+                            {v !== "yes" && !off && <b className="shrink-0 text-right font-semibold tabular-nums">{v}</b>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+                <a href={startHref(p.id, yearly)} className={`mt-1 text-center text-sm font-semibold ${featured ? "text-accent-text" : "text-ink"} hover:underline`}>
+                  {t.cta} {p.name} →
+                </a>
+              </div>
             </article>
           );
         })}
@@ -246,9 +169,6 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
           ))}
         </dl>
       </div>
-
-      {/* plan comparison */}
-      <ComparePlans t={t} es={es} yearly={yearly} money={money} perMonthOfYear={perMonthOfYear} />
 
       {/* top-ups and payment questions */}
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

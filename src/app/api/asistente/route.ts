@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
   try {
     const account = await accountOf(s);
-    const raw = await textAI.complete({ system: ASSISTANT_SYSTEM, prompt: assistantPrompt(account, turns, page), json: true, maxTokens: 900 });
+    const raw = await textAI.complete({ system: ASSISTANT_SYSTEM, prompt: assistantPrompt(account, turns, page), json: true, maxTokens: 900, fast: true });
     const out = tidyAssistant(parseJSON<Record<string, unknown>>(raw));
     if (!out.answer) throw new Error("empty answer");
     await logChat({ ws: s.user.workspace, topic: out.topic, solved: out.solved, q: turns[turns.length - 1].content });

@@ -304,6 +304,11 @@ export const en = {
     adsMonth: "UGC ads of 30 s a month",
     yearlyTotal: "for 12 months",
     popular: "Most popular",
+    bestValue: "Best price per ad",
+    perAd: "per ad",
+    cancel: "cancel anytime",
+    cardNote: "Secure checkout · instant credits · no lock-in",
+    includes: "What's included",
     credits: "credits / month",
     cta: "Start with",
     ctaNote: "Create your account and pay in 1 minute",
@@ -333,6 +338,8 @@ export const en = {
           rows: [
             ["Every AI model and studio", "yes", "yes", "yes"],
             ["Automatic QA and free redos", "yes", "yes", "yes"],
+            ["AI script generator", "yes", "yes", "yes"],
+            ["HD and commercial use", "yes", "yes", "yes"],
             ["Avatars with your face", "1", "3", "Unlimited"],
             ["Cloned voices", "1", "3", "Unlimited"],
           ],
@@ -342,6 +349,7 @@ export const en = {
           rows: [
             ["Team seats", "1", "1", "3"],
             ["Generation queue", "Standard", "Priority", "Fastest"],
+            ["Early access to new models", "no", "no", "yes"],
             ["Support", "24/7 assistant", "24/7 assistant", "24/7 assistant + direct"],
           ],
         },

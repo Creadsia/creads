@@ -305,6 +305,11 @@ export const es: Content = {
     adsMonth: "anuncios UGC de 30 s al mes",
     yearlyTotal: "por 12 meses",
     popular: "El más elegido",
+    bestValue: "Mejor precio por anuncio",
+    perAd: "por anuncio",
+    cancel: "cancelas cuando quieras",
+    cardNote: "Pago seguro · créditos al instante · sin permanencia",
+    includes: "Lo que incluye",
     credits: "créditos / mes",
     cta: "Empezar con",
     ctaNote: "Creas tu cuenta y pagas en 1 minuto",
@@ -334,6 +339,8 @@ export const es: Content = {
           rows: [
             ["Todos los modelos de IA y estudios", "yes", "yes", "yes"],
             ["Revisión de calidad y rehechos gratis", "yes", "yes", "yes"],
+            ["Generador de guiones con IA", "yes", "yes", "yes"],
+            ["HD y uso comercial", "yes", "yes", "yes"],
             ["Avatares con tu cara", "1", "3", "Ilimitados"],
             ["Voces clonadas", "1", "3", "Ilimitadas"],
           ],
@@ -343,6 +350,7 @@ export const es: Content = {
           rows: [
             ["Usuarios del equipo", "1", "1", "3"],
             ["Cola de generación", "Normal", "Prioritaria", "La más rápida"],
+            ["Modelos nuevos antes que nadie", "no", "no", "yes"],
             ["Soporte", "Asistente 24/7", "Asistente 24/7", "Asistente 24/7 + directo"],
           ],
         },

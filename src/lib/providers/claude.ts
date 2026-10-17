@@ -2,7 +2,9 @@ import type { TextAI } from "./types";
 import { noteOutage } from "../balances";
 
 // Claude through the Anthropic Messages API, called only from the server.
+// Main model for scripts, scenes and the quality review; a faster, cheaper one for the support chat.
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
+const FAST_MODEL = process.env.CLAUDE_FAST_MODEL || "claude-haiku-5-5";
 
 type Block =
   | { type: "text"; text: string }
@@ -12,7 +14,21 @@ export const claude: TextAI = {
   id: "claude",
   configured: () => Boolean(process.env.ANTHROPIC_API_KEY),
 
-  async complete({ system, prompt, images, json, maxTokens }) {
+  async complete(opts) {
+    try {
+      return await call(opts, opts.fast ? FAST_MODEL : MODEL);
+    } catch (err) {
+      // the fast model unavailable (renamed, not enabled): answer with the main one instead of failing
+      if (opts.fast && err instanceof ModelMissing) return call(opts, MODEL);
+      throw err;
+    }
+  },
+};
+
+class ModelMissing extends Error {}
+
+async function call({ system, prompt, images, json, maxTokens }: Parameters<TextAI["complete"]>[0], model: string): Promise<string> {
+  {
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw new Error("Falta ANTHROPIC_API_KEY en Vercel.");
 
@@ -33,7 +49,7 @@ export const claude: TextAI = {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         max_tokens: Math.min(32000, Math.max(1000, maxTokens ?? 8000)),
         ...(system ? { system } : {}),
         messages: [{ role: "user", content }],
@@ -44,6 +60,7 @@ export const claude: TextAI = {
     if (!res.ok) {
       const msg = data?.error?.message || `HTTP ${res.status}`;
       console.error("claude error", res.status, msg);
+      if (res.status === 404 || /model/i.test(msg) && res.status === 400) throw new ModelMissing(msg);
       if (/credit balance is too low/i.test(msg)) {
         await noteOutage("claude", msg);
         throw new Error("El asistente de Creads no está disponible en este momento. Vuelve a intentar en un rato.");
@@ -62,8 +79,8 @@ export const claude: TextAI = {
       throw new Error(`Claude respondió sin el formato esperado: “${text.trim().slice(0, 160)}”`);
     }
     return text;
-  },
-};
+  }
+}
 
 /** Pulls the first JSON object or array out of a model answer (tolerates stray text or code fences). */
 export function parseJSON<T>(text: string): T {
