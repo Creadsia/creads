@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sbRest } from "@/lib/supabase";
 import { balanceOf } from "@/lib/credits";
-import { planEndingEmail } from "@/lib/emails";
+import { ownerReportEmail, planEndingEmail } from "@/lib/emails";
+import { dailyReport } from "@/lib/daily-report";
 import { runExpiry } from "@/lib/expiry";
 import { emailConfigured, sendEmail } from "@/lib/providers/email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-// Once a day (vercel.json → crons, 9:00 Chile): customers whose plan ends in 3 days, or today, get an
-// email to renew. Only Vercel can call it: it sends CRON_SECRET as a bearer token.
+// Once a day (vercel.json → crons, 9:00 Chile): credits of ended periods expire, customers whose plan
+// ends in 3 days or today get an email to renew, and the owner gets yesterday's summary. Only Vercel can call it: it sends CRON_SECRET as a bearer token.
 
 const day = (offset: number) => new Date(Date.now() + offset * 86400_000).toISOString().slice(0, 10);
 
@@ -24,6 +25,17 @@ function authorized(req: Request) {
 interface Ws { id: string; plan: string | null; paid_until: string }
 interface U { email: string; name: string | null; workspace: string }
 
+/** The owner's morning summary (never blocks the customers' emails). */
+async function ownerReport(expired: number, ending: number) {
+  try {
+    const owners = await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1");
+    if (!owners[0]?.email) return;
+    await sendEmail(ownerReportEmail(owners[0].email, await dailyReport({ expired, ending })));
+  } catch (err) {
+    console.error("owner report", err instanceof Error ? err.message : err);
+  }
+}
+
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "no autorizado" }, { status: 401 });
   // credits of periods that ended expire (before the reminders, which mention what's left)
@@ -32,7 +44,10 @@ export async function GET(req: Request) {
   const soon = day(3);
   const today = day(0);
   const ws = await sbRest<Ws[]>(`workspaces?paid_until=in.(${soon},${today})&id=neq.main&select=id,plan,paid_until`);
-  if (!ws.length) return NextResponse.json({ ok: true, sent: 0, expiry });
+  if (!ws.length) {
+    await ownerReport(expiry?.expired ?? 0, 0);
+    return NextResponse.json({ ok: true, sent: 0, expiry });
+  }
   const users = await sbRest<U[]>(`users?workspace=in.(${ws.map((w) => encodeURIComponent(w.id)).join(",")})&active=eq.true&select=email,name,workspace`);
   let sent = 0;
   for (const w of ws) {
@@ -42,5 +57,6 @@ export async function GET(req: Request) {
       if (ok) sent++;
     }
   }
+  await ownerReport(expiry?.expired ?? 0, ws.filter((w) => w.paid_until === soon).length);
   return NextResponse.json({ ok: true, sent, expiry });
 }

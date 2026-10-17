@@ -108,3 +108,44 @@ export function planEndingEmail(to: string, name: string | null, o: { plan: stri
     text: plain([hello(name), "", `${plan} está vigente hasta el ${longDate(o.until)}. ${left}`, "Tus anuncios, avatares y voces quedan guardados aunque el plan venza.", "", `Renovar: ${link}`]),
   };
 }
+
+export interface DailyReport {
+  day: string; // YYYY-MM-DD (yesterday)
+  salesCount: number;
+  salesUsd: number;
+  salesClp: number;
+  signups: number;
+  aiUsd: number;
+  expired: number;
+  ending: number;
+  alerts: string[];
+}
+
+/** The owner's 9:00 summary: money in, AI spent, new accounts and anything to look at. */
+export function ownerReportEmail(to: string, r: DailyReport): Email {
+  const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const margin = r.salesUsd - r.aiUsd;
+  const rows: [string, string][] = [
+    ["Ventas", `${r.salesCount} · ${usd(r.salesUsd)}${r.salesClp ? ` ($${Math.round(r.salesClp).toLocaleString("es-CL")} CLP)` : ""}`],
+    ["Gasto en IA (estimado)", usd(r.aiUsd)],
+    ["Ventas − gasto IA", usd(margin)],
+    ["Cuentas nuevas", String(r.signups)],
+    ["Planes que vencen en 3 días", String(r.ending)],
+    ["Créditos vencidos hoy", r.expired.toLocaleString("es-CL")],
+  ];
+  const date = longDate(r.day);
+  const ok = !r.alerts.length;
+  return {
+    to, tag: "resumen-dueno",
+    subject: `Creads · ${date}: ${r.salesCount} venta${r.salesCount === 1 ? "" : "s"}, ${usd(r.salesUsd)}${ok ? "" : " · ⚠ revisar"}`,
+    html: layout({
+      preview: ok ? "Todo en orden." : `${r.alerts.length} cosa(s) para revisar.`,
+      title: `Resumen del ${date}`,
+      paragraphs: [ok ? "Todo anduvo en orden. Estos son los números de ayer:" : "Hay algo para revisar (abajo). Estos son los números de ayer:"],
+      rows,
+      cta: { label: "Abrir el Panel", href: `${SITE}/admin` },
+      after: r.alerts.length ? [`<b>Para revisar:</b><br>${r.alerts.map((a) => `• ${esc(a)}`).join("<br>")}`] : [],
+    }),
+    text: plain([`Resumen del ${date}`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", ...(r.alerts.length ? ["Para revisar:", ...r.alerts.map((a) => `- ${a}`)] : ["Todo en orden."]), "", `Panel: ${SITE}/admin`]),
+  };
+}

@@ -27,3 +27,10 @@ test("emails escape names and include a text version", () => {
   assert.match(planEndingEmail("a@x.cl", "Ana", { plan: "Starter", until: "2026-10-19", daysLeft: 3, credits: 200 }).subject, /vence en 3 días/);
   assert.match(planEndingEmail("a@x.cl", "Ana", { plan: "Starter", until: "2026-10-16", daysLeft: 0, credits: 0 }).subject, /vence hoy/);
 });
+
+test("owner daily summary", async () => {
+  const { ownerReportEmail } = await import("../src/lib/emails");
+  const e = ownerReportEmail("o@x.cl", { day: "2026-10-16", salesCount: 2, salesUsd: 59, salesClp: 55990, signups: 3, aiUsd: 12.5, expired: 0, ending: 1, alerts: ["fal.ai: saldo bajo"] });
+  assert.match(e.subject, /2 ventas, US\$59,00 · ⚠ revisar/);
+  assert.ok(e.html.includes("US$46,50") && e.text.includes("fal.ai: saldo bajo"));
+});
