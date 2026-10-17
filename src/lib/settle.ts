@@ -3,6 +3,7 @@ import { PACKS, PLANS } from "./catalog";
 import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
 import { receiptEmail } from "./emails";
+import { beforeNewPeriod } from "./expiry";
 import { getPreapproval, setSubscriptionAmount } from "./mercadopago";
 
 // Applies a payment confirmed by Mercado Pago (or by the owner) to its order. The money part
@@ -56,6 +57,10 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
     if (other) return { ok: true, already: true };
   }
   const g = orderGrant(order);
+  // a plan starts a new period: the credits left from the previous one expire (now, or when it ends)
+  if (g.months > 0 && !(order.payments ?? []).includes(`${source}:${pay.id}`)) {
+    await beforeNewPeriod(order.ws).catch((e) => console.error("expiry before period", order.id, e instanceof Error ? e.message : e));
+  }
   const r = await applyPayment({
     paymentId: `${source}:${pay.id}`, orderId: order.id, amount: pay.amount, currency: pay.currency,
     credits: g.credits, months: g.months, plan: g.plan, note: `${order.quote.label} · ${order.id}`,

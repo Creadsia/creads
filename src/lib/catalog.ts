@@ -57,6 +57,9 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   };
 }
 
+/** Prices as shown everywhere: US$ (e.g. US$59, US$29,50). */
+export const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+
 /** Price in Chilean pesos (Mercado Pago charges in CLP): rounded to a ...990 price. */
 export function clpFor(usd: number, usdClp = 950) {
   if (!(usd > 0)) return 0;

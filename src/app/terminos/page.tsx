@@ -21,14 +21,14 @@ export default function Terminos() {
       <h2>3. Planes y créditos</h2>
       <ul>
         <li>Cada trabajo (video, imagen, voz u otro) usa créditos según el modelo y su duración. Siempre ves el precio antes de generar.</li>
-        <li>Los planes entregan créditos cada mes mientras estén vigentes. Las recargas suman créditos que no vencen.</li>
+        <li>Los planes entregan créditos para cada período pagado (un mes, o un año en el plan anual). Los créditos se usan dentro de ese período: los que no uses vencen cuando termina y no se acumulan para el siguiente. Las recargas se suman a tu saldo y vencen junto con tu plan.</li>
         <li>Si un trabajo falla por un problema del proveedor o de la plataforma, sus créditos vuelven automáticamente a tu cuenta.</li>
         <li>Los créditos no son dinero, no se pueden transferir a otras cuentas ni canjear por efectivo.</li>
       </ul>
 
       <h2>4. Pagos, renovación y cancelación</h2>
       <ul>
-        <li>Los precios se muestran en pesos chilenos e incluyen los impuestos que correspondan. Los pagos se procesan con Mercado Pago.</li>
+        <li>Los precios se muestran en dólares de EE. UU. (US$) e incluyen los impuestos que correspondan. Los pagos se procesan con Mercado Pago, que cobra el equivalente en pesos chilenos al tipo de cambio del día; antes de pagar ves el monto exacto en pesos.</li>
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
         <li>La oferta de lanzamiento (descuento en el primer mes) aplica una vez por cuenta.</li>
         <li>Los planes anuales y las recargas se pagan una sola vez.</li>

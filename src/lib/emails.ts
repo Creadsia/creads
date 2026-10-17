@@ -95,7 +95,7 @@ export function planEndingEmail(to: string, name: string | null, o: { plan: stri
   const link = `${SITE}/app/planes`;
   const when = o.daysLeft <= 0 ? "hoy" : o.daysLeft === 1 ? "mañana" : `en ${o.daysLeft} días`;
   const plan = o.plan ? `Tu plan ${o.plan}` : "Tu plan";
-  const left = o.credits && o.credits > 0 ? `Te quedan ${o.credits.toLocaleString("es-CL")} créditos: renueva para seguir usándolos sin pausa.` : "Renueva para seguir generando sin pausa.";
+  const left = o.credits && o.credits > 0 ? `Te quedan ${o.credits.toLocaleString("es-CL")} créditos: úsalos antes de esa fecha, porque los créditos vencen con el período del plan.` : "Renueva para seguir generando sin pausa.";
   return {
     to, tag: o.daysLeft <= 0 ? "plan-vence-hoy" : "plan-por-vencer",
     subject: o.daysLeft <= 0 ? `${plan} vence hoy` : `${plan} vence ${when}`,

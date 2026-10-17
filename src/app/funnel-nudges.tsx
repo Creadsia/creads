@@ -21,7 +21,7 @@ export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; l
   const es = lang === "es";
   const plus = PLANS.find((p) => p.id === "plus")!;
   const first = plus.monthly * (1 - LAUNCH_PCT / 100);
-  const price = es ? `$${clpFor(first, rate).toLocaleString("es-CL")}` : `US$${first.toFixed(2).replace(/\.00$/, "")}`;
+  const price = `US$${first.toFixed(2).replace(/\.00$/, "")}`;
 
   const [bar, setBar] = useState(false);
   const [open, setOpen] = useState(false);
@@ -98,7 +98,7 @@ export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; l
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
             <b className="block truncate">{t.bar}</b>
-            <span className="text-muted"><s>{es ? `$${clpFor(plus.monthly, rate).toLocaleString("es-CL")}` : `US$${plus.monthly}`}</s> {price}</span>
+            <span className="text-muted"><s>{`US$${plus.monthly}`}</s> {price}</span>
           </span>
           <a href={startHref("plus")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>

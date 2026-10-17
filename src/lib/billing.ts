@@ -4,6 +4,7 @@ import type { ItemId, MethodId, Period, Quote } from "./catalog";
 import { CreditError, grant } from "./credits";
 import { DEFAULT_FINANZAS, type Finanzas } from "./finance";
 import type { Visitor } from "./meta";
+import { beforeNewPeriod } from "./expiry";
 import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "./supabase";
 
 // Payments: recording a paid plan or top-up (by hand today, by Stripe / Mercado Pago later) and the
@@ -50,6 +51,7 @@ export async function recordPlanPayment(ws: string, planId: string, months: numb
   const m = Math.min(12, Math.max(1, Math.round(months)));
   const from = w.paid_until && w.paid_until > today() ? w.paid_until : today();
   const until = addMonths(from, m);
+  await beforeNewPeriod(ws).catch((e) => console.error("expiry before period", ws, e instanceof Error ? e.message : e));
   const what = `Plan ${plan.nombre} · ${m === 1 ? "1 mes" : `${m} meses`}${opts.note ? ` · ${opts.note}` : ""}`;
   await grant(ws, plan.creditos * m, "plan", `Pago ${what}`, opts.by, opts.ref); // first: a repeated payment stops here
   await sbRest(`workspaces?id=eq.${encodeURIComponent(ws)}`, { method: "PATCH", body: JSON.stringify({ plan: plan.nombre, paid_until: until }) });

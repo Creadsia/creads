@@ -126,7 +126,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
               <span className="text-xs font-semibold text-muted">{plan}</span>
               <span className="font-mono text-sm font-bold">{!info ? "…" : info.unlimited ? "Sin límite" : `${(info.balance ?? 0).toLocaleString("es-CL")} créditos`}</span>
             </div>
-            {until && <p className="mt-0.5 text-xs text-muted">Vigente hasta el {until}</p>}
+            {until && <p className="mt-0.5 text-xs text-muted">Tus créditos vencen el {until}</p>}
             {!info?.unlimited && (
               <Link href="/app/planes" role="menuitem" onClick={close}
                 className="mt-2 block rounded-lg bg-[image:var(--grad)] px-3 py-1.5 text-center text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-accent">

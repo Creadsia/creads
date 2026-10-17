@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { sbRest } from "@/lib/supabase";
 import { balanceOf } from "@/lib/credits";
 import { planEndingEmail } from "@/lib/emails";
+import { runExpiry } from "@/lib/expiry";
 import { emailConfigured, sendEmail } from "@/lib/providers/email";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +26,13 @@ interface U { email: string; name: string | null; workspace: string }
 
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "no autorizado" }, { status: 401 });
-  if (!emailConfigured()) return NextResponse.json({ ok: true, skipped: "sin RESEND_API_KEY" });
+  // credits of periods that ended expire (before the reminders, which mention what's left)
+  const expiry = await runExpiry().catch((e) => { console.error("expiry", e instanceof Error ? e.message : e); return null; });
+  if (!emailConfigured()) return NextResponse.json({ ok: true, expiry, skipped: "sin RESEND_API_KEY" });
   const soon = day(3);
   const today = day(0);
   const ws = await sbRest<Ws[]>(`workspaces?paid_until=in.(${soon},${today})&id=neq.main&select=id,plan,paid_until`);
-  if (!ws.length) return NextResponse.json({ ok: true, sent: 0 });
+  if (!ws.length) return NextResponse.json({ ok: true, sent: 0, expiry });
   const users = await sbRest<U[]>(`users?workspace=in.(${ws.map((w) => encodeURIComponent(w.id)).join(",")})&active=eq.true&select=email,name,workspace`);
   let sent = 0;
   for (const w of ws) {
@@ -39,5 +42,5 @@ export async function GET(req: Request) {
       if (ok) sent++;
     }
   }
-  return NextResponse.json({ ok: true, sent });
+  return NextResponse.json({ ok: true, sent, expiry });
 }

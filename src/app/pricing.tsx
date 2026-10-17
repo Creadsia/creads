@@ -27,12 +27,12 @@ export default function Pricing({ t, lang, rate, renews = true }: { t: Content["
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // money as the visitor reads it: pesos in Spanish (that's what Mercado Pago charges), dollars in English
-  const money = (usd: number) => (es ? pesos(clpFor(usd, rate)) : dollars(usd));
+  const money = (usd: number) => dollars(usd); // prices are always in US$
   // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
-  const perMonthOfYear = (usdYear: number) => (es ? pesos(Math.round(clpFor(usdYear, rate) / 12 / 10) * 10) : dollars(Math.round((usdYear / 12) * 100) / 100));
+  const perMonthOfYear = (usdYear: number) => dollars(Math.round((usdYear / 12) * 100) / 100);
   // without automatic renewal (temporary payment setup) the FAQ must not promise it
   const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes y créditos» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans and credits\" with one click. There are no automatic charges." } : f));
-  const other = (usd: number) => (es ? dollars(usd) : `≈ ${pesos(clpFor(usd, rate))} CLP`);
+  const other = (usd: number) => `≈ ${pesos(clpFor(usd, rate))} CLP`;
 
   // Meta "ViewContent": the visitor saw the plans (once per visit)
   useEffect(() => {

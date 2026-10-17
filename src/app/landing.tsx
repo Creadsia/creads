@@ -516,7 +516,8 @@ function AppPreview({ t }: { t: Content["preview"] }) {
 /** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
 function fromPrice(lang: string, rate: number) {
   const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100);
-  return lang === "es" ? `$${clpFor(usd, rate).toLocaleString("es-CL")}` : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
+  void rate; void lang;
+  return `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
 }
 
 /** A thin reminder between sections: the price and one button to the plans. */
@@ -641,7 +642,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                 <span>{t.hero.poweredBy}</span>
-                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs", "Claude"].map((m) => (
+                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs", "Creads IA"].map((m) => (
                   <b key={m} className="font-mono text-[13px] font-medium text-ink/85">
                     {m}
                   </b>

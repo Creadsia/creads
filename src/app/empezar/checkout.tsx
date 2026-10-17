@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
@@ -30,7 +30,6 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   const plan = PLANS.find((p) => p.id === item);
   const pack = PACKS.find((p) => p.id === item);
   const totalClp = clpFor(q.total, rate);
-  const regularClp = plan ? clpFor(plan.monthly, rate) : 0;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -138,12 +137,12 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                       {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
-                      {isPlan ? `${x.credits.toLocaleString("es-CL")} créditos al mes · ≈ ${ADS(x.credits)} anuncios de 30 s` : `≈ ${ADS(x.credits)} anuncios de 30 s · no vencen`}
+                      {isPlan ? `${x.credits.toLocaleString("es-CL")} créditos al mes · ≈ ${ADS(x.credits)} anuncios de 30 s` : `≈ ${ADS(x.credits)} anuncios de 30 s · se suman a tu plan`}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end">
-                    {xq.launch > 0 && <s className="text-xs text-muted">{pesos(clpFor(xq.subtotal, rate))}</s>}
-                    <b className="font-display text-lg font-semibold">{pesos(clpFor(xq.total, rate))}</b>
+                    {xq.launch > 0 && <s className="text-xs text-muted">{usd(xq.subtotal)}</s>}
+                    <b className="font-display text-lg font-semibold">{usd(xq.total)}</b>
                     <span className="text-[11px] text-muted">{xq.period === "anual" ? "por 12 meses" : xq.period === "mensual" ? "primer mes" : "una vez"}</span>
                   </span>
                 </button>
@@ -154,7 +153,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5">
             <b>{plan ? `Lo que incluye ${plan.name}` : "Lo que incluye"}</b>
             <ul className="grid gap-2 text-sm sm:grid-cols-2">
-              {(plan ? plan.features : ["Se suman a tu saldo al instante", "No vencen", "Sirven para todos los modelos", "Puedes sumar un plan cuando quieras"]).map((f) => (
+              {(plan ? plan.features : ["Se suman a tu saldo al instante", "Vencen junto con tu plan", "Sirven para todos los modelos", "Puedes sumar un plan cuando quieras"]).map((f) => (
                 <li key={f} className="flex gap-2"><Check />{f}</li>
               ))}
               <li className="flex gap-2"><Check />Revisión de calidad automática en cada anuncio</li>
@@ -179,11 +178,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
               {renews ? (
-                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? pesos(totalClp) : "el precio con descuento"} y desde el segundo mes {plan ? pesos(regularClp) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(q.total) : "el precio con descuento"} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
               ) : (
-                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? pesos(totalClp) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? pesos(regularClp) : "precio normal"}/mes).</p>
+                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(q.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}
-              <p>El plan anual y las recargas se pagan una sola vez. Todo se cobra en pesos chilenos y recibes el comprobante de Mercado Pago en tu correo.</p>
+              <p>El plan anual y las recargas se pagan una sola vez. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
           </details>
@@ -196,13 +195,15 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <div className="flex flex-col gap-1 rounded-2xl bg-surface-2 p-4">
               <span className="flex items-center justify-between gap-2 text-sm text-muted">{q.label}<a href="#tu-plan" className="font-semibold text-accent-text underline lg:hidden">Cambiar</a></span>
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <b className="font-display text-3xl font-semibold">{pesos(totalClp)}</b>
-                {q.launch > 0 && <s className="text-muted">{pesos(clpFor(q.subtotal, rate))}</s>}
+                <b className="font-display text-3xl font-semibold">{usd(q.total)}</b>
+                {q.launch > 0 && <s className="text-muted">{usd(q.subtotal)}</s>}
                 <span className="text-sm text-muted">hoy</span>
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">
-                {q.period === "mensual" ? (renews ? `Luego ${pesos(regularClp)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${pesos(regularClp)}/mes si renuevas.`) : q.period === "anual" ? `${q.credits.toLocaleString("es-CL")} créditos para todo el año.` : `${pack?.credits.toLocaleString("es-CL")} créditos que no vencen.`}
+                {q.period === "mensual" ? (renews ? `Luego ${usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${usd(plan?.monthly ?? 0)}/mes si renuevas.`) : q.period === "anual" ? `${q.credits.toLocaleString("es-CL")} créditos para todo el año.` : `${pack?.credits.toLocaleString("es-CL")} créditos que se suman a tu plan y vencen con él.`}
+              </span>
+              <span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
               </span>
             </div>
 
@@ -241,7 +242,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
             <button type="submit" disabled={Boolean(busy)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
-              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${pesos(totalClp)}`}
+              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
             </button>
             <p className="text-center text-xs text-muted">
               Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>.
