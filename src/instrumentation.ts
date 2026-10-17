@@ -4,5 +4,5 @@ export async function onRequestError(err: unknown, request: { path: string; meth
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const { logError } = await import("./lib/errlog");
   const e = err as { message?: string; digest?: string };
-  await logError({ area: "servidor", message: `${request.method} ${e?.message ?? String(err)}`, path: request.path, ref: e?.digest });
+  await logError({ area: "servidor", message: `${request.method} ${e?.message ?? String(err)}`, path: String(request.path ?? "").split("?")[0], ref: e?.digest });
 }

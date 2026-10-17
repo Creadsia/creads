@@ -33,11 +33,22 @@ export function summarizeGen(clips: { status: string; kind: string | null; model
   return { hours, total, failed, rate: total ? failed / total : 0, failedUsd: +rows.reduce((a, r) => a + r.failedUsd, 0).toFixed(2), refunded, rows };
 }
 
+/** All rows of a query, 1000 at a time (the database hands out at most 1000 per request). */
+async function allRows<T>(q: string, maxPages = 50): Promise<T[]> {
+  const out: T[] = [];
+  for (let p = 0; p < maxPages; p++) {
+    const page = await sbRest<T[]>(`${q}&order=created_at.asc&limit=1000&offset=${p * 1000}`).catch(() => [] as T[]);
+    out.push(...page);
+    if (page.length < 1000) break;
+  }
+  return out;
+}
+
 export async function genStats(hours: number): Promise<GenStats> {
   const since = new Date(Date.now() - hours * 3600_000).toISOString();
   const [clips, refunds] = await Promise.all([
-    sbRest<{ status: string; kind: string | null; model: string | null; usd: number | null; ad_id: string | null }[]>(`clips?created_at=gte.${since}&select=status,kind,model,usd,ad_id&limit=50000`).catch(() => []),
-    sbRest<{ delta: number }[]>(`credits?kind=eq.refund&created_at=gte.${since}&select=delta&limit=50000`).catch(() => []),
+    allRows<{ status: string; kind: string | null; model: string | null; usd: number | null; ad_id: string | null }>(`clips?created_at=gte.${since}&select=status,kind,model,usd,ad_id`),
+    allRows<{ delta: number }>(`credits?kind=eq.refund&created_at=gte.${since}&select=delta`),
   ]);
   return summarizeGen(clips, hours, refunds.reduce((a, r) => a + Number(r.delta || 0), 0));
 }

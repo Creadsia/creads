@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { alarm, groupErrors, markResolved, recentErrors, resolvedSigs } from "@/lib/errlog";
 import { genStats, watchFailures } from "@/lib/genstats";
@@ -16,7 +16,7 @@ export async function GET() {
     recentErrors(7), resolvedSigs(), genStats(24), genStats(24 * 7),
     sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []),
   ]);
-  void watchFailures();
+  after(() => watchFailures());
   return NextResponse.json({ groups: groupErrors(list, resolved).slice(0, 100), g24, g7, alarms: { email: owners[0]?.email ?? null, ready: emailConfigured() } });
 }
 

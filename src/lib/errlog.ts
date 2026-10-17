@@ -12,10 +12,13 @@ import { sendEmail } from "./providers/email";
 
 export type ErrArea = "servidor" | "navegador" | "generacion" | "pagos" | "correo" | "cron";
 
-export interface ErrEntry { at: string; area: ErrArea; sig: string; message: string; ref?: string; path?: string; ws?: string }
+export interface ErrEntry { at: string; area: ErrArea; sig: string; message: string; ref?: string; path?: string; ws?: string; n?: number }
 
 const day = (d = new Date()) => d.toISOString().slice(0, 10);
-const file = (d: string) => `errores/${d}.json`;
+// browser errors (reported by anyone's browser) live in their own file, so a flood of them can never
+// push real server errors out of the daily cap
+const file = (d: string, browser = false) => `errores/${d}${browser ? "-navegador" : ""}.json`;
+const CAP = { server: 3000, browser: 1000 };
 const ALARMS = "errores/alarmas.json";
 const RESOLVED = "errores/resueltos.json";
 const SIX_HOURS = 6 * 3600_000;
@@ -24,8 +27,10 @@ const SIX_HOURS = 6 * 3600_000;
 export function redact(s: string) {
   return String(s ?? "")
     .replace(/(https?:\/\/[^\s?#"']+)\?[^\s"']*/g, "$1?…")
+    .replace(/\bBearer\s+[^\s"',]+/gi, "Bearer [clave]")
     .replace(/\b(sk|pk|rk|whsec|re|xi|fal)[-_][A-Za-z0-9_-]{8,}/g, "[clave]")
-    .replace(/\b[A-Za-z0-9_-]{32,}\b/g, "[…]")
+    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]*)?/g, "[clave]")
+    .replace(/(?=[A-Za-z0-9+/_-]*\d)(?=[A-Za-z0-9+/_-]*[A-Za-z])[A-Za-z0-9+/_-]{32,}={0,2}/g, "[…]") // long keys/ids (needs letters and digits, so plain page paths survive)
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[correo]")
     .slice(0, 600);
 }
@@ -72,26 +77,46 @@ export async function alarm(key: string, a: { title: string; detail: string; row
   }
 }
 
-/** Records an error (and emails the owner the first time this kind shows up in a while). */
+const noLinks = (t: string) => t.replace(/https?:\/\/\S+/g, "[enlace]").replace(/\bwww\.\S+/g, "[enlace]");
+
+// The same error repeating within a minute on this server is counted, not written each time.
+const recent = new Map<string, { at: number; skipped: number }>();
+
+/** Records an error (and emails the owner the first time a new kind of server error shows up). */
 export async function logError(e: { area: ErrArea; message: string; ref?: string; path?: string; ws?: string }) {
   try {
     const message = redact(e.message);
     if (!message) return;
+    const browser = e.area === "navegador";
     const sig = signature(e.area, message);
-    const entry: ErrEntry = { at: new Date().toISOString(), area: e.area, sig, message, ...(e.ref ? { ref: e.ref } : {}), ...(e.path ? { path: e.path.slice(0, 120) } : {}), ...(e.ws ? { ws: e.ws } : {}) };
-    const list = (await readPrivateJSON<ErrEntry[]>(file(day()))) ?? [];
+    const mem = recent.get(sig);
+    if (mem && Date.now() - mem.at < 60_000) { mem.skipped++; return; }
+    recent.set(sig, { at: Date.now(), skipped: 0 });
+    if (recent.size > 500) for (const [k, v] of recent) if (Date.now() - v.at > 60_000) recent.delete(k);
+    const path = e.path ? redact(e.path.split("?")[0]).slice(0, 120) : undefined;
+    const n = 1 + (mem?.skipped ?? 0);
+    const entry: ErrEntry = { at: new Date().toISOString(), area: e.area, sig, message, ...(e.ref ? { ref: redact(e.ref).slice(0, 80) } : {}), ...(path ? { path } : {}), ...(e.ws ? { ws: e.ws } : {}), ...(n > 1 ? { n } : {}) };
+    const f = file(day(), browser);
+    const list = (await readPrivateJSON<ErrEntry[]>(f)) ?? [];
     const firstToday = !list.some((x) => x.sig === sig);
-    if (list.length < 3000) {
+    if (list.length < (browser ? CAP.browser : CAP.server)) {
       list.push(entry);
-      await writePrivateJSON(file(day()), list);
+      await writePrivateJSON(f, list);
+    }
+    if (browser) {
+      // Anyone can report a browser error, so its text never goes into an email. Only a real wave of
+      // them (many reports today) sends one fixed-text alarm; the details are in the Panel.
+      const today = list.reduce((a, x) => a + (x.n ?? 1), 0);
+      if (today >= 50 && today - n < 50) await alarm("navegador:ola", { title: "Muchos errores en el navegador de los clientes", detail: `Hoy van ${today} errores reportados desde el navegador. Revisa el detalle en Panel → Errores y alarmas.` });
+      return;
     }
     if (firstToday) {
       const resolved = (await readPrivateJSON<Record<string, string>>(RESOLVED).catch(() => null)) ?? {};
       const where = { servidor: "el servidor", navegador: "el navegador de un cliente", generacion: "una generación", pagos: "pagos", correo: "el envío de correos", cron: "las tareas diarias" }[e.area];
       await alarm(`err:${sig}`, {
         title: resolved[sig] ? "Volvió un error que habías marcado como resuelto" : `Error nuevo en ${where}`,
-        detail: message,
-        rows: [["Dónde", e.path || where], ...(e.ref ? [["Referencia", e.ref] as [string, string]] : [])],
+        detail: noLinks(message),
+        rows: [["Dónde", path ? noLinks(path) : where], ...(e.ref ? [["Referencia", noLinks(redact(e.ref).slice(0, 80))] as [string, string]] : [])],
       });
     }
   } catch (err) {
@@ -104,8 +129,10 @@ export async function recentErrors(days = 7): Promise<ErrEntry[]> {
   const out: ErrEntry[] = [];
   for (let i = 0; i < days; i++) {
     const d = day(new Date(Date.now() - i * 86400_000));
-    const list = (await readPrivateJSON<ErrEntry[]>(file(d)).catch(() => null)) ?? [];
-    if (Array.isArray(list)) out.push(...list);
+    for (const browser of [false, true]) {
+      const list = (await readPrivateJSON<ErrEntry[]>(file(d, browser)).catch(() => null)) ?? [];
+      if (Array.isArray(list)) out.push(...list);
+    }
   }
   return out.sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -116,7 +143,7 @@ export function groupErrors(list: ErrEntry[], resolved: Record<string, string> =
   const m = new Map<string, ErrGroup>();
   for (const e of list) {
     const g = m.get(e.sig) ?? { sig: e.sig, area: e.area, message: e.message, count: 0, first: e.at, last: e.at, refs: [], paths: [], resolved: false };
-    g.count++;
+    g.count += e.n ?? 1;
     if (e.at < g.first) g.first = e.at;
     if (e.at > g.last) { g.last = e.at; g.message = e.message; }
     if (e.ref && g.refs.length < 5 && !g.refs.includes(e.ref)) g.refs.push(e.ref);

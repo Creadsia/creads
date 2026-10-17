@@ -165,8 +165,10 @@ export default function AdminPanel() {
         ))}
       </nav>
 
-      {!data ? (
-        tab === "lanzamiento" ? <Lanzamiento /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
+      {/* tabs that load their own data render the same way before and after the money data arrives
+          (so they don't mount twice) */}
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+        tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -175,12 +177,7 @@ export default function AdminPanel() {
           {tab === "fijos" && <Fijos d={data} change={change} setCfg={setCfg} />}
           {tab === "modelos" && <Modelos d={data} change={change} />}
           {tab === "cuentas" && <Cuentas d={data} />}
-          {tab === "saldos" && <Saldos />}
           {tab === "clientes" && <Clientes planes={data.config.planes} />}
-          {tab === "registros" && <Registros />}
-          {tab === "estado" && <Estado />}
-          {tab === "lanzamiento" && <Lanzamiento />}
-          {tab === "errores" && <Errores />}
         </>
       )}
     </div>
@@ -1248,15 +1245,16 @@ function Lanzamiento() {
         </div>
       </div>
       {(() => {
+        if (!checks) return null; // wait for the automatic checks so the banner doesn't flash red
         const blocking = MANUAL.filter((m) => m.urgent && !done[m.id]).length + (checks?.filter((c) => c.state === "falta").length ?? 0);
         return blocking > 0 ? (
           <div className="rounded-xl border border-bad/50 bg-bad/10 px-4 py-3">
             <b className="text-bad">🔴 Todavía no se puede lanzar: faltan {blocking} {blocking === 1 ? "cosa que bloquea" : "cosas que bloquean"}.</b>
             <p className="text-sm text-muted">Están en rojo abajo. Cuando no quede ninguna, este aviso se pone verde.</p>
           </div>
-        ) : checks ? (
+        ) : (
           <div className="rounded-xl border border-good/50 bg-good/10 px-4 py-3"><b className="text-good">🟢 Lista para lanzar: no queda nada que bloquee.</b></div>
-        ) : null;
+        );
       })()}
       {err && <p className="text-sm text-bad">{err}</p>}
       <h3 className="text-sm font-bold text-muted">Se revisa solo</h3>

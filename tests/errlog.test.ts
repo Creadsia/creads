@@ -41,3 +41,18 @@ test("generations: failure rates per model and alarms only when it matters", () 
   assert.ok(sp.some((x) => x.key === "fallas:todas")); // 33% of 12
   assert.equal(spikes(summarizeGen(clips.slice(0, 9), 24)).length, 0);
 });
+
+test("error log: bearer tokens and base64 keys are hidden, page paths are kept", () => {
+  const r = redact("Authorization: Bearer abc.def-123 key=Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdo+/xyz== on /app/herramientas/copiar-movimiento");
+  assert.ok(!r.includes("abc.def-123"));
+  assert.ok(!r.includes("Zm9vYmFy"));
+  assert.ok(r.includes("/app/herramientas/copiar-movimiento"));
+});
+
+test("error log: repeats counted on one entry add up in the group", () => {
+  const g = groupErrors([
+    { at: "2026-10-17T10:00:00Z", area: "navegador", sig: "cccccccccccc", message: "z", n: 7 },
+    { at: "2026-10-17T10:05:00Z", area: "navegador", sig: "cccccccccccc", message: "z" },
+  ]);
+  assert.equal(g[0].count, 8);
+});
