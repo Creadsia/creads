@@ -90,7 +90,7 @@ export async function grokRun(o: { system: string; prompt: string; history?: Tur
   const data = (await res.json().catch(() => ({}))) as Resp;
   if (!res.ok) {
     const msg = typeof data.error === "string" ? data.error : data.error?.message;
-    if (res.status === 401 || res.status === 403) throw new GrokError("xAI rechazó la clave: revisa XAI_API_KEY en Vercel.");
+    if (res.status === 401 || res.status === 403 || /api key/i.test(msg ?? "")) throw new GrokError("xAI rechazó la clave: revisa que XAI_API_KEY en Vercel sea la clave completa (empieza con «xai-») y haz Redeploy.");
     if (res.status === 402 || /credit|balance|billing|spend/i.test(msg ?? "")) throw new GrokError("sin saldo en xAI: carga créditos en console.x.ai → Billing.");
     if (res.status === 429) throw new GrokError("xAI pidió esperar (demasiadas solicitudes). Prueba en unos minutos.");
     throw new GrokError(`xAI respondió ${res.status}${msg ? `: ${String(msg).slice(0, 200)}` : ""}`);
