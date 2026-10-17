@@ -62,6 +62,12 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
     build: (i) => ({ prompt: videoEditPrompt(i.prompt ?? "", i.images?.length ?? 0), video_url: i.video, keep_audio: true, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}) }),
     pick: vid,
   },
+  "copiar-movimiento": {
+    endpoint: "fal-ai/kling-video/v3/standard/motion-control",
+    // "video": the character follows the reference video's motion and framing (up to 30 s)
+    build: (i) => ({ image_url: i.image, video_url: i.video, character_orientation: "video", keep_original_sound: true, ...(i.prompt ? { prompt: i.prompt } : {}) }),
+    pick: vid,
+  },
   "avatar-habla": {
     endpoint: "bytedance/omnihuman/v2",
     build: (i) => ({ image_url: i.image, audio_url: i.audio, ...(i.prompt ? { prompt: i.prompt } : {}) }),

@@ -8,6 +8,7 @@ export type ToolId =
   | "mejorar-imagen"
   | "mejorar-video"
   | "editar-video"
+  | "copiar-movimiento"
   | "avatar-habla"
   | "sincronizar-labios"
   | "doblaje"
@@ -43,6 +44,8 @@ export interface ToolDef {
   approx?: boolean;
   /** Needs the person's permission (faces and voices). */
   consent?: boolean;
+  /** Ready-made instructions the customer can tap to start from. */
+  ideas?: string[];
 }
 
 const ceil5 = (s: number) => Math.max(5, Math.ceil(s / 5) * 5);
@@ -112,6 +115,36 @@ export const TOOLS: ToolDef[] = [
     priceNote: "≈ US$0,17 por segundo de video",
     approx: true,
     consent: true,
+    ideas: [
+      "Cambia a la persona por la de la foto 1, con la misma ropa y los mismos gestos.",
+      "Cambia el producto que tiene en la mano por el de la foto 1.",
+      "Cambia el lugar por una cocina moderna y luminosa.",
+      "Cambia el fondo por un living cálido de casa chilena.",
+      "Ponle una polera del color de mi marca y deja todo lo demás igual.",
+    ],
+  },
+  {
+    id: "copiar-movimiento",
+    name: "Copiar movimiento",
+    short: "Tu personaje hace exactamente los mismos movimientos de otro video.",
+    lead: "Sube un video que te guste (de 3 a 30 segundos) y la foto de tu personaje: tu personaje repite los mismos gestos, poses y movimientos de cámara. Ideal para recrear un anuncio ganador con tu propia cara o avatar.",
+    output: "video",
+    model: "Kling 3.0 Motion Control",
+    inputs: {
+      image: true,
+      video: { min: 3, max: 30 },
+      prompt: "optional",
+      promptHint: "Opcional: el lugar o detalles, por ejemplo «en una cocina moderna, luz de día». Si no escribes nada, se mantiene el estilo de la foto.",
+    },
+    // billed per second of the result, which is as long as the video given
+    estimate: (s) => +(0.126 * Math.max(3, Math.ceil(s))).toFixed(2),
+    priceNote: "≈ US$0,13 por segundo de video",
+    consent: true,
+    ideas: [
+      "En una cocina moderna y luminosa, luz natural.",
+      "En un living cálido, cámara en mano estilo UGC.",
+      "En la calle, de día, estilo video de celular.",
+    ],
   },
   {
     id: "avatar-habla",

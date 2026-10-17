@@ -29,6 +29,7 @@ const I = {
   chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   close: "M6 6l12 12M18 6 6 18",
   pen: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4",
+  redo: "M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z",
 };
 
@@ -75,6 +76,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     items: [
       { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
       { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
+      { href: "/app/recrear", label: "Recrear video", icon: I.redo, full: true },
     ],
   },
 ];

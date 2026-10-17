@@ -136,3 +136,24 @@ export async function signedUploadFor(ws: string, folder: string, ext: string) {
   if (typeof data?.url !== "string") throw new Error("Storage: respuesta inesperada al preparar la subida.");
   return { uploadUrl: `${url}/storage/v1${data.url}`, publicUrl: refFor(path) };
 }
+
+/**
+ * Copies a file from one workspace into another one's private folder (used when a customer recreates
+ * an example video Creadsia published: from then on it is their own file, like any upload).
+ */
+export async function copyMedia(ref: string, toWs: string, folder: string) {
+  await ensureVault();
+  const from = pathOf(ref);
+  if (!from) throw new Error("Archivo inválido.");
+  const ext = from.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "mp4";
+  const to = pathFor(toWs, folder, `${randomUUID()}.${ext}`);
+  const { url, key } = env();
+  const res = await fetch(`${url}/storage/v1/object/copy`, {
+    method: "POST",
+    headers: { ...sbHeaders(key), "content-type": "application/json" },
+    body: JSON.stringify({ bucketId: VAULT, sourceKey: from, destinationKey: to }),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Storage: no se pudo copiar el archivo (${res.status}).`);
+  return refFor(to);
+}

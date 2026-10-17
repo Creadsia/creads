@@ -20,3 +20,26 @@ test("video edit: request keeps the audio and only sends photos when there are s
   assert.equal(t.consent, true);
   assert.equal(t.estimate(5), 0.84);
 });
+
+test("copy motion: character follows the video, keeps its sound, priced per second", () => {
+  const a = toolRequest("copiar-movimiento", { image: "https://x/p.png", video: "https://x/v.mp4" })!;
+  assert.equal(a.endpoint, "fal-ai/kling-video/v3/standard/motion-control");
+  assert.equal(a.body.character_orientation, "video");
+  assert.equal(a.body.keep_original_sound, true);
+  assert.equal("prompt" in a.body, false);
+  assert.equal(toolRequest("copiar-movimiento", { image: "i", video: "v", prompt: "en una cocina" })!.body.prompt, "en una cocina");
+  const t = findTool("copiar-movimiento")!;
+  assert.equal(t.consent, true);
+  assert.equal(t.inputs.video?.max, 30);
+  assert.equal(t.estimate(10), 1.26);
+  assert.equal(t.estimate(1), 0.38); // 3 s minimum
+});
+
+test("inspiration: owner input is clamped and the tool is one of the two recreate modes", async () => {
+  const { cleanExample } = await import("../src/lib/inspiracion");
+  const e = cleanExample({ title: "  Hola  ", prompt: "x".repeat(900), mode: "quitar-fondo", tag: 5 });
+  assert.equal(e.title, "Hola");
+  assert.equal(e.prompt.length, 600);
+  assert.equal(e.mode, "editar-video");
+  assert.equal(e.tag, "");
+});

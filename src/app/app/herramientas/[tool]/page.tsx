@@ -28,7 +28,7 @@ export default async function ToolPage({ params, searchParams }: Props) {
           <span className="rounded-full border border-line px-3 py-1 font-mono text-xs text-muted">{t.model}</span>
         </PageHead>
       </div>
-      <FullOnly><ToolRun key={t.id} toolId={t.id} initial={{ image: one(q.image), video: one(q.video) }} /></FullOnly>
+      <FullOnly><ToolRun key={t.id} toolId={t.id} initial={{ image: one(q.image), video: one(q.video), prompt: typeof q.prompt === "string" ? q.prompt.slice(0, 600) : undefined }} /></FullOnly>
     </>
   );
 }

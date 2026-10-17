@@ -214,7 +214,12 @@ function Result({ job, output }: { job: Job; output: "image" | "video" | "audio"
       )}
       <div className="flex flex-wrap items-center gap-2">
         <a href={job.url} download className={btnCls}>Descargar</a>
-        {next.map((x) => (
+        {output === "video" && (
+          <Link href={`/app/recrear?video=${encodeURIComponent(job.url)}`} className={ghostCls} title="Usa este video como base: cambia la persona, el producto o el lugar, o copia su movimiento con otro personaje">
+            ↻ Recrear
+          </Link>
+        )}
+        {next.filter((x) => output !== "video" || (x.id !== "editar-video" && x.id !== "copiar-movimiento")).map((x) => (
           <Link key={x.id} href={`/app/herramientas/${x.id}?${output === "image" ? "image" : "video"}=${encodeURIComponent(job.url!)}`} className={ghostCls}>
             {x.name}
           </Link>
@@ -226,14 +231,14 @@ function Result({ job, output }: { job: Job; output: "image" | "video" | "audio"
 
 // ---------- the tool page ----------
 
-export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: { image?: string; video?: string } }) {
+export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: { image?: string; video?: string; prompt?: string } }) {
   const t = findTool(toolId)!;
   const library = useTable<Img>("images");
   const [image, setImage] = useState(initial.image ?? "");
   const [images, setImages] = useState<string[]>(initial.image ? [initial.image] : []);
   const [video, setVideo] = useState<{ url: string; secs: number } | null>(null);
   const [audio, setAudio] = useState<{ url: string; secs: number } | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initial.prompt ?? "");
   const [target, setTarget] = useState<string>("es");
   const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
   const [instrumental, setInstrumental] = useState(true);
@@ -337,6 +342,18 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
           <Field label={n.prompt === "required" ? "Qué quieres" : "Instrucción (opcional)"} hint={n.promptHint}>
             <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className={inputCls} />
           </Field>
+        )}
+        {n.prompt && t.ideas && (
+          <Group label="Ideas para empezar" hint="Tócala para usarla y después ajústala a tu caso.">
+            <div className="flex flex-wrap gap-1.5">
+              {t.ideas.map((x) => (
+                <button key={x} type="button" onClick={() => setPrompt(x)} aria-pressed={prompt === x}
+                  className={`rounded-full border px-3 py-1 text-left text-xs font-medium transition-colors ${prompt === x ? "border-accent bg-accent/10 text-ink" : "border-line text-muted hover:border-muted hover:text-ink"}`}>
+                  {x}
+                </button>
+              ))}
+            </div>
+          </Group>
         )}
         {n.target && (
           <Field label="Doblar al">
