@@ -26,10 +26,10 @@ function Days({ ad }: { ad: SpyAd }) {
   );
 }
 
-function AdCard({ ad, onScript, busy }: { ad: SpyAd; onScript: (ad: SpyAd) => void; busy: boolean }) {
+function AdCard({ ad, onScript, busy, first }: { ad: SpyAd; onScript: (ad: SpyAd) => void; busy: boolean; first?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
+    <article data-tour={first ? "spy-card" : undefined} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="relative aspect-[4/5] bg-black">
         {ad.video ? (
           <video src={ad.video} poster={ad.poster ?? undefined} controls playsInline preload="none" className="h-full w-full object-contain" />
@@ -62,7 +62,7 @@ function AdCard({ ad, onScript, busy }: { ad: SpyAd; onScript: (ad: SpyAd) => vo
         )}
         {ad.text.length > 180 && <button type="button" onClick={() => setOpen((v) => !v)} className="w-fit text-xs font-semibold text-muted hover:text-ink">{open ? "Ver menos" : "Ver texto completo"}</button>}
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
-          <button type="button" onClick={() => onScript(ad)} disabled={busy} className={`${btnCls} flex-1`}>
+          <button type="button" onClick={() => onScript(ad)} disabled={busy} data-tour={first ? "spy-desarmar" : undefined} className={`${btnCls} flex-1`}>
             {busy ? <span className="inline-flex items-center gap-2"><Spinner />Sacando el guion…</span> : "Desarmar este guion"}
           </button>
           <a href={`https://www.facebook.com/ads/library/?id=${ad.id}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink" title="Abrir en la Biblioteca de anuncios de Meta">Ver en Meta ↗</a>
@@ -148,18 +148,18 @@ export default function Spy() {
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={(e) => { e.preventDefault(); search(); }} className={cardCls}>
-        <div className="flex flex-col gap-2 lg:flex-row">
+        <div className="flex flex-col gap-2 lg:flex-row" data-tour="spy-buscar">
           <label className="sr-only" htmlFor="spy-q">Qué vendes o tu nicho</label>
           <input id="spy-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="¿Qué vendes? Ej: seguro de auto, remodelación de baño, paneles solares" className={`${inputCls} flex-1 py-3 text-base`} />
           <label className="sr-only" htmlFor="spy-pais">País</label>
-          <select id="spy-pais" value={pais} onChange={(e) => setPais(e.target.value)} className={`${inputCls} py-3`}>
+          <select id="spy-pais" data-tour="spy-pais" value={pais} onChange={(e) => setPais(e.target.value)} className={`${inputCls} py-3`}>
             {COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}
           </select>
           <button type="submit" disabled={Boolean(busy)} className="rounded-lg bg-[image:var(--grad)] px-6 py-3 font-semibold text-white disabled:opacity-60">
             {busy === "search" ? <span className="inline-flex items-center gap-2"><Spinner />Espiando…</span> : "Espiar anuncios"}
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-tour="spy-filtros">
           <label className="flex items-center gap-2"><input type="checkbox" checked={onlyVideo} onChange={(e) => setOnlyVideo(e.target.checked)} />Solo videos</label>
           <span className="text-muted">Ideas:</span>
           {NICHES.slice(0, 7).map((n) => (
@@ -170,14 +170,14 @@ export default function Spy() {
       </form>
 
       {ads && (
-        <section aria-labelledby="spy-res" className="flex flex-col gap-4">
+        <section aria-labelledby="spy-res" className="flex flex-col gap-4" data-tour={ads.length ? "spy-resultados" : undefined}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="flex flex-col">
               <h2 id="spy-res" className="font-display text-lg font-bold">{ads.length ? `${ads.length} anuncios activos para «${last.current}»` : `No encontramos anuncios activos para «${last.current}»`}</h2>
               {ads.length > 0 && <p className="text-sm text-muted">Ordenados por días activo. {hot ? `${hot} llevan 30 días o más: esos están vendiendo.` : "Ninguno lleva 30 días todavía: prueba con otra palabra o país."}</p>}
             </div>
             {ads.length > 0 && (
-              <div role="group" aria-label="Filtrar por días activo" className="flex rounded-lg border border-line p-0.5 text-sm">
+              <div role="group" aria-label="Filtrar por días activo" data-tour="spy-dias" className="flex rounded-lg border border-line p-0.5 text-sm">
                 {[[0, "Todos"], [14, "+14 días"], [30, "+30 días"], [60, "+60 días"]].map(([d, l]) => (
                   <button key={d} type="button" aria-pressed={minDays === d} onClick={() => setMinDays(Number(d))} className={`rounded-md px-3 py-1.5 font-semibold ${minDays === d ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{l}</button>
                 ))}
@@ -186,7 +186,7 @@ export default function Spy() {
           </div>
           {ads.length === 0 && <p className="text-sm text-muted">Prueba con palabras más simples (por ejemplo «seguro» en vez de «seguro automotriz full cobertura»), otro país o desmarca «Solo videos».</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {shown.map((ad) => <AdCard key={ad.id} ad={ad} onScript={takeScript} busy={taking === ad.id} />)}
+            {shown.map((ad, i) => <AdCard key={ad.id} ad={ad} onScript={takeScript} busy={taking === ad.id} first={i === 0} />)}
           </div>
           {ads.length > 0 && shown.length === 0 && <p className="text-sm text-muted">Ninguno pasa ese filtro. Elige «Todos» o carga más resultados.</p>}
           {cursor && (

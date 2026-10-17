@@ -200,7 +200,7 @@ export default function Guiones() {
       {learn && <Lesson />}
 
       {reference && (
-        <section aria-labelledby="ref-h" className="flex flex-col gap-4 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4 sm:p-5">
+        <section aria-labelledby="ref-h" data-tour="guion-ref" className="flex flex-col gap-4 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex max-w-2xl flex-col gap-1">
               <span className="text-xs font-semibold text-accent-text">Partiste de un anuncio que está funcionando</span>
@@ -221,7 +221,7 @@ export default function Guiones() {
               ["hooks", "🎣 10 hooks nuevos", "Otras formas de abrir, con puntaje, para cambiar solo el inicio.", () => run("hooks")],
               ["angulos", "🔀 3 ángulos nuevos", "La misma idea contada desde 3 motivos distintos.", () => run("angulos")],
             ] as [Mode, string, string, () => void][]).map(([id, title, text, go], i) => (
-              <button key={id} type="button" onClick={go} disabled={Boolean(busy) || w < 12}
+              <button key={id} type="button" onClick={go} data-tour={i === 0 ? "guion-ref-mia" : undefined} disabled={Boolean(busy) || w < 12}
                 className={`flex flex-col gap-1 rounded-xl p-3.5 text-left transition-transform hover:-translate-y-px disabled:opacity-60 ${i === 0 ? "bg-[image:var(--grad)] text-white" : "border border-line bg-surface"}`}>
                 <b className="text-sm">{busy === id ? <Working label="Trabajando…" /> : title}</b>
                 <span className={`text-xs ${i === 0 ? "text-white/85" : "text-muted"}`}>{text}</span>
@@ -246,9 +246,9 @@ export default function Guiones() {
           )}
         </div>
         <Field label={isReference ? "Guion del anuncio de referencia (puedes editarlo)" : "Pega el guion ganador (lo que dice la persona en el video)"} hint={w ? `${w} palabras · ≈ ${spokenSeconds(script)} segundos hablado` : "Puede ser tuyo o uno de la competencia que esté funcionando. En español o en inglés."}>
-          <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder="Ej: ¿Sabías que si tu casa tiene esta grieta en la pared…" className={`${inputCls} leading-relaxed`} />
+          <textarea data-tour="guion-texto" value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder="Ej: ¿Sabías que si tu casa tiene esta grieta en la pared…" className={`${inputCls} leading-relaxed`} />
         </Field>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3" data-tour="guion-contexto">
           <Field label="Idioma de los guiones nuevos">
             <select value={lang} onChange={(e) => setLang(e.target.value as ScriptLang)} className={inputCls}>
               {SCRIPT_LANGS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
@@ -293,7 +293,7 @@ export default function Guiones() {
           <h2 id="que-hacer" className="font-display text-lg font-bold">2 · ¿Qué quieres hacer?</h2>
           <p className="text-sm text-muted">Si recién empiezas, parte por <b>Desarmar el guion</b>: vas a ver cada parte y por qué funciona. Gratis mientras tengas créditos: no descuenta nada.</p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-tour="guion-modos">
           {MODES.map((m) => (
             <button key={m.id} type="button" onClick={() => { setMode(m.id); setErr(""); if (m.id === "adaptar") { if (canRun(m.id)) makeMine(); } else if (m.id !== "idea" && m.id !== "crear" && m.id !== "mejorar" && canRun(m.id)) run(m.id); }}
               aria-pressed={mode === m.id} disabled={Boolean(busy)}

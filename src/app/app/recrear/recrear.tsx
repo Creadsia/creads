@@ -109,7 +109,7 @@ function Gallery({ onOwn }: { onOwn: (m: Mode) => void }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="grid gap-3 sm:grid-cols-2" aria-label="Recrear tu propio video">
+      <section className="grid gap-3 sm:grid-cols-2" aria-label="Recrear tu propio video" data-tour="recrear-modos">
         {MODES.map((m) => (
           <button key={m.id} type="button" onClick={() => onOwn(m.id)} className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4 text-left transition-colors hover:border-muted/60">
             <span className="flex items-center justify-between gap-2"><b>{m.title}</b><span className="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-muted">{m.model}</span></span>
@@ -119,7 +119,7 @@ function Gallery({ onOwn }: { onOwn: (m: Mode) => void }) {
         ))}
       </section>
 
-      <section className="flex flex-col gap-3" aria-labelledby="insp">
+      <section className="flex flex-col gap-3" aria-labelledby="insp" data-tour="recrear-galeria">
         <div className="flex flex-col gap-0.5">
           <h2 id="insp" className="font-display text-lg font-bold">Inspiración</h2>
           <p className="text-sm text-muted">Anuncios que funcionan. Toca «Recrear» y cámbiales la persona, el producto o el lugar por los tuyos.</p>

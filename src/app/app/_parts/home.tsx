@@ -50,7 +50,7 @@ export default function Home({ full = true }: { full?: boolean }) {
       {missing && <SetupNotice />}
 
       {starting ? (
-        <section className={cardCls} aria-labelledby="pasos">
+        <section className={cardCls} aria-labelledby="pasos" data-tour="primeros-pasos">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="pasos" className="font-display text-lg font-bold">Primeros pasos</h2>
             <span className="text-sm text-muted">{doneCount} de {steps.length} listos</span>

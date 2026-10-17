@@ -151,6 +151,7 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
 
       {/* drop zone */}
       <div
+        data-tour="voz-subir"
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); add(Array.from(e.dataTransfer.files)); }}
@@ -204,12 +205,12 @@ export default function VoiceFromAudios({ code, onCreated }: { code: string; onC
         </div>
       )}
 
-      <label className="flex items-start gap-2 text-sm">
+      <label className="flex items-start gap-2 text-sm" data-tour="voz-permiso">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
         <span>Tengo el permiso de esta persona para crear su voz y usarla en anuncios.</span>
       </label>
 
-      <button type="button" onClick={create} disabled={!code || !name.trim() || !items.length || !consent || Boolean(busy) || Boolean(rec)}
+      <button type="button" data-tour="voz-crear" onClick={create} disabled={!code || !name.trim() || !items.length || !consent || Boolean(busy) || Boolean(rec)}
         className="rounded-lg bg-[image:var(--grad)] px-4 py-3 font-semibold text-white disabled:opacity-50">
         {busy || `Crear voz${items.length ? ` con ${items.length} audio${items.length > 1 ? "s" : ""}` : ""}`}
       </button>

@@ -8,6 +8,7 @@ import AccountMenu, { CreditsPill } from "./account-menu";
 import InstallBanner from "./install-banner";
 import Assistant from "./assistant";
 import FailNotices from "./fail-notices";
+import { Guides, HelpButton } from "./tour";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -130,7 +131,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
       {groups.map((g, i) => {
         const open = !g.more || moreOpen;
         return (
-          <div key={i} className="flex flex-col gap-0.5">
+          <div key={i} className="flex flex-col gap-0.5" data-tour={g.group === "Tu campaña" ? "nav-campana" : g.group === "Tu marca" ? "nav-marca" : undefined}>
             {g.group && (g.more ? (
               <button type="button" onClick={toggleMore} aria-expanded={open} className="flex items-center justify-between px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase hover:text-ink">
                 {g.group}<span aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
@@ -162,7 +163,7 @@ function CreditsBox() {
   const { info } = useCredits();
   const low = info && !info.unlimited && (info.balance ?? 0) < 100;
   return (
-    <Link href="/app/planes" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
+    <Link href="/app/planes" data-tour="creditos" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold text-muted">Créditos</span>
         <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
@@ -248,7 +249,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
         <div className="flex items-center gap-2">
           <CreditsPill />
           <AccountMenu user={user} />
-          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
+          <button type="button" data-tour="nav-menu" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
             <Icon d={I.menu} />
           </button>
         </div>
@@ -269,16 +270,20 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:pt-4 lg:pb-8">
         {/* back, and (desktop) the account corner */}
-        <div className={`mx-auto mb-4 max-w-6xl items-center justify-between gap-2 ${path === "/app" ? "hidden lg:flex" : "flex"}`}>
+        <div className="mx-auto mb-4 flex max-w-6xl items-center justify-between gap-2">
           {path !== "/app" ? <BackButton path={path} /> : <span />}
-          <div className="hidden items-center gap-2 lg:flex">
-            <CreditsPill />
-            <AccountMenu user={user} />
+          <div className="flex items-center gap-2">
+            <HelpButton />
+            <span className="hidden items-center gap-2 lg:flex">
+              <CreditsPill />
+              <AccountMenu user={user} />
+            </span>
           </div>
         </div>
         <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
       <Assistant />
+      <Guides />
     </div>
   );
 }

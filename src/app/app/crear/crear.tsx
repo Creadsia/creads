@@ -126,7 +126,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
       </PageHead>
       {scripts.missing && <SetupNotice />}
 
-      <ol className="flex flex-wrap gap-2" aria-label="Pasos">
+      <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
         {STEPS.map((s, i) => {
           const can = i === 0 || (i <= 2 && cuts.length > 0) || (i === 3 && cuts.length > 0 && step >= 3);
           return (
@@ -163,11 +163,11 @@ export default function Crear({ full = true }: { full?: boolean }) {
               <button type="button" onClick={() => { setText(""); setFromGuion(false); }} className="text-xs font-semibold text-muted underline hover:text-ink">Empezar con uno en blanco</button>
             </p>
           )}
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
+          <textarea data-tour="crear-guion" value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
           <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en <a href="/app/guiones" className="font-semibold text-accent-text underline">Crear guion</a> (paso 1).</p>
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3" data-tour="crear-formato">
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             <div role="radiogroup" aria-label="Formato del video" className="contents">
@@ -213,7 +213,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
             )}
           </div>
 
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-3" data-tour="crear-dividir">
             <Field label="Cortes máximos">
               <select value={cap} onChange={(e) => setCap(Number(e.target.value))} className={inputCls}>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>{n}</option>)}

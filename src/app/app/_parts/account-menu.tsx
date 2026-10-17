@@ -50,7 +50,7 @@ export function CreditsPill() {
   const { info } = useCredits();
   const low = info && !info.unlimited && (info.balance ?? 0) < 100;
   return (
-    <Link href="/app/planes" title="Planes y créditos"
+    <Link href="/app/planes" title="Planes y créditos" data-tour="creditos"
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-surface-2 ${low ? "border-warn/50 text-warn" : "border-line"}`}>
       <Svg d={D.coin} />
       <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : (info.balance ?? 0).toLocaleString("es-CL")}</span>

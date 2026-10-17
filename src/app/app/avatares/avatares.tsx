@@ -62,7 +62,7 @@ export default function Avatares() {
     <>
       <Stepper flow="marca" current={1} />
       <PageHead title="Avatares" lead="Tus presentadores fijos: la cara y la voz de quien habla. Los cargas una vez y sirven para todos tus anuncios.">
-        {!form && <button type="button" onClick={() => open()} className={btnCls}>+ Nuevo avatar</button>}
+        {!form && <button type="button" data-tour="avatar-nuevo" onClick={() => open()} className={btnCls}>+ Nuevo avatar</button>}
       </PageHead>
       {t.missing && <SetupNotice />}
       {voices.length > 0 && own.length === 0 && (
@@ -73,7 +73,7 @@ export default function Avatares() {
         <form onSubmit={save} className={cardCls}>
           <h2 className="font-display text-lg font-bold">{editing ? "Editar avatar" : "Nuevo avatar"}</h2>
           <div className="grid gap-4 md:grid-cols-[200px_1fr]">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" data-tour="avatar-foto">
               <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-xl border border-dashed border-line bg-surface-2">
                 {form.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -90,14 +90,14 @@ export default function Avatares() {
             <div className="flex flex-col gap-3">
               <h3 className="text-sm font-bold">Cara</h3>
               <Field label="Nombre"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Papá (Chile)" className={inputCls} /></Field>
-              <Field label="Cómo es" hint="Mejor en inglés. Se usa en cada escena para que siempre sea la misma persona.">
+              <div data-tour="avatar-como"><Field label="Cómo es" hint="Mejor en inglés. Se usa en cada escena para que siempre sea la misma persona.">
                 <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ej: 62-year-old Chilean man, short gray hair, light stubble, navy polo shirt" className={inputCls} />
-              </Field>
+              </Field></div>
               <div className="mt-2 flex flex-col gap-1 border-t border-line pt-4">
                 <h3 className="text-sm font-bold">Voz</h3>
                 <p className="text-xs text-muted">La voz es aparte de la cara: puedes dejar la del modelo de video o usar una voz clonada de <a href="/app/voces" className="underline">Voces</a>.</p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2" data-tour="avatar-voz">
                 <Field label="Voz que usa">
                   <select value={form.voice_id} onChange={(e) => setForm({ ...form, voice_id: e.target.value })} className={inputCls}>
                     <option value="">La voz del modelo de video</option>
@@ -113,7 +113,7 @@ export default function Avatares() {
                   </select>
                 </Field>
               </div>
-              <label className="flex items-start gap-2 text-sm">
+              <label className="flex items-start gap-2 text-sm" data-tour="avatar-permiso">
                 <input type="checkbox" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} className="mt-1" required />
                 <span>Tengo el permiso de esta persona para usar su cara y su voz en anuncios.</span>
               </label>

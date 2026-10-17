@@ -130,7 +130,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   return (
     <>
       {step === 2 && (
-        <form onSubmit={direct} className={cardCls}>
+        <form onSubmit={direct} className={cardCls} data-tour="crear-escenas">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <h2 className="font-display text-xl font-bold">3 · Escenas</h2>
             <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-muted">{f.icon} {f.name}</span>
@@ -138,7 +138,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
           <p className="text-sm text-muted">Creads lee todo el guion, decide dónde está la persona y qué pasa en cada corte, y escribe el prompt de cada video. Las palabras de cada corte no se tocan. Puedes copiar los prompts para usarlos en otra herramienta, o generar los videos aquí mismo en el paso 4.</p>
 
           {f.av !== "none" && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2" data-tour="crear-quien">
               <span className="text-sm font-semibold text-muted">{f.avLabel ?? "¿Quién habla?"}{f.av === "opt" ? " (opcional)" : ""}</span>
               {avatars.rows && avatars.rows.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -174,15 +174,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               </select>
             </Field>
           </div>
-          <Field label="Cómo quieres los videos (opcional, vale para todos los cortes)">
+          <div data-tour="crear-direccion" className="flex flex-col gap-3"><Field label="Cómo quieres los videos (opcional, vale para todos los cortes)">
             <textarea rows={2} value={direction} onChange={(e) => setDirection(e.target.value)} placeholder="Escribe en español lo que quieres ver. Ej: que camine afuera de su casa, más energía en el hook" className={inputCls} />
           </Field>
           <div className="flex flex-wrap gap-1.5">
             {DIR_CHIPS.map((c) => (
               <button key={c} type="button" onClick={() => setDirection((d) => (d ? `${d}. ${c}` : c))} className="rounded-full border border-line px-2.5 py-1 text-xs text-muted hover:text-ink">+ {c}</button>
             ))}
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
+          </div></div>
+          <div className="flex flex-wrap items-end gap-3" data-tour="crear-escenas-btn">
             <Field label="Formato">
               <select value={aspect} onChange={(e) => setAspect(e.target.value as typeof aspect)} className={inputCls}>
                 <option value="9:16">9:16 vertical (Reels, TikTok, Stories)</option>
@@ -250,7 +250,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 return (
                   <div className="flex flex-col gap-2">
                     <span className="text-sm font-semibold text-muted">Modelo de video</span>
-                    <div role="radiogroup" aria-label="Modelo de video" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div role="radiogroup" aria-label="Modelo de video" data-tour="crear-modelo" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {sorted.map((x) => {
                         const tag = MODEL_TAGS[x.id];
                         const on = x.id === model;
@@ -278,7 +278,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                   </div>
                 );
               })()}
-              <p className="rounded-lg bg-surface-2 p-3 text-sm">
+              <p className="rounded-lg bg-surface-2 p-3 text-sm" data-tour="crear-precio">
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
                 {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}<br />
                 {takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
