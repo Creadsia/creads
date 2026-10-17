@@ -26,6 +26,10 @@
   --chroma-b: #19e3ff; /* cyan channel */
   --grad: linear-gradient(100deg, #ff2bd6 0%, #8a5cff 48%, #19e3ff 100%);
   --rec: #ff3b30;
+  /* charts (Panel → Estadísticas): validated categorical steps, light / dark */
+  --viz-1: #00809c;
+  --viz-2: #7c5ce0;
+  --viz-3: #c9407f;
   --font-display: "Unbounded Variable", "Arial Black", system-ui, sans-serif;
   --font-body: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
@@ -45,11 +49,17 @@
     --good: #4fd18b;
     --bad: #ff7a70;
     --warn: #f0b35a;
+    --viz-1: #1aa3c0;
+    --viz-2: #8b6cf0;
+    --viz-3: #e0559c;
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
+  --viz-1: #1aa3c0;
+  --viz-2: #8b6cf0;
+  --viz-3: #e0559c;
   --bg: #000000;
   --surface: #0d0e11;
   --surface-2: #17191e;

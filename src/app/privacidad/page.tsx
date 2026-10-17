@@ -55,6 +55,7 @@ export default function Privacidad() {
 
       <h2>8. Cookies</h2>
       <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta solo se activan si las aceptas en el aviso de cookies.</p>
+      <p>Además contamos las visitas de forma anónima y agregada (cuántas visitas hubo cada día, desde qué tipo de dispositivo, ciudad y canal), sin guardar tu IP ni nada que te identifique. Si aceptas las cookies, una cookie propia recuerda además solo el canal por el que llegaste (por ejemplo, «instagram») durante 90 días, para saber qué canales nos traen clientes.</p>
 
       <h2>9. Cambios</h2>
       <p>Si cambiamos esta política, publicaremos la nueva versión aquí con su fecha y, si el cambio es importante, te avisaremos.</p>

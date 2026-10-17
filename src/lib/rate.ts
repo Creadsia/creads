@@ -22,6 +22,7 @@ const BUCKETS = {
   forgotAll: [60 * 60, 200], // ... and in total (keeps the email account from being used for spam)
   resetIp: [60 * 60, 20], // new-password attempts with an emailed link
   clientErr: [10 * 60, 20], // browser error reports per connection in 10 min
+  visit: [10 * 60, 30], // anonymous visit counts per connection in 10 min
   spy: [10 * 60, 30], // ad-library searches and transcripts per person in 10 min (each is a paid call)
   spyDay: [24 * 60 * 60, 200], // ... and per day
   assist: [10 * 60, 25], // messages to the in-app assistant per person in 10 min
@@ -74,6 +75,7 @@ const MSG: Record<Bucket, string> = {
   forgotAll: "No podemos enviar más correos por ahora. Escríbenos a hola@creadsia.com.",
   resetIp: "Demasiados intentos. Espera una hora.",
   clientErr: "Demasiados reportes.",
+  visit: "Demasiadas visitas.",
   spy: "Vas muy rápido: espera unos minutos y vuelve a buscar.",
   spyDay: "Llegaste al máximo de búsquedas de hoy. Mañana puedes seguir espiando.",
   assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",

@@ -7,6 +7,7 @@ import MetaPixel from "./meta-pixel";
 import { PwaSetup } from "./install-app";
 import ErrorCatcher from "./error-catcher";
 import EnvBanner from "./env-banner";
+import VisitBeacon from "./visit-beacon";
 
 export const metadata: Metadata = {
   title: "Creads IA · Every AI model, one studio",
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <PwaSetup />
         <ErrorCatcher />
         <EnvBanner />
+        <VisitBeacon />
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ const API = "https://graph.facebook.com/v21.0";
 const sha = (v: string) => createHash("sha256").update(v.trim().toLowerCase()).digest("hex");
 
 /** What we know about the visitor from the request (consent, Meta cookies, IP, browser). */
-export interface Visitor { consent: boolean; fbp?: string; fbc?: string; ip?: string; ua?: string; url?: string }
+export interface Visitor { consent: boolean; fbp?: string; fbc?: string; ip?: string; ua?: string; url?: string; src?: string }
 
 export function visitorFrom(req: Request): Visitor {
   const cookies = Object.fromEntries((req.headers.get("cookie") ?? "").split(/;\s*/).map((c) => {
@@ -23,6 +23,8 @@ export function visitorFrom(req: Request): Visitor {
     fbp: cookies._fbp,
     fbc: cookies._fbc,
     ip: (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "").trim() || undefined,
+    // the channel the person first came from (instagram, google…), for "Ventas por fuente"
+    src: cookies.creads_consent === "1" && /^[a-z0-9._-]{2,40}$/.test(cookies.creads_src ?? "") ? cookies.creads_src : undefined,
     ua: req.headers.get("user-agent") ?? undefined,
     url: req.headers.get("referer") ?? undefined,
   };

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { saveSource } from "./visit-beacon";
 
 // Meta Pixel + the cookie notice. The pixel loads only after the visitor accepts (Chile's data law,
 // Ley 21.719, and GDPR-style rules ask for consent before tracking). The choice is kept for a year.
@@ -27,6 +28,7 @@ const readChoice = () => {
 };
 const saveChoice = (v: "0" | "1") => {
   document.cookie = `creads_consent=${v}; Max-Age=${365 * 86400}; Path=/; SameSite=Lax; Secure`;
+  if (v === "1") saveSource();
 };
 
 export default function MetaPixel() {

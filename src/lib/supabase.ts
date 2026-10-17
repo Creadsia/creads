@@ -136,3 +136,16 @@ export async function sbRest<T = unknown>(path: string, init: RequestInit = {}):
 /** Runs a database function (security definer, service role only). */
 export const sbRpc = <T = unknown>(fn: string, args: Record<string, unknown>) =>
   sbRest<T>(`rpc/${fn}`, { method: "POST", body: JSON.stringify(args) });
+
+/** All rows of a PostgREST query, 1000 at a time (the database hands out at most 1000 per request).
+ *  `order` must be unique (add a tie-breaker like `,id.asc`) so pages don't repeat or skip rows.
+ *  Fails instead of returning a cut list when there are more than `maxPages` pages. */
+export async function sbAll<T>(q: string, order = "created_at.asc", maxPages = 50): Promise<T[]> {
+  const out: T[] = [];
+  for (let p = 0; p < maxPages; p++) {
+    const page = await sbRest<T[]>(`${q}&order=${order}&limit=1000&offset=${p * 1000}`);
+    out.push(...page);
+    if (page.length < 1000) return out;
+  }
+  throw new Error(`Demasiadas filas (más de ${maxPages * 1000}).`);
+}
