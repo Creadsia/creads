@@ -25,3 +25,13 @@ test("guides: the right guides for each screen", () => {
   assert.ok(toursFor("/app/crear").map((t) => t.id).includes("crear-escenas"));
   assert.equal(toursFor("/app/creditos").length, 0);
 });
+
+test("Seedance is refused before charging when the clip would show a real face", async () => {
+  const { refusesFrame } = await import("../src/lib/formats");
+  const seedance = { noFaces: true }, veo = {};
+  assert.equal(refusesFrame(seedance, "ugc", { face: true, product: false }), true);
+  assert.equal(refusesFrame(seedance, "ugc", { face: false, product: true }), true); // a person holding the product
+  assert.equal(refusesFrame(seedance, "faceless", { face: false, product: true }), false); // only scenes
+  assert.equal(refusesFrame(seedance, "ugc", { face: false, product: false }), false); // text-to-video
+  assert.equal(refusesFrame(veo, "ugc", { face: true, product: true }), false);
+});

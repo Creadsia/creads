@@ -10,6 +10,7 @@ import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { type StorySettings, billedSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
+import { refusesFrame } from "@/lib/formats";
 
 export const maxDuration = 120;
 
@@ -74,6 +75,10 @@ export async function POST(req: Request) {
     let ownVoice = talks ? story?.plan?.characters?.find((c) => c.key === shotPlan?.dialogue?.speaker)?.voiceId ?? null : null;
     if (ownVoice && !(await canUseVoice(ws, ownVoice))) ownVoice = null;
     if (talks && !ownVoice && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
+    // Seedance refuses real faces: say so now instead of charging and failing
+    if (!story && refusesFrame(provider, String(ad.format ?? "ugc"), { face: Boolean(face), product: Boolean(prod) })) {
+      return giveBack(NextResponse.json({ error: `${provider.label} no acepta fotos de personas reales (tu avatar, o una persona con tu producto). Elige Veo 3.1 Fast o Kling 3.0. No se usaron créditos.` }, { status: 400 }));
+    }
     const asked = story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);

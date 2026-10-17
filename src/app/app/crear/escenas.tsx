@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { type FormatId, formatById } from "@/lib/formats";
+import { type FormatId, formatById, refusesFrame } from "@/lib/formats";
 import AdWork from "../_parts/ad-work";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
@@ -65,7 +65,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
   const videoSecs = cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
   // Seedance refuses a real person's face as the starting image
-  const faceRefused = (x: Model) => Boolean(x.noFaces && avatar?.image_url);
+  const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
   useEffect(() => { if (m && faceRefused(m)) setModel("veo-3.1-fast"); }); // eslint-disable-line react-hooks/exhaustive-deps
   const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) : 0;
 
@@ -271,7 +271,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                       <details className="text-xs text-muted">
                         <summary className="cursor-pointer">No sirven para este anuncio ({other.length})</summary>
                         <ul className="mt-1 flex flex-col gap-0.5 pl-4">
-                          {other.map((x) => <li key={x.id}>{x.label} · {!x.configured ? "no disponible por ahora" : x.needsImage || x.silent ? "no genera voz" : "no acepta la cara de tu avatar"}</li>)}
+                          {other.map((x) => <li key={x.id}>{x.label} · {!x.configured ? "no disponible por ahora" : x.needsImage || x.silent ? "no genera voz" : "no acepta personas reales (tu avatar o una persona con tu producto)"}</li>)}
                         </ul>
                       </details>
                     )}

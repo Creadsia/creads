@@ -148,7 +148,8 @@ export default function AdWork({ adId }: { adId: string }) {
   // a review belongs to the video it looked at: a redone clip has no review yet
   const reviewOf = (id: string) => { const c = clips.find((x) => x.id === id); return review?.find((r) => r.clipId === id && (!r.url || r.url === c?.url)); };
   const failed = clips.filter((c) => c.status === "failed");
-  const faceRefused = failed.some((c) => /no acepta fotos de personas reales|likeness/i.test(c.error ?? ""));
+  const refused = (c: Clip) => c.status === "failed" && /no acepta fotos de personas reales|likeness/i.test(c.error ?? "");
+  const faceRefused = failed.some(refused);
   const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces));
   async function retryFailed() {
     for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
@@ -242,15 +243,16 @@ export default function AdWork({ adId }: { adId: string }) {
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
                       {ask === c.id ? (
                         <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2 text-xs">
-                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1} usa ≈ {cost(clipUsd(c))}. Si falla, los créditos vuelven solos.</span>
+                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los créditos vuelven solos.</span>
                           <div className="flex gap-2">
-                            <button type="button" onClick={() => { setAsk(null); redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>
+                            {/* a model that refused the face would refuse again: retry with the one chosen above */}
+                            <button type="button" onClick={() => { setAsk(null); if (refused(c)) run(c.id, retryModel); else redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>
                             <button type="button" onClick={() => setAsk(null)} className="text-muted">Cancelar</button>
                           </div>
                         </div>
                       ) : (
                         <button type="button" onClick={() => setAsk(c.id)} className="self-start text-xs font-semibold text-accent-text">
-                          {c.status === "failed" ? "Reintentar" : "Rehacer este corte"}{clipUsd(c) > 0 ? ` · ≈ ${price(clipUsd(c))}` : ""}
+                          {refused(c) ? `Reintentar con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : c.status === "failed" ? "Reintentar" : "Rehacer este corte"}{(refused(c) ? clipUsd(c, retryModel) : clipUsd(c)) > 0 ? ` · ≈ ${price(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}` : ""}
                         </button>
                       )}
                     </div>

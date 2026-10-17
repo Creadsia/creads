@@ -59,6 +59,14 @@ export const FORMATS: Format[] = [
 ];
 
 export const formatById = (id: string) => FORMATS.find((f) => f.id === id) ?? FORMATS[0];
+/** Whether the clips of this format show people (voice-over formats show only scenes). */
+export const showsPeople = (id: string) => !formatById(id).narr;
+/**
+ * Models that refuse photos of real people (Seedance) can't animate an opening frame drawn from the
+ * avatar's face, nor one with a person holding the product. Checked before charging anything.
+ */
+export const refusesFrame = (m: { noFaces?: boolean }, format: string, refs: { face: boolean; product: boolean }) =>
+  Boolean(m.noFaces && (refs.face || (refs.product && showsPeople(format))));
 
 export interface SplitOptions {
   format: FormatId;
