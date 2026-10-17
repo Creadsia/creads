@@ -17,9 +17,10 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "lanzamiento" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "lanzamiento" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["lanzamiento", "Lanzamiento"],
+  ["errores", "Errores y alarmas"],
   ["resumen", "Resumen"],
   ["saldos", "Saldos y alertas"],
   ["clientes", "Clientes y accesos"],
@@ -80,6 +81,7 @@ function Split({ r }: { r: PlanMonth }) {
   return (
     <div className="flex h-2.5 w-full min-w-32 overflow-hidden rounded-full bg-surface-2" role="img" aria-label={`Te queda ${fmtPct(r.margen)}`}>
       <i className="block bg-accent" style={{ width: w(r.queda) }} />
+      <i className="block bg-ink/40" style={{ width: w(r.iva) }} />
       <i className="block bg-muted" style={{ width: w(r.modelos) }} />
       <i className="block bg-warn" style={{ width: w(r.stripe) }} />
       <i className="block bg-bad" style={{ width: w(r.afiliado) }} />
@@ -103,7 +105,11 @@ export default function AdminPanel() {
   const saveT = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    try { const t = localStorage.getItem("admin-tab") as Tab | null; if (t && TABS.some(([k]) => k === t)) setTab(t); } catch {}
+    try {
+      // a link from an alarm email (?tab=errores) wins over the last tab used
+      const t = (new URLSearchParams(location.search).get("tab") ?? localStorage.getItem("admin-tab")) as Tab | null;
+      if (t && TABS.some(([k]) => k === t)) setTab(t);
+    } catch {}
     fetch("/api/admin/finanzas")
       .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setData(d); setStatus(d.actualizado ? `Guardado ${new Date(d.actualizado).toLocaleString("es-CL")}` : "Datos iniciales (aún no guardados)"); })
       .catch((e) => setStatus(e.message || "No se pudo cargar."));
@@ -160,7 +166,7 @@ export default function AdminPanel() {
       </nav>
 
       {!data ? (
-        tab === "lanzamiento" ? <Lanzamiento /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
+        tab === "lanzamiento" ? <Lanzamiento /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
           {tab === "resumen" && <Resumen d={data} setCfg={setCfg} />}
@@ -174,6 +180,7 @@ export default function AdminPanel() {
           {tab === "registros" && <Registros />}
           {tab === "estado" && <Estado />}
           {tab === "lanzamiento" && <Lanzamiento />}
+          {tab === "errores" && <Errores />}
         </>
       )}
     </div>
@@ -215,7 +222,7 @@ function Proyeccion({ d, setCfg, withFixed = false }: { d: Finanzas; setCfg: Set
   const fijos = withFixed ? fijoMensual(d.fijos) : 0;
   const neto = p.neto - fijos;
   const margen = p.mrr ? (neto / p.mrr) * 100 : 0;
-  const rows: [string, number][] = [["Ingresos (MRR)", p.mrr], ["Modelos de IA", -p.modelos], ["Stripe", -p.stripe], ["Afiliados", -p.afiliados], ...(withFixed ? [["Costos fijos", -fijos] as [string, number]] : [])];
+  const rows: [string, number][] = [["Ingresos (MRR)", p.mrr], ["IVA (va al SII)", -p.iva], ["Modelos de IA", -p.modelos], ["Stripe", -p.stripe], ["Afiliados", -p.afiliados], ...(withFixed ? [["Costos fijos", -fijos] as [string, number]] : [])];
   return (
       <section className={card}>
       <div>
@@ -228,6 +235,8 @@ function Proyeccion({ d, setCfg, withFixed = false }: { d: Finanzas; setCfg: Set
           <Field key={pl.id} label={pl.nombre}><Num id={`p-${pl.id}`} value={c.proyeccion[pl.id] ?? 0} onChange={(v) => setCfg((x) => { x.proyeccion[pl.id] = v; })} /></Field>
         ))}
         <Field label="% de créditos que usan"><Num id="p-uso" value={c.uso} step={5} max={100} onChange={(v) => setCfg((x) => { x.uso = v; })} /></Field>
+        <Field label="IVA %"><Num id="p-iva" value={c.ivaPct ?? 19} step={1} max={30} onChange={(v) => setCfg((x) => { x.ivaPct = v; })} /></Field>
+        <Field label="% de ventas en Chile"><Num id="p-cl" value={c.pctChile ?? 100} step={10} max={100} onChange={(v) => setCfg((x) => { x.pctChile = v; })} /></Field>
         <Field label="% que llegó por afiliado"><Num id="p-af" value={c.proyeccion.pctAfiliado} step={5} max={100} onChange={(v) => setCfg((x) => { x.proyeccion.pctAfiliado = v; })} /></Field>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -250,12 +259,122 @@ function Proyeccion({ d, setCfg, withFixed = false }: { d: Finanzas; setCfg: Set
         <div className="flex flex-col gap-3">
           <Stat label={withFixed ? "Margen neto real" : "Margen de las suscripciones"} value={fmtPct(margen)} sub={`${p.subs} suscriptores · ${fmtUsd(neto * 12)} al año`} t={tone(margen)} />
           <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">
-            Supone que el {c.proyeccion.pctPromo ?? 100}% está en su primer mes pagando la mitad (al lanzar son todos; después baja a los nuevos de cada mes), que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
+            Los precios incluyen IVA: el {c.ivaPct ?? 19}% de las ventas en Chile ({c.pctChile ?? 100}% del total) va al SII. Supone que el {c.proyeccion.pctPromo ?? 100}% está en su primer mes pagando la mitad (al lanzar son todos; después baja a los nuevos de cada mes), que usan el {c.uso}% de sus créditos y que el {c.proyeccion.pctAfiliado}% llegó por un afiliado con comisión{" "}
             {c.afiliado.tipo === "recurrente" ? `de ${c.afiliado.pct}% mensual` : "única (no entra en el mes a mes)"}.
           </p>
         </div>
       </div>
     </section>
+  );
+}
+
+// ---------- Errores y alarmas ----------
+interface ErrGroupV { sig: string; area: string; message: string; count: number; first: string; last: string; refs: string[]; paths: string[]; resolved: boolean }
+interface GenRowV { label: string; total: number; failed: number; rate: number; failedUsd: number }
+interface GenV { hours: number; total: number; failed: number; rate: number; failedUsd: number; refunded: number; rows: GenRowV[] }
+const AREA: Record<string, string> = { servidor: "Servidor", navegador: "Navegador", generacion: "Generación", pagos: "Pagos", correo: "Correo", cron: "Tareas diarias" };
+const when = (iso: string) => new Date(iso).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+function Errores() {
+  const [d, setD] = useState<{ groups: ErrGroupV[]; g24: GenV; g7: GenV; alarms: { email: string | null; ready: boolean } } | null>(null);
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+  const [showResolved, setShowResolved] = useState(false);
+  const [range, setRange] = useState<"g24" | "g7">("g24");
+  const load = () => fetch("/api/admin/errores").then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); setD(j); }).catch((e) => setErr(e.message || "No se pudo cargar."));
+  useEffect(() => { load(); }, []);
+  async function act(body: Record<string, string>) {
+    setMsg("");
+    const r = await fetch("/api/admin/errores", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (body.action === "probar") setMsg(j.ok ? "Listo: revisa tu correo." : j.error || "No se pudo enviar.");
+    else load();
+  }
+  if (err) return <div className={card}><p className="text-bad">{err}</p></div>;
+  if (!d) return <div className={card}><p className="text-muted">Cargando…</p></div>;
+  const g = d[range];
+  const open = d.groups.filter((x) => !x.resolved);
+  const shown = showResolved ? d.groups : open;
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section className={card}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">Alarmas</h2>
+            <p className="text-sm text-muted">Te llega un correo cuando aparece un error nuevo, cuando vuelve uno que marcaste como resuelto, o cuando fallan muchas generaciones (más del 20% en 24 h, o un modelo con más del 40%). Como máximo uno cada 6 horas por problema y 20 al día.</p>
+          </div>
+          <button type="button" onClick={() => act({ action: "probar" })} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Enviarme una alarma de prueba</button>
+        </div>
+        <p className="text-sm">{d.alarms.ready && d.alarms.email ? <>Se envían a <b>{d.alarms.email}</b>.</> : <span className="text-bad">No se pueden enviar: {d.alarms.ready ? "no hay correo del dueño" : "falta RESEND_API_KEY en Vercel"}.</span>}</p>
+        {msg && <p className="text-sm text-muted">{msg}</p>}
+      </section>
+
+      <section className={card}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-display text-xl font-bold">Generaciones</h2>
+          <div className="flex rounded-lg border border-line p-0.5 text-sm">
+            {([["g24", "Últimas 24 h"], ["g7", "7 días"]] as const).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setRange(k)} className={`rounded-md px-3 py-1 font-semibold ${range === k ? "bg-ink text-bg" : "text-muted"}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
+          <Stat label="Generaciones" value={g.total.toLocaleString("es-CL")} />
+          <Stat label="Fallidas" value={`${g.failed} · ${pct(g.rate)}`} t={g.rate >= 0.2 ? "bad" : g.rate >= 0.1 ? "warn" : "good"} />
+          <Stat label="Costo de lo fallido" value={fmtUsd(g.failedUsd, 2)} sub="si el proveedor igual cobró" />
+          <Stat label="Créditos devueltos" value={g.refunded.toLocaleString("es-CL")} sub="a clientes, por fallas" />
+        </div>
+        {g.rows.length > 0 ? (
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr>{["Modelo o herramienta", "Total", "Fallidas", "% falla", "Costo de lo fallido"].map((h, i) => <th key={h} className={`${th} ${i ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
+              <tbody>
+                {g.rows.map((r) => (
+                  <tr key={r.label}>
+                    <td className={td}>{r.label}</td>
+                    <td className={`${td} ${num} text-right`}>{r.total}</td>
+                    <td className={`${td} ${num} text-right`}>{r.failed}</td>
+                    <td className={`${td} text-right`}><Pill t={r.rate >= 0.4 ? "bad" : r.rate >= 0.15 ? "warn" : "good"}>{pct(r.rate)}</Pill></td>
+                    <td className={`${td} ${num} text-right`}>{fmtUsd(r.failedUsd, 2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="text-sm text-muted">Sin generaciones en este período.</p>}
+        <p className="text-xs text-muted">«Costo de lo fallido» es lo que habría costado cada trabajo fallido. Algunos proveedores no cobran lo que rechazan; compáralo con sus facturas para saber la pérdida real.</p>
+      </section>
+
+      <section className={card}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">Errores de los últimos 7 días</h2>
+            <p className="text-sm text-muted">Agrupados por tipo. El código de referencia es el mismo que ve el cliente, así lo encuentras si te escribe.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Pill t={open.length ? "warn" : "good"}>{open.length ? `${open.length} sin resolver` : "Todo resuelto"}</Pill>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />Ver resueltos</label>
+            <button type="button" onClick={load} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Actualizar</button>
+          </div>
+        </div>
+        {shown.length === 0 ? <p className="text-sm text-muted">No hay errores{showResolved ? "" : " sin resolver"}. 🎉</p> : (
+          <ul className="flex flex-col gap-2">
+            {shown.map((x) => (
+              <li key={x.sig} className={`flex flex-col gap-1.5 rounded-xl px-4 py-3 ${x.resolved ? "bg-surface-2 opacity-60" : "bg-surface-2"}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2"><Pill t={x.area === "navegador" ? "acc" : "warn"}>{AREA[x.area] ?? x.area}</Pill><b className="text-sm">{x.count} {x.count === 1 ? "vez" : "veces"}</b><span className="text-xs text-muted">última: {when(x.last)}</span></span>
+                  {!x.resolved && <button type="button" onClick={() => act({ action: "resolver", sig: x.sig })} className="text-xs font-semibold text-muted hover:text-ink">Marcar como resuelto</button>}
+                </div>
+                <p className="break-words font-mono text-xs">{x.message}</p>
+                {(x.paths.length > 0 || x.refs.length > 0) && <p className="text-xs text-muted">{x.paths.length > 0 && <>Dónde: {x.paths.join(", ")} </>}{x.refs.length > 0 && <>· Códigos: {x.refs.join(", ")}</>}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -289,7 +408,7 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
         </div>
         <div className="min-w-0 overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr>{["Plan", "Precio/mes", "Modelos de IA", "Stripe", "Afiliado", "Te queda", "Margen", "Reparto"].map((h, i) => <th key={h} className={`${th} ${i && i < 7 ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
+            <thead><tr>{["Plan", "Precio/mes", "IVA", "Modelos de IA", "Stripe", "Afiliado", "Te queda", "Margen", "Reparto"].map((h, i) => <th key={h} className={`${th} ${i && i < 8 ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
             <tbody>
               {c.planes.map((p) => {
                 const r = planMonth(c, p, o);
@@ -297,6 +416,7 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
                   <tr key={p.id}>
                     <td className={td}><strong>{p.nombre}</strong><br /><span className="text-xs text-muted">{p.creditos.toLocaleString("es-CL")} créditos</span></td>
                     <td className={`${td} ${num} text-right`}>{fmtUsd(r.precio, 2)}</td>
+                    <td className={`${td} ${num} text-right`}>{fmtUsd(r.iva, 2)}</td>
                     <td className={`${td} ${num} text-right`}>{fmtUsd(r.modelos, 2)}</td>
                     <td className={`${td} ${num} text-right`}>{fmtUsd(r.stripe, 2)}</td>
                     <td className={`${td} ${num} text-right`}>{fmtUsd(r.afiliado, 2)}</td>
@@ -1059,23 +1179,37 @@ const AUTO: Record<string, { title: string; how: string }> = {
   dolar: { title: "Dólar automático", how: "Se lee solo del Banco Central cada día. Si falla, se usa el «Dólar de respaldo» de arriba en el Panel." },
   ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
 };
-const MANUAL: { id: string; title: string; how: string }[] = [
-  { id: "pasarela", title: "Automático 1 · Cobro mensual automático (Flow o Stripe)", how: "Lo más importante para escalar: el cliente no tiene que acordarse de renovar. Con la SpA lista: revisa en stripe.com/global si aparece Chile. Recomendado partir con Flow (Webpay, cobro mensual automático): crea la cuenta, saca la API Key y la Secret Key, pégalas en Vercel y avísale a Claude para conectarla." },
-  { id: "compra", title: "Compra de prueba", how: "Cuando la pasarela esté conectada: desde una cuenta nueva compra el pack de 500 créditos. Deben llegar los créditos y el correo de pago. Después la puedes devolver." },
-  { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Primero las 5 llaves de todo: correo (Google), Vercel, GitHub, Supabase y Namecheap. También tu cuenta de Creads (Mi cuenta). Después: Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend." },
+/** `urgent`: blocks the launch (shown in red). `who`: "tu" = the owner, "claude" = pending work of the AI developer. */
+const MANUAL: { id: string; title: string; how: string; urgent?: boolean; who?: "tu" | "claude" }[] = [
+  { id: "iva", title: "Precios con IVA: decidir y anotar", how: "Con el contador: ¿los US$119/219/449 incluyen el 19% de IVA? Hoy el Panel (Resumen y Costos fijos) asume que sí y lo resta. Si el precio va + IVA, hay que cambiar la web y el checkout: avísale a Claude.", urgent: true, who: "tu" },
+  { id: "abogado", title: "Abogado: Términos, Privacidad y uso de caras y voces", how: "Que revise /terminos y /privacidad (Ley 19.628 y la nueva Ley 21.719 de datos personales), el consentimiento para clonar caras y voces, el retracto y el uso de anuncios de terceros en «Espiar anuncios».", urgent: true, who: "tu" },
+  { id: "mal-uso", title: "Protocolo ante mal uso (suplantación, estafas)", how: "Definir qué hacer si alguien denuncia que usaron su cara o voz sin permiso: bloquear la cuenta, borrar el contenido, guardar registro y responder en 48 h. Escríbelo en una página y Claude lo agrega a los Términos y al Panel.", urgent: true, who: "tu" },
+  { id: "staging", title: "Ambiente de pruebas listo", how: "1) Supabase → New project «creads-staging» y ejecuta ahí schema.sql, tenancy.sql y billing.sql. 2) Vercel → Settings → Environment Variables: copia cada variable marcando solo «Preview», con las claves del proyecto de pruebas (y claves de prueba de la pasarela, nunca las reales). 3) Avísale a Claude: publica la rama «staging» y te pasa el link (sale con una franja amarilla «AMBIENTE DE PRUEBAS»).", urgent: true, who: "tu" },
+  { id: "alarma-prueba", title: "Probar las alarmas por correo", how: "Panel → Errores y alarmas → «Enviarme una alarma de prueba». Si no llega, revisa spam y que RESEND_API_KEY esté en Vercel.", urgent: true, who: "tu" },
+  { id: "cuota-google", title: "Pedir más cuota de Veo a Google (justo antes de lanzar)", how: "Google Cloud → IAM y administración → Cuotas → busca «Veo» / «generate video» → solicitar aumento. Pide para al menos 30 videos por minuto. Tarda días: hazlo apenas tengas fecha de lanzamiento.", urgent: true, who: "tu" },
+  { id: "beta", title: "Beta cerrada con 5 a 10 clientes reales", how: "Antes del lanzamiento abierto: que cada uno haga el recorrido completo (se registra → paga → voz y avatar → crea un anuncio → lo descarga). Mira dónde se traban, compara el gasto real de cada proveedor con el Panel y pregúntales cuánto pagarían.", urgent: true, who: "tu" },
+  { id: "c-e2e", title: "Claude: pruebas automáticas del recorrido completo", how: "Un robot que todos los días en el ambiente de pruebas se registra, paga en modo prueba, genera un anuncio barato y lo descarga, y te avisa si algo se rompe. Necesita el ambiente de pruebas listo.", urgent: true, who: "claude" },
+  { id: "c-gasto", title: "Claude: gasto real por proveedor en el Panel", how: "Conectar las facturas o consumos de Google, fal.ai, ElevenLabs y Anthropic para comparar lo estimado con lo cobrado. Se hace durante la beta.", urgent: true, who: "claude" },
+  { id: "c-contracargos", title: "Claude: evidencia para contracargos", how: "Por cada pago, guardar qué generó el cliente, cuándo y desde dónde, para defenderte si desconoce el cargo con su banco.", urgent: true, who: "claude" },
+  { id: "c-retencion", title: "Claude: borrado automático de archivos viejos", how: "Aplicar la política de retención de los Términos: borrar solo los archivos de cuentas cerradas o vencidas hace más del plazo, para no pagar almacenamiento de más.", who: "claude" },
+  { id: "c-analitica", title: "Claude: analítica de producto (dónde abandonan)", how: "Medir cada paso (registro, pago, voz, avatar, primer anuncio) para ver dónde se cae la gente. Necesita que crees una cuenta gratis en posthog.com y pegues la clave en Vercel.", who: "claude" },
+  { id: "c-auditoria", title: "Revisión de un programador senior humano", how: "Cuando haya ingresos: unas horas de un experto en seguridad que revise el código y las claves, y alguien que pueda responder si algo se cae un domingo.", who: "tu" },
+  { id: "pasarela", title: "Automático 1 · Cobro mensual automático (Flow o Stripe)", how: "Lo más importante para escalar: el cliente no tiene que acordarse de renovar. Con la SpA lista: revisa en stripe.com/global si aparece Chile. Recomendado partir con Flow (Webpay, cobro mensual automático): crea la cuenta, saca la API Key y la Secret Key, pégalas en Vercel y avísale a Claude para conectarla.", urgent: true },
+  { id: "compra", title: "Compra de prueba", how: "Cuando la pasarela esté conectada: desde una cuenta nueva compra el pack de 500 créditos. Deben llegar los créditos y el correo de pago. Después la puedes devolver.", urgent: true },
+  { id: "2fa", title: "Verificación en dos pasos en tus cuentas", how: "Primero las 5 llaves de todo: correo (Google), Vercel, GitHub, Supabase y Namecheap. También tu cuenta de Creads (Mi cuenta). Después: Mercado Pago, Google Cloud, fal.ai, ElevenLabs, Anthropic y Resend.", urgent: true },
   { id: "recarga", title: "Automático 2 · Recarga automática con tarjeta", how: "Para no quedarte nunca sin saldo. Google AI Studio → Billing → Setup auto-reload (US$50 cuando quede menos de US$15). ElevenLabs → Developers → Top Up → Auto Top Up (US$20 bajo US$10). fal.ai y Anthropic: buscar «Auto top-up» o «Auto reload» en Billing (US$50 bajo US$20 / US$20 bajo US$5)." },
-  { id: "caps", title: "Topes de gasto", how: "Límite mensual en fal.ai, ElevenLabs y Anthropic; alerta de presupuesto en Google Cloud. El tope diario de Creads está en Saldos y alertas." },
-  { id: "vercel-pro", title: "Vercel en plan Pro", how: "El plan gratis (Hobby) no permite uso comercial y corta los procesos largos (armar películas, clonar voces). Vercel → Settings → Billing → Pro (US$20/mes)." },
-  { id: "backups", title: "Supabase en plan Pro (no se pausa y tiene respaldo)", how: "El plan gratis se pausa solo si pasa días sin uso y no tiene respaldo. Supabase → Settings → Billing → Pro (US$25/mes): respaldo diario incluido." },
+  { id: "caps", title: "Topes de gasto", how: "Límite mensual en fal.ai, ElevenLabs y Anthropic; alerta de presupuesto en Google Cloud. El tope diario de Creads está en Saldos y alertas.", urgent: true },
+  { id: "vercel-pro", title: "Vercel en plan Pro", how: "El plan gratis (Hobby) no permite uso comercial y corta los procesos largos (armar películas, clonar voces). Vercel → Settings → Billing → Pro (US$20/mes).", urgent: true },
+  { id: "backups", title: "Supabase en plan Pro (no se pausa y tiene respaldo)", how: "El plan gratis se pausa solo si pasa días sin uso y no tiene respaldo. Supabase → Settings → Billing → Pro (US$25/mes): respaldo diario incluido.", urgent: true },
   { id: "dominio", title: "Dominio y correo con renovación automática", how: "Namecheap → Domain List → creadsia.com → Auto-Renew activado y tarjeta al día. Lo mismo con Google Workspace (tu correo hola@creadsia.com). Si el dominio vence, se cae todo." },
-  { id: "monitor", title: "Aviso si la web se cae", how: "uptimerobot.com (gratis) → crear cuenta → Add New Monitor → HTTP(s) → URL https://www.creadsia.com → cada 5 minutos → avisarte por correo y por la app del celular." },
+  { id: "monitor", title: "Aviso si la web se cae", how: "uptimerobot.com (gratis) → crear cuenta → Add New Monitor → HTTP(s) → URL https://www.creadsia.com → cada 5 minutos → avisarte por correo y por la app del celular.", urgent: true },
   { id: "whatsapp", title: "WhatsApp de ayuda", how: "Vercel → Environment Variables → NEXT_PUBLIC_WHATSAPP = tu número con código de país, sin + ni espacios (ej: 56912345678) → Redeploy. Aparece un botón de WhatsApp en la web, en el checkout y en el menú de cuenta." },
-  { id: "claves", title: "Gestor de contraseñas y acceso de emergencia", how: "Guarda todas las claves (Vercel, Supabase, Namecheap, proveedores, ADMIN_ACCESS_CODE) en 1Password o Bitwarden y deja a una persona de confianza con acceso de emergencia." },
+  { id: "claves", title: "Gestor de contraseñas y acceso de emergencia", how: "Guarda todas las claves (Vercel, Supabase, Namecheap, proveedores, ADMIN_ACCESS_CODE) en 1Password o Bitwarden y deja a una persona de confianza con acceso de emergencia.", urgent: true },
   { id: "marca", title: "Registrar la marca Creads IA", how: "inapi.cl → solicitud de marca (clase 42: software y servicios en línea; opcional clase 35: publicidad). Cuesta unos $100.000–200.000 CLP. Que nadie te la pueda quitar." },
-  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar IVA incluido y boletas, giro de la SpA (620100 / 631100), pagos a proveedores extranjeros en US$, y revisar /terminos: sobre todo la cláusula de derecho a retracto (no aplica porque los créditos se entregan al instante; devolución si no usó créditos dentro de 10 días)." },
-  { id: "gasto-real", title: "Automático 3 · Gasto real de cada proveedor en el Panel", how: "Después de la pasarela: clave de administrador de Anthropic (gasto diario real) y la exportación de facturación de Google Cloud, para comparar lo estimado con lo que cobran de verdad. Pídeselo a Claude." },
-  { id: "boletas", title: "Automático 4 · Boletas automáticas", how: "Que cada cobro emita su boleta electrónica sola. Definir con el contador (inicio de actividades en el SII) y activarlo en la pasarela (Flow puede emitirlas) o con un servicio de boletas; después Claude lo conecta." },
-  { id: "dia-1", title: "Día 1: borrón y cuenta nueva", how: "Justo antes de la primera venta real: lo de hoy se archiva como «Ensayo» (no se borra) y el Panel parte de cero en movimientos, pedidos y gasto en IA. Claude te muestra antes la lista exacta para tu OK." },
+  { id: "contador", title: "Contador: IVA, términos y giro", how: "Confirmar IVA incluido y boletas, giro de la SpA (620100 / 631100), pagos a proveedores extranjeros en US$, y revisar /terminos: sobre todo la cláusula de derecho a retracto (no aplica porque los créditos se entregan al instante; devolución si no usó créditos dentro de 10 días).", urgent: true },
+  { id: "gasto-real", title: "Automático 3 · Gasto real de cada proveedor en el Panel", how: "Después de la pasarela: clave de administrador de Anthropic (gasto diario real) y la exportación de facturación de Google Cloud, para comparar lo estimado con lo que cobran de verdad. Pídeselo a Claude.", urgent: true },
+  { id: "boletas", title: "Automático 4 · Boletas automáticas", how: "Que cada cobro emita su boleta electrónica sola. Definir con el contador (inicio de actividades en el SII) y activarlo en la pasarela (Flow puede emitirlas) o con un servicio de boletas; después Claude lo conecta.", urgent: true },
+  { id: "dia-1", title: "Día 1: borrón y cuenta nueva", how: "Justo antes de la primera venta real: lo de hoy se archiva como «Ensayo» (no se borra) y el Panel parte de cero en movimientos, pedidos y gasto en IA. Claude te muestra antes la lista exacta para tu OK.", urgent: true },
   { id: "precios", title: "Precios nuevos (oct 2026)", how: "Starter US$119, Plus US$219, Studio US$449 al mes, con 50% el primer mes; anual con 2 meses gratis; recargas US$25 / 89 / 209 (sin cambio). Con el 50% cada plan deja al menos unos US$24 el primer mes aunque el cliente use todos los créditos. Márcalo cuando lo revises en la web." },
   { id: "espia", title: "Buscador de anuncios (Espiar anuncios)", how: "En scrapecreators.com → copia tu API key y pégala en Vercel como SCRAPECREATORS_API_KEY (Production) y redeploy. Reclama los créditos gratis (¿cómo nos conociste? +1.000, estrella en GitHub +1.000). Después recarga: US$47 = 25.000 créditos (cada búsqueda o guion ≈ 1 crédito, las búsquedas repetidas en 24 h no gastan). Activa la recarga automática si la ofrecen." },
   { id: "inspiracion", title: "Llenar la galería «Recrear video»", how: "Entra a Recrear video (menú Herramientas) y, abajo, «Agregar ejemplo»: sube 8 a 12 anuncios ganadores de tus nichos (hasta 30 s, que tengas permiso para usar), con título, etiqueta (ej. «Seguros · UGC») y una instrucción sugerida. Tus clientes los verán con el botón «Recrear». Antes de lanzar, prueba 1 recreación de cada tipo (gasta créditos reales: unos US$0,85 cambiar elementos de 5 s, US$1,30 copiar movimiento de 10 s)." },
@@ -1113,6 +1247,17 @@ function Lanzamiento() {
           <button type="button" onClick={load} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Revisar de nuevo</button>
         </div>
       </div>
+      {(() => {
+        const blocking = MANUAL.filter((m) => m.urgent && !done[m.id]).length + (checks?.filter((c) => c.state === "falta").length ?? 0);
+        return blocking > 0 ? (
+          <div className="rounded-xl border border-bad/50 bg-bad/10 px-4 py-3">
+            <b className="text-bad">🔴 Todavía no se puede lanzar: faltan {blocking} {blocking === 1 ? "cosa que bloquea" : "cosas que bloquean"}.</b>
+            <p className="text-sm text-muted">Están en rojo abajo. Cuando no quede ninguna, este aviso se pone verde.</p>
+          </div>
+        ) : checks ? (
+          <div className="rounded-xl border border-good/50 bg-good/10 px-4 py-3"><b className="text-good">🟢 Lista para lanzar: no queda nada que bloquee.</b></div>
+        ) : null;
+      })()}
       {err && <p className="text-sm text-bad">{err}</p>}
       <h3 className="text-sm font-bold text-muted">Se revisa solo</h3>
       {!checks ? <p className="text-muted">Revisando…</p> : (
@@ -1129,20 +1274,33 @@ function Lanzamiento() {
           ))}
         </ul>
       )}
-      <h3 className="text-sm font-bold text-muted">Lo marcas tú</h3>
-      <ul className="flex flex-col gap-2">
-        {MANUAL.map((m) => (
+      {(() => {
+        const item = (m: (typeof MANUAL)[number]) => (
           <li key={m.id}>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-surface-2 px-4 py-3">
+            <label className={`flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3 ${m.urgent && !done[m.id] ? "border border-bad/50 bg-bad/10" : "bg-surface-2"}`}>
               <input type="checkbox" checked={Boolean(done[m.id])} onChange={() => tick(m.id)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
               <span className="flex flex-col gap-0.5">
-                <b className={`text-sm ${done[m.id] ? "text-muted line-through" : ""}`}>{m.title}</b>
+                <span className="flex flex-wrap items-center gap-2">
+                  <b className={`text-sm ${done[m.id] ? "text-muted line-through" : m.urgent ? "text-bad" : ""}`}>{m.title}</b>
+                  {m.urgent && !done[m.id] && <span className="rounded-full bg-bad px-2 py-0.5 text-[10px] font-bold text-white">BLOQUEA EL LANZAMIENTO</span>}
+                </span>
                 <span className="text-xs text-muted">{m.how}</span>
               </span>
             </label>
           </li>
-        ))}
-      </ul>
+        );
+        const mineLeft = MANUAL.filter((m) => m.who !== "claude");
+        const claude = MANUAL.filter((m) => m.who === "claude");
+        const first = (l: typeof MANUAL) => [...l.filter((m) => m.urgent && !done[m.id]), ...l.filter((m) => !(m.urgent && !done[m.id]))];
+        return (
+          <>
+            <h3 className="text-sm font-bold text-muted">Lo haces tú (y lo marcas)</h3>
+            <ul className="flex flex-col gap-2">{first(mineLeft).map(item)}</ul>
+            <h3 className="text-sm font-bold text-muted">Pendiente de Claude (márcalo cuando te lo entregue)</h3>
+            <ul className="flex flex-col gap-2">{first(claude).map(item)}</ul>
+          </>
+        );
+      })()}
     </section>
   );
 }

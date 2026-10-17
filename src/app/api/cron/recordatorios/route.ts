@@ -8,6 +8,7 @@ import { dailyReport } from "@/lib/daily-report";
 import { runExpiry } from "@/lib/expiry";
 import { observedDollar } from "@/lib/usd-clp";
 import { emailConfigured, sendEmail } from "@/lib/providers/email";
+import { watchFailures } from "@/lib/genstats";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -85,5 +86,6 @@ export async function GET(req: Request) {
     }
   }
   await ownerReport(expiry?.expired ?? 0, ws.filter((w) => w.paid_until === soon).length);
+  await watchFailures(true);
   return NextResponse.json({ ok: true, sent, tips, expiry });
 }

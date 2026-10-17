@@ -62,6 +62,8 @@ export interface Config {
   uso: number; // % of credits customers use
   stripePct: number;
   stripeFijo: number;
+  ivaPct?: number; // VAT included in the price of sales to Chile (19), paid to the SII
+  pctChile?: number; // % of sales that carry Chilean VAT
   planes: Plan[];
   afiliado: { tipo: "recurrente" | "cpa"; pct: number; meses: number; cpa: number; vida: number };
   proyeccion: Record<string, number> & { pctAfiliado: number; pctPromo?: number };
@@ -147,6 +149,8 @@ export const DEFAULT_FINANZAS: Finanzas = {
     uso: 70,
     stripePct: 4.4,
     stripeFijo: 0.3,
+    ivaPct: 19,
+    pctChile: 100,
     planes: [
       { id: "starter", nombre: "Starter", mensual: 119, anual: 99, creditos: 1000 },
       { id: "plus", nombre: "Plus", mensual: 219, anual: 182, creditos: 3000 },
@@ -170,6 +174,7 @@ export const fijoMensual = (fijos: CostoFijo[]) =>
 
 export interface PlanMonth {
   precio: number;
+  iva: number;
   modelos: number;
   stripe: number;
   afiliado: number;
@@ -178,20 +183,28 @@ export interface PlanMonth {
 }
 
 /** What one customer on a plan leaves us in one month. */
+/** VAT inside a price paid in Chile (prices include it): the part that goes to the SII, never to us. */
+export function ivaOf(c: Config, precio: number) {
+  const pct = Math.max(0, Number(c.ivaPct ?? 19));
+  const chile = Math.min(100, Math.max(0, Number(c.pctChile ?? 100))) / 100;
+  return precio * chile * (pct / (100 + pct));
+}
+
 export function planMonth(c: Config, p: Plan, o: { anual?: boolean; promo?: boolean; viaAf?: boolean; uso?: number }): PlanMonth {
   let precio = o.anual ? p.anual : p.mensual;
   if (o.promo) precio *= 0.5;
   const modelos = p.creditos * ((o.uso ?? c.uso) / 100) * c.costoCredito;
   const stripe = (precio * c.stripePct) / 100 + c.stripeFijo;
   const afiliado = o.viaAf && c.afiliado.tipo === "recurrente" ? (precio * c.afiliado.pct) / 100 : 0;
-  const queda = precio - modelos - stripe - afiliado;
-  return { precio, modelos, stripe, afiliado, queda, margen: precio ? (queda / precio) * 100 : 0 };
+  const iva = ivaOf(c, precio);
+  const queda = precio - iva - modelos - stripe - afiliado;
+  return { precio, iva, modelos, stripe, afiliado, queda, margen: precio ? (queda / precio) * 100 : 0 };
 }
 
 /** Monthly projection for a number of subscribers per plan, before fixed costs. */
 export function proyectar(f: Finanzas) {
   const c = f.config;
-  let mrr = 0, modelos = 0, stripe = 0, afiliados = 0, subs = 0;
+  let mrr = 0, iva = 0, modelos = 0, stripe = 0, afiliados = 0, subs = 0;
   for (const p of c.planes) {
     const n = Number(c.proyeccion[p.id] || 0);
     if (!n) continue;
@@ -204,14 +217,15 @@ export function proyectar(f: Finanzas) {
       const r = planMonth(c, p, o);
       const ra = planMonth(c, p, { ...o, viaAf: true });
       mrr += k * r.precio;
+      iva += k * r.iva;
       modelos += k * r.modelos;
       stripe += k * r.stripe;
       afiliados += ((k * c.proyeccion.pctAfiliado) / 100) * ra.afiliado;
     }
   }
   // what the subscriptions themselves leave (fixed costs are looked at on their own)
-  const neto = mrr - modelos - stripe - afiliados;
-  return { subs, mrr, modelos, stripe, afiliados, neto, margen: mrr ? (neto / mrr) * 100 : 0 };
+  const neto = mrr - iva - modelos - stripe - afiliados;
+  return { subs, mrr, iva, modelos, stripe, afiliados, neto, margen: mrr ? (neto / mrr) * 100 : 0 };
 }
 
 /** Plan prices before the October 2026 increase: a saved book that still has them gets today's plans. */

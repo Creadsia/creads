@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { logLater } from "./errlog";
 
 // What a customer may read when something fails. Customers see Creads, never the services behind it:
 // no provider names, keys, balances, status codes or English error text. Our own Spanish messages pass
@@ -34,6 +35,7 @@ export function customerText(raw: string, fallback = "No se pudo completar."): s
   if (TIMEOUT.test(msg)) return SLOW;
   const ref = randomBytes(3).toString("hex").toUpperCase();
   console.error(`[ref ${ref}]`, msg.slice(0, 1000));
+  logLater({ area: "servidor", message: msg, ref });
   return `${fallback.replace(/\.?$/, ".")} Vuelve a intentarlo en un momento; si se repite, escríbenos a hola@creadsia.com con el código ${ref}.`;
 }
 

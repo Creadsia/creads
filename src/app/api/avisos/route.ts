@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { watchFailures } from "@/lib/genstats";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { refundedJobs } from "@/lib/credits";
 import { findTool } from "@/lib/tools";
@@ -13,6 +14,8 @@ export interface FailNotice { id: string; what: string; href: string; when: stri
 export async function GET(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  // customers open the studio all day: a cheap moment to check whether generations are failing
+  after(() => watchFailures());
   try {
     const since = Date.now() - 48 * 3600_000;
     const rows = (await s.db.list("clips", "status=eq.failed&order=created_at.desc&limit=12")) as Record<string, unknown>[];

@@ -24,6 +24,10 @@ Compete head-on with Higgsfield and win Latin America. Creads exists to help mar
 - Phase 2 (weeks 7–10): login, credits, Stripe plans, library, avatars/products with consent.
 - Phase 3: paid founders beta. Phase 4: open launch.
 
+## Deploys
+- `main` is production (creadsia.com): every push goes live. `staging` is the test environment (Vercel preview, its own Supabase project and test keys; shows a yellow "AMBIENTE DE PRUEBAS" strip).
+- Risky changes (payments, credits, database, auth, providers) go to `staging` first; the owner checks them there, then they are merged into `main`. Small copy and style fixes can go straight to `main`.
+
 ## Rules
 - UI copy in Spanish; code and comments in English.
 - Dark "modo suave" theme with violet accent (`--accent`, `--grad`) as in the prototype.

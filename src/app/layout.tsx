@@ -5,6 +5,8 @@ import "@fontsource-variable/geist-mono";
 import "./globals.css";
 import MetaPixel from "./meta-pixel";
 import { PwaSetup } from "./install-app";
+import ErrorCatcher from "./error-catcher";
+import EnvBanner from "./env-banner";
 
 export const metadata: Metadata = {
   title: "Creads IA · Every AI model, one studio",
@@ -33,6 +35,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <MetaPixel />
         <PwaSetup />
+        <ErrorCatcher />
+        <EnvBanner />
       </body>
     </html>
   );

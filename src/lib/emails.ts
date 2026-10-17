@@ -136,6 +136,8 @@ export interface DailyReport {
   alerts: string[];
   /** What the in-app assistant handled. */
   support?: { chats: number; people: number; solved: number; topics: [string, number][]; unsolved: string[] };
+  errors?: { total: number; kinds: number; top: string[] };
+  gen?: { total: number; failed: number; failedUsd: number; refunded: number };
 }
 
 const TOPIC_ES: Record<string, string> = { creditos: "créditos", planes_pago: "planes y pagos", crear: "crear anuncios", marca: "voces y avatares", herramientas: "herramientas", falla: "fallas", cuenta: "cuenta", otro: "otros" };
@@ -153,6 +155,9 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
     ["Planes que vencen en 3 días", String(r.ending)],
     ["Créditos vencidos hoy", r.expired.toLocaleString("es-CL")],
   ];
+  if (r.gen) rows.push(["Generaciones fallidas", r.gen.total ? `${r.gen.failed} de ${r.gen.total} (${Math.round((r.gen.failed / r.gen.total) * 100)}%) · ${usd(r.gen.failedUsd)} en riesgo` : "Sin generaciones"]);
+  if (r.gen?.refunded) rows.push(["Créditos devueltos a clientes", r.gen.refunded.toLocaleString("es-CL")]);
+  if (r.errors) rows.push(["Errores registrados", r.errors.total ? `${r.errors.total} (${r.errors.kinds} tipo${r.errors.kinds === 1 ? "" : "s"})` : "Ninguno"]);
   const sp = r.support;
   if (sp) rows.push(["Asistente Creads", sp.chats ? `${sp.chats} pregunta${sp.chats === 1 ? "" : "s"} de ${sp.people} cliente${sp.people === 1 ? "" : "s"} · ${Math.round((sp.solved / sp.chats) * 100)}% resueltas` : "Sin preguntas"]);
   const topics = sp?.topics.length ? `Temas: ${sp.topics.map(([t, n]) => `${TOPIC_ES[t] ?? t} (${n})`).join(", ")}.` : "";
@@ -170,6 +175,7 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
       cta: { label: "Abrir el Panel", href: `${SITE}/admin` },
       after: [
         ...(r.alerts.length ? [`<b>Para revisar:</b><br>${r.alerts.map((a) => `• ${esc(a)}`).join("<br>")}`] : []),
+        ...(r.errors?.top.length ? [`<b>Errores más repetidos:</b><br>${r.errors.top.map((e) => `• ${esc(e)}`).join("<br>")}`] : []),
         ...(topics ? [esc(topics)] : []),
         ...(unsolved.length ? [`<b>Lo que el asistente no supo responder</b> (vale la pena sumarlo al Centro de ayuda o mejorar el producto):<br>${unsolved.map((q) => `• «${esc(q)}»`).join("<br>")}`] : []),
       ],
@@ -225,5 +231,22 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
     to, tag: `activacion-${o.step}`, subject: v.subject, unsub: o.unsub,
     html: layout({ preview: v.title, title: v.title, paragraphs: v.paragraphs, cta: v.cta, unsub: o.unsub }),
     text: plain([...v.paragraphs.map(unhtml), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
+  };
+}
+
+/** An alarm for the owner: something is failing right now (an error or many failed generations). */
+export function alarmEmail(to: string, a: { title: string; detail: string; rows?: [string, string][]; times?: number }): Email {
+  return {
+    to, tag: "alarma",
+    subject: `⚠ Creads: ${a.title}`.slice(0, 140),
+    html: layout({
+      preview: a.detail.slice(0, 120),
+      title: a.title,
+      paragraphs: [esc(a.detail), ...(a.times && a.times > 1 ? [`Pasó <b>${a.times} veces</b> desde el último aviso.`] : [])],
+      rows: a.rows,
+      cta: { label: "Ver errores en el Panel", href: `${SITE}/admin?tab=errores` },
+      after: ["Este aviso se repite como máximo cada 6 horas por el mismo problema. Si ya lo resolviste, márcalo como resuelto en el Panel."],
+    }),
+    text: plain([`⚠ ${a.title}`, "", a.detail, ...(a.rows ?? []).map(([k, v]) => `${k}: ${v}`), "", `Panel: ${SITE}/admin?tab=errores`]),
   };
 }
