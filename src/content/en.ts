@@ -311,8 +311,8 @@ export const en = {
       {
         id: "starter",
         name: "Starter",
-        price: 59,
-        yearly: 49,
+        price: 119,
+        yearly: 99,
         credits: "1,000",
         for: "For creators and small businesses getting started.",
         features: ["≈ 3 UGC ads of 30 s, or 125 images", "Every studio and model", "1 avatar with your face", "1 cloned voice", "AI script generator", "HD, commercial use"],
@@ -320,8 +320,8 @@ export const en = {
       {
         id: "plus",
         name: "Plus",
-        price: 129,
-        yearly: 108,
+        price: 219,
+        yearly: 182,
         credits: "3,000",
         for: "For marketers and creators who publish every week.",
         features: ["≈ 10 UGC ads of 30 s, or 375 images", "Auto production: 3 versions per script", "3 avatars and 3 cloned voices", "Priority queue"],
@@ -329,8 +329,8 @@ export const en = {
       {
         id: "studio",
         name: "Studio",
-        price: 249,
-        yearly: 208,
+        price: 449,
+        yearly: 374,
         credits: "8,000",
         for: "For agencies, brands and teams producing at scale.",
         features: ["≈ 26 UGC ads of 30 s, or 1,000 images", "Unlimited avatars and voices", "3 team seats", "Fastest queue and early access to new models", "Direct support"],
@@ -341,9 +341,9 @@ export const en = {
       lead: "For busy months. They add to your balance and expire with your plan.",
       buy: "Buy",
       packs: [
-        ["500 credits", "$25"],
-        ["2,000 credits", "$89"],
-        ["5,000 credits", "$209"],
+        ["500 credits", "$49"],
+        ["2,000 credits", "$179"],
+        ["5,000 credits", "$399"],
       ],
     },
     promos: [

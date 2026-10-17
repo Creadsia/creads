@@ -312,8 +312,8 @@ export const es: Content = {
       {
         id: "starter",
         name: "Starter",
-        price: 59,
-        yearly: 49,
+        price: 119,
+        yearly: 99,
         credits: "1.000",
         for: "Para creadores y negocios que están partiendo.",
         features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "Generador de guiones con IA", "HD, uso comercial"],
@@ -321,8 +321,8 @@ export const es: Content = {
       {
         id: "plus",
         name: "Plus",
-        price: 129,
-        yearly: 108,
+        price: 219,
+        yearly: 182,
         credits: "3.000",
         for: "Para marketers y creadores que publican todas las semanas.",
         features: ["≈ 10 anuncios UGC de 30 s, o 375 imágenes", "Producción automática: 3 versiones por guion", "3 avatares y 3 voces clonadas", "Cola prioritaria"],
@@ -330,8 +330,8 @@ export const es: Content = {
       {
         id: "studio",
         name: "Studio",
-        price: 249,
-        yearly: 208,
+        price: 449,
+        yearly: 374,
         credits: "8.000",
         for: "Para agencias, marcas y equipos que producen a escala.",
         features: ["≈ 26 anuncios UGC de 30 s, o 1.000 imágenes", "Avatares y voces ilimitados", "3 usuarios de equipo", "La cola más rápida y acceso anticipado a modelos nuevos", "Soporte directo"],
@@ -342,9 +342,9 @@ export const es: Content = {
       lead: "Para los meses con más trabajo. Se suman a tu saldo y vencen junto con tu plan.",
       buy: "Comprar",
       packs: [
-        ["500 créditos", "US$25"],
-        ["2.000 créditos", "US$89"],
-        ["5.000 créditos", "US$209"],
+        ["500 créditos", "US$49"],
+        ["2.000 créditos", "US$179"],
+        ["5.000 créditos", "US$399"],
       ],
     },
     promos: [

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { DEFAULT_FINANZAS, type Finanzas } from "@/lib/finance";
+import { DEFAULT_FINANZAS, type Finanzas, withCurrentPlans } from "@/lib/finance";
 import { readPrivateJSON, writePrivateJSON } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ const FILE = "finanzas.json";
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   try {
-    const data = (await readPrivateJSON<Finanzas>(FILE)) ?? DEFAULT_FINANZAS;
+    const data = withCurrentPlans((await readPrivateJSON<Finanzas>(FILE)) ?? DEFAULT_FINANZAS);
     // models connected after the book was first saved show up automatically
     const known = new Set(data.modelos.map((m) => m.id));
     const added = DEFAULT_FINANZAS.modelos.filter((m) => !known.has(m.id));

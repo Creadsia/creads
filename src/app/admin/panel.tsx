@@ -1061,7 +1061,7 @@ const MANUAL: { id: string; title: string; how: string }[] = [
   { id: "gasto-real", title: "Automático 3 · Gasto real de cada proveedor en el Panel", how: "Después de la pasarela: clave de administrador de Anthropic (gasto diario real) y la exportación de facturación de Google Cloud, para comparar lo estimado con lo que cobran de verdad. Pídeselo a Claude." },
   { id: "boletas", title: "Automático 4 · Boletas automáticas", how: "Que cada cobro emita su boleta electrónica sola. Definir con el contador (inicio de actividades en el SII) y activarlo en la pasarela (Flow puede emitirlas) o con un servicio de boletas; después Claude lo conecta." },
   { id: "dia-1", title: "Día 1: borrón y cuenta nueva", how: "Justo antes de la primera venta real: lo de hoy se archiva como «Ensayo» (no se borra) y el Panel parte de cero en movimientos, pedidos y gasto en IA. Claude te muestra antes la lista exacta para tu OK." },
-  { id: "precios", title: "Decidir la oferta de Plus y Studio", how: "Con 50% el primer mes, Plus y Studio pierden plata si el cliente usa todo. Recomendado: 50% solo en Starter, 20% en Plus y Studio, Studio anual a US$229/mes. Avísale a Claude para cambiarlo." },
+  { id: "precios", title: "Precios nuevos (oct 2026)", how: "Starter US$119, Plus US$219, Studio US$449 al mes, con 50% el primer mes; anual con 2 meses gratis; recargas US$49 / 179 / 399. Con el 50% cada plan deja al menos unos US$24 el primer mes aunque el cliente use todos los créditos. Márcalo cuando lo revises en la web." },
 ];
 
 function Lanzamiento() {

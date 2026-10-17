@@ -148,9 +148,9 @@ export const DEFAULT_FINANZAS: Finanzas = {
     stripePct: 4.4,
     stripeFijo: 0.3,
     planes: [
-      { id: "starter", nombre: "Starter", mensual: 59, anual: 49, creditos: 1000 },
-      { id: "plus", nombre: "Plus", mensual: 129, anual: 108, creditos: 3000 },
-      { id: "studio", nombre: "Studio", mensual: 249, anual: 208, creditos: 8000 },
+      { id: "starter", nombre: "Starter", mensual: 119, anual: 99, creditos: 1000 },
+      { id: "plus", nombre: "Plus", mensual: 219, anual: 182, creditos: 3000 },
+      { id: "studio", nombre: "Studio", mensual: 449, anual: 374, creditos: 8000 },
     ],
     afiliado: { tipo: "recurrente", pct: 30, meses: 12, cpa: 50, vida: 8 },
     proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30 },
@@ -206,4 +206,11 @@ export function proyectar(f: Finanzas) {
   const fijos = fijoMensual(f.fijos);
   const neto = mrr - modelos - stripe - afiliados - fijos;
   return { subs, mrr, modelos, stripe, afiliados, fijos, neto, margen: mrr ? (neto / mrr) * 100 : 0 };
+}
+
+/** Plan prices before the October 2026 increase: a saved book that still has them gets today's plans. */
+const OLD_PRICES: Record<string, number> = { starter: 59, plus: 129, studio: 249 };
+export function withCurrentPlans(f: Finanzas): Finanzas {
+  const old = f.config?.planes?.some((p) => OLD_PRICES[p.id] === p.mensual);
+  return old ? { ...f, config: { ...f.config, planes: DEFAULT_FINANZAS.config.planes } } : f;
 }

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { forgetWorkspace } from "./auth";
 import type { ItemId, MethodId, Period, Quote } from "./catalog";
 import { CreditError, grant } from "./credits";
-import { DEFAULT_FINANZAS, type Finanzas } from "./finance";
+import { DEFAULT_FINANZAS, type Finanzas, withCurrentPlans } from "./finance";
 import type { Visitor } from "./meta";
 import { beforeNewPeriod } from "./expiry";
 import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "./supabase";
@@ -29,7 +29,7 @@ export const addMonths = (iso: string, months: number) => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 async function book() {
-  return (await readPrivateJSON<Finanzas>("finanzas.json").catch(() => null)) ?? DEFAULT_FINANZAS;
+  return withCurrentPlans((await readPrivateJSON<Finanzas>("finanzas.json").catch(() => null)) ?? DEFAULT_FINANZAS);
 }
 
 /** Writes an income line in the owner's finance book. */
