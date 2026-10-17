@@ -129,6 +129,7 @@ export interface DailyReport {
   salesUsd: number;
   salesClp: number;
   signups: number;
+  installs?: number;
   aiUsd: number;
   expired: number;
   ending: number;
@@ -144,6 +145,7 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
     ["Gasto en IA (estimado)", usd(r.aiUsd)],
     ["Ventas − gasto IA", usd(margin)],
     ["Cuentas nuevas", String(r.signups)],
+    ["Instalaciones de la app", String(r.installs ?? 0)],
     ["Planes que vencen en 3 días", String(r.ending)],
     ["Créditos vencidos hoy", r.expired.toLocaleString("es-CL")],
   ];

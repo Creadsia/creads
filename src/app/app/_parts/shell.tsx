@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import AccountMenu, { CreditsPill } from "./account-menu";
+import InstallBanner from "./install-banner";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -235,7 +236,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
           <CreditsPill />
           <AccountMenu user={user} />
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col gap-6">{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
     </div>
   );

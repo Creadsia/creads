@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
 import { WHATSAPP, whatsappLink } from "../../whatsapp";
+import { IosSteps, useInstall } from "../../install-app";
 import type { ShellUser } from "./shell";
 
 // The account corner every logged-in screen has: credits at a glance and a menu with the account,
@@ -39,6 +40,7 @@ const D = {
   help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01",
   moon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z",
   sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+  phone: "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm3 17h2",
   out: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10",
   coin: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v8M9.5 10.5c0-1 1.1-1.5 2.5-1.5s2.5.6 2.5 1.5-1 1.3-2.5 1.5-2.5.6-2.5 1.5 1.1 1.5 2.5 1.5 2.5-.5 2.5-1.5",
 };
@@ -61,6 +63,8 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
   const { info } = useCredits();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState<boolean | null>(null);
+  const app = useInstall();
+  const [ios, setIos] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
 
@@ -141,6 +145,12 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
           <a href={whatsappLink("Hola, necesito ayuda con Creads IA") || "mailto:hola@creadsia.com?subject=Ayuda%20con%20Creads"} target={WHATSAPP ? "_blank" : undefined} rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.help} />{WHATSAPP ? "Ayuda por WhatsApp" : "Ayuda y soporte"}</a>
+          {(app.mode === "prompt" || app.mode === "ios") && (
+            <button type="button" role="menuitem" onClick={() => (app.mode === "prompt" ? app.install().then(close) : setIos((v) => !v))} className={item}>
+              <Svg d={D.phone} />Instalar la app
+            </button>
+          )}
+          {ios && app.mode === "ios" && <div className="mx-3 mb-1 rounded-lg bg-surface-2 p-3"><IosSteps /></div>}
           <button type="button" role="menuitem" onClick={flipTheme} className={item}>
             <Svg d={dark ? D.sun : D.moon} />{dark ? "Modo claro" : "Modo oscuro"}
           </button>

@@ -20,6 +20,7 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
     overview(false).catch(() => null),
     modelWarnings().catch(() => [] as string[]),
   ]);
+  const installs = ((await readPrivateJSON<Record<string, number>>("instalaciones.json").catch(() => null)) ?? {})[from] ?? 0;
   const leaves = ((await readPrivateJSON<{ at: string; reason: string; detail: string }[]>("cancelaciones.json").catch(() => null)) ?? []).filter((l) => l.at >= from && l.at < to);
   const clp = pays.filter((p) => p.currency === "CLP").reduce((s, p) => s + Number(p.amount || 0), 0);
   const usd = pays.filter((p) => p.currency !== "CLP").reduce((s, p) => s + Number(p.amount || 0), 0) + clp / rate;
@@ -29,6 +30,7 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
     salesUsd: +usd.toFixed(2),
     salesClp: clp,
     signups: users.length,
+    installs,
     aiUsd: +clips.reduce((s, c) => s + Number(c.usd ?? 0), 0).toFixed(2),
     expired: extra.expired,
     ending: extra.ending,
