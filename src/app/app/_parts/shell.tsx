@@ -131,25 +131,6 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
   );
 }
 
-function Status() {
-  const [h, setH] = useState<{ providers: { claude: boolean; database: boolean; video: Record<string, boolean>; image: Record<string, boolean>; voice: Record<string, boolean> } } | null>(null);
-  useEffect(() => { fetch("/api/health").then((r) => r.json()).then(setH).catch(() => {}); }, []);
-  if (!h?.providers) return null;
-  const p = h.providers;
-  const any = (o: Record<string, boolean>) => Object.values(o).some(Boolean);
-  const items: [string, boolean][] = [["Base de datos", p.database], ["Claude", p.claude], ["Video", any(p.video)], ["Imagen", any(p.image)], ["Voz", any(p.voice)]];
-  return (
-    <ul className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted" aria-label="Estado de los servicios">
-      {items.map(([k, ok]) => (
-        <li key={k} className="flex items-center gap-1.5">
-          <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-good" : "bg-warn"}`} aria-hidden="true" />
-          {k}<span className="sr-only">{ok ? " conectado" : " sin conectar"}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /** The account's credits in the menu (the owner has no limit). */
 function CreditsBox() {
   const { info } = useCredits();
@@ -214,7 +195,6 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
   const footer = (
     <div className="flex flex-col gap-3 border-t border-line pt-4">
       <CreditsBox />
-      {user.owner && <Status />}
     </div>
   );
 
