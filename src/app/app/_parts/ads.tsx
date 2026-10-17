@@ -22,7 +22,8 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
   const [niche, setNiche] = useState<string | null>(null); // nicheKey, or null = all
   const [editing, setEditing] = useState<string | null>(null);
   const nicheOf = (a: Ad) => cleanNiche(a.settings?.niche);
-  const mine = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" : a.status !== "done"));
+  // an ad being redone shows in both: in production, and finished (its last final video) until rebuilt
+  const mine = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" || Boolean(a.final_url) : a.status !== "done"));
   // niches in use, with how many ads each (same niche written differently counts once)
   const niches = useMemo(() => {
     const m = new Map<string, { label: string; n: number }>();

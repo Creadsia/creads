@@ -13,6 +13,7 @@ export default function Home({ full = true }: { full?: boolean }) {
   const [c, setC] = useState<Counts | null>(null);
   const [voices, setVoices] = useState<number | null>(null);
   const [missing, setMissing] = useState(false);
+  const [working, setWorking] = useState<{ id: string; title: string | null; format: string | null; status: string }[]>([]);
 
   useEffect(() => {
     const tables = ["avatars", "products", "scripts", "ads"] as const;
@@ -21,6 +22,8 @@ export default function Home({ full = true }: { full?: boolean }) {
         if (all.some((x) => !x.ok)) setMissing(true);
         setC(Object.fromEntries(all.map((x) => [x.t, x.ok ? Number(x.d.count ?? 0) : null])) as Counts);
       });
+    // ads still being made: a way back to them right from the start page
+    fetch("/api/data/ads").then((r) => (r.ok ? r.json() : null)).then((d) => setWorking(((d?.rows ?? []) as { id: string; title: string | null; format: string | null; status: string }[]).filter((a) => a.status !== "done" && a.status !== "draft").slice(0, 3))).catch(() => {});
     fetch("/api/voices").then((r) => (r.ok ? r.json() : null)).then((d) => setVoices(d ? (d.voices ?? []).filter((v: { category?: string }) => v.category === "cloned").length : 0)).catch(() => setVoices(0));
   }, []);
 
@@ -48,6 +51,24 @@ export default function Home({ full = true }: { full?: boolean }) {
     <>
       <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Sigue estos pasos en orden. Los primeros se hacen una sola vez; después, cada anuncio es guion → anuncio." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
       {missing && <SetupNotice />}
+      {working.length > 0 && (
+        <section aria-label="Anuncios en producción" className="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <b className="text-sm">{working.length === 1 ? "Tienes un anuncio en producción" : `Tienes ${working.length} anuncios en producción`}</b>
+            <Link href="/app/videos" className="text-sm font-semibold text-accent-text underline">Ver todos</Link>
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {working.map((a) => (
+              <li key={a.id}>
+                <Link href={a.format === "historia" ? `/app/historias?id=${a.id}` : `/app/videos/${a.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-surface px-3 py-2.5 text-sm hover:bg-surface-2">
+                  <span className="min-w-0 truncate font-semibold">{a.title || "Anuncio sin título"}</span>
+                  <span className="shrink-0 text-xs font-semibold text-accent-text">{a.status === "failed" ? "Tiene cortes con error · " : a.status === "review" ? "Listo para revisar · " : "Generando · "}Volver →</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {starting ? (
         <section className={cardCls} aria-labelledby="pasos" data-tour="primeros-pasos">

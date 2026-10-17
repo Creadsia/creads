@@ -114,6 +114,9 @@ export async function POST(req: Request) {
     // story (which the customer may edit while the clip renders)
     const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : {};
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd, ...extra });
+    // redoing a cut of a finished ad puts it back in «En producción» (its last final video stays in
+    // «Anuncios terminados» until it's rebuilt)
+    if (ad.status === "done" || ad.status === "failed") await db.update("ads", String(ad.id), { status: "generating" }).catch(() => {});
     return NextResponse.json({ clip: row });
   } catch (err) {
     if (charged) await refundJob(s.user.workspace, id);
