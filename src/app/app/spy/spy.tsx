@@ -121,14 +121,14 @@ export default function Spy() {
     setTaking(ad.id); setErr("");
     let text = "";
     if (ad.video) {
-      const d = await fetch("/api/espiar/guion", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: ad.id }) })
+      const d = await fetch("/api/espiar/guion", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: ad.id, video: ad.video, lang: ["US", "CA", "GB"].includes(pais) ? "en" : "es" }) })
         .then((r) => r.json()).catch(() => ({}));
       text = String(d.transcript ?? "").trim();
     }
     // no voice in the video: the ad's own text is the script
     const script = [text, !text ? [ad.title, ad.text].filter(Boolean).join("\n\n") : ""].filter(Boolean).join("\n\n").trim();
     if (!script) { setTaking(""); return setErr("Este anuncio no tiene texto ni voz para sacar el guion. Prueba con otro."); }
-    try { sessionStorage.setItem(FROM_SPY_KEY, JSON.stringify({ text: script, page: ad.page, voice: Boolean(text), video: Boolean(ad.video) })); } catch {}
+    try { sessionStorage.setItem(FROM_SPY_KEY, JSON.stringify({ text: script, page: ad.page, voice: Boolean(text), video: Boolean(ad.video), days: ad.days })); } catch {}
     router.push("/app/guiones");
   }
 

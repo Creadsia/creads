@@ -31,10 +31,11 @@ export const blockOf = (id: string) => BLOCKS.find((b) => b.id.toLowerCase() ===
 
 export const HOOK_TYPES = "pregunta directa · advertencia o estafa · precio o número concreto · historia personal · POV · curiosidad o secreto · contraintuitivo · llamada al público («Dueños de casa de más de 50…») · urgencia temporal · prueba social";
 
-export type Mode = "desarmar" | "angulos" | "hooks" | "mejorar" | "idea" | "duraciones" | "crear";
+export type Mode = "desarmar" | "adaptar" | "angulos" | "hooks" | "mejorar" | "idea" | "duraciones" | "crear";
 
 export const MODES: { id: Mode; title: string; short: string; needsScript: boolean }[] = [
   { id: "desarmar", title: "Desarmar el guion", short: "Lo separa en hook, dolor, urgencia, CTA… y te explica por qué funciona y qué mejorar.", needsScript: true },
+  { id: "adaptar", title: "Hacer mi versión", short: "Toma lo que hace funcionar un anuncio ajeno y escribe 3 guiones originales para tu negocio.", needsScript: true },
   { id: "angulos", title: "3 ángulos nuevos", short: "La misma oferta contada desde 3 ángulos distintos, listos para testear.", needsScript: true },
   { id: "hooks", title: "10 hooks", short: "Diez aperturas de tipos distintos, con puntaje, para cambiar solo el inicio.", needsScript: true },
   { id: "mejorar", title: "Mejorar cada línea", short: "Reescribe cada frase un 10% mejor y te muestra qué cambió y por qué.", needsScript: true },
@@ -110,6 +111,18 @@ Para cada parte del guion (en orden, cubriendo TODO el texto, sin cambiar las pa
 Diagnóstico general: palanca principal (la emoción o motivo que mueve a actuar), ángulo, a quién le habla, nivel de conciencia (inconsciente / consciente del problema / consciente de la solución / consciente del producto / muy consciente), emoción dominante, tipo de hook (${HOOK_TYPES}), estructura (p. ej. Hook → Dolor → Mecanismo → Oferta → CTA).
 Todo el análisis en español. Los "texto" de los bloques van tal cual están en el guion original${L === "en" ? ' y agrega "es" con la traducción al español si el guion no está en español' : ""}.
 Responde SOLO JSON: {"analysis":{"titulo":"nombre corto","puntaje":1-10,"resumen":"2-3 frases: qué hace bien y qué lo frena","palanca":"","angulo":"","publico":"","conciencia":"","emocion":"","tipo_hook":"","estructura":"","bloques":[{"tipo":"Hook","texto":"","es":"","para_que":"qué logra esta parte, 1 frase","nota":8,"mejora":""}],"fortalezas":["3 a 5"],"mejoras":["3 a 5, concretas y accionables"],"riesgos":["riesgos de políticas de Meta o de leads de mala calidad; [] si no hay"],"ideas":["3 a 5 ideas para testear variaciones"]}}`;
+    case "adaptar":
+      return `${ROLE}
+El GUION GANADOR es un anuncio de OTRA marca que está funcionando. El usuario NO quiere copiarlo: quiere su propia versión para su negocio.
+Primero identifica en silencio qué lo hace funcionar (palanca, tipo de hook, estructura, ritmo, nivel de conciencia, prueba, CTA). Después escribe 3 guiones ORIGINALES para el negocio del usuario que usen esos mismos principios con palabras, historia y detalles propios:
+1) "Misma estructura": sigue el mismo esqueleto bloque a bloque, con texto nuevo.
+2) "Mismo ángulo, otra historia": conserva la palanca y el ángulo, pero con otra situación o personaje.
+3) "Misma palanca, ángulo nuevo": conserva lo que mueve a actuar, contado desde un ángulo distinto.
+Nunca copies frases del original (como mucho 3 palabras seguidas) ni menciones su marca. Usa la oferta, el público y el CTA del usuario si los dio; si no, frases que funcionen sin esos datos.
+${m}
+${HARD_RULES(L)}
+Para cada guion: "angulo" (uno de los 3 nombres de arriba), "por_que" (qué tomó del original y por qué debería funcionar, 1-2 frases en español), "cuando" (cuándo testearlo, 1 frase), "puntaje" 1-10, "segundos".
+Responde SOLO JSON: {"scripts":[{"titulo":"","angulo":"","por_que":"","cuando":"","puntaje":8,"segundos":30,"bloques":[${blockJson(L)}]}]}`;
     case "angulos":
       return `${ROLE}
 Escribe 3 guiones nuevos que vendan LO MISMO (misma oferta y mismo CTA) desde 3 ÁNGULOS claramente distintos (por ejemplo: miedo a perder, ahorro, estatus/orgullo, comodidad, rabia contra el enemigo común, historia de alguien parecido, curiosidad). Mantén el largo parecido al original.

@@ -11,7 +11,9 @@ import { Field, PageHead, type Row, Stepper, btnCls, cardCls, ghostCls, inputCls
 
 interface SavedScript extends Row { title: string | null; lang: string; text: string; favorite: boolean }
 interface Version { id: string; label: string; text: string; at: number }
-interface Draft { script: string; lang: ScriptLang; niche: string; context: string; versions: Version[] }
+/** The competitor's ad the work started from (from «Espiar anuncios»): a base to learn from, not to copy. */
+interface Reference { text: string; page: string; days: number | null; voice: boolean; video: boolean }
+interface Draft { script: string; lang: ScriptLang; niche: string; context: string; versions: Version[]; reference?: Reference | null }
 
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const newId = () => Math.random().toString(36).slice(2, 10);
@@ -67,35 +69,38 @@ export default function Guiones() {
   const [analysis, setAnalysis] = useState<{ text: string; a: Analysis } | null>(null);
   const [note, setNote] = useState("");
   const [learn, setLearn] = useState(false);
+  const [reference, setReference] = useState<Reference | null>(null);
+  const [needContext, setNeedContext] = useState(false);
 
   // the work in progress survives a reload (this browser only)
   useEffect(() => {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") as Draft | null;
-      if (d) { setScript(d.script || ""); setLang(d.lang === "en" ? "en" : "es-CL"); setNiche(d.niche || ""); setContext(d.context || ""); setVersions(Array.isArray(d.versions) ? d.versions.slice(0, 20) : []); }
+      if (d) { setScript(d.script || ""); setLang(d.lang === "en" ? "en" : "es-CL"); setNiche(d.niche || ""); setContext(d.context || ""); setVersions(Array.isArray(d.versions) ? d.versions.slice(0, 20) : []); setReference(d.reference?.text ? d.reference : null); }
       else { const n = localStorage.getItem("creads-niche"); if (n) setNiche(n); }
       // a winning ad brought from «Espiar anuncios»: it becomes the script to take apart (the previous one is kept as a version)
-      const spy = JSON.parse(sessionStorage.getItem(FROM_SPY_KEY) || "null") as { text?: string; page?: string; voice?: boolean; video?: boolean } | null;
+      const spy = JSON.parse(sessionStorage.getItem(FROM_SPY_KEY) || "null") as { text?: string; page?: string; voice?: boolean; video?: boolean; days?: number | null } | null;
       sessionStorage.removeItem(FROM_SPY_KEY);
       if (spy?.text?.trim()) {
         const prev = d?.script?.trim();
         if (prev) setVersions((v) => (v.some((x) => x.text === prev) ? v : [{ id: newId(), label: "Mi versión", text: prev, at: Date.now() }, ...v].slice(0, 20)));
         setScript(spy.text.trim());
-        setNote(spy.voice
-          ? `Trajimos lo que dicen en el anuncio de ${spy.page || "la competencia"}. Toca «Desarmar el guion» para ver por qué funciona.`
-          : spy.video
-            ? `El video de ${spy.page || "ese anuncio"} no tiene voz que se pueda transcribir (suele ser solo música), así que trajimos el texto que acompaña al anuncio. Puedes completarlo con lo que se ve en pantalla.`
-            : `Trajimos el texto del anuncio de ${spy.page || "la competencia"}. Toca «Desarmar el guion» para ver por qué funciona.`);
+        setReference({ text: spy.text.trim(), page: spy.page || "la competencia", days: typeof spy.days === "number" ? spy.days : null, voice: Boolean(spy.voice), video: Boolean(spy.video) });
+        setOut(null);
+        setAnalysis(null);
+        setMode(null);
       }
     } catch {}
     setLoaded(true);
   }, []);
   useEffect(() => {
     if (!loaded) return;
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ script, lang, niche, context, versions } satisfies Draft)); } catch {}
-  }, [loaded, script, lang, niche, context, versions]);
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ script, lang, niche, context, versions, reference } satisfies Draft)); } catch {}
+  }, [loaded, script, lang, niche, context, versions, reference]);
 
   const w = words(script);
+  // still the competitor's words, untouched: make your version before taking it to video
+  const isReference = Boolean(reference && reference.text.trim() === script.trim());
   const current = analysis && analysis.text === script ? analysis.a : null;
 
   function flash(t: string) { setNote(t); setTimeout(() => setNote(""), 3500); }
@@ -174,6 +179,17 @@ export default function Guiones() {
   const modeInfo = MODES.find((m) => m.id === mode);
   const canRun = (m: Mode) => (m === "crear" ? context.trim().length >= 20 || Boolean(niche) : w >= 12);
 
+  /** «Hacer mi versión» needs to know what you sell (or at least the niche) to write for your business. */
+  function makeMine() {
+    if (context.trim().length < 10 && !niche.trim()) {
+      setNeedContext(true);
+      setTimeout(() => document.getElementById("guion-context")?.focus(), 50);
+      return;
+    }
+    setNeedContext(false);
+    run("adaptar");
+  }
+
   return (
     <>
       <Stepper flow="anuncio" current={1} />
@@ -182,6 +198,41 @@ export default function Guiones() {
       </PageHead>
 
       {learn && <Lesson />}
+
+      {reference && (
+        <section aria-labelledby="ref-h" className="flex flex-col gap-4 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex max-w-2xl flex-col gap-1">
+              <span className="text-xs font-semibold text-accent-text">Partiste de un anuncio que está funcionando</span>
+              <h2 id="ref-h" className="font-display text-lg font-bold">
+                Anuncio de {reference.page}{reference.days != null ? ` · ${reference.days} días activo${reference.days >= 30 ? " 🔥" : ""}` : ""}
+              </h2>
+              <p className="text-sm text-muted">
+                {reference.voice ? "Abajo está lo que dicen en el video." : reference.video ? "El video no tiene voz que se pueda transcribir (suele ser solo música): abajo está el texto que acompaña al anuncio." : "Abajo está el texto del anuncio."}{" "}
+                Úsalo como base, no lo copies: elige qué hacer con él y quédate con la versión que más te guste.
+              </p>
+            </div>
+            <button type="button" onClick={() => setReference(null)} className="text-xs text-muted underline hover:text-ink">Quitar referencia</button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {([
+              ["adaptar", "✍️ Hacer mi versión", "3 guiones originales para tu negocio, con lo que hace funcionar este anuncio.", makeMine],
+              ["desarmar", "🔍 Entender por qué funciona", "Hook, dolor, oferta, CTA… parte por parte y qué mejorar.", () => run("desarmar")],
+              ["hooks", "🎣 10 hooks nuevos", "Otras formas de abrir, con puntaje, para cambiar solo el inicio.", () => run("hooks")],
+              ["angulos", "🔀 3 ángulos nuevos", "La misma idea contada desde 3 motivos distintos.", () => run("angulos")],
+            ] as [Mode, string, string, () => void][]).map(([id, title, text, go], i) => (
+              <button key={id} type="button" onClick={go} disabled={Boolean(busy) || w < 12}
+                className={`flex flex-col gap-1 rounded-xl p-3.5 text-left transition-transform hover:-translate-y-px disabled:opacity-60 ${i === 0 ? "bg-[image:var(--grad)] text-white" : "border border-line bg-surface"}`}>
+                <b className="text-sm">{busy === id ? <Working label="Trabajando…" /> : title}</b>
+                <span className={`text-xs ${i === 0 ? "text-white/85" : "text-muted"}`}>{text}</span>
+              </button>
+            ))}
+          </div>
+          {needContext && <p role="alert" className="text-sm text-warn">Para escribir tu versión cuéntanos qué vendes (o elige tu nicho) en «Qué vendes», más abajo. Con eso la hacemos para tu negocio y no para el de ellos.</p>}
+          {w < 12 && <p className="text-sm text-warn">El texto es muy corto para trabajarlo: complétalo abajo con lo que se dice o se ve en el anuncio.</p>}
+          {busy && <p role="status" className="text-sm text-muted">La IA está trabajando. Tarda entre 15 y 40 segundos…</p>}
+        </section>
+      )}
 
       <section className={cardCls} aria-labelledby="tu-guion">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -194,7 +245,7 @@ export default function Guiones() {
             </select>
           )}
         </div>
-        <Field label="Pega el guion ganador (lo que dice la persona en el video)" hint={w ? `${w} palabras · ≈ ${spokenSeconds(script)} segundos hablado` : "Puede ser tuyo o uno de la competencia que esté funcionando. En español o en inglés."}>
+        <Field label={isReference ? "Guion del anuncio de referencia (puedes editarlo)" : "Pega el guion ganador (lo que dice la persona en el video)"} hint={w ? `${w} palabras · ≈ ${spokenSeconds(script)} segundos hablado` : "Puede ser tuyo o uno de la competencia que esté funcionando. En español o en inglés."}>
           <textarea value={script} onChange={(e) => setScript(e.target.value)} rows={8} placeholder="Ej: ¿Sabías que si tu casa tiene esta grieta en la pared…" className={`${inputCls} leading-relaxed`} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -208,7 +259,7 @@ export default function Guiones() {
             <datalist id="guion-niches">{NICHES.map((n) => <option key={n} value={n} />)}</datalist>
           </Field>
           <Field label="Qué vendes (opcional)" hint="Oferta, público, diferencia. Mejora mucho el resultado.">
-            <input value={context} onChange={(e) => setContext(e.target.value)} placeholder="Ej: inspección gratis, dueños de casa de +50 en Texas" className={inputCls} />
+            <input id="guion-context" value={context} onChange={(e) => { setContext(e.target.value); if (needContext) setNeedContext(false); }} placeholder="Ej: inspección gratis, dueños de casa de +50 en Texas" className={`${inputCls} ${needContext ? "border-warn" : ""}`} />
           </Field>
         </div>
         {versions.length > 0 && (
@@ -227,7 +278,7 @@ export default function Guiones() {
             <button type="button" onClick={() => setVersions([])} className="mt-2 text-xs text-muted underline">Borrar historial</button>
           </details>
         )}
-        {w >= 12 && (
+        {w >= 12 && !isReference && (
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => toCrear(script)} className={btnCls}>Llevar a Crear anuncio</button>
             <button type="button" onClick={() => save(script, current?.titulo || script.slice(0, 40))} className={ghostCls}>☆ Guardar</button>
@@ -244,7 +295,7 @@ export default function Guiones() {
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {MODES.map((m) => (
-            <button key={m.id} type="button" onClick={() => { setMode(m.id); setErr(""); if (m.id !== "idea" && m.id !== "crear" && m.id !== "mejorar" && canRun(m.id)) run(m.id); }}
+            <button key={m.id} type="button" onClick={() => { setMode(m.id); setErr(""); if (m.id === "adaptar") { if (canRun(m.id)) makeMine(); } else if (m.id !== "idea" && m.id !== "crear" && m.id !== "mejorar" && canRun(m.id)) run(m.id); }}
               aria-pressed={mode === m.id} disabled={Boolean(busy)}
               className={`flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors disabled:opacity-60 ${mode === m.id ? "border-accent bg-accent/10" : "border-line hover:bg-surface-2"}`}>
               <b className="text-sm">{busy === m.id ? <Working label="Trabajando…" /> : m.title}</b>
@@ -315,7 +366,12 @@ export default function Guiones() {
         </section>
       )}
 
-      {w >= 12 && (
+      {w >= 12 && isReference && !out && (
+        <p className="rounded-2xl border border-dashed border-line px-5 py-4 text-sm text-muted">
+          <b className="text-ink">Siguiente paso:</b> haz tu versión arriba (o mejora este guion). Cuando elijas una con «Usar este guion», aparece el botón para crearla en video.
+        </p>
+      )}
+      {w >= 12 && !isReference && (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]" aria-labelledby="siguiente">
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-[15px] bg-surface p-5">
             <div className="flex max-w-xl flex-col gap-1">
