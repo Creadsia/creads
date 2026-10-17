@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { type Tour, type TourStep, TOURS, VIDEOS, tourMatches, toursFor } from "@/lib/tours";
 import { askAssistant } from "./assistant";
 
@@ -42,22 +43,63 @@ function findTarget(target?: string): HTMLElement | null {
 /** The guide that fits what is on screen now: a guide waiting for an element beats the general one. */
 function bestTour(path: string): Tour | null {
   const list = toursFor(path);
-  return list.find((t) => t.when && findTarget(t.when)) ?? list.find((t) => !t.when) ?? null;
+  return list.find((t) => t.when && findTarget(t.when)) ?? list.find((t) => !t.when) ?? list[0] ?? null;
+}
+
+/** A guide can start when it has nothing to point at, or when something it points at is on screen. */
+function canShow(t: Tour) {
+  if (t.when && !findTarget(t.when)) return false;
+  const targeted = t.steps.filter((s) => s.target);
+  return targeted.length === 0 || targeted.some((s) => findTarget(s.target));
+}
+
+/**
+ * While a guide or video is open, the rest of the page can't be reached with the mouse or the
+ * keyboard (`inert`), and focus goes back where it was when it closes.
+ */
+function useModal(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    const others = Array.from(document.body.children).filter((el) => el !== root.current && !el.hasAttribute("inert")) as HTMLElement[];
+    others.forEach((el) => el.setAttribute("inert", ""));
+    return () => {
+      others.forEach((el) => el.removeAttribute("inert"));
+      if (prev && document.contains(prev)) prev.focus({ preventScroll: true });
+    };
+  }, [root]);
+}
+
+/** Renders into its own element at the end of <body> (so the rest of the page can be made inert). */
+function Layer({ children }: { children: (ref: React.RefObject<HTMLDivElement | null>) => React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    ref.current = el;
+    setHost(el);
+    return () => { el.remove(); };
+  }, []);
+  return host ? createPortal(children(ref), host) : null;
 }
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function Runner({ tour, onClose }: { tour: Tour; onClose: (finished: boolean) => void }) {
-  // steps whose (optional) element isn't there are left out
-  const [steps] = useState<TourStep[]>(() => tour.steps.filter((s) => !s.optional || findTarget(s.target)));
-  const [i, setI] = useState(0);
+function Runner({ tour, onClose, root }: { tour: Tour; onClose: (finished: boolean) => void; root: React.RefObject<HTMLDivElement | null> }) {
+  useModal(root);
+  // an optional step shows only if its element is on screen when the guide gets to it
+  const ok = (s: TourStep) => !s.optional || Boolean(findTarget(s.target));
+  const [i, setI] = useState(() => Math.max(0, tour.steps.findIndex(ok)));
+  const go = (dir: 1 | -1) => setI((v) => { for (let k = v + dir; k >= 0 && k < tour.steps.length; k += dir) if (ok(tour.steps[k])) return k; return v; });
+  const steps = tour.steps.filter((s, k) => k === i || ok(s));
+  const pos = steps.indexOf(tour.steps[i]);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [card, setCard] = useState<{ top: number; left: number } | null>(null);
   const [mobile, setMobile] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
-  const step = steps[i];
-  const last = i === steps.length - 1;
+  const step = tour.steps[i];
+  const last = pos === steps.length - 1;
 
   const measure = useCallback(() => {
     const el = findTarget(step?.target);
@@ -118,12 +160,12 @@ function Runner({ tour, onClose }: { tour: Tour; onClose: (finished: boolean) =>
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose(false);
-      else if (e.key === "ArrowRight") setI((v) => Math.min(v + 1, steps.length - 1));
-      else if (e.key === "ArrowLeft") setI((v) => Math.max(v - 1, 0));
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "ArrowLeft") go(-1);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [onClose, steps.length]);
+  });
 
   if (!step) return null;
   const pad = 8;
@@ -144,7 +186,7 @@ function Runner({ tour, onClose }: { tour: Tour; onClose: (finished: boolean) =>
         className={`absolute flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)] ${mobile ? "inset-x-3 bottom-3" : "w-[340px]"} ${!mobile && !card ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" : ""} ${anim}`}
         style={!mobile && card ? { top: card.top, left: card.left } : undefined}>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-accent-text">{tour.title} · {i + 1} de {steps.length}</span>
+          <span className="text-xs font-semibold text-accent-text">{tour.title} · {pos + 1} de {steps.length}</span>
           <button type="button" onClick={() => onClose(false)} className="rounded-md px-1.5 text-xs font-semibold text-muted hover:text-ink">Saltar guía</button>
         </div>
         <div className="flex flex-col gap-1">
@@ -153,11 +195,11 @@ function Runner({ tour, onClose }: { tour: Tour; onClose: (finished: boolean) =>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="flex gap-1" aria-hidden="true">
-            {steps.map((_, k) => <i key={k} className={`h-1.5 rounded-full ${k === i ? "w-4 bg-accent-text" : "w-1.5 bg-line"}`} />)}
+            {steps.map((_, k) => <i key={k} className={`h-1.5 rounded-full ${k === pos ? "w-4 bg-accent-text" : "w-1.5 bg-line"}`} />)}
           </span>
           <span className="flex gap-2">
-            {i > 0 && <button type="button" onClick={() => setI(i - 1)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-muted hover:text-ink">Atrás</button>}
-            <button ref={nextRef} type="button" onClick={() => (last ? onClose(true) : setI(i + 1))} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink">
+            {pos > 0 && <button type="button" onClick={() => go(-1)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-muted hover:text-ink">Atrás</button>}
+            <button ref={nextRef} type="button" onClick={() => (last ? onClose(true) : go(1))} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink">
               {last ? "Listo" : "Siguiente"}
             </button>
           </span>
@@ -167,7 +209,8 @@ function Runner({ tour, onClose }: { tour: Tour; onClose: (finished: boolean) =>
   );
 }
 
-function VideoModal({ id, onClose }: { id: string; onClose: () => void }) {
+function VideoModal({ id, onClose, root }: { id: string; onClose: () => void; root: React.RefObject<HTMLDivElement | null> }) {
+  useModal(root);
   const v = VIDEOS.find((x) => x.id === id);
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -202,12 +245,16 @@ export function Guides() {
   const activeRef = useRef<Tour | null>(null);
   activeRef.current = active;
 
-  const finish = useCallback((t: Tour) => {
+  // "Saltar guía" means no more guides on this screen for now; "Listo" lets the next one (e.g. the
+  // next step of «Crear anuncio») show when its time comes
+  const finish = useCallback((t: Tour, finished: boolean) => {
     const s = readSeen();
     s[t.id] = 1;
+    if (!finished) for (const x of toursFor(path)) s[x.id] = 1;
     writeSeen(s);
     setActive(null);
-  }, []);
+  }, [path]);
+  const closeVideo = useCallback(() => setVideo(null), []);
 
   // first visit: start the guide that fits the screen once its elements are there
   useEffect(() => {
@@ -217,19 +264,21 @@ export function Guides() {
       timer = 0;
       if (activeRef.current || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       const seen = readSeen();
-      if (seen.off) return;
-      const next = toursFor(path).find((t) => !seen[t.id] && (!t.when || findTarget(t.when)) && (t.steps.some((s) => !s.target) || t.steps.some((s) => findTarget(s.target))));
+      const left = toursFor(path).filter((t) => !seen[t.id]);
+      if (seen.off || !left.length) { mo.disconnect(); return; }
+      // the guide for the current state of the screen first (as the «Ayuda» button does)
+      const next = left.filter((t) => t.when).find(canShow) ?? left.filter((t) => !t.when).find(canShow);
       if (next) setActive(next);
     };
     // throttled, not debounced: a page that keeps changing (a timer ticking) must not delay it forever
     const later = () => { if (!timer) timer = window.setTimeout(check, 900); };
-    later();
     const mo = new MutationObserver(later);
+    later();
     mo.observe(document.body, { childList: true, subtree: true });
     return () => { clearTimeout(timer); mo.disconnect(); };
   }, [path]);
 
-  useEffect(() => setActive(null), [path]);
+  useEffect(() => { setActive(null); setVideo(null); }, [path]);
 
   // ?guia=<id> (from the help center): start that guide once its screen is ready
   useEffect(() => {
@@ -239,7 +288,12 @@ export function Guides() {
     let n = 0;
     const iv = window.setInterval(() => {
       const ready = !t.when || findTarget(t.when);
-      if (ready || ++n > 20) { window.clearInterval(iv); if (ready) setActive(t); }
+      if (ready || ++n > 20) {
+        window.clearInterval(iv);
+        if (ready) setActive(t);
+        // so a reload or going back doesn't start it again
+        const u = new URL(window.location.href); u.searchParams.delete("guia"); window.history.replaceState(window.history.state, "", u);
+      }
     }, 300);
     return () => window.clearInterval(iv);
   }, [path]);
@@ -258,8 +312,8 @@ export function Guides() {
 
   return (
     <>
-      {active && <Runner key={active.id} tour={active} onClose={() => finish(active)} />}
-      {video && <VideoModal id={video} onClose={() => setVideo(null)} />}
+      {active && <Layer key={active.id}>{(root) => <Runner tour={active} root={root} onClose={(done) => finish(active, done)} />}</Layer>}
+      {video && <Layer key={video}>{(root) => <VideoModal id={video} root={root} onClose={closeVideo} />}</Layer>}
     </>
   );
 }
@@ -295,27 +349,27 @@ export function HelpButton() {
 
   return (
     <div ref={box} className="relative">
-      <button type="button" onClick={() => setOpen((x) => !x)} aria-expanded={open} aria-haspopup="menu" data-tour="ayuda"
+      <button type="button" onClick={() => setOpen((x) => !x)} aria-expanded={open} aria-controls="ayuda-menu" data-tour="ayuda"
         className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm font-semibold text-muted hover:text-ink">
         <span aria-hidden="true" className="grid h-[18px] w-[18px] place-items-center rounded-full border border-current text-[11px] font-bold">?</span>
         <span>Ayuda</span>
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-40 mt-2 flex w-[min(300px,calc(100vw-24px))] flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 shadow-xl">
+        <div id="ayuda-menu" className="absolute right-0 z-40 mt-2 flex w-[min(300px,calc(100vw-24px))] flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 shadow-xl">
           {tours.length > 0 && (
-            <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); startTour(); }}>
+            <button type="button" className={item} onClick={() => { setOpen(false); startTour(); }}>
               <span aria-hidden="true">🧭</span><span className="flex flex-col"><b>Guía paso a paso</b><span className="text-xs text-muted">Te muestra cómo se usa esta pantalla.</span></span>
             </button>
           )}
           {v && (
-            <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); playHelpVideo(v.id); }}>
+            <button type="button" className={item} onClick={() => { setOpen(false); playHelpVideo(v.id); }}>
               <span aria-hidden="true">▶️</span><span className="flex flex-col"><b>Ver el video</b><span className="text-xs text-muted">{v.title}{v.secs ? ` · ${Math.round(v.secs)} s` : ""}</span></span>
             </button>
           )}
-          <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); askAssistant(); }}>
+          <button type="button" className={item} onClick={() => { setOpen(false); askAssistant(); }}>
             <span aria-hidden="true">💬</span><span className="flex flex-col"><b>Preguntarle al asistente</b><span className="text-xs text-muted">Responde al tiro, 24/7.</span></span>
           </button>
-          <Link href="/app/ayuda" role="menuitem" className={item} onClick={() => setOpen(false)}>
+          <Link href="/app/ayuda" className={item} onClick={() => setOpen(false)}>
             <span aria-hidden="true">📚</span><span className="flex flex-col"><b>Centro de ayuda</b><span className="text-xs text-muted">Todas las guías y videos.</span></span>
           </Link>
           <label className="mt-1 flex cursor-pointer items-center gap-2 border-t border-line px-3 pt-2.5 pb-1.5 text-xs text-muted">

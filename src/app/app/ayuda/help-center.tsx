@@ -72,7 +72,7 @@ export default function HelpCenter() {
   );
 }
 
-const GUIDES = TOURS.filter((t) => !t.when).map((t) => ({ id: t.id, title: t.title, href: `${t.path}?guia=${t.id}` }));
+const GUIDES = TOURS.filter((t) => t.listed).map((t) => ({ id: t.id, title: t.title, href: `${t.path}?guia=${t.id}` }));
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 /** Short videos of each flow and the step-by-step guides of each screen. */

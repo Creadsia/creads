@@ -9,26 +9,27 @@
 // A link to <path>?guia=<id> opens that screen and starts that guide.
 
 export interface TourStep { target?: string; title: string; text: string; optional?: boolean }
-export interface Tour { id: string; path: string; exact?: boolean; when?: string; title: string; steps: TourStep[]; video?: string }
+/** `listed`: shown in the help center's list of guides (the main guide of each screen). */
+export interface Tour { id: string; path: string; exact?: boolean; when?: string; title: string; steps: TourStep[]; video?: string; listed?: boolean }
 
 export const TOURS: Tour[] = [
   {
-    id: "inicio", path: "/app", exact: true, title: "Recorrido por Creads", video: "primer-anuncio",
+    id: "inicio", path: "/app", exact: true, title: "Recorrido por Creads", video: "primer-anuncio", listed: true,
     steps: [
-      { title: "Bienvenido a Creads 👋", text: "En 1 minuto te muestro dónde está cada cosa. Puedes saltar la guía cuando quieras y volver a verla con el botón «?» de arriba." },
+      { title: "Bienvenido a Creads 👋", text: "En 1 minuto te muestro dónde está cada cosa. Puedes saltar la guía cuando quieras y volver a verla con el botón «Ayuda» de arriba." },
       { target: "nav-campana|nav-menu", title: "Tu campaña, en 3 pasos", text: "En el menú, «Tu campaña» es cómo se hace cada anuncio: 1) espía qué está funcionando en tu nicho, 2) conviértelo en un guion mejor, 3) créalo en video." },
       { target: "nav-marca|nav-menu", title: "Tu marca, una sola vez", text: "En «Tu marca» van tu voz, tu avatar (la cara de quien habla) y tus productos. Se configuran una vez y sirven para todos tus anuncios." },
       { target: "primeros-pasos", title: "Tu lista para partir", text: "Aquí vas viendo qué te falta. El paso marcado es el siguiente que te conviene hacer.", optional: true },
       { target: "creditos", title: "Tus créditos", text: "Cada video, imagen o voz usa créditos. Si algo falla, los créditos vuelven solos." },
-      { target: "ayuda", title: "¿Te perdiste? Aquí está la ayuda", text: "En «?» tienes la guía de cada pantalla y un video corto de cómo se hace. Y abajo a la derecha, el asistente responde tus dudas al tiro." },
+      { target: "ayuda", title: "¿Te perdiste? Aquí está la ayuda", text: "En «Ayuda» tienes la guía de cada pantalla y un video corto de cómo se hace. Y abajo a la derecha, el asistente responde tus dudas al tiro." },
     ],
   },
   {
-    id: "espiar", path: "/app/spy", title: "Cómo espiar anuncios", video: "espiar-anuncios",
+    id: "espiar", path: "/app/spy", title: "Cómo espiar anuncios", video: "espiar-anuncios", listed: true,
     steps: [
       { target: "spy-buscar", title: "Escribe qué vendes", text: "Tu nicho o tu producto, como lo buscaría un cliente. Ej: «seguro de auto», «remodelación de baño»." },
       { target: "spy-pais", title: "Elige el país", text: "Te muestra los anuncios activos en ese país, en su idioma." },
-      { target: "spy-filtros", title: "Mejor solo videos", text: "Marca «Solo videos» si vas a hacer anuncios en video. Las ideas de abajo buscan con un toque." },
+      { target: "spy-filtros", title: "Mejor solo videos", text: "Deja marcado «Solo videos» si vas a hacer anuncios en video. Las ideas de abajo buscan con un toque." },
       { title: "Y a espiar", text: "Toca «Espiar anuncios». Cuando aparezcan los resultados, te muestro cómo saber cuáles están vendiendo." },
     ],
   },
@@ -41,7 +42,7 @@ export const TOURS: Tour[] = [
     ],
   },
   {
-    id: "guion", path: "/app/guiones", title: "Cómo crear un guion", video: "crear-guion",
+    id: "guion", path: "/app/guiones", title: "Cómo crear un guion", video: "crear-guion", listed: true,
     steps: [
       { target: "guion-texto", title: "Pega el guion ganador", text: "Lo que dice la persona en el video: uno tuyo que funcionó o uno de la competencia que esté activo hace tiempo." },
       { target: "guion-contexto", title: "Cuéntanos qué vendes", text: "Idioma, nicho y tu oferta. Con esto la IA escribe para tu negocio y no para el de la competencia." },
@@ -52,16 +53,16 @@ export const TOURS: Tour[] = [
   {
     id: "guion-ref", path: "/app/guiones", when: "guion-ref", title: "Partiste de un anuncio espiado",
     steps: [
-      { target: "guion-ref", title: "Este es el anuncio que espiaste", text: "Arriba ves de quién es y cuántos días lleva activo. Abajo quedó lo que dice el video." },
+      { target: "guion-ref", title: "Este es el anuncio que espiaste", text: "Arriba ves de quién es y cuántos días lleva activo. Abajo quedó lo que dice el anuncio, para que lo trabajes." },
       { target: "guion-ref-mia", title: "Haz tu versión", text: "Escribe 3 guiones originales para tu negocio con lo que hace funcionar este anuncio. Antes, completa «Qué vendes» más abajo." },
     ],
   },
   {
-    id: "crear", path: "/app/crear", when: "crear-guion", title: "Cómo crear un anuncio", video: "primer-anuncio",
+    id: "crear", path: "/app/crear", when: "crear-guion", title: "Cómo crear un anuncio", video: "primer-anuncio", listed: true,
     steps: [
       { target: "crear-pasos", title: "4 pasos y listo", text: "Guion → cortes → escenas → videos. Puedes volver a cualquier paso sin perder lo que hiciste." },
-      { target: "crear-guion", title: "Pega tu guion", text: "Si vienes de «Crear guion», ya está aquí. Elige el idioma en que habla el video." },
-      { target: "crear-formato", title: "Elige el formato", text: "UGC (una persona a cámara) y Podcast son los que más venden para captar contactos. Abajo te explicamos cada uno." },
+      { target: "crear-guion", title: "Pega tu guion", text: "Si vienes de «Crear guion», ya está aquí. Arriba a la derecha eliges el idioma en que habla el video." },
+      { target: "crear-formato", title: "Elige el formato", text: "UGC (una persona a cámara) y Podcast son los que más venden para captar contactos. Abajo te explicamos el que elijas." },
       { target: "crear-dividir", title: "Divide en cortes", text: "Cada corte es un video corto. Con 6 a 8 cortes el anuncio queda dinámico. Después revisas y corriges el texto de cada uno." },
     ],
   },
@@ -70,7 +71,7 @@ export const TOURS: Tour[] = [
     steps: [
       { target: "crear-quien", title: "¿Quién habla?", text: "Elige tu avatar para que sea la misma persona en todos los cortes. Si no tienes, descríbela o créalo en «Avatares».", optional: true },
       { target: "crear-direccion", title: "Dirige el video (opcional)", text: "Escribe en español lo que quieres ver: dónde está, qué hace, más energía en el hook…" },
-      { target: "crear-escenas-btn", title: "Crea los prompts", text: "Creads escribe la escena de cada corte sin cambiar tus palabras. Elige vertical 9:16 para Reels o 4:5 para el feed." },
+      { target: "crear-escenas-btn", title: "Crea los prompts", text: "Creads escribe la escena de cada corte sin cambiar tus palabras. Elige vertical 9:16 para Reels o 4:5 para el feed (con Veo sale en 9:16)." },
     ],
   },
   {
@@ -82,7 +83,7 @@ export const TOURS: Tour[] = [
     ],
   },
   {
-    id: "voces", path: "/app/voces", title: "Cómo clonar tu voz", video: "clonar-voz",
+    id: "voces", path: "/app/voces", title: "Cómo clonar tu voz", video: "clonar-voz", listed: true,
     steps: [
       { target: "voz-subir", title: "Sube o graba audio", text: "1 a 3 minutos de la persona hablando sola, sin música ni ruido. Un audio de WhatsApp sirve. También puedes grabar aquí con el micrófono." },
       { target: "voz-permiso", title: "Con permiso, siempre", text: "Solo puedes clonar tu voz o la de alguien que te dio permiso. Es obligatorio." },
@@ -90,7 +91,7 @@ export const TOURS: Tour[] = [
     ],
   },
   {
-    id: "avatares", path: "/app/avatares", title: "Cómo crear tu avatar", video: "crear-avatar",
+    id: "avatares", path: "/app/avatares", title: "Cómo crear tu avatar", video: "crear-avatar", listed: true,
     steps: [
       { target: "avatar-nuevo", title: "Tu presentador fijo", text: "Un avatar es la persona que habla en tus anuncios: su cara y su voz. Se crea una vez." },
     ],
@@ -105,7 +106,7 @@ export const TOURS: Tour[] = [
     ],
   },
   {
-    id: "recrear", path: "/app/recrear", title: "Cómo recrear un video", video: "recrear-video",
+    id: "recrear", path: "/app/recrear", title: "Cómo recrear un video", video: "recrear-video", listed: true,
     steps: [
       { target: "recrear-modos", title: "Sube un video que te guste", text: "Elige: cambiar la persona, el producto, la ropa o el lugar con tus fotos (mismo movimiento y audio), o que tu personaje en una foto copie los mismos gestos y movimientos." },
       { target: "recrear-galeria", title: "O parte de un ejemplo", text: "Anuncios que funcionan. Toca «Recrear» y cámbiales lo que quieras por lo tuyo." },
@@ -116,7 +117,7 @@ export const TOURS: Tour[] = [
 /** Help videos (in /public/ayuda), shown in the Centro de ayuda and in each screen's "?" menu. */
 export const VIDEOS: { id: string; title: string; text: string; secs: number }[] = [
   { id: "primer-anuncio", title: "Tu primer anuncio, de principio a fin", text: "Del guion al video: formato, cortes, escenas y modelo.", secs: 72 },
-  { id: "espiar-anuncios", title: "Espiar anuncios que funcionan", text: "Busca en tu nicho, filtra por días activo y desarma el guion.", secs: 41 },
+  { id: "espiar-anuncios", title: "Espiar anuncios que funcionan", text: "Busca en tu nicho, filtra por días activo y desarma el guion.", secs: 44 },
   { id: "crear-guion", title: "Hacer tu versión de un guion ganador", text: "Desarmar, hooks, ángulos y tu propia versión.", secs: 44 },
   { id: "clonar-voz", title: "Clonar tu voz", text: "Qué audio subir y cómo queda lista.", secs: 32 },
   { id: "crear-avatar", title: "Crear tu avatar", text: "Foto, descripción, voz y permiso.", secs: 37 },
