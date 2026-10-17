@@ -342,9 +342,9 @@ export const es: Content = {
       lead: "Para los meses con más trabajo. Se suman a tu saldo y vencen junto con tu plan.",
       buy: "Comprar",
       packs: [
-        ["500 créditos", "US$49"],
-        ["2.000 créditos", "US$179"],
-        ["5.000 créditos", "US$399"],
+        ["500 créditos", "US$25"],
+        ["2.000 créditos", "US$89"],
+        ["5.000 créditos", "US$209"],
       ],
     },
     promos: [

@@ -341,9 +341,9 @@ export const en = {
       lead: "For busy months. They add to your balance and expire with your plan.",
       buy: "Buy",
       packs: [
-        ["500 credits", "$49"],
-        ["2,000 credits", "$179"],
-        ["5,000 credits", "$399"],
+        ["500 credits", "$25"],
+        ["2,000 credits", "$89"],
+        ["5,000 credits", "$209"],
       ],
     },
     promos: [

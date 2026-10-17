@@ -18,9 +18,9 @@ export const PLANS = es.pricing.plans.map((p) => ({
 
 // Same packs and prices as the website (content/*.ts → pricing.topups).
 export const PACKS = [
-  { id: "pack-500" as ItemId, credits: 500, usd: 49, note: "Para terminar el mes" },
-  { id: "pack-2000" as ItemId, credits: 2000, usd: 179, note: "El más pedido" },
-  { id: "pack-5000" as ItemId, credits: 5000, usd: 399, note: "Para agencias" },
+  { id: "pack-500" as ItemId, credits: 500, usd: 25, note: "Para terminar el mes" },
+  { id: "pack-2000" as ItemId, credits: 2000, usd: 89, note: "El más pedido" },
+  { id: "pack-5000" as ItemId, credits: 5000, usd: 209, note: "Para agencias" },
 ];
 
 /** Launch offer: 50% off the first month of a monthly plan. */
