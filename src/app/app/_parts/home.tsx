@@ -74,7 +74,7 @@ export default function Home({ full = true }: { full?: boolean }) {
               );
             })}
           </ol>
-          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Están en «Crear anuncio», junto a los formatos UGC y Podcast.</p>}
+          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Las Historias están en «Crear anuncio», junto a UGC y Podcast; las otras, en «Herramientas» del menú.</p>}
         </section>
       ) : (
         c && (

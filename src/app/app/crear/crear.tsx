@@ -26,11 +26,9 @@ const SPEAKER: Record<string, string> = { host: "Conductor", guest: "Invitado", 
 
 const STEPS = ["Guion", "Cortes", "Escenas", "Videos"];
 
-// Other ways to make an ad, next to the formats: each one opens its own studio.
+// Another style of ad, next to the formats: it opens its own studio.
 const MORE_KINDS = [
   { href: "/app/historias", icon: "🎬", name: "Historias animadas", tag: "Mini película con IA" },
-  { href: "/app/laboratorio", icon: "🧪", name: "Video e imagen IA", tag: "Una toma o una foto" },
-  { href: "/app/herramientas", icon: "✨", name: "Herramientas IA", tag: "Editar, doblar, música" },
 ];
 
 export default function Crear({ full = true }: { full?: boolean }) {
@@ -157,7 +155,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
 
           <div className="flex flex-col gap-3">
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             <div role="radiogroup" aria-label="Formato del video" className="contents">
               {FORMATS.map((x) => (
                 <button key={x.id} type="button" role="radio" aria-checked={x.id === format} onClick={() => pickFormat(x.id)}
