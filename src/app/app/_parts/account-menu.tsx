@@ -135,8 +135,8 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
             )}
           </div>
 
-          <Link href="/app/cuenta" role="menuitem" onClick={close} className={item}><Svg d={D.user} />Mi cuenta y seguridad</Link>
-          <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y pagos</Link>
+          <Link href="/app/cuenta" role="menuitem" onClick={close} className={item}><Svg d={D.user} />Mi cuenta</Link>
+          <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y créditos</Link>
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
           <a href="mailto:hola@creadsia.com?subject=Ayuda%20con%20Creads" role="menuitem" className={item}><Svg d={D.help} />Ayuda y soporte</a>

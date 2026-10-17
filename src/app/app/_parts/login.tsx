@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import ThemeToggle from "../../theme-toggle";
 
@@ -10,6 +10,9 @@ const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal 
 export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
   const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover" | "forgot">(initial);
   const [sent, setSent] = useState(false);
+  // the owner's recovery (with the Vercel code) stays out of sight: creadsia.com/app?dueno
+  const [ownerLink, setOwnerLink] = useState(false);
+  useEffect(() => { setOwnerLink(new URLSearchParams(window.location.search).has("dueno")); }, []);
   const rescue = "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,8 +121,7 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
           {mode === "login" && (
             <p className="text-xs text-muted">
               <button type="button" onClick={() => { setMode("forgot"); setSent(false); setError(""); }} className="font-semibold text-accent-text underline">¿Olvidaste tu clave?</button>
-              {" · "}
-              <button type="button" onClick={() => { setMode("recover"); setError(""); }} className="underline">Soy el dueño</button>
+              {ownerLink && <>{" · "}<button type="button" onClick={() => { setMode("recover"); setError(""); }} className="underline">Soy el dueño</button></>}
             </p>
           )}
           {(mode === "recover" || mode === "forgot") && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}

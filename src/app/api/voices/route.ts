@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { elevenlabs, VOICE_MODELS } from "@/lib/providers/elevenlabs";
-import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
+import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { voicesFor } from "@/lib/voices";
 
 export const dynamic = "force-dynamic";

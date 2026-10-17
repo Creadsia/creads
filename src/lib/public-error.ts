@@ -20,6 +20,7 @@ const TECHNICAL = new RegExp(
 );
 
 export const UNAVAILABLE = "Este modelo no está disponible en este momento. Prueba con otro modelo o vuelve a intentar en un rato.";
+export const FEATURE_UNAVAILABLE = "Esta función no está disponible en este momento. Vuelve a intentar en unos minutos.";
 export const REFUSED = "El modelo no aceptó este contenido (por ejemplo, un rostro real, una marca o un tema sensible). Ajusta el texto o la imagen, o prueba con otro modelo.";
 export const SLOW = "El modelo tardó demasiado en responder. Vuelve a intentarlo en un momento.";
 

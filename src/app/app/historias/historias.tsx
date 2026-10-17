@@ -161,7 +161,7 @@ function NewStory({ onOpen }: { onOpen: (id: string) => void }) {
 
         {est && (
           <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">
-            Escribir la historia es gratis. La película completa cuesta aprox. <b>{price(est.total)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}, música {price(est.music)}. Pagas cada paso cuando lo apruebas.
+            Escribir la historia es gratis con un plan activo. La película completa cuesta aprox. <b>{price(est.total)}</b>: personajes e imágenes {price(est.images)}, animación {price(est.video)}, música {price(est.music)}. Pagas cada paso cuando lo apruebas.
           </p>
         )}
         <button type="submit" disabled={busy || idea.trim().length < 15 || (narrator && !voiceId)} className={`${btnCls} self-start py-2.5`}>
@@ -211,18 +211,26 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const [voices, setVoices] = useState<Voice[]>([]);
   const { price, covers } = useCredits();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loadErr, setLoadErr] = useState("");
+  // paid batch actions ask first, inline (e.g. "reanim")
+  const [ask, setAsk] = useState("");
 
   const load = useCallback(async () => {
-    const [a, c] = await Promise.all([
-      fetch(`/api/data/ads/${id}`).then((r) => r.json()),
-      fetch(`/api/data/clips?ad_id=${id}`).then((r) => r.json()),
-    ]);
-    if (a.row) {
+    try {
+      const [ar, cr] = await Promise.all([fetch(`/api/data/ads/${id}`), fetch(`/api/data/clips?ad_id=${id}`)]);
+      const [a, c] = await Promise.all([ar.json().catch(() => ({})), cr.json().catch(() => ({}))]);
+      if (!a.row?.settings?.plan) {
+        setLoadErr(ar.status === 404 || ar.ok ? "No encontramos esta historia. Puede que se haya borrado." : a.error || "No se pudo cargar la historia. Recarga la página.");
+        return;
+      }
+      setLoadErr("");
       setAd(a.row);
       setPlan((p) => (dirty && p ? p : a.row.settings.plan));
       setMusic((m) => m || a.row.settings.plan.music || "");
+      if (cr.ok) setClips((c.rows ?? []).sort((x: Clip, y: Clip) => x.idx - y.idx));
+    } catch {
+      setLoadErr("No se pudo cargar la historia. Revisa tu conexión y recarga la página.");
     }
-    setClips((c.rows ?? []).sort((x: Clip, y: Clip) => x.idx - y.idx));
   }, [id, dirty]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -246,7 +254,18 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [generating.map((c) => c.id).join(","), load]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!ad || !plan) return <p className="text-muted">Cargando la historia…</p>;
+  if (!ad || !plan) {
+    if (!loadErr) return <p className="text-muted">Cargando la historia…</p>;
+    return (
+      <div className={cardCls}>
+        <p className="text-sm">{loadErr}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => load()} className={btnCls}>Intentar de nuevo</button>
+          <button type="button" onClick={onBack} className={ghostCls}>Volver a mis historias</button>
+        </div>
+      </div>
+    );
+  }
   const st = ad.settings;
   const m = models.find((x) => x.id === ad.model);
   // same price the server charges: real model length, plus voice + lip-sync for a character with their own voice
@@ -290,6 +309,20 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
   const missingFrames = clips.filter((c) => !c.image_url);
   const talkingDone = clips.filter((c) => c.status === "done" && Boolean(plan.shots[c.idx]?.dialogue?.line?.trim()));
   const toAnimate = clips.filter((c) => c.image_url && (c.status === "pending" || c.status === "failed"));
+  // what building the film charges (same rules as the server): music when there's none yet, it's too
+  // short or new music is asked for; narrator lines not recorded yet. The video shots are already paid.
+  const filmUsd = (newMusic: boolean, partial: boolean) => {
+    const idxs = (partial ? clips.filter((c) => c.status === "done" && c.url) : clips).map((c) => c.idx);
+    const total = idxs.reduce((a, i) => a + (Number(plan.shots[i]?.seconds) || 2.5), 0);
+    const st0 = ad.settings;
+    const music = !st0.music_url || newMusic || (st0.music_secs ?? 0) < total - 0.5 ? (0.15 * Math.max(total, 15)) / 60 : 0;
+    const cache = st0.narration_cache ?? {};
+    const chars = st0.narrator && st0.voiceId
+      ? idxs.map((i) => plan.shots[i]?.narration?.trim() ?? "").filter((t) => t && !cache[`${st0.voiceId}|${t}`]).reduce((a, t) => a + t.length, 0)
+      : 0;
+    return music + chars * 0.00022;
+  };
+  const filmCost = (newMusic: boolean, partial = false) => { const u = filmUsd(newMusic, partial); return u > 0 ? ` · ≈ ${price(u)}` : ""; };
   const montar = (newMusic = false, partial = false) => run("film", async () => {
     const d = await post("/api/historias/montar", { adId: id, newMusic, music, subtitles, partial });
     if (d.note) setTimeout(() => setErr(d.note), 0); // e.g. the music couldn't be made this time
@@ -323,7 +356,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         </div>
         <div className="flex flex-col gap-2 rounded-xl border border-accent-text/40 bg-accent/5 p-3">
           <b className="text-sm">Diálogos con IA</b>
-          <p className="text-xs text-muted">Claude lee tu idea, mira las imágenes de las tomas que ya creaste y escribe qué dice cada personaje en los momentos clave. Dale contexto si quieres: cómo habla Pancho, qué le enseña, frases que no pueden faltar.</p>
+          <p className="text-xs text-muted">Creads lee tu idea, mira las imágenes de las tomas que ya creaste y escribe qué dice cada personaje en los momentos clave. Dale contexto si quieres: cómo habla Pancho, qué le enseña, frases que no pueden faltar.</p>
           <textarea value={context} onChange={(e) => setContext(e.target.value)} rows={2} className={`${inputCls} text-sm`}
             placeholder="Ej: Pancho habla relajado y seguro, como mentor. Le dice que el colegio no le enseña a ganar plata. Al final el niño le agradece frente a todos." />
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={dlgAll} onChange={(e) => setDlgAll(e.target.checked)} /> Como película: diálogo en todas las tomas donde aparece alguien</label>
@@ -337,7 +370,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
                 const redo = (d.changed as number[]).filter((i) => animated.has(i)).length;
                 setDlgMsg(`Listo: ${d.plan.shots.filter((x: { dialogue?: unknown }) => x.dialogue).length} tomas con diálogo.${redo ? ` ${redo} de ellas ya estaban animadas: aprieta "Re-animar" en las que tienen 🗣 para que hablen.` : ""}`);
               })}>
-              {busy.dlg ? "Escribiendo diálogos… (≈ 30 s)" : plan.shots.some((x) => x.dialogue) ? "Reescribir diálogos con IA (gratis)" : "Escribir diálogos con IA (gratis)"}
+              {busy.dlg ? "Escribiendo diálogos… (≈ 30 s)" : plan.shots.some((x) => x.dialogue) ? "Reescribir diálogos con IA (gratis con un plan activo)" : "Escribir diálogos con IA (gratis con un plan activo)"}
             </button>
             {dlgMsg && <span className="text-sm text-good">{dlgMsg}</span>}
           </div>
@@ -431,10 +464,17 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           )}
           {talkingDone.length > 0 && (
             <button type="button" disabled={busy.reanim || busy.anim}
-              onClick={() => { if (window.confirm(`Se vuelven a animar ${talkingDone.length} tomas con diálogo (las mismas imágenes) para que hablen. ¿Seguir?`)) many(talkingDone.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "reanim"); }}
+              onClick={() => setAsk("reanim")} aria-expanded={ask === "reanim"}
               className={ghostCls}>
               {busy.reanim ? "Enviando…" : `Re-animar las ${talkingDone.length} tomas con diálogo · ${price(talkingDone.reduce((a, c) => a + shotUsd(c.idx), 0))}`}
             </button>
+          )}
+          {ask === "reanim" && talkingDone.length > 0 && (
+            <div className="flex basis-full flex-wrap items-center gap-2 rounded-xl bg-surface-2 p-3 text-sm">
+              <span>Se vuelven a animar {talkingDone.length} tomas con diálogo (con las mismas imágenes) para que hablen. Usa ≈ {price(talkingDone.reduce((a, c) => a + shotUsd(c.idx), 0))}; si alguna falla, sus créditos vuelven solos.</span>
+              <button type="button" className={btnCls} onClick={() => { setAsk(""); many(talkingDone.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "reanim"); }}>Sí, re-animar</button>
+              <button type="button" className={ghostCls} onClick={() => setAsk("")}>Cancelar</button>
+            </div>
           )}
           {!sheetsReady && <span className="self-center text-sm text-muted">Primero crea los personajes.</span>}
           {generating.length > 0 && <span className="self-center text-sm text-muted">Animando {generating.length} tomas… (2 a 5 min)</span>}
@@ -461,11 +501,11 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
         )}
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={!allDone || busy.film} onClick={() => montar(false)} className={btnCls}>
-            {busy.film ? "Armando la película… (≈ 1 min)" : ad.final_url ? "Volver a armar" : "Armar la película"}
+            {busy.film ? "Armando la película… (≈ 1 min)" : `${ad.final_url ? "Volver a armar" : "Armar la película"}${filmCost(false)}`}
           </button>
-          {st.music_url && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>Otra música</button>}
+          {st.music_url && <button type="button" disabled={!allDone || busy.film} onClick={() => montar(true)} className={ghostCls}>Otra música{filmCost(true)}</button>}
           {!allDone && clips.filter((c) => c.status === "done" && c.url).length >= 2 && (
-            <button type="button" disabled={busy.film} onClick={() => montar(false, true)} className={ghostCls}>Armar solo con las {clips.filter((c) => c.status === "done" && c.url).length} tomas listas</button>
+            <button type="button" disabled={busy.film} onClick={() => montar(false, true)} className={ghostCls}>Armar solo con las {clips.filter((c) => c.status === "done" && c.url).length} tomas listas{filmCost(false, true)}</button>
           )}
         </div>
         {!allDone && (

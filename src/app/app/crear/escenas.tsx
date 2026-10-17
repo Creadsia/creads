@@ -128,7 +128,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
             <h2 className="font-display text-xl font-bold">3 · Escenas</h2>
             <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-muted">{f.icon} {f.name}</span>
           </div>
-          <p className="text-sm text-muted">Claude lee todo el guion, decide dónde está la persona y qué pasa en cada corte, y escribe el prompt de cada video. Las palabras de cada corte no se tocan. Puedes copiar los prompts para usarlos en otra herramienta, o generar los videos aquí mismo en el paso 4.</p>
+          <p className="text-sm text-muted">Creads lee todo el guion, decide dónde está la persona y qué pasa en cada corte, y escribe el prompt de cada video. Las palabras de cada corte no se tocan. Puedes copiar los prompts para usarlos en otra herramienta, o generar los videos aquí mismo en el paso 4.</p>
 
           {f.av !== "none" && (
             <div className="flex flex-col gap-2">

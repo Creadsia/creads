@@ -6,7 +6,7 @@ import { sharedRules } from "@/lib/db";
 import { type CutIn, type Direction, type SceneContext, directorPrompt, scenePrompt } from "@/lib/director";
 import { FORMATS, type FormatId } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
-import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
+import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 120;

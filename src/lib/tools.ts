@@ -119,7 +119,7 @@ export const TOOLS: ToolDef[] = [
     short: "Una foto + una voz = una persona hablando a cámara.",
     lead: "Sube la foto de una persona y su audio (o escribe el texto y elige una voz). La foto cobra vida y habla con labios sincronizados.",
     output: "video",
-    model: "OmniHuman 2 (ByteDance)",
+    model: "OmniHuman 2",
     inputs: { image: true, audio: { min: 4, max: 60 }, prompt: "optional", promptHint: "Opcional: cómo se mueve, por ejemplo «gesticula con las manos, sonríe al final»." },
     estimate: (s) => +(0.16 * Math.max(4, s)).toFixed(2),
     priceNote: "≈ US$0,16 por segundo de audio",

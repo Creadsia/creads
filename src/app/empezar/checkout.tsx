@@ -11,7 +11,6 @@ import PayBadges from "../pay-badges";
 // New accounts always get the launch offer (first purchase), so the price shown here is the price charged.
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const ADS = (credits: number) => Math.max(1, Math.floor(credits / 300));
 const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
@@ -199,7 +198,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <b className="font-display text-3xl font-semibold">{pesos(totalClp)}</b>
                 {q.launch > 0 && <s className="text-muted">{pesos(clpFor(q.subtotal, rate))}</s>}
-                <span className="text-sm text-muted">hoy · {usd(q.total)}</span>
+                <span className="text-sm text-muted">hoy</span>
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">

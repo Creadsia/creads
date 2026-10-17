@@ -133,9 +133,21 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [voicesErr, setVoicesErr] = useState("");
+  const { price } = useCredits();
   useEffect(() => {
-    fetch("/api/voices").then((r) => r.json()).then((d) => { setVoices(d.voices ?? []); setVoiceId((v) => v || d.voices?.[0]?.id || ""); }).catch(() => {});
+    fetch("/api/voices")
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (!ok || !Array.isArray(d.voices)) throw new Error();
+        setVoices(d.voices);
+        setVoiceId((v) => v || d.voices[0]?.id || "");
+        if (!d.voices.length) setVoicesErr("No hay voces disponibles por ahora. Sube un audio en su lugar.");
+      })
+      .catch(() => setVoicesErr("No se pudieron cargar las voces. Recarga la página."));
   }, []);
+  // same price as the server: per character read
+  const voiceUsd = text.trim().length * 0.00022;
   async function speak() {
     setBusy(true); setErr("");
     try {
@@ -143,7 +155,8 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo generar la voz.");
       const secs = await urlLength(d.url, "audio");
-      if (secs && (secs < limits.min - 0.3 || secs > limits.max + 0.5)) throw new Error(`El audio quedó de ${Math.round(secs)} s; debe durar entre ${limits.min} y ${limits.max} s. Ajusta el texto.`);
+      refreshCredits();
+      if (secs && (secs < limits.min - 0.3 || secs > limits.max + 0.5)) throw new Error(`El audio quedó de ${Math.round(secs)} s y debe durar entre ${limits.min} y ${limits.max} s. ${secs > limits.max ? "Acorta" : "Alarga"} el texto y genera de nuevo (esta voz ya usó ${price(voiceUsd)}).`);
       onChange({ url: d.url, secs });
     } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo generar la voz."); } finally { setBusy(false); }
   }
@@ -163,14 +176,15 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className={inputCls} placeholder="Lo que dice la persona, tal cual (en español o inglés)." />
           <div className="flex flex-wrap items-center gap-2">
             <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} className={inputCls} aria-label="Voz">
-              {voices.length === 0 && <option value="">Cargando voces…</option>}
+              {voices.length === 0 && <option value="">{voicesErr ? "Sin voces" : "Cargando voces…"}</option>}
               {voices.map((v) => <option key={v.id} value={v.id}>{v.name}{v.category === "cloned" ? " (tu voz)" : ""}</option>)}
             </select>
             <button type="button" onClick={speak} disabled={busy || !voiceId || text.trim().length < 2} className={ghostCls}>
-              {busy ? "Generando voz…" : "Generar voz"}
+              {busy ? "Generando voz…" : text.trim().length >= 2 ? `Generar voz · ${price(voiceUsd)}` : "Generar voz"}
             </button>
             {text.trim() && <span className="text-xs text-muted">≈ {est} s de audio</span>}
           </div>
+          {voicesErr && <p className="text-sm text-warn">{voicesErr}</p>}
           {err && <p className="text-sm text-bad">{err}</p>}
           {value && <audio src={value.url} controls className="w-full max-w-md" />}
         </div>
@@ -182,7 +196,8 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 // ---------- results ----------
 
 function Result({ job, output }: { job: Job; output: "image" | "video" | "audio" }) {
-  if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "Falló."}</p>;
+  if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "No se pudo crear. Si se usaron créditos, ya volvieron a tu saldo."}</p>;
+  if (job.status === "stuck") return <p className="text-sm text-warn">{job.error}</p>;
   if (job.status !== "done" || !job.url) return <p className="text-sm text-muted">Trabajando… puedes cerrar esta página: queda en «Tus creaciones».</p>;
   const next = output === "audio" ? [] : TOOLS.filter((x) => (output === "image" ? (x.inputs.image || x.inputs.images) && !x.inputs.video : x.inputs.video) && `tool:${x.id}` !== job.kind);
   return (
@@ -251,7 +266,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
         const n = (fails.current.get(id) ?? 0) + 1;
         fails.current.set(id, n);
         if (n < 40) timers.current.set(id, setTimeout(() => check(id), 15000));
-        else setJobs((js) => js.map((j) => (j.id === id ? { ...j, error: "No pudimos revisar este trabajo. Recarga la página para volver a intentarlo." } : j)));
+        else setJobs((js) => js.map((j) => (j.id === id ? { ...j, status: "stuck", error: "No pudimos revisar este trabajo. Recarga la página para volver a intentarlo; si falló, los créditos vuelven solos." } : j)));
       });
   }, [t.id, t.output]);
 

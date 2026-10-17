@@ -14,7 +14,8 @@ export default function Cuenta() {
     e.preventDefault();
     if (next !== again) return setMsg({ ok: false, text: "Las dos claves nuevas no coinciden." });
     setBusy(true); setMsg(null);
-    const res = await fetch("/api/auth/password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ current, next }) });
+    const res = await fetch("/api/auth/password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ current, next }) }).catch(() => null);
+    if (!res) { setBusy(false); return setMsg({ ok: false, text: "No pudimos conectarnos. Revisa tu conexión e intenta de nuevo." }); }
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) return setMsg({ ok: false, text: d.error || "No se pudo cambiar la clave." });
@@ -64,7 +65,7 @@ function Credits() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id="cr" className="font-display text-lg font-bold">Créditos</h2>
-          <p className="text-sm text-muted">{d.plan ? `Plan ${d.plan}. ` : ""}{until ? (d.expired ? `Tu plan venció el ${until}.` : `Pagado hasta el ${until}.`) : ""} Si algo falla, sus créditos vuelven solos.</p>
+          <p className="text-sm text-muted">{d.plan ? `Plan ${d.plan}. ` : ""}{until ? (d.expired ? `Tu plan venció el ${until}.` : `Pagado hasta el ${until}.`) : ""} Si algo falla, te devolvemos los créditos automáticamente.</p>
         </div>
         <p className="font-mono text-3xl font-bold tabular-nums">{(d.balance ?? 0).toLocaleString("es-CL")}</p>
       </div>
@@ -100,10 +101,11 @@ function TwoFactor() {
 
   async function call(body: object) {
     setBusy(true); setMsg(null);
-    const res = await fetch("/api/auth/2fa", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch("/api/auth/2fa", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+    if (!res) { setBusy(false); setMsg({ ok: false, text: "No pudimos conectarnos. Revisa tu conexión e intenta de nuevo." }); return null; }
     const d = await res.json().catch(() => ({}));
     setBusy(false);
-    if (!res.ok) { setMsg({ ok: false, text: d.error || "No se pudo." }); return null; }
+    if (!res.ok) { setMsg({ ok: false, text: d.error || "No se pudo guardar. Intenta de nuevo." }); return null; }
     return d;
   }
 

@@ -76,11 +76,16 @@ export default function Planes() {
     }
   }, []);
   const rate = pay?.usdClp ?? 950;
+  // customers see and pay Chilean pesos (same rounding as the server); the owner also sees the US$ base
+  const clp = (n: number) => clpFor(n, rate);
+  const money = (n: number) => (pay?.owner ? `${pesos(clp(n))} (${usd(n)})` : pesos(clp(n)));
   async function cancelSub() {
     if (!window.confirm("¿Cancelar la renovación automática? Tu plan sigue activo hasta la fecha ya pagada.")) return;
-    const r = await fetch("/api/pagos/cancelar", { method: "POST" });
+    setErr("");
+    const r = await fetch("/api/pagos/cancelar", { method: "POST" }).catch(() => null);
+    if (!r) return setErr("No pudimos conectarnos. Revisa tu conexión e intenta de nuevo.");
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) return setErr(d.error || "No se pudo cancelar.");
+    if (!r.ok) return setErr(d.error || "No se pudo cancelar la renovación. Intenta de nuevo o escríbenos a hola@creadsia.com.");
     load();
   }
 
@@ -98,7 +103,8 @@ export default function Planes() {
     if (!item) return;
     setBusy(true); setErr("");
     const eventId = newEventId();
-    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method, eventId }) });
+    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method, eventId }) }).catch(() => null);
+    if (!r) { setBusy(false); return setErr("No pudimos conectarnos. Revisa tu conexión e intenta de nuevo."); }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) return setErr(d.error || "No se pudo crear el pedido.");
@@ -158,7 +164,7 @@ export default function Planes() {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h2 className="font-display text-xl font-bold">Pedido <span className="whitespace-nowrap">{done.id}</span> recibido</h2>
-              <p className="text-sm text-muted">{done.label} · {usd(done.total)}</p>
+              <p className="text-sm text-muted">{done.label} · {money(done.total)}</p>
             </div>
             <span className="rounded-full bg-warn/15 px-3 py-1 text-sm font-semibold text-warn">Esperando pago</span>
           </div>
@@ -173,7 +179,7 @@ export default function Planes() {
 
       {/* what to buy */}
       <div role="tablist" aria-label="Qué quieres comprar" className="flex gap-1 border-b border-line">
-        {([["planes", "Planes mensuales"], ["creditos", "Solo créditos"]] as const).map(([k, l]) => (
+        {([["planes", "Planes"], ["creditos", "Solo créditos"]] as const).map(([k, l]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold ${tab === k ? "border-accent-text text-ink" : "border-transparent text-muted hover:text-ink"}`}>{l}</button>
         ))}
@@ -204,8 +210,8 @@ export default function Planes() {
                   </div>
                   <p className="text-sm text-muted">{p.for}</p>
                   <div className="flex flex-col">
-                    <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{usd(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
-                    <span className="text-xs text-muted">{period === "anual" ? `${usd(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${usd(first)}` : "Facturado cada mes"}</span>
+                    <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
+                    <span className="text-xs text-muted">{period === "anual" ? `${money(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${money(first)}` : "Facturado cada mes"}</span>
                   </div>
                   <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm"><b className="font-mono">{p.credits.toLocaleString("es-CL")}</b> créditos cada mes</p>
                   <ul className="flex flex-col gap-2 text-sm">
@@ -227,7 +233,7 @@ export default function Planes() {
                 <span className="text-xs font-semibold text-muted">{k.note}</span>
                 <b className="font-mono text-3xl">+{k.credits.toLocaleString("es-CL")}</b>
                 <span className="text-sm text-muted">créditos</span>
-                <span className="font-display text-2xl font-semibold">{usd(k.usd)}</span>
+                <span className="font-display text-2xl font-semibold">{money(k.usd)}</span>
                 <button type="button" onClick={() => choose(k.id)} className={`${ghostCls} mt-auto w-full py-2.5`}>Comprar</button>
               </article>
             ))}
@@ -261,15 +267,16 @@ export default function Planes() {
           <aside className={`${cardCls} lg:sticky lg:top-20 lg:self-start`} aria-labelledby="sum">
             <h2 id="sum" className="font-display text-lg font-bold">Tu pedido</h2>
             <dl className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between gap-3"><dt>{q.label}</dt><dd className="font-mono">{usd(q.subtotal)}</dd></div>
-              {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{usd(q.launch)}</dd></div>}
-              {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{usd(q.discount)}</dd></div>}
-              <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{usd(q.total)}</dd></div>
-              <div className="flex justify-between gap-3 text-sm"><dt>Pagas en pesos chilenos</dt><dd className="font-mono font-semibold">{pesos(clpFor(q.total, rate))}</dd></div>
+              {/* discounts shown as differences of the rounded peso prices, so the lines add up exactly */}
+              <div className="flex justify-between gap-3"><dt>{q.label}</dt><dd className="font-mono">{pesos(clp(q.subtotal))}</dd></div>
+              {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{pesos(clp(q.subtotal) - clp(q.subtotal - q.launch))}</dd></div>}
+              {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{pesos(clp(q.subtotal - q.launch) - clp(q.total))}</dd></div>}
+              <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{pesos(clp(q.total))}</dd></div>
+              {pay?.owner && <div className="flex justify-between gap-3 text-xs text-muted"><dt>Base en dólares</dt><dd className="font-mono">{usd(q.total)}</dd></div>}
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{q.credits.toLocaleString("es-CL")}</b> créditos{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${usd(m)} (${pesos(clpFor(m, rate))}).` : `Se renueva solo cada mes: ${usd(m)} (${pesos(clpFor(m, rate))}). Cancela cuando quieras.`}</p>; })()}
-            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${pesos(clpFor(q.total, rate))} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
+            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${pesos(clp(q.total))} con Mercado Pago` : `Ir a pagar ${pesos(clp(q.total))}`}</button>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
@@ -285,7 +292,7 @@ export default function Planes() {
           <ul className="flex flex-col divide-y divide-line">
             {pay.orders.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                <span><b className="font-mono">{o.id}</b> · {o.label} · {usd(o.total)} <span className="text-muted">· {new Date(o.created).toLocaleDateString("es-CL")}</span></span>
+                <span><b className="font-mono">{o.id}</b> · {o.label} · {money(o.total)} <span className="text-muted">· {new Date(o.created).toLocaleDateString("es-CL")}</span></span>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${(STATUS[o.status] ?? STATUS.pendiente)[1]}`}>{(STATUS[o.status] ?? STATUS.pendiente)[0]}</span>
               </li>
             ))}

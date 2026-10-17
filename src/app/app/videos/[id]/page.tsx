@@ -8,7 +8,7 @@ export default async function AdPage({ params }: { params: Promise<{ id: string 
   const { id } = await params;
   return (
     <>
-      <Link href="/app/videos" className="text-sm text-muted hover:text-ink">← Videos</Link>
+      <Link href="/app/videos" className="text-sm text-muted hover:text-ink">← En producción</Link>
       <AdWork adId={id} />
     </>
   );

@@ -8,6 +8,7 @@ import { compose, elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
+import { isOwner } from "@/lib/auth";
 import { loadStory, updateStory } from "@/lib/historia-db";
 import { speaks, voiceLang } from "@/lib/historias";
 import { publicError } from "@/lib/public-error";
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
         await updateStory(s.db, adId, (x) => { x.music_url = musicUrl; x.music_secs = Math.ceil(total) + 2; x.plan.music = st.plan.music; });
       } catch (err) {
         if (ref) await refundJob(ws, ref);
-        if (!st.music_url) musicNote = `La música no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música; prueba «Otra música» en un rato.`;
+        if (!st.music_url) musicNote = isOwner(s.user) ? `La música no se pudo crear (${await failMessage(err, s.user, "eleven")}). La película salió sin música.` : "La música no se pudo crear esta vez. La película salió sin música; prueba «Otra música» en un rato.";
       }
     }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCredits } from "./use-credits";
 import { useCallback, useEffect, useState } from "react";
 
 // Small building blocks shared by the platform pages.
@@ -41,12 +42,18 @@ export function Empty({ title, text, children }: { title: string; text?: string;
   );
 }
 
-/** Shown when the platform tables don't exist yet in Supabase. */
+/** Shown when a section couldn't load. The owner gets the setup hint; customers a calm message. */
 export function SetupNotice() {
+  const { info } = useCredits();
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-warn/50 bg-warn/10 p-4 text-sm">
-      <p className="font-semibold">Falta un paso: crear las tablas de la plataforma en Supabase.</p>
-      <p className="text-muted">Abre Supabase → SQL Editor, pega el bloque «Platform tables» del archivo schema.sql que te mandé y aprieta Run. Después recarga esta página.</p>
+    <div role="alert" className="flex flex-col gap-2 rounded-2xl border border-warn/50 bg-warn/10 p-4 text-sm">
+      <p className="font-semibold">No pudimos cargar esta sección.</p>
+      <p className="text-muted">
+        {info?.owner
+          ? "Si es la primera vez, puede faltar crear las tablas en Supabase (SQL Editor → bloque «Platform tables» de schema.sql → Run). Si no, revisa la conexión y recarga."
+          : "Revisa tu conexión y recarga la página. Si sigue igual, escríbenos a hola@creadsia.com."}
+      </p>
+      <button type="button" onClick={() => window.location.reload()} className="self-start font-semibold text-accent-text underline">Recargar</button>
     </div>
   );
 }
@@ -60,11 +67,12 @@ export function useTable<T extends Row>(table: string) {
   const [missing, setMissing] = useState(false);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/data/${table}`);
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setMissing(Boolean(d.missingTable));
-      setError(d.error || "No se pudo cargar.");
+    const res = await fetch(`/api/data/${table}`).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    if (!res?.ok) {
+      // any failure (not only a missing table): the page shows "couldn't load", never a false "empty"
+      setMissing(true);
+      setError(d.error || "No se pudo cargar. Revisa tu conexión.");
       setRows([]);
       return;
     }
@@ -107,7 +115,7 @@ export async function uploadFile(file: File): Promise<string> {
     fd.append("cacheControl", "3600");
     fd.append("", file);
     const up = await fetch(d.uploadUrl, { method: "PUT", body: fd, headers: { "x-upsert": "false" } });
-    if (!up.ok) throw new Error(`No se pudo subir el archivo (${up.status}).`);
+    if (!up.ok) throw new Error("No se pudo subir el archivo. Revisa tu conexión e intenta de nuevo.");
     return d.publicUrl as string;
   }
   const fd = new FormData();

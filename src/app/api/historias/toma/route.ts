@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const missing = shot.characters.filter((k) => !st.plan.characters.find((c) => c.key === k)?.image_url);
   if (missing.length) return NextResponse.json({ error: "Primero crea los personajes de esta toma." }, { status: 400 });
   const provider = findImage("nano-banana-pro");
-  if (!provider?.configured()) return NextResponse.json({ error: "Nano Banana Pro no está conectado." }, { status: 503 });
+  if (!provider?.configured()) return NextResponse.json({ error: "La creación de imágenes no está disponible ahora. Vuelve a intentar en unos minutos." }, { status: 503 });
   const svc = serviceOfModel(provider.id);
   let ref = "";
   try {

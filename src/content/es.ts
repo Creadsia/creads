@@ -168,7 +168,7 @@ export const es: Content = {
       scenes: "Escenas",
       scenesValue: "4 × 8 s",
       format: "Formato",
-      formatValue: "9:16 · 1080p",
+      formatValue: "9:16 · HD",
       voice: "Voz",
       voiceValue: "Tu voz clonada",
       cost: "Costo",
@@ -250,7 +250,7 @@ export const es: Content = {
     title: "Créditos simples. Sin sorpresas.",
     lead: "Cada plan trae créditos mensuales. Ves el costo antes de generar, y Creads no te cobra cuando su propia revisión rehace una escena.",
     examples: [
-      ["Anuncio UGC de 30 segundos", "Veo 3.1 Fast, 1080p", "≈ 300 créditos"],
+      ["Anuncio UGC de 30 segundos", "Veo 3.1 Fast, 720p", "≈ 300 créditos"],
       ["10 fotos de producto", "Nano Banana Pro, 4:5", "80 créditos"],
       ["Borrador rápido de un gancho", "Veo 3.1 Lite, 8 segundos", "40 créditos"],
       ["Guion, escenas y revisión de calidad", "Claude + Whisper", "Incluido"],
@@ -317,7 +317,7 @@ export const es: Content = {
         yearly: 49,
         credits: "1.000",
         for: "Para creadores y negocios que están partiendo.",
-        features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "1080p, uso comercial"],
+        features: ["≈ 3 anuncios UGC de 30 s, o 125 imágenes", "Todos los estudios y modelos", "1 avatar con tu cara", "1 voz clonada", "HD, uso comercial"],
       },
       {
         id: "plus",

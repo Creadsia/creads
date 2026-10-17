@@ -5,7 +5,7 @@ import { userFromRequest } from "@/lib/auth";
 import { tooMany } from "@/lib/rate";
 import { type FormatId, FORMATS, formatById, rondaPrompt, splitRules } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
-import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
+import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 90;

@@ -103,7 +103,7 @@ export default function ModelLab({ code }: { code: string }) {
       if (!res.ok) throw new Error(data.error || "No se pudo revisar el video.");
       if (data.state === "done") return setVideo({ s: "done", url: data.url });
       if (data.state === "failed") throw new Error(data.error || "El video falló.");
-      if (tries > 60) throw new Error("Se demoró demasiado (más de 10 minutos).");
+      if (tries > 60) throw new Error("Está tardando más de lo normal. Cuando termine aparece en «Tus creaciones»; si falla, los créditos vuelven solos.");
       poll.current = setTimeout(() => check(id, job, tries + 1), 10000);
     } catch (e) {
       setVideo({ s: "error", msg: e instanceof Error ? e.message : "El video falló." });
@@ -180,7 +180,7 @@ export default function ModelLab({ code }: { code: string }) {
           <select value={im.id} onChange={(e) => setImgModel(e.target.value)} className={pill} aria-label="Modelo de imagen">
             {imageModels.map((m) => (
               <option key={m.id} value={m.id} disabled={!m.configured}>
-                {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? price(m.usd) : "sin conectar"}
+                {m.label} · {m.configured ? price(m.usd) : "No disponible por ahora"}
               </option>
             ))}
           </select>
@@ -206,7 +206,7 @@ export default function ModelLab({ code }: { code: string }) {
             <select value={vm.id} onChange={(e) => setModel(e.target.value)} className={pill} aria-label="Modelo">
               {models.map((m) => (
                 <option key={m.id} value={m.id} disabled={!m.configured}>
-                  {m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")} · {m.configured ? `${price(m.usdPerSecond * 8)} por 8 s` : "sin conectar"}
+                  {m.label} · {m.configured ? `${price(m.usdPerSecond * 8)} por 8 s` : "No disponible por ahora"}
                 </option>
               ))}
             </select>

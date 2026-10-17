@@ -29,12 +29,12 @@ export default function Home({ full = true }: { full?: boolean }) {
     ["Avatares", c?.avatars, "/app/avatares", "Ver avatares"],
     ["Productos", c?.products, "/app/productos", "Ver productos"],
     ["Guiones guardados", c?.scripts, "/app/crear", "Abrir guiones"],
-    ["Anuncios", c?.ads, "/app/biblioteca", "Ver biblioteca"],
+    ["Anuncios", c?.ads, "/app/biblioteca", "Ver anuncios terminados"],
   ];
 
   return (
     <>
-      <PageHead title="Qué hacer hoy" lead="Espía lo que funciona, produce tus versiones y guarda los anuncios terminados." />
+      <PageHead title="Qué hacer hoy" lead="Crea tus anuncios, revisa cómo avanzan y guarda los terminados." />
       {missing && <SetupNotice />}
       {next && (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]">
@@ -77,7 +77,7 @@ export default function Home({ full = true }: { full?: boolean }) {
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             ["Guion", "Pega tu guion ganador o escríbelo. Puede estar en inglés o en español."],
-            ["Cortes", "Claude lo divide en cortes de hasta 8 segundos y lo adapta al formato."],
+            ["Cortes", "Creads lo divide en cortes de hasta 8 segundos y lo adapta al formato."],
             ["Escenas", "Elige quién habla, el lugar y el producto. Cada corte se genera con el modelo que elijas."],
             ["Anuncio", "Revisamos cada corte, lo armamos con voz y subtítulos, y queda en tu biblioteca."],
           ].map(([t, d], i) => (

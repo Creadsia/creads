@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isOwner, type User } from "./auth";
 import { DbError, type TenantTable } from "./db";
+import { publicError } from "./public-error";
 import { ownsMedia } from "./media";
 
 // Rules for the /api/data routes: what a customer may read and change from the browser.
@@ -8,8 +9,8 @@ import { ownsMedia } from "./media";
 
 export const failJson = (err: unknown) =>
   err instanceof DbError
-    ? NextResponse.json({ error: err.message, missingTable: err.missingTable }, { status: err.missingTable ? 503 : err.status === 400 ? 400 : 502 })
-    : NextResponse.json({ error: err instanceof Error ? err.message : "Error inesperado." }, { status: 500 });
+    ? NextResponse.json({ error: publicError(err, err.status === 400 ? "No se pudo guardar: revisa los datos." : "No se pudo guardar."), missingTable: err.missingTable }, { status: err.missingTable ? 503 : err.status === 400 ? 400 : 502 })
+    : NextResponse.json({ error: publicError(err, "No se pudo completar.") }, { status: 500 });
 
 /** Learned rules are shared by every customer: only Creadsia's owner edits them. */
 export const canEditRules = (u: User) => isOwner(u);

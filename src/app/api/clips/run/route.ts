@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     const ad = await db.get("ads", String(clip.ad_id));
     if (!ad) return giveBack(NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 }));
     const provider = findVideo(String(clip.model));
-    if (!provider?.configured()) return giveBack(NextResponse.json({ error: "Ese modelo no está conectado." }, { status: 503 }));
+    if (!provider?.configured()) return giveBack(NextResponse.json({ error: "Ese modelo no está disponible ahora. Elige otro." }, { status: 503 }));
 
     const st = (ad.settings ?? {}) as Settings;
     const ws = s.user.workspace;

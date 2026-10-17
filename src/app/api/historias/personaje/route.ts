@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   const avatar = typeof b?.avatarId === "string" ? await s.db.get("avatars", b.avatarId).catch(() => null) : null;
   if (b?.avatarId && !avatar?.image_url) return NextResponse.json({ error: "Ese avatar no tiene foto." }, { status: 400 });
   const provider = findImage("nano-banana-pro");
-  if (!provider?.configured()) return NextResponse.json({ error: "Nano Banana Pro no está conectado." }, { status: 503 });
+  if (!provider?.configured()) return NextResponse.json({ error: "La creación de imágenes no está disponible ahora. Vuelve a intentar en unos minutos." }, { status: 503 });
   const svc = serviceOfModel(provider.id);
   let ref = "";
   try {

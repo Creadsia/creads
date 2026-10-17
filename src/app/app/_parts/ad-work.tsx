@@ -4,14 +4,17 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatById } from "@/lib/formats";
 import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
+import { billedSeconds } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
 import { btnCls, cardCls, ghostCls, inputCls } from "./ui";
+import { refreshCredits, useCredits } from "./use-credits";
 
 // One ad in production: its clips (with live status), the automatic review, the free automatic redos,
 // and the final assembly with captions. Used right after generating and from Videos → an ad.
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
+interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
 
@@ -27,7 +30,13 @@ export default function AdWork({ adId }: { adId: string }) {
   // start from the style used last time (per browser)
   useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [models, setModels] = useState<{ id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean }[]>([]);
+  const [models, setModels] = useState<VideoModel[]>([]);
+  const { price } = useCredits();
+  // per-clip notes shown under a clip (e.g. a refused redo on a finished clip, a clip taking too long)
+  const [clipMsg, setClipMsg] = useState<Record<string, string>>({});
+  const say = (id: string, text: string) => setClipMsg((m) => ({ ...m, [id]: text }));
+  // paid actions ask first, inline: one clip (its id) or all failed clips ("all")
+  const [ask, setAsk] = useState<string | null>(null);
   const [retryModel, setRetryModel] = useState("veo-3.1-fast");
   useEffect(() => { fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {}); }, []);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -49,6 +58,7 @@ export default function AdWork({ adId }: { adId: string }) {
     if (d.clip) setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
     const still = !d.clip || ["generating", "starting", "syncing"].includes(d.clip.status);
     if (still && tries < 120) timers.current.push(setTimeout(() => poll(id, tries + 1), 12000));
+    else if (still) setClipMsg((m) => ({ ...m, [id]: "Este corte está tardando más de lo normal. Recarga la página para revisarlo." }));
   }, []);
 
   const loadClips = useCallback(async () => {
@@ -65,23 +75,36 @@ export default function AdWork({ adId }: { adId: string }) {
     return () => t.forEach(clearTimeout);
   }, [loadAd, loadClips]);
 
-  async function run(id: string, model?: string, free = false) {
+  async function run(id: string, model?: string, free = false, prev?: Clip) {
+    const before = prev ?? clips.find((c) => c.id === id);
+    setClipMsg((m) => { const n = { ...m }; delete n[id]; return n; });
     setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
     const res = await fetch("/api/clips/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, model, free }) }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : { error: "Se cortó la conexión. Revisa tu internet y vuelve a intentar." };
     if (!res) { timers.current.push(setTimeout(() => poll(id), 5000)); }
-    if (!res || !res.ok) return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: d.error || "No se pudo iniciar." } : c)));
+    if (!res || !res.ok) {
+      const msg = d.error || "No se pudo iniciar.";
+      // a finished clip stays finished when the redo is refused (no credits, limit…): only the message shows
+      if (before?.status === "done") { setClips((cs) => cs.map((c) => (c.id === id ? before : c))); return say(id, msg); }
+      return setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "failed", error: msg } : c)));
+    }
     setClips((cs) => cs.map((c) => (c.id === id ? d.clip : c)));
+    refreshCredits();
     timers.current.push(setTimeout(() => poll(id), 20000));
   }
 
   async function redo(id: string, problem: string, free = false) {
+    const before = clips.find((c) => c.id === id);
     if (problem.trim()) {
       setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
-      const res = await fetch("/api/clips/fix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, problem }) });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); setErr(d.error || "No se pudo corregir el corte."); }
+      const res = await fetch("/api/clips/fix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, problem }) }).catch(() => null);
+      if (!res || !res.ok) {
+        // don't spend on a redo without the correction the customer asked for
+        if (before) setClips((cs) => cs.map((c) => (c.id === id ? before : c)));
+        return say(id, "No pudimos aplicar tu corrección. No se usaron créditos; intenta de nuevo.");
+      }
     }
-    await run(id, undefined, free);
+    await run(id, undefined, free, before);
   }
 
   async function doReview() {
@@ -130,6 +153,17 @@ export default function AdWork({ adId }: { adId: string }) {
   async function retryFailed() {
     for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
   }
+  // what one clip costs to generate again (same estimate as the server: the model's allowed length)
+  const clipUsd = (c: Clip, modelId = c.model) => {
+    const m = models.find((x) => x.id === modelId);
+    if (!m) return 0;
+    const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
+    const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    return m.usdPerSecond * billedSeconds(asked, m.durations ?? undefined, m.id.startsWith("veo"));
+  };
+  const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos");
+  const retryAllUsd = failed.reduce((t, c) => t + clipUsd(c, retryModel), 0);
+  const waitingUsd = waiting.reduce((t, c) => t + clipUsd(c), 0);
   const ratio = ad.aspect === "16:9" ? "aspect-video" : ad.aspect === "1:1" ? "aspect-square" : ad.aspect === "4:5" ? "aspect-[4/5]" : "aspect-[9/16]";
 
   return (
@@ -146,7 +180,7 @@ export default function AdWork({ adId }: { adId: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/50 bg-warn/10 p-3 text-sm">
             <span>{waiting.length === 1 ? "1 corte quedó sin empezar." : `${waiting.length} cortes quedaron sin empezar.`} Se cobran recién cuando empiezan.</span>
             <button type="button" className={btnCls} onClick={async () => { for (let i = 0; i < waiting.length; i += 2) await Promise.all(waiting.slice(i, i + 2).map((c) => run(c.id))); }}>
-              Empezar {waiting.length === 1 ? "el corte" : `los ${waiting.length}`}
+              Empezar {waiting.length === 1 ? "el corte" : `los ${waiting.length}`}{waitingUsd > 0 ? ` · ≈ ${price(waitingUsd)}` : ""}
             </button>
           </div>
         )}
@@ -158,10 +192,18 @@ export default function AdWork({ adId }: { adId: string }) {
             </p>
             <label className="flex flex-col gap-1 text-xs font-semibold text-muted">Modelo
               <select value={retryModel} onChange={(e) => setRetryModel(e.target.value)} className={inputCls}>
-                {usable.map((m) => <option key={m.id} value={m.id}>{m.label.replace(/ \((Gemini API|fal\.ai)\)$/, "")}</option>)}
+                {usable.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
             </label>
-            <button type="button" onClick={retryFailed} className={btnCls}>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length}`} con este modelo</button>
+            {ask === "all" ? (
+              <div className="flex basis-full flex-wrap items-center gap-2 rounded-lg bg-surface p-2">
+                <span>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length} cortes`} usa ≈ {cost(retryAllUsd)}. Si alguno vuelve a fallar, esos créditos se devuelven solos.</span>
+                <button type="button" onClick={() => { setAsk(null); retryFailed(); }} className={btnCls}>Sí, reintentar</button>
+                <button type="button" onClick={() => setAsk(null)} className={ghostCls}>Cancelar</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAsk("all")} className={btnCls}>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length}`} con este modelo{retryAllUsd > 0 ? ` · ≈ ${price(retryAllUsd)}` : ""}</button>
+            )}
           </div>
         )}
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
@@ -185,13 +227,24 @@ export default function AdWork({ adId }: { adId: string }) {
                   <span className="font-mono text-xs text-muted">Corte {c.idx + 1}</span>
                   <p className="line-clamp-3 text-xs">“{c.text}”</p>
                   {(rv?.issues.length ? rv.issues.join(" · ") : c.error) && <p className="text-xs text-bad">{rv?.issues.length ? rv.issues.join(" · ") : c.error}</p>}
+                  {clipMsg[c.id] && <p role="status" className="text-xs text-warn">{clipMsg[c.id]}</p>}
                   {(c.status === "done" || c.status === "failed") && (
                     <div className="mt-auto flex flex-col gap-1">
                       <input aria-label={`Qué corregir en el corte ${c.idx + 1}`} value={notes[c.id] ?? ""} onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
-                      <button type="button" onClick={() => { if (c.status === "failed" || window.confirm("Rehacer este corte lo genera de nuevo y usa créditos (lo mismo que costó la primera vez). ¿Seguir?")) redo(c.id, notes[c.id] ?? ""); }} className="self-start text-xs font-semibold text-accent-text">
-                        {c.status === "failed" ? "Reintentar" : "Rehacer este corte"}
-                      </button>
+                      {ask === c.id ? (
+                        <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2 text-xs">
+                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1} usa ≈ {cost(clipUsd(c))}. Si falla, los créditos vuelven solos.</span>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => { setAsk(null); redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>
+                            <button type="button" onClick={() => setAsk(null)} className="text-muted">Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => setAsk(c.id)} className="self-start text-xs font-semibold text-accent-text">
+                          {c.status === "failed" ? "Reintentar" : "Rehacer este corte"}{clipUsd(c) > 0 ? ` · ≈ ${price(clipUsd(c))}` : ""}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

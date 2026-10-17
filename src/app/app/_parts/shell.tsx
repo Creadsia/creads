@@ -41,7 +41,7 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
 type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string };
 const NAV: { group?: string; items: Item[] }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
-  { group: "Investigar", items: [{ href: "/app/spy", label: "Spy anuncios", icon: I.spy, soon: true, full: true }] },
+  { group: "Investigar", items: [{ href: "/app/spy", label: "Espiar anuncios", icon: I.spy, soon: true, full: true }] },
   {
     group: "Crear",
     items: [
@@ -62,7 +62,7 @@ const NAV: { group?: string; items: Item[] }[] = [
   {
     group: "Biblioteca",
     items: [
-      { href: "/app/videos", label: "Videos", icon: I.film },
+      { href: "/app/videos", label: "En producción", icon: I.film },
       { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true },
     ],

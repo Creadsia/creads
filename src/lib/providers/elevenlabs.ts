@@ -19,9 +19,9 @@ async function fail(res: Response, what: string): Promise<never> {
 
 /** Models offered in the studio. v3 is the most expressive; Flash is the cheapest and fastest. */
 export const VOICE_MODELS = [
-  { id: "eleven_v3", label: "Eleven v3 (más expresivo)" },
-  { id: "eleven_multilingual_v2", label: "Multilingual v2 (estable)" },
-  { id: "eleven_flash_v2_5", label: "Flash v2.5 (rápido y barato)" },
+  { id: "eleven_v3", label: "Más expresiva" },
+  { id: "eleven_multilingual_v2", label: "Estable" },
+  { id: "eleven_flash_v2_5", label: "Rápida y económica" },
 ] as const;
 
 export const elevenlabs: VoiceProvider = {
