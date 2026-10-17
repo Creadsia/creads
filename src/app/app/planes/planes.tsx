@@ -103,6 +103,7 @@ export default function Planes() {
   const currentPlan = info?.plan ?? null;
 
   function choose(id: ItemId) {
+    setLeaving(false);
     setItem(id); setDone(null); setErr("");
     requestAnimationFrame(() => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
@@ -317,7 +318,7 @@ export default function Planes() {
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
-            <button type="button" onClick={() => setItem(null)} className="text-xs text-muted underline">Cancelar</button>
+            <button type="button" onClick={() => { setItem(null); setErr(""); }} className="text-xs text-muted underline">Cancelar</button>
             {err && <p className="text-sm text-bad" role="alert">{err}</p>}
           </aside>
         </form>

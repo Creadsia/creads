@@ -33,9 +33,12 @@ async function expire(ws: string, credits: number, note: string, ref: string) {
   return n;
 }
 
-/** Top-ups paid after the period ended: they wait for the next plan instead of expiring with the old one. */
+/**
+ * Credits added after the period ended (a top-up paid late, or a renewal landing while the daily job
+ * runs): they belong to what comes next and never expire with the old period.
+ */
 async function lateTopups(ws: string, periodEnd: string) {
-  const rows = await sbRest<{ delta: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=eq.topup&created_at=gt.${periodEnd}T23:59:59.999Z&select=delta&limit=1000`);
+  const rows = await sbRest<{ delta: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&kind=in.(topup,plan)&created_at=gt.${periodEnd}T23:59:59.999Z&select=delta&limit=1000`);
   return rows.reduce((s, r) => s + Math.max(0, Number(r.delta || 0)), 0);
 }
 
