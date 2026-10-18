@@ -1,4 +1,4 @@
-import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, sbRpc, uploadMedia, writePrivateJSON } from "./supabase";
 import { MetaError, budgetUnits, graph, metaAds, metaToken, unitsToUsd } from "./meta-graph";
 import { observedDollar, usdClpRate } from "./usd-clp";
 import { FORMATS } from "./formats";
@@ -31,7 +31,10 @@ export interface MarketingState {
   campanas: CampanaRow[];
   publicaciones: Publicacion[];
   respuestas: { day: string; count: number; hour: string; hourCount: number; seen: string[] };
+  /** Ideas and references the team leaves for the content agents (text, a link, a picture). */
+  ideas?: Idea[];
 }
+export interface Idea { id: string; at: string; by: string; texto: string; link?: string; imagenUrl?: string; imagenDesc?: string; estado: "nueva" | "usada" | "descartada" }
 
 const FILE = "marketing/estado.json";
 export const DEFAULT_MARKETING = (): MarketingState => ({
@@ -344,6 +347,34 @@ export async function feedLook(): Promise<string> {
   const text = `${head}\nCómo se ve el feed hoy:\n${look}`;
   await writePrivateJSON(file, { text }).catch(() => {});
   return text;
+}
+
+/** Saves an idea from the team; a picture is described once by Claude's vision so any agent can use it. */
+export async function addIdea(i: { texto: string; link?: string; imagen?: { bytes: Uint8Array; type: string } }, by: string) {
+  const id = uid("idea");
+  let imagenUrl: string | undefined, imagenDesc: string | undefined;
+  if (i.imagen) {
+    const ext = i.imagen.type === "image/png" ? "png" : i.imagen.type === "image/webp" ? "webp" : "jpg";
+    imagenUrl = await uploadMedia(`marketing/ideas/${id}-${crypto.randomUUID()}.${ext}`, i.imagen.bytes, i.imagen.type);
+    if (claude.configured()) {
+      imagenDesc = await claude.complete({
+        fast: true, maxTokens: 500, images: [imagenUrl],
+        system: "Eres directora creativa. Describes referencias visuales en español, breve y concreto.",
+        prompt: `Esta imagen es una referencia que dejó el equipo para hacer contenido de Instagram de una marca de videos con IA.${i.texto ? ` Su nota: «${i.texto.slice(0, 300)}».` : ""} Describe en 4 a 6 líneas qué se ve, el estilo (colores, encuadre, texto en pantalla, ritmo si parece un video) y qué idea de contenido se puede sacar de ahí.`,
+      }).catch(() => undefined);
+    }
+  }
+  const idea: Idea = { id, at: new Date().toISOString(), by: by.slice(0, 60), texto: i.texto.slice(0, 1500), ...(i.link ? { link: i.link.slice(0, 400) } : {}), ...(imagenUrl ? { imagenUrl } : {}), ...(imagenDesc ? { imagenDesc: imagenDesc.slice(0, 1500) } : {}), estado: "nueva" };
+  await commitMarketing((s) => { s.ideas = [idea, ...(s.ideas ?? [])].slice(0, 80); });
+  return idea;
+}
+
+/** What the content agents read: the team's ideas, newest first (they go before their own). */
+export async function ideasSummary() {
+  const s = await loadMarketing();
+  const nuevas = (s.ideas ?? []).filter((i) => i.estado === "nueva").slice(0, 20);
+  if (!nuevas.length) return "El equipo no ha dejado ideas nuevas. (Se dejan en Marketing → Ideas y referencias.)";
+  return `IDEAS Y REFERENCIAS QUE DEJÓ EL EQUIPO (úsalas PRIMERO, antes que las tuyas; cuando uses una, dilo con su número):\n${nuevas.map((i, n) => `${n + 1}. [${i.id}] ${i.at.slice(0, 10)} · ${i.by}: ${i.texto || "(sin texto)"}${i.link ? `\n   Link de referencia: ${i.link}` : ""}${i.imagenDesc ? `\n   Imagen de referencia: ${i.imagenDesc.replace(/\s+/g, " ")}` : ""}`).join("\n")}`;
 }
 
 export async function organicSummary() {

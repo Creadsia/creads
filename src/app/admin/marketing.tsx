@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CampaignView, MarketingState, Pedido } from "@/lib/marketing";
+import type { CampaignView, Idea, MarketingState, Pedido } from "@/lib/marketing";
 import { TO_CREAR_KEY } from "@/lib/guiones";
 
 // Panel → Marketing: the marketing studio's controls. Connection with Meta, the daily cap, the campaigns
@@ -79,6 +79,8 @@ export default function Marketing() {
       )}
 
       <Conexiones d={d} reload={(x) => apply(x)} />
+
+      <Ideas ideas={s.ideas ?? []} reload={(x) => apply(x)} patch={(body) => call("PATCH", body)} />
 
       <section className={card} aria-labelledby="h-tope">
         <h3 id="h-tope" className="text-lg font-bold">Tope de gasto en campañas</h3>
@@ -307,6 +309,85 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
           <li>Más abajo, en «Respuesta automática», escribe las palabras y el mensaje, y enciéndela.</li>
         </ol>
       </details>
+    </section>
+  );
+}
+
+/** A picture made smaller in the browser (max 1600 px, JPEG) so it uploads fast. */
+async function shrink(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.85);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/** Marketing → Ideas y referencias: what the team wants to see; the Community manager and Creativos use these first. */
+function Ideas({ ideas, reload, patch }: { ideas: Idea[]; reload: (x: Data) => void; patch: (body: unknown) => Promise<boolean> }) {
+  const [texto, setTexto] = useState("");
+  const [link, setLink] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [fileKey, setFileKey] = useState(0);
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const imagen = file ? await shrink(file) : undefined;
+      const r = await fetch("/api/admin/marketing", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ nuevaIdea: { texto, link, imagen } }) });
+      const x = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(x.error || "No se pudo guardar.");
+      reload(x); setTexto(""); setLink(""); setFile(null); setFileKey((k) => k + 1);
+      setMsg({ ok: true, text: "Idea guardada. El Community manager y Creativos la van a usar primero." });
+    } catch (err) { setMsg({ ok: false, text: err instanceof Error ? err.message : "No se pudo guardar." }); }
+    setBusy(false);
+  }
+  return (
+    <section className={card} aria-labelledby="h-ideas">
+      <div className="flex flex-col gap-1">
+        <h3 id="h-ideas" className="text-lg font-bold">Ideas y referencias del equipo</h3>
+        <p className="text-xs text-muted">Deja aquí lo que tienes en mente: una idea, el link de un video viral o una imagen de referencia. El Community manager, Creativos y el Director de Marketing las usan antes que sus propias ideas.</p>
+      </div>
+      <form onSubmit={add} className="grid gap-2 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm sm:col-span-2"><b>La idea</b>
+          <textarea rows={2} value={texto} maxLength={1500} onChange={(e) => setTexto(e.target.value)} placeholder="Ej: un video tipo «antes y después» mostrando cómo un guion se vuelve video en 60 segundos, con música en tendencia" className={input} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm"><b>Link de referencia (opcional)</b>
+          <input type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://www.instagram.com/reel/…" className={input} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm"><b>Imagen de referencia (opcional)</b>
+          <input key={fileKey} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" />
+        </label>
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+          <button type="submit" disabled={busy || (!texto.trim() && !link.trim() && !file)} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50">{busy ? "Guardando…" : "Guardar idea"}</button>
+          {msg && <span role="status" className={`text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</span>}
+        </div>
+      </form>
+      {ideas.length > 0 && (
+        <ul className="flex flex-col divide-y divide-line">
+          {ideas.slice(0, 30).map((i) => (
+            <li key={i.id} className={`flex gap-3 py-3 ${i.estado === "nueva" ? "" : "opacity-60"}`}>
+              {i.imagenUrl && <a href={i.imagenUrl} target="_blank" rel="noopener noreferrer" className="shrink-0"><img src={i.imagenUrl} alt="Referencia" className="h-16 w-16 rounded-lg border border-line object-cover" /></a>}
+              <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                {i.texto && <p className="whitespace-pre-wrap">{i.texto}</p>}
+                {i.link && <a href={i.link} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-accent-text underline">{i.link}</a>}
+                <span className="text-xs text-muted">{new Date(i.at).toLocaleDateString("es-CL")} · {i.by} · {i.estado === "nueva" ? "por usar" : i.estado}</span>
+              </div>
+              <span className="flex shrink-0 flex-col gap-1 text-xs">
+                {i.estado === "nueva"
+                  ? <button type="button" onClick={() => patch({ idea: i.id, estado: "usada" })} className="text-muted hover:text-ink">Marcar usada</button>
+                  : <button type="button" onClick={() => patch({ idea: i.id, estado: "nueva" })} className="text-muted hover:text-ink">Volver a usar</button>}
+                <button type="button" onClick={() => window.confirm("¿Borrar esta idea?") && patch({ borrarIdea: i.id })} className="text-muted hover:text-bad">Borrar</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

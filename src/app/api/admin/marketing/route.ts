@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser, isAdmin } from "@/lib/admin";
-import { campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
+import { addIdea, campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
 import { metaAds, metaToken, probarMeta } from "@/lib/meta-graph";
 import { metaConnView, saveMetaConn } from "@/lib/meta-conexiones";
 
@@ -55,6 +55,11 @@ export async function PATCH(req: Request) {
       if (typeof a.publico === "string") s.autoReply.publico = a.publico.trim().slice(0, 300);
       if (a.maxPorHora !== undefined) s.autoReply.maxPorHora = Math.max(1, Math.min(200, Math.round(Number(a.maxPorHora) || 30)));
     }
+    if (typeof b?.idea === "string" && ["nueva", "usada", "descartada"].includes(b.estado)) {
+      const i = (s.ideas ?? []).find((x) => x.id === b.idea);
+      if (i) i.estado = b.estado;
+    }
+    if (typeof b?.borrarIdea === "string") s.ideas = (s.ideas ?? []).filter((x) => x.id !== b.borrarIdea);
     if (typeof b?.pedido === "string" && ["pendiente", "en producción", "listo"].includes(b.estado)) {
       const p = s.pedidos.find((x) => x.id === b.pedido);
       if (p) p.estado = b.estado;
@@ -63,10 +68,28 @@ export async function PATCH(req: Request) {
   return GET();
 }
 
-/** POST {probar: true}: checks every connection with Meta. */
+/** POST {probar: true}: checks every connection with Meta. POST {nuevaIdea: {texto, link?, imagen?: data URL}}: an idea for the content agents. */
 export async function POST(req: Request) {
   if (!(await isAdmin())) return no();
   const b = await req.json().catch(() => null);
+  if (b?.nuevaIdea && typeof b.nuevaIdea === "object") {
+    const texto = String(b.nuevaIdea.texto ?? "").trim();
+    const link = String(b.nuevaIdea.link ?? "").trim();
+    if (link && !/^https?:\/\/\S+$/.test(link)) return NextResponse.json({ error: "El link debe empezar con https://" }, { status: 400 });
+    let imagen: { bytes: Uint8Array; type: string } | undefined;
+    if (typeof b.nuevaIdea.imagen === "string" && b.nuevaIdea.imagen) {
+      const m = b.nuevaIdea.imagen.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+      if (!m) return NextResponse.json({ error: "La imagen debe ser JPG, PNG o WebP." }, { status: 400 });
+      const bytes = Uint8Array.from(Buffer.from(m[2], "base64"));
+      if (bytes.length > 3_500_000) return NextResponse.json({ error: "La imagen es muy pesada (máximo 3,5 MB)." }, { status: 400 });
+      imagen = { bytes, type: m[1] };
+    }
+    if (!texto && !link && !imagen) return NextResponse.json({ error: "Escribe la idea, pega un link o sube una imagen." }, { status: 400 });
+    const me = await currentUser();
+    try { await addIdea({ texto, link: link || undefined, imagen }, me?.name?.trim() || me?.email.split("@")[0] || "equipo"); }
+    catch (e) { return NextResponse.json({ error: e instanceof Error ? e.message : "No se pudo guardar la idea." }, { status: 502 }); }
+    return GET();
+  }
   if (!b?.probar) return NextResponse.json({ error: "Nada que hacer." }, { status: 400 });
   return NextResponse.json({ prueba: await probarMeta() });
 }
