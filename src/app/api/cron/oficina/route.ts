@@ -22,20 +22,23 @@ function authorized(req: Request) {
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   try {
-    const { ceo, ran } = await runAll();
-    if (ceo?.error) {
-      const rows = await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []);
-      if (rows[0]?.email) await sendEmail(officeEmail(rows[0].email, { resumen: "La oficina no pudo hacer el resumen de hoy", prioridades: [], informe: `El CEO ${ceo.resumen.replace(/^No pudo trabajar: /, "no pudo trabajar: ")}`, estado: "atencion", alertas: [] }));
-    } else if (ceo) {
+    const { brief, by, ran } = await runAll();
+    const rows = brief ? await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []) : [];
+    const to = rows[0]?.email;
+    if (brief?.error) {
+      if (to) await sendEmail(officeEmail(to, { resumen: "La oficina no pudo hacer el resumen de hoy", prioridades: [], informe: `El ${by === "general" ? "CEO General" : "Director Creads"} ${brief.resumen.replace(/^No pudo trabajar: /, "no pudo trabajar: ")}`, estado: "atencion", alertas: [] }));
+    } else if (brief) {
+      // the one official brief: the CEO General's (or the Director's when the CEO General couldn't work)
       const st = await loadState();
-      const rows = await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []);
       const fresh = Date.now() - 26 * 3600_000;
-      const alertas = agentsOf(st).filter((w) => w.id !== "ceo" && w.on).flatMap((w) => {
+      const alertas = agentsOf(st).filter((w) => w.id !== by && w.on).flatMap((w) => {
         const r = st.last[w.id];
         if (!r || r.estado === "ok" || Date.parse(r.at) < fresh) return [];
         return [[w.name, `${r.error ? "No pudo trabajar" : r.estado === "urgente" ? "Urgente" : "Revisar"}: ${r.resumen}`.slice(0, 160)] as [string, string]];
       });
-      if (rows[0]?.email) await sendEmail(officeEmail(rows[0].email, { resumen: ceo.resumen, prioridades: ceo.prioridades ?? [], informe: ceo.informe, estado: ceo.estado, alertas }));
+      const pending = st.pending.filter((p) => p.estado === "pendiente").length;
+      if (pending) alertas.unshift(["Por aprobar", `${pending} movimiento${pending > 1 ? "s" : ""} propuesto${pending > 1 ? "s" : ""} esperando tu OK en la Oficina`]);
+      if (to) await sendEmail(officeEmail(to, { resumen: brief.resumen, prioridades: brief.prioridades ?? [], informe: brief.informe, estado: brief.estado, alertas }));
     }
     return NextResponse.json({ ok: true, ran });
   } catch (err) {

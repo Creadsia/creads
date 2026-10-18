@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { BUILTIN_IDS, commit, dismiss, findAgent, loadState, officeView, runAll, runOne, runTeam, saveMemory } from "@/lib/oficina";
+import { BUILTIN_IDS, commit, decide, dismiss, findAgent, markEncargo, loadState, officeView, runAll, runOne, runTeam, saveMemory } from "@/lib/oficina";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // Owner only. GET: the office (agents, last reports, month's spend, memory). POST {agent: id | "todos"}:
-// make an agent (or the whole office) work now. PATCH {on?, budgetUsd?, agent?, agentOn?, mission?, memoria?}.
+// make an agent (or the whole office) work now. PATCH {on?, budgetUsd?, agent?, agentOn?, mission?, memoria?} | {decide, aprobar} (a proposed move)
+// | {encargo, estado} (an assignment for Claude copied by hand).
 const no = () => NextResponse.json({ error: "No autorizado." }, { status: 401 });
 const fail = (err: unknown) => {
   console.error("oficina", err instanceof Error ? err.message : err);
@@ -47,6 +48,15 @@ export async function PATCH(req: Request) {
   try {
     if (typeof b?.memoria === "string") await saveMemory(b.memoria);
     if (typeof b?.dismiss === "string") { await dismiss(b.dismiss); return NextResponse.json(await officeView()); }
+    if (typeof b?.decide === "string" && typeof b.aprobar === "boolean") {
+      const r = await decide(b.decide, b.aprobar);
+      if (!r.ok) return NextResponse.json({ error: r.mensaje }, { status: 409 });
+      return NextResponse.json({ ...(await officeView()), mensaje: r.mensaje });
+    }
+    if (typeof b?.encargo === "string" && ["por enviar", "enviado", "en curso", "listo"].includes(b.estado)) {
+      await markEncargo(b.encargo, b.estado);
+      return NextResponse.json(await officeView());
+    }
     await commit((s) => {
       if (typeof b?.on === "boolean") s.on = b.on;
       if (b?.budgetUsd !== undefined) s.budgetUsd = Math.round(Number(b.budgetUsd) * 100) / 100;

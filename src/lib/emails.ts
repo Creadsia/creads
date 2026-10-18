@@ -264,7 +264,7 @@ export function officeEmail(to: string, b: { resumen: string; prioridades: strin
       paragraphs: [`<b>${esc(b.resumen)}</b>`, ...(b.prioridades.length ? [`<b>Lo primero hoy:</b><br>${b.prioridades.map((p, i) => `${i + 1}. ${esc(p)}`).join("<br>")}`] : []), ...para],
       rows: b.alertas,
       cta: { label: "Abrir la Oficina", href: `${SITE}/admin?tab=oficina` },
-      after: ["Lo escribió el agente CEO con los informes de los demás agentes. Revisa los detalles en el Panel antes de actuar."],
+      after: ["Lo escribió tu CEO General (agente de IA) con los informes del Director Creads, su equipo y los números reales. Revisa los detalles en el Panel antes de actuar."],
     }),
     text: plain([`${mark} ${b.resumen}`, "", ...b.prioridades.map((p, i) => `${i + 1}. ${p}`), "", b.informe, "", ...b.alertas.map(([k, v]) => `${k}: ${v}`), "", `Oficina: ${SITE}/admin?tab=oficina`]),
   };

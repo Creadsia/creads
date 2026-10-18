@@ -46,7 +46,8 @@ ESTADO DEL LANZAMIENTO
 
 EQUIPO
 - Gastón (dueño). Benjamín apoya en el área comercial (ventas, conectar píxeles y campañas), con acceso limitado.
-- Claude (en el estudio de desarrollo) programa y publica los cambios de la plataforma. Los agentes de la oficina analizan y proponen; no cambian el sistema.
+- Claude (en el estudio de desarrollo) programa y publica los cambios de la plataforma: es la «mano izquierda». Los agentes de la oficina analizan y proponen; no cambian el sistema.
+- Estructura (decidida el 17 oct, opción A): Gastón → CEO General (mano derecha, en este Panel; escribe el único resumen oficial del día y propone movimientos que Gastón aprueba) → Director Creads (equipo de la plataforma) y, más adelante, Director Afiliados (RedTrack, Meta, espía de ganadores, creativos hechos en Creads). Los bots de Gastón en grok.com sirven para pensar en voz alta; no ven datos.
 
 COMPETENCIA
 - Principal: Higgsfield. También: Arcads, Creatify, HeyGen, Captions/Mirage, MakeUGC, Pippit (CapCut), Freepik, Krea, OpenArt, Hedra.

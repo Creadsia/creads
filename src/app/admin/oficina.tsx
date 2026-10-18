@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Agent, AgentConfig, ChatMsg, OfficeState, Report, Source } from "@/lib/oficina";
+import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposal, Report, Source } from "@/lib/oficina";
 
 // Panel → Oficina: the owner's Grok agents. Each one reads its area once a day (8:00), writes a report and
-// proposes what to do; the CEO reads them all and writes the day's brief. The owner can chat with any of
+// proposes what to do; the Director Creads reads its team, and the CEO General reads everything, writes the
+// one official brief and proposes moves that only happen when the owner approves them. The owner can chat with any of
 // them, edit their instructions, create new ones and edit the «Memoria de Creads» they all read.
 
 type AgentView = Agent & { cap: number };
 interface View {
   ready: boolean; model: string; modelCeo: string; maxCustom: number;
-  state: Pick<OfficeState, "on" | "budgetUsd" | "spend" | "last" | "tasks">;
+  state: Pick<OfficeState, "on" | "budgetUsd" | "spend" | "last" | "tasks" | "pending" | "encargos">;
+  bridge: boolean;
   agents: AgentView[];
   sources: Record<Source, { name: string; text: string; internal: boolean }>;
   memory: { text: string; updated: string | null };
@@ -194,6 +196,73 @@ function AgentForm({ v, a, onDone }: { v: View; a?: AgentView; onDone: (view?: V
   );
 }
 
+// ---------------------------------------------------------------- moves and assignments
+
+function actionText(a: Action) {
+  if (a.tipo === "encargo") return { title: `Encargo para Claude: ${a.titulo}`, body: `Problema: ${a.problema || "—"}\nQué hacer: ${a.que}\nPara quién: ${a.para || "Gastón"}\nCómo se sabe que quedó bien: ${a.listo || "—"}` };
+  if (a.tipo === "memoria") return { title: "Agregar a la Memoria de Creads", body: a.texto };
+  return { title: `${a.on ? "Prender" : "Apagar"} el agente «${a.id}»`, body: a.motivo };
+}
+
+function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: string, ok: boolean) => void; busy: string | null }) {
+  const pending = list.filter((p) => p.estado === "pendiente");
+  const done = list.filter((p) => p.estado !== "pendiente").slice(0, 5);
+  if (!list.length) return null;
+  return (
+    <section className={card} aria-labelledby="h-aprobar">
+      <h3 id="h-aprobar" className="text-lg font-bold">Por aprobar {pending.length > 0 && <span className="ml-1 rounded-full bg-warn/15 px-2 py-0.5 text-sm text-warn">{pending.length}</span>}</h3>
+      {pending.length ? (
+        <ul className="flex flex-col gap-2">
+          {pending.map((p) => { const t = actionText(p.action); return (
+            <li key={p.id} className="flex flex-col gap-2 rounded-xl border border-line p-3">
+              <b className="text-sm">{t.title}</b>
+              <p className="whitespace-pre-wrap text-sm text-muted">{t.body}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" disabled={!!busy} onClick={() => onDecide(p.id, true)} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-bg disabled:opacity-50">{busy === p.id ? "Haciendo…" : "Aprobar"}</button>
+                <button type="button" disabled={!!busy} onClick={() => onDecide(p.id, false)} className={btn}>Rechazar</button>
+                <span className="text-xs text-muted">Propuesto por el CEO General · {when(p.at)}</span>
+              </div>
+            </li>
+          ); })}
+        </ul>
+      ) : <p className="text-sm text-muted">Nada pendiente.</p>}
+      {done.length > 0 && (
+        <details><summary className="cursor-pointer text-xs font-semibold text-muted">Últimas decisiones</summary>
+          <ul className="flex flex-col gap-1 pt-2 text-xs text-muted">{done.map((p) => <li key={p.id}>{p.estado === "aprobada" ? "✓" : p.estado === "rechazada" ? "✕" : p.estado === "aprobando" ? "…" : "⚠"} {actionText(p.action).title} — {p.resultado}</li>)}</ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
+function Encargos({ list, bridge, onMark }: { list: Encargo[]; bridge: boolean; onMark: (id: string, estado: Encargo["estado"]) => void }) {
+  const [copied, setCopied] = useState("");
+  if (!list.length) return null;
+  const copy = async (e: Encargo) => { try { await navigator.clipboard.writeText(`Encargo del CEO General: ${e.titulo}\n\n${e.texto.replace(/\*\*/g, "")}`); setCopied(e.id); } catch {} };
+  const tone: Record<Encargo["estado"], string> = { "por enviar": "bg-warn/15 text-warn", enviado: "bg-surface-2 text-muted", "en curso": "bg-accent/15 text-accent-text", listo: "bg-good/15 text-good" };
+  return (
+    <section className={card} aria-labelledby="h-encargos">
+      <div className="flex flex-col gap-0.5">
+        <h3 id="h-encargos" className="text-lg font-bold">Encargos para Claude</h3>
+        <span className="text-xs text-muted">{bridge ? "Se envían solos a Claude (tareas en GitHub). Dile a Claude «revisa los encargos» para que los haga." : "Todavía sin conexión automática: copia el encargo y pégaselo a Claude. Después márcalo como enviado."}</span>
+      </div>
+      <ul className="flex flex-col divide-y divide-line">
+        {list.map((e) => (
+          <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+            <span className="flex min-w-0 flex-col"><b className="text-sm">{e.titulo}</b><span className="text-xs text-muted">{when(e.at)}{e.url && safeUrl(e.url) ? <> · <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-accent-text underline">tarea #{e.issue}</a></> : null}</span></span>
+            <span className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${tone[e.estado]}`}>{e.estado}</span>
+              {!e.issue && <button type="button" onClick={() => copy(e)} className={`${btn} text-xs`}>{copied === e.id ? "¡Copiado!" : "Copiar"}</button>}
+              {!e.issue && e.estado === "por enviar" && <button type="button" onClick={() => onMark(e.id, "enviado")} className={`${btn} text-xs`}>Marcar enviado</button>}
+              {!e.issue && e.estado !== "listo" && e.estado !== "por enviar" && <button type="button" onClick={() => onMark(e.id, "listo")} className={`${btn} text-xs`}>Marcar listo</button>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- the page
 
 export default function Oficina() {
@@ -202,7 +271,8 @@ export default function Oficina() {
   const [busy, setBusy] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [edit, setEdit] = useState<string | null>(null);
-  const [talk, setTalk] = useState("ceo");
+  const [talk, setTalk] = useState("general");
+  const [note, setNote] = useState("");
   const [budget, setBudget] = useState("");
   const [memory, setMemory] = useState("");
   const [memMsg, setMemMsg] = useState("");
@@ -220,21 +290,28 @@ export default function Oficina() {
 
   const run = async (agent: string) => {
     setBusy(agent);
-    // the whole office in two steps (each well inside the server's time limit): the team, then the CEO
-    if (agent === "todos") { if (await call("POST", { agent: "equipo" })) await call("POST", { agent: "ceo" }); }
+    // the whole office in three steps (each well inside the server's time limit): the team, the Director, the CEO General
+    if (agent === "todos") {
+      if (await call("POST", { agent: "equipo" })) { setBusy("ceo"); if (await call("POST", { agent: "ceo" })) { setBusy("general"); await call("POST", { agent: "general" }); } }
+    }
     else await call("POST", { agent });
     setBusy(null);
   };
   const remove = async (a: AgentView) => {
     if (!confirm(`¿Eliminar a ${a.name}? Se borran sus informes y su conversación.`)) return;
-    try { apply(await api<View>("/api/admin/oficina/agentes", "DELETE", { id: a.id })); if (talk === a.id) setTalk("ceo"); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
+    try { apply(await api<View>("/api/admin/oficina/agentes", "DELETE", { id: a.id })); if (talk === a.id) setTalk("general"); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
+  };
+  const decideMove = async (id: string, aprobar: boolean) => {
+    setBusy(id); setNote("");
+    try { const x = await api<View & { mensaje?: string }>("/api/admin/oficina", "PATCH", { decide: id, aprobar }); apply(x, true); setNote(x.mensaje ?? ""); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
+    setBusy(null);
   };
   const talkTo = (id: string) => { setTalk(id); chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
 
   if (!v) return <div className={card}>{err ? <p role="alert" className="text-bad">{err}</p> : <p className="text-muted">Cargando la oficina…</p>}</div>;
   const st = v.state;
-  const ceo = st.last.ceo;
-  const workers = v.agents.filter((a) => a.id !== "ceo");
+  const ceo = st.last.general; // the official brief comes from the CEO General
+  const workers = v.agents.filter((a) => a.id !== "ceo" && a.id !== "general");
   const customs = workers.filter((a) => !a.builtin).length;
   const pct = st.budgetUsd ? Math.min(100, (st.spend.usd / st.budgetUsd) * 100) : 100;
 
@@ -246,12 +323,12 @@ export default function Oficina() {
       <section className={`${card} border-accent/40`} aria-labelledby="h-ceo">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h3 id="h-ceo" className="text-lg font-bold">CEO · resumen del día</h3>
-            <span className="text-xs text-muted">Lee los informes de todos, decide qué es lo primero y le sugiere a cada agente qué mirar después. Te llega también por correo a las 8:00.</span>
+            <h3 id="h-ceo" className="text-lg font-bold">CEO General · resumen oficial del día</h3>
+            <span className="text-xs text-muted">Tu mano derecha: lee al Director Creads, a todo el equipo y los números reales, y decide qué es lo primero. Es el único resumen que te llega por correo a las 8:00.</span>
           </div>
           <span className="flex flex-wrap items-center gap-2"><Badge r={ceo} />
             <button type="button" disabled={!!busy || !v.ready || !st.on} onClick={() => run("todos")} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">
-              {busy === "todos" ? "Trabajando… (2 a 4 min)" : busy === "ceo" ? "El CEO está escribiendo…" : "Hacer trabajar a todos ahora"}
+              {busy === "todos" ? "1/3 · El equipo está trabajando…" : busy === "ceo" ? "2/3 · El Director Creads está escribiendo…" : busy === "general" ? "3/3 · El CEO General está escribiendo…" : "Hacer trabajar a todos ahora"}
             </button>
           </span>
         </div>
@@ -268,13 +345,17 @@ export default function Oficina() {
         ) : ceo?.error ? (
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-sm text-warn">{ceo.resumen}</p>
-            <button type="button" disabled={!!busy || !v.ready} onClick={() => run("ceo")} className={`${btn} text-ink`}>{busy === "ceo" ? "Trabajando…" : "Que el CEO lo intente de nuevo"}</button>
-            <button type="button" onClick={() => call("PATCH", { dismiss: "ceo" })} className={`${btn} text-ink`}>Quitar aviso</button>
+            <button type="button" disabled={!!busy || !v.ready} onClick={() => run("general")} className={`${btn} text-ink`}>{busy === "general" ? "Trabajando…" : "Que el CEO General lo intente de nuevo"}</button>
+            <button type="button" onClick={() => call("PATCH", { dismiss: "general" })} className={`${btn} text-ink`}>Quitar aviso</button>
           </div>
         ) : (
           <p className="text-sm text-muted">Todavía no hay resumen. Toca «Hacer trabajar a todos ahora» para la primera ronda (cuesta unos centavos) o espera a mañana a las 8:00.</p>
         )}
       </section>
+
+      {note && <p role="status" className="rounded-xl border border-good/40 bg-good/10 px-4 py-2 text-sm">{note}</p>}
+      <Approvals list={st.pending} onDecide={decideMove} busy={busy} />
+      <Encargos list={st.encargos} bridge={v.bridge} onMark={(id, estado) => call("PATCH", { encargo: id, estado })} />
 
       <div ref={chatRef} className="scroll-mt-4"><Chat v={v} agent={talk} setAgent={setTalk} onSpent={refresh} /></div>
 
@@ -285,7 +366,7 @@ export default function Oficina() {
       {edit === "nuevo" && <section className={card} aria-label="Nuevo agente"><h4 className="font-bold">Nuevo agente</h4><AgentForm v={v} onDone={(x) => { if (x) apply(x); setEdit(null); }} /></section>}
 
       <div className="grid items-start gap-3 lg:grid-cols-2">
-        {[v.agents.find((a) => a.id === "ceo")!, ...workers].map((a) => {
+        {[...v.agents.filter((a) => a.id === "general" || a.id === "ceo"), ...workers].map((a) => {
           const r = st.last[a.id];
           const task = st.tasks[a.id];
           return (
@@ -297,9 +378,9 @@ export default function Oficina() {
                 </div>
                 <Badge r={r} />
               </div>
-              {a.id !== "ceo" && (r ? <p className={`text-sm ${r.error ? "text-warn" : ""}`}>{r.resumen}</p> : <p className="text-sm text-muted">Todavía no ha trabajado.</p>)}
-              {task && <p className="rounded-lg border border-line px-3 py-2 text-xs"><b>El CEO sugiere mirar:</b> {task}</p>}
-              {a.id !== "ceo" && r && !r.error && (
+              {a.id !== "general" && (r ? <p className={`text-sm ${r.error ? "text-warn" : ""}`}>{r.resumen}</p> : <p className="text-sm text-muted">Todavía no ha trabajado.</p>)}
+              {task && <p className="rounded-lg border border-line px-3 py-2 text-xs"><b>{a.id === "ceo" ? "El CEO General sugiere mirar:" : "El Director sugiere mirar:"}</b> {task}</p>}
+              {a.id !== "general" && r && !r.error && (
                 <>
                   <button type="button" onClick={() => setOpen((o) => ({ ...o, [a.id]: !o[a.id] }))} aria-expanded={!!open[a.id]} className="self-start text-sm font-semibold text-accent-text">
                     {open[a.id] ? "Ocultar informe" : `Ver informe${r.propuestas.length ? ` y ${r.propuestas.length} propuesta${r.propuestas.length > 1 ? "s" : ""}` : ""}`}

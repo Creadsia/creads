@@ -8,11 +8,18 @@ import { GROK_MODEL, GROK_MODEL_CEO, GrokError, type Turn, grokConfigured, grokR
 import { parseJSON } from "./providers/claude";
 import { dayCL } from "./stats";
 import { DEFAULT_MEMORY } from "./oficina-memoria";
+import { overview } from "./balances";
+import { rentabilidadReport } from "./rentabilidad-data";
+import { launchChecks, launchDone } from "./lanzamiento-checks";
+import { AUTO, MANUAL } from "./lanzamiento";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
-// day, write a short report and propose what to do. A CEO agent reads every report, writes the morning
-// brief (also by email) and suggests what each agent should look at next. The owner can chat with any
+// day, write a short report and propose what to do. The Director Creads (id "ceo") reads its team's
+// reports and suggests what each one should look at next. Above it, the CEO General (id "general") sees
+// both businesses with every number, writes the one official morning brief (also by email) and can
+// PROPOSE a short list of moves (an assignment for Claude, a line in the memory, turning an agent on or
+// off) that only happen when the owner presses «Aprobar». The owner can chat with any
 // agent, edit their instructions, create new agents and edit the «Memoria de Creads» they all read.
 // They only READ and PROPOSE: nothing here can spend customers' money, write to customers, change
 // settings or touch the database. The only writes are the office's own files in the private bucket.
@@ -22,7 +29,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -30,6 +37,10 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   seguridad: { name: "Errores y abusos", text: "Errores sin resolver e intentos repetidos (entrar, registrarse…)", internal: true },
   modelos: { name: "Modelos y competencia", text: "Los modelos que ofrece Creads y la lista de competidores", internal: false },
   soporte: { name: "Servicio al cliente", text: "Dudas del asistente, cancelaciones y problemas de pago (sin datos personales)", internal: true },
+  finanzas: { name: "Saldos y gasto en IA", text: "Saldo de cada proveedor, gasto de hoy y del mes, alertas", internal: true },
+  rentabilidad: { name: "Rentabilidad", text: "Costo por anuncio, fallas por proveedor, margen por plan y dónde se pierde plata", internal: true },
+  lanzamiento: { name: "Lista de lanzamiento", text: "Cuánto falta para lanzar y qué bloquea", internal: true },
+  disputas: { name: "Devoluciones y contracargos", text: "Pagos devueltos o desconocidos con el banco (30 días)", internal: true },
 };
 
 export type Estado = "ok" | "atencion" | "urgente";
@@ -48,8 +59,18 @@ export interface OfficeState {
   last: Record<string, Report>;
   history: Record<string, Report[]>; // newest first, a week or so
   tasks: Record<string, string>; // what the CEO suggests each agent looks at next
+  pending: Proposal[]; // the CEO General's proposed moves, newest first
+  encargos: Encargo[]; // assignments for Claude, newest first
 }
 export interface Agent extends AgentConfig { id: string; builtin: boolean; on: boolean }
+/** A move the CEO General proposes; nothing happens until the owner approves it. */
+export type Action =
+  | { tipo: "encargo"; titulo: string; problema: string; que: string; para: string; listo: string }
+  | { tipo: "memoria"; texto: string }
+  | { tipo: "agente"; id: string; on: boolean; motivo: string };
+export interface Proposal { id: string; at: string; by: string; action: Action; estado: "pendiente" | "aprobando" | "aprobada" | "rechazada" | "error"; resultado?: string; decidedAt?: string }
+/** An assignment for Claude (the developer): a GitHub issue when the bridge is set up, else copied by hand. */
+export interface Encargo { id: string; at: string; titulo: string; texto: string; issue?: number; url?: string; estado: "por enviar" | "enviado" | "en curso" | "listo"; respuesta?: string }
 export interface ChatMsg { role: "user" | "agent"; text: string; at: string; usd?: number; fuentes?: string[]; error?: boolean }
 
 const FILE = "oficina/estado.json";
@@ -65,9 +86,14 @@ export const MAX_CUSTOM = 12;
 // ---------------------------------------------------------------- built-in agents
 
 const BUILTIN: Record<string, AgentConfig> = {
+  general: {
+    name: "CEO General", area: "Mano derecha de Gastón: ve todo y prioriza", search: false, sharePct: 15,
+    sources: ["negocio", "visitas", "finanzas", "rentabilidad", "lanzamiento", "disputas"],
+    mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Lees el informe del Director Creads y de su equipo, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
+  },
   ceo: {
-    name: "CEO", area: "Dirige la oficina", search: false, sharePct: 20, sources: ["negocio"],
-    mission: "Eres el CEO de la oficina de agentes de Creads. Lees los informes de tus agentes y los números del negocio, decides qué es lo más importante HOY para el dueño y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
+    name: "Director Creads", area: "Dirige el equipo de Creads", search: false, sharePct: 10, sources: ["negocio", "produccion"],
+    mission: "Eres el Director de Creads: diriges al equipo de agentes de la plataforma y le reportas al CEO General. Lees los informes de tu equipo y los números de Creads, resumes qué está pasando en la plataforma y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
   },
   produccion: {
     name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 15, sources: ["produccion"],
@@ -78,7 +104,7 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el encargado de ciberseguridad. Buscas señales de ataque o abuso (muchos intentos de entrar, cuentas nuevas en masa, errores raros) y fallas de seguridad conocidas y recientes en las versiones que usa Creads (Next.js y React). Explicas el riesgo en simple y qué hacer. No alarmes sin motivo: si todo está normal, dilo en una línea.",
   },
   novedades: {
-    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 35, sources: ["modelos"],
+    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 30, sources: ["modelos"],
     mission: "Eres el analista de novedades. Buscas en la web y en X lo nuevo de los ÚLTIMOS 7 DÍAS: modelos de video, imagen y voz recién lanzados o con mejores precios (y si se pueden usar por API, por ejemplo en fal.ai o Google), y qué lanzó o cambió la competencia (funciones, precios, promociones, cómo se están vendiendo). Por cada novedad di si Creads debería sumarla o responder, y por qué. Solo cosas nuevas y comprobadas, con su fuente; nada de rumores viejos.",
   },
   soporte: {
@@ -92,7 +118,7 @@ export const DEFAULT_STATE = (): OfficeState => ({
   on: true, budgetUsd: 30,
   agents: Object.fromEntries(BUILTIN_IDS.map((id) => [id, { on: true }])),
   custom: {}, missions: {},
-  spend: { month: month(), usd: 0, byAgent: {} }, last: {}, history: {}, tasks: {},
+  spend: { month: month(), usd: 0, byAgent: {} }, last: {}, history: {}, tasks: {}, pending: [], encargos: [],
 });
 
 /** The office's state. A file that can't be READ throws (it never falls back to defaults and overwrites it). */
@@ -103,6 +129,7 @@ export async function loadState(): Promise<OfficeState> {
     ...d, ...(s ?? {}),
     agents: { ...d.agents, ...(s?.agents ?? {}) }, custom: s?.custom ?? {}, missions: s?.missions ?? {},
     last: s?.last ?? {}, history: s?.history ?? {}, tasks: s?.tasks ?? {}, spend: s?.spend ?? d.spend,
+    pending: Array.isArray(s?.pending) ? s!.pending : [], encargos: Array.isArray(s?.encargos) ? s!.encargos : [],
   };
   if (st.spend.month !== month()) st.spend = { month: month(), usd: 0, byAgent: {} };
   return st;
@@ -122,7 +149,8 @@ export function agentsOf(st: OfficeState): Agent[] {
   return [...b, ...c];
 }
 export const findAgent = (st: OfficeState, id: string) => agentsOf(st).find((a) => a.id === id);
-const workersOf = (st: OfficeState) => agentsOf(st).filter((a) => a.id !== "ceo");
+export const LEADERS = ["general", "ceo"];
+const workersOf = (st: OfficeState) => agentsOf(st).filter((a) => !LEADERS.includes(a.id));
 
 // ---------------------------------------------------------------- memory
 
@@ -227,11 +255,54 @@ Problemas de pagos o correos (2 días):
 ${lines(pagos.map((g) => `${g.area} · ${scrubPersonal(g.message).slice(0, 140)} · ${g.count}`))}`;
 }
 
-const READERS: Record<Source, () => Promise<string>> = { negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte };
+async function srcFinanzas() {
+  const o = await overview(false);
+  return `Gasto en IA de hoy: US$${o.today.toFixed(2)} (tope diario US$${o.umbrales.diario}).
+Proveedores (saldo · gastado este mes):
+${lines(o.services.map((x) => `${x.name}: ${x.headline}${x.usd !== null ? ` (US$${x.usd.toFixed(2)}${x.estimated ? " aprox." : ""})` : ""} · US$${x.spentMonth.toFixed(2)} este mes${x.lastFailure ? " · tuvo una caída reciente" : ""}`))}
+Alertas: ${o.alerts.map((a) => `${a.name}: ${a.text}`).join(" | ") || "ninguna"}`;
+}
 
+async function srcRentabilidad() {
+  const r = await rentabilidadReport(30);
+  const segFmt = (s: typeof r.clientes) => lines(s.formatos.slice(0, 6).map((f) => `${f.formato}: ${f.terminados} terminados, US$${f.usdPorTerminado} por terminado`));
+  const prov = (s: typeof r.clientes) => lines(s.proveedores.slice(0, 8).map((p) => `${p.familia}: ${p.intentos} intentos, ${Math.round(p.tasa * 100)}% fallas, US$${p.usd} (US$${p.usdFallas} en fallas)`));
+  return `Últimos 30 días. Costo por crédito: US$${r.costoCredito.usado}${r.costoCredito.real ? " (real)" : " (supuesto: aún pocos datos de clientes)"}.
+Clientes: gastado US$${r.clientes.usd}. Costo por anuncio terminado:
+${segFmt(r.clientes)}
+Proveedores (clientes):
+${prov(r.clientes)}
+Pruebas internas de Gastón (mínimo): US$${r.interno.usd}.
+${segFmt(r.interno)}
+Dónde más plata se pierde (al mes):
+${lines([...r.fugas, ...r.otrasFugas].slice(0, 5).map((f) => `${f.titulo}: US$${f.usdMes}`))}
+Margen por plan si el cliente usa el 100%:
+${lines(r.planes.map((p) => `${p.plan} ${p.caso}: precio US$${p.precio}, queda US$${p.queda} (${p.margen}%)`))}
+Modelos más baratos posibles:
+${lines(r.baratos.map((b) => `${b.paso}: ${b.hoy} → ${b.alternativa} (${b.ahorroPct}% menos)`))}`;
+}
+
+async function srcLanzamiento() {
+  const [checks, done] = await Promise.all([launchChecks(), launchDone()]);
+  const autoMissing = checks.filter((c) => c.state === "falta").map((c) => AUTO[c.id]?.title ?? c.id);
+  const manualMissing = MANUAL.filter((m) => m.urgent && !done[m.id]).map((m) => `${m.title}${m.who === "claude" ? " (trabajo de Claude)" : ""}`);
+  const total = checks.length + MANUAL.length;
+  const ok = checks.filter((c) => c.state === "ok").length + MANUAL.filter((m) => done[m.id]).length;
+  return `Avance: ${ok} de ${total} tareas listas. Bloquean el lanzamiento (${autoMissing.length + manualMissing.length}):
+${lines([...autoMissing, ...manualMissing])}`;
+}
+
+async function srcDisputas() {
+  const rows = await sbRest<{ delta: number; note: string | null; created_at: string }[]>(`credits?kind=eq.adjust&ref=like.pay:rev:*&created_at=gte.${since(24 * 30)}&select=delta,note,created_at&limit=500`);
+  return rows.length ? `${rows.length} pagos devueltos o con contracargo en 30 días (créditos descontados: ${rows.reduce((a, r) => a - r.delta, 0)}).` : "Sin devoluciones ni contracargos en 30 días.";
+}
+
+const READERS: Record<Source, () => Promise<string>> = { negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+
+const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {
   const parts = await Promise.all(sources.map(async (s) => {
-    try { return `### ${SOURCES[s].name}\n${untag(await READERS[s]())}`; } catch { return `### ${SOURCES[s].name}\n(no se pudieron leer)`; }
+    try { return `### ${SOURCES[s].name}\n${untag(await within(READERS[s](), 20_000))}`; } catch { return `### ${SOURCES[s].name}\n(no se pudieron leer)`; }
   }));
   return parts.join("\n\n") || "(sin datos internos)";
 }
@@ -251,6 +322,14 @@ const FORMAT_WORKER = `Responde SOLO un JSON válido, sin texto antes ni despué
 
 const formatCeo = (ids: string[]) => `Responde SOLO un JSON válido, sin texto antes ni después:
 {"estado":"ok|atencion|urgente","resumen":"una frase: cómo está Creads hoy","prioridades":["lo 1º que el dueño debería hacer hoy","2º","3º"],"informe":"el resumen del día en texto simple (párrafos cortos y listas con «- », máximo ~250 palabras): qué dijo cada agente que importa y qué decides","temas":{${ids.map((id) => `"${id}":"tema corto para su próximo turno"`).join(",")}}}`;
+
+const formatGeneral = `Responde SOLO un JSON válido, sin texto antes ni después:
+{"estado":"ok|atencion|urgente","resumen":"una frase: cómo están los negocios hoy","prioridades":["lo 1º que Gastón debe hacer hoy","2º","3º"],"informe":"el resumen oficial del día en texto simple (párrafos cortos y listas con «- », máximo ~300 palabras), con los números que importan","temas":{"ceo":"tema corto para el Director Creads"},"acciones":[]}
+En "acciones" propón SOLO si hace falta (máximo 3), de estos tipos:
+{"tipo":"encargo","titulo":"…","problema":"qué problema resuelve","que":"qué debe hacer Claude","para":"para quién","listo":"cómo se sabe que quedó bien"}
+{"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads (una decisión o un dato que todos deben saber)"}
+{"tipo":"agente","id":"id del agente","on":true,"motivo":"por qué prenderlo o apagarlo"}
+No repitas acciones que ya están pendientes de aprobación.`;
 
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/\u0000/g, "").trim().slice(0, n);
 /** Text from reports, the web or customers can't open or close the prompt's <datos>-style blocks. */
@@ -328,12 +407,27 @@ const ceoInput = (st: OfficeState) => `\n<datos>\nINFORMES DE TUS AGENTES (los m
   return untag(`## ${w.name} [${w.id}] (${r.at.slice(0, 16).replace("T", " ")} UTC, estado ${r.estado})\nResumen: ${r.resumen}\n${r.informe}\nPropuestas:\n${lines(r.propuestas)}`);
 }).join("\n\n")}\n</datos>`;
 
+const reportLine = (name: string, id: string, on: boolean, r?: Report) =>
+  !on ? `## ${name} [${id}]: apagado por el dueño.` : !r ? `## ${name} [${id}]: todavía no ha informado.` : r.error ? `## ${name} [${id}]: no pudo trabajar (${untag(r.error)}).`
+    : untag(`## ${name} [${id}] (${r.at.slice(0, 16).replace("T", " ")} UTC, estado ${r.estado})\nResumen: ${r.resumen}\n${r.informe}${r.prioridades?.length ? `\nPrioridades: ${r.prioridades.join(" | ")}` : ""}\nPropuestas:\n${lines(r.propuestas)}`);
+
+const generalInput = (st: OfficeState) => {
+  const dir = findAgent(st, "ceo");
+  const pend = st.pending.filter((p) => p.estado === "pendiente");
+  return `\n<datos>\nINFORME DEL DIRECTOR CREADS:\n${reportLine(dir?.name ?? "Director Creads", "ceo", dir?.on !== false, st.last.ceo)}\n\nINFORMES DEL EQUIPO DE CREADS:\n${workersOf(st).map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
+\nNEGOCIO DE AFILIADOS: todavía no está conectado (falta conectar RedTrack y Meta).
+\nACCIONES YA PENDIENTES DE APROBACIÓN: ${pend.map((p) => describe(p.action)).join(" | ") || "ninguna"}
+\nACCIONES QUE GASTÓN RECHAZÓ ESTA SEMANA (no las vuelvas a proponer): ${st.pending.filter((p) => p.estado === "rechazada").slice(0, 8).map((p) => describe(p.action)).join(" | ") || "ninguna"}
+\nAGENTES (id: nombre): ${agentsOf(st).map((a) => `${a.id}: ${a.name}${a.on ? "" : " (apagado)"}`).join(", ")}\n</datos>`;
+};
+
 /** One agent's report. Never throws: a failure becomes a report that says so (and keeps what it cost). */
-async function work(st: OfficeState, a: Agent, memory: string, deadline: number): Promise<{ report: Report; temas: Record<string, string> }> {
+type WorkOut = { report: Report; temas: Record<string, string>; acciones: Action[] };
+async function work(st: OfficeState, a: Agent, memory: string, deadline: number): Promise<WorkOut> {
   const at = new Date().toISOString();
-  const isCeo = a.id === "ceo";
-  const model = isCeo ? GROK_MODEL_CEO() : GROK_MODEL();
-  const fail = (error: string, usd = 0): { report: Report; temas: Record<string, string> } => ({ report: { at, estado: "atencion", resumen: `No pudo trabajar: ${error}`, informe: "", propuestas: [], fuentes: [], usd, model, error }, temas: {} });
+  const isCeo = a.id === "ceo", isGeneral = a.id === "general";
+  const model = isCeo || isGeneral ? GROK_MODEL_CEO() : GROK_MODEL();
+  const fail = (error: string, usd = 0): WorkOut => ({ report: { at, estado: "atencion", resumen: `No pudo trabajar: ${error}`, informe: "", propuestas: [], fuentes: [], usd, model, error }, temas: {}, acciones: [] });
   if (!grokConfigured()) return fail("falta la clave XAI_API_KEY en Vercel.");
   const blocked = canSpend(st, a);
   if (blocked) return fail(blocked);
@@ -343,29 +437,40 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   const r = await ask(a, {
     model, deadline, maxTokens: a.search && !internalOf(a) ? 8000 : 6000,
     system: `${a.mission}\n\n${STYLE}`,
-    prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por el CEO para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isCeo ? ceoInput(st) : ""}${research}\n\n${isCeo ? formatCeo(workerIds) : FORMAT_WORKER}`,
+    prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st) : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}`,
   });
   if (r.error) return fail(r.error, r.usd);
-  let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown> };
+  let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown>; acciones?: unknown[] };
   try { j = parseJSON(r.text); } catch { return fail("su respuesta vino en un formato que no se pudo leer. Prueba de nuevo.", r.usd); }
   if (!clip(j.resumen, 10)) return fail("su respuesta vino vacía. Prueba de nuevo.", r.usd);
   const temas: Record<string, string> = {};
   if (isCeo && j.temas && typeof j.temas === "object") for (const id of workerIds) { const t = topic(j.temas[id]); if (t) temas[id] = t; }
+  if (isGeneral && j.temas && typeof j.temas === "object") { const t = topic(j.temas.ceo); if (t) temas.ceo = t; }
+  const acciones = isGeneral && Array.isArray(j.acciones) ? j.acciones.map((x) => cleanAction(x, st)).filter((x): x is Action => Boolean(x)).slice(0, 3) : [];
   return {
-    temas,
+    temas, acciones,
     report: {
       at, estado: estadoOf(j.estado), resumen: clip(j.resumen, 300).replace(/\s+/g, " "), informe: clip(j.informe, 6000),
       propuestas: (Array.isArray(j.propuestas) ? j.propuestas : []).map((p) => clip(p, 400)).filter(Boolean).slice(0, 8),
       fuentes: r.sources, usd: +r.usd.toFixed(4), model: r.model,
-      ...(isCeo ? { prioridades: (Array.isArray(j.prioridades) ? j.prioridades : []).map((p) => clip(p, 300)).filter(Boolean).slice(0, 5) } : {}),
+      ...(isCeo || isGeneral ? { prioridades: (Array.isArray(j.prioridades) ? j.prioridades : []).map((p) => clip(p, 300)).filter(Boolean).slice(0, 5) } : {}),
     },
   };
 }
 
-function save(s: OfficeState, id: string, out: { report: Report; temas: Record<string, string> }) {
+function save(s: OfficeState, id: string, out: WorkOut) {
   record(s, id, out.report);
   if (!out.report.error) delete s.tasks[id]; // the suggestion was looked at
   Object.assign(s.tasks, out.temas);
+  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const open = new Set(s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando" || (p.estado === "rechazada" && (p.decidedAt ?? "") > weekAgo)).map((p) => describe(p.action)));
+  for (const action of out.acciones) {
+    if (open.has(describe(action))) continue;
+    s.pending.unshift({ id: `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), by: id, action, estado: "pendiente" });
+  }
+  // keep every pending one; trim only decided ones
+  const decided = s.pending.filter((p) => p.estado !== "pendiente" && p.estado !== "aprobando");
+  s.pending = [...s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando"), ...decided.slice(0, 20)].sort((a, b) => b.at.localeCompare(a.at));
 }
 
 /** Runs one agent now and saves its report. */
@@ -392,19 +497,37 @@ export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]
   return on.map((w) => w.id);
 }
 
-export async function runAll(): Promise<{ ceo: Report | null; ran: string[] }> {
+/**
+ * The daily round, within Vercel's 300 s: the team (in parallel, up to ~110 s), then the Director Creads
+ * with their reports, then the CEO General with everything. Returns the brief to email (the CEO General's,
+ * or the Director's if the CEO General couldn't work).
+ */
+export async function runAll(): Promise<{ brief: Report | null; by: string | null; ran: string[] }> {
   const start = Date.now();
   const st = await loadState();
-  if (!st.on) return { ceo: null, ran: [] };
+  if (!st.on) return { brief: null, by: null, ran: [] };
   const memory = (await loadMemory()).text;
   const on = workersOf(st).filter((w) => w.on);
-  const outs = await Promise.all(on.map((w) => work(st, w, memory, start + 150_000)));
-  const fresh = await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
-  const ceoAgent = findAgent(fresh, "ceo");
-  if (!fresh.on || !ceoAgent?.on) return { ceo: null, ran: on.map((w) => w.id) };
-  const out = await work(fresh, ceoAgent, memory, start + 280_000);
-  await commit((s) => save(s, "ceo", out));
-  return { ceo: out.report, ran: [...on.map((w) => w.id), "ceo"] };
+  const outs = await Promise.all(on.map((w) => work(st, w, memory, start + 110_000)));
+  let fresh = await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
+  const ran = on.map((w) => w.id);
+  let director: Report | null = null, general: Report | null = null;
+  const dir = findAgent(fresh, "ceo");
+  if (fresh.on && dir?.on) {
+    const out = await work(fresh, dir, memory, start + 185_000);
+    fresh = await commit((s) => save(s, "ceo", out));
+    director = out.report; ran.push("ceo");
+  }
+  const gen = findAgent(fresh, "general");
+  // the CEO General only starts if there's time to finish (else the Director's brief is the email)
+  if (fresh.on && gen?.on && Date.now() - start < 200_000) {
+    const out = await work(fresh, gen, memory, start + 260_000);
+    await commit((s) => save(s, "general", out));
+    general = out.report; ran.push("general");
+  }
+  if (general && !general.error) return { brief: general, by: "general", ran };
+  if (director && !director.error) return { brief: director, by: "ceo", ran };
+  return { brief: general ?? director, by: general ? "general" : director ? "ceo" : null, ran };
 }
 
 /** Removes a «No pudo trabajar» notice (only reports that are failures). */
@@ -436,9 +559,9 @@ export async function chat(id: string, text: string): Promise<ChatMsg[]> {
     const last = st.last[a.id];
     const history: Turn[] = msgs.filter((m) => !m.error).slice(-16).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text.slice(0, 4000) }));
     const r = await ask(a, {
-      model: a.id === "ceo" ? GROK_MODEL_CEO() : GROK_MODEL(), deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
+      model: LEADERS.includes(a.id) ? GROK_MODEL_CEO() : GROK_MODEL(), deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
       system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}`,
-      prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nMENSAJE DEL DUEÑO:\n${mine.text}`,
+      prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nMENSAJE DEL DUEÑO:\n${mine.text}`,
     });
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
     return { role: "agent", text: clip(r.text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources };
@@ -449,6 +572,132 @@ export async function chat(id: string, text: string): Promise<ChatMsg[]> {
   if (reply.usd) await commit((s) => addSpend(s, id, reply.usd!)).catch((e) => console.error("oficina spend", e instanceof Error ? e.message : e));
   return list;
 }
+
+// ---------------------------------------------------------------- moves the CEO General proposes
+
+/** One line that says what a move does (also used to avoid proposing the same move twice). */
+export function describe(a: Action): string {
+  if (a.tipo === "encargo") return `Encargo para Claude: ${a.titulo}`;
+  if (a.tipo === "memoria") return `Agregar a la Memoria: ${a.texto}`;
+  return `${a.on ? "Prender" : "Apagar"} el agente ${a.id}`;
+}
+
+/** Turns what the model wrote into a valid move, or null (unknown type, missing fields, unknown agent). */
+export function cleanAction(x: unknown, st: OfficeState): Action | null {
+  const o = (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
+  const t = (v: unknown, n: number) => untag(clip(v, n));
+  if (o.tipo === "encargo") {
+    const a = { tipo: "encargo" as const, titulo: t(o.titulo, 120), problema: t(o.problema, 800), que: t(o.que, 1500), para: t(o.para, 200), listo: t(o.listo, 600) };
+    return a.titulo.length >= 5 && a.que.length >= 10 ? a : null;
+  }
+  if (o.tipo === "memoria") {
+    const texto = t(o.texto, 600).replace(/https?:\/\/\S+/g, "").trim();
+    return texto.length >= 10 ? { tipo: "memoria", texto } : null;
+  }
+  if (o.tipo === "agente" && typeof o.id === "string" && typeof o.on === "boolean") {
+    if (o.id === "general" || !findAgent(st, o.id)) return null; // it can't switch itself off
+    return { tipo: "agente", id: o.id, on: o.on, motivo: t(o.motivo, 300) };
+  }
+  return null;
+}
+
+/** Model-written text for GitHub: no links, images, @mentions or #references (nothing that fetches or pings). */
+export const plainForIssue = (t: string) => t.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/https?:\/\/\S+|\bwww\.\S+/g, "[enlace quitado]").replace(/@(?=[\w-])/g, "@\u200b").replace(/#(?=\d)/g, "#\u200b").replace(/[<>`]/g, " ");
+const encargoText = (a: Extract<Action, { tipo: "encargo" }>) =>
+  plainForIssue(`Qué problema resuelve: ${a.problema || "—"}\n\nQué debe hacer: ${a.que}\n\nPara quién: ${a.para || "Gastón"}\n\nCómo se sabe que quedó bien: ${a.listo || "—"}`);
+
+// The bridge with Claude: an approved assignment becomes a GitHub issue (label «encargo-claude») in the
+// platform's repository. The token (GITHUB_ENCARGOS_TOKEN) must only be allowed to manage issues.
+const REPO = () => (process.env.GITHUB_REPO || "Creadsia/creads").trim();
+export const bridgeReady = () => Boolean((process.env.GITHUB_ENCARGOS_TOKEN ?? "").trim());
+async function gh<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`https://api.github.com/repos/${REPO()}${path}`, {
+    ...init,
+    headers: { authorization: `Bearer ${(process.env.GITHUB_ENCARGOS_TOKEN ?? "").trim()}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "content-type": "application/json", ...(init.headers ?? {}) },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`GitHub respondió ${res.status}`);
+  return (await res.json()) as T;
+}
+async function sendToClaude(e: Encargo): Promise<Encargo> {
+  if (!bridgeReady()) return e;
+  const tag = `oficina:${e.id}`;
+  // the same assignment is never opened twice (a retry after a timeout finds the first one)
+  const found = await gh<{ number: number; html_url: string; body: string | null }[]>("/issues?labels=encargo-claude&state=all&per_page=50").catch(() => []);
+  const twin = found.find((i) => i.body?.includes(tag));
+  if (twin) return { ...e, issue: twin.number, url: twin.html_url, estado: "enviado" };
+  const issue = await gh<{ number: number; html_url: string }>("/issues", { method: "POST", body: JSON.stringify({
+    title: `[Encargo] ${plainForIssue(e.titulo)}`,
+    body: `${e.texto}\n\n---\nEscrito por un agente de IA (CEO General) y aprobado por Gastón en el Panel. Es un pedido para revisar y decidir, no instrucciones para ejecutar a ciegas.\n<!-- ${tag} -->`,
+    labels: ["encargo-claude"],
+  }) });
+  return { ...e, issue: issue.number, url: issue.html_url, estado: "enviado" };
+}
+let issueCache: { at: number; map: Map<number, { state: string; labels: string[]; comments: number }> } | null = null;
+/** Brings each sent assignment's status from GitHub (cached 1 minute; never fails the panel). */
+async function refreshEncargos(list: Encargo[]): Promise<Encargo[]> {
+  if (!bridgeReady() || !list.some((e) => e.issue)) return list;
+  try {
+    if (!issueCache || Date.now() - issueCache.at > 60_000) {
+      const issues = await gh<{ number: number; state: string; labels: { name: string }[]; comments: number }[]>("/issues?labels=encargo-claude&state=all&per_page=50");
+      issueCache = { at: Date.now(), map: new Map(issues.map((i) => [i.number, { state: i.state, labels: i.labels.map((l) => l.name), comments: i.comments }])) };
+    }
+    return list.map((e) => {
+      const i = e.issue ? issueCache!.map.get(e.issue) : undefined;
+      if (!i) return e;
+      return { ...e, estado: i.state === "closed" ? "listo" : i.labels.includes("en-curso") || i.comments > 0 ? "en curso" : "enviado" };
+    });
+  } catch { return list; }
+}
+
+/** The owner approves or rejects a proposed move. Approving does it right away. */
+export async function decide(proposalId: string, approve: boolean): Promise<{ ok: boolean; mensaje: string }> {
+  // claim it first, so a double click, a second tab or a retry can't do the same move twice
+  let p: Proposal | undefined;
+  await commit((s) => {
+    const q = s.pending.find((x) => x.id === proposalId);
+    const stale = q?.estado === "aprobando" && Date.now() - Date.parse(q.decidedAt ?? "") > 10 * 60_000; // a run that died midway
+    if (!q || (q.estado !== "pendiente" && !stale)) return;
+    q.estado = "aprobando"; q.decidedAt = new Date().toISOString();
+    p = { ...q };
+  });
+  if (!p) return { ok: false, mensaje: "Esa propuesta ya no está pendiente." };
+  const finish = (estado: Proposal["estado"], resultado: string, extra?: (s: OfficeState) => void) =>
+    commit((s) => {
+      const q = s.pending.find((x) => x.id === proposalId);
+      if (q) { q.estado = estado; q.resultado = resultado; q.decidedAt = new Date().toISOString(); }
+      extra?.(s);
+    });
+  if (!approve) { await finish("rechazada", "Rechazada por Gastón."); return { ok: true, mensaje: "Rechazada." }; }
+  const a = p.action;
+  const pid = p.id;
+  try {
+    if (a.tipo === "agente") {
+      await finish("aprobada", `${a.on ? "Prendido" : "Apagado"}.`, (s) => { if (findAgent(s, a.id)) s.agents[a.id] = { on: a.on }; });
+      return { ok: true, mensaje: `Agente ${a.on ? "prendido" : "apagado"}.` };
+    }
+    if (a.tipo === "memoria") {
+      const m = await loadMemory();
+      const next = `${m.text.trimEnd()}\n- (${dayCL()}) ${a.texto}`;
+      if (next.length > 20_000) { await finish("error", "La Memoria está llena (20.000 caracteres): acórtala y vuelve a proponerlo."); return { ok: false, mensaje: "La Memoria está llena: acórtala primero en la Oficina." }; }
+      await saveMemory(next);
+      await finish("aprobada", "Agregado a la Memoria.");
+      return { ok: true, mensaje: "Agregado a la Memoria de Creads." };
+    }
+    let e: Encargo = { id: `e-${pid}`, at: new Date().toISOString(), titulo: a.titulo, texto: encargoText(a), estado: "por enviar" };
+    let note = "Guardado: cópialo y pásaselo a Claude.";
+    try { e = await sendToClaude(e); if (e.issue) note = `Enviado a Claude (tarea #${e.issue}).`; }
+    catch { note = "No se pudo enviar a GitHub: quedó guardado para copiarlo a mano."; }
+    await finish("aprobada", note, (s) => { if (!s.encargos.some((x) => x.id === e.id)) s.encargos = [e, ...s.encargos].slice(0, 60); });
+    return { ok: true, mensaje: note };
+  } catch (err) {
+    await finish("error", err instanceof Error ? err.message : "No se pudo hacer.").catch(() => {});
+    return { ok: false, mensaje: "No se pudo hacer. Prueba de nuevo." };
+  }
+}
+
+/** The owner marks a hand-copied assignment as sent / done. */
+export const markEncargo = (id: string, estado: Encargo["estado"]) => commit((s) => { const e = s.encargos.find((x) => x.id === id); if (e) e.estado = estado; });
 
 // ---------------------------------------------------------------- the owner's settings
 
@@ -476,7 +725,8 @@ export async function officeView() {
   const [st, memory] = await Promise.all([loadState(), loadMemory()]);
   return {
     ready: grokConfigured(), model: GROK_MODEL(), modelCeo: GROK_MODEL_CEO(), maxCustom: MAX_CUSTOM,
-    state: { on: st.on, budgetUsd: st.budgetUsd, spend: st.spend, last: st.last, tasks: st.tasks },
+    state: { on: st.on, budgetUsd: st.budgetUsd, spend: st.spend, last: st.last, tasks: st.tasks, pending: st.pending.slice(0, 30), encargos: await refreshEncargos(st.encargos.slice(0, 30)) },
+    bridge: bridgeReady(),
     agents: agentsOf(st).map((a) => ({ ...a, cap: +((st.budgetUsd * a.sharePct) / 100).toFixed(2) })),
     sources: SOURCES,
     memory,
