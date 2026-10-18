@@ -16,6 +16,8 @@ import { FORMATS } from "./formats";
 import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import { type AreaId, AREAS, areaOfAgent } from "./areas";
 import { guardianSummary } from "./guardian";
+import { sendWhatsApp, whatsappMode } from "./whatsapp";
+import { SITE } from "./emails";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
@@ -542,6 +544,26 @@ function save(s: OfficeState, id: string, out: WorkOut) {
   s.pending = [...s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando"), ...decided.slice(0, 20)].sort((a, b) => b.at.localeCompare(a.at));
 }
 
+/**
+ * Something urgent from the CEO General or an area head reaches the owner's WhatsApp (when it's connected):
+ * one message per agent every 6 h, within the same 12-a-day cap as the Guardián. Only the agent's one-line
+ * summary goes out (no links but the panel's, no customer data).
+ */
+async function escalate(st: OfficeState, ids: string[], reports: Report[]) {
+  if (!whatsappMode()) return;
+  for (const [i, r] of reports.entries()) {
+    const id = ids[i];
+    if (!r || r.error || r.estado !== "urgente" || !(id === "general" || LEADERS.includes(id) || AREAS.some((x) => x.agents[0] === id))) continue;
+    try {
+      if (!(await once("wa:dia", 86400, 12))) return;
+      if (!(await once(`wa:agente:${id}`, 6 * 3600))) continue;
+      const name = findAgent(st, id)?.name ?? id;
+      const text = redact(r.resumen).replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").slice(0, 300);
+      await sendWhatsApp(`🟠 Creads · ${name}: ${text} Revisa la Oficina: ${SITE}/admin`);
+    } catch { /* the email brief still carries it */ }
+  }
+}
+
 /** Runs one agent now and saves its report. */
 export async function runOne(id: string): Promise<Report> {
   const st = await loadState();
@@ -549,6 +571,7 @@ export async function runOne(id: string): Promise<Report> {
   if (!a) throw new Error("Agente desconocido.");
   const out = await work(st, a, (await loadMemory()).text, Date.now() + 240_000);
   await commit((s) => save(s, id, out));
+  await escalate(st, [id], [out.report]);
   return out.report;
 }
 
@@ -563,6 +586,7 @@ export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]
   const on = workersOf(st).filter((w) => w.on);
   const outs = await Promise.all(on.map((w) => work(st, w, memory, deadline)));
   await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
+  await escalate(st, on.map((w) => w.id), outs.map((o) => o.report));
   return on.map((w) => w.id);
 }
 
@@ -578,6 +602,7 @@ export async function runDirectors(): Promise<string[]> {
   const dirs = ["ceo", "marketing"].map((id) => findAgent(st, id)).filter((d): d is Agent => Boolean(d?.on));
   const outs = await Promise.all(dirs.map((d) => work(st, d, memory, Date.now() + 200_000)));
   await commit((s) => dirs.forEach((d, i) => save(s, d.id, outs[i])));
+  await escalate(st, dirs.map((d) => d.id), outs.map((o) => o.report));
   return dirs.map((d) => d.id);
 }
 
@@ -589,12 +614,14 @@ export async function runAll(): Promise<{ brief: Report | null; by: string | nul
   const on = workersOf(st).filter((w) => w.on);
   const outs = await Promise.all(on.map((w) => work(st, w, memory, start + 110_000)));
   let fresh = await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
+  await escalate(fresh, on.map((w) => w.id), outs.map((o) => o.report));
   const ran = on.map((w) => w.id);
   let director: Report | null = null, general: Report | null = null;
   const dirs = ["ceo", "marketing"].map((id) => findAgent(fresh, id)).filter((d): d is Agent => Boolean(d?.on));
   if (fresh.on && dirs.length) {
     const outs2 = await Promise.all(dirs.map((d) => work(fresh, d, memory, start + 185_000)));
     fresh = await commit((s) => dirs.forEach((d, i) => save(s, d.id, outs2[i])));
+    await escalate(fresh, dirs.map((d) => d.id), outs2.map((o) => o.report));
     director = outs2[dirs.findIndex((d) => d.id === "ceo")]?.report ?? null;
     ran.push(...dirs.map((d) => d.id));
   }
@@ -603,6 +630,7 @@ export async function runAll(): Promise<{ brief: Report | null; by: string | nul
   if (fresh.on && gen?.on && Date.now() - start < 200_000) {
     const out = await work(fresh, gen, memory, start + 260_000);
     await commit((s) => save(s, "general", out));
+    await escalate(fresh, ["general"], [out.report]);
     general = out.report; ran.push("general");
   }
   if (general && !general.error) return { brief: general, by: "general", ran };
