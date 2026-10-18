@@ -161,6 +161,13 @@ export default function CaptionEditor({ value, onChange, aspect, sample, video }
             <span>Mostrar comas y puntos</span>
           </label>
         </Group>
+
+        <Group title="Sello">
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={!!s.sello} onChange={(e) => set({ sello: e.target.checked })} className="mt-1" />
+            <span>Mostrar «Hecho con Creads IA» en una esquina <span className="text-muted">(para tus propias redes)</span></span>
+          </label>
+        </Group>
       </div>
     </div>
   );

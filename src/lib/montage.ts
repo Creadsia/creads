@@ -129,8 +129,25 @@ export function respell(words: Word[], script: string): Word[] {
   return out;
 }
 
+/**
+ * The «Hecho con Creads IA» badge: a small violet tag over the brand name, top left (bottom left when the
+ * captions go on top), inside the area Instagram and TikTok leave clear.
+ */
+function selloStyles(W: number, H: number, bottom: boolean) {
+  const tag = Math.round(W * 0.032), name = Math.round(W * 0.078);
+  const left = Math.round(W * 0.07), top = Math.round(H * 0.085);
+  const violet = assColor("#8A5CFF"), white = assColor("#FFFFFF"), black = assColor("#000000", 0x60);
+  const al = bottom ? 1 : 7;
+  const tagV = bottom ? Math.round(H * 0.2) + Math.round(name * 1.25) : top;
+  const nameV = bottom ? Math.round(H * 0.2) : top + Math.round(tag * 1.55);
+  return [
+    `Style: SelloTag,Montserrat ExtraBold,${tag},${white},${white},${violet},${violet},0,0,0,0,100,100,1,0,3,${Math.max(4, Math.round(tag * 0.35))},0,${al},${left},50,${tagV},1`,
+    `Style: SelloName,Montserrat ExtraBold,${name},${white},${white},${black},${black},0,0,0,0,100,100,0,0,1,${Math.max(2, Math.round(name / 18))},${Math.max(1, Math.round(name / 30))},${al},${left},50,${nameV},1`,
+  ];
+}
+
 /** Builds the .ass captions (and an .srt) from word timings on the final timeline. */
-export function captions(words0: Word[], W: number, H: number, aspect: string, style0: CaptionStyle) {
+export function captions(words0: Word[], W: number, H: number, aspect: string, style0: CaptionStyle, totalSec = 0) {
   const st = normalizeStyle(style0);
   // join "34" + ",000" back into one token
   const words: Word[] = [];
@@ -169,8 +186,13 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
     "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "ScaledBorderAndShadow: yes", "", "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
     `Style: Cap,${font.ass},${size},${assColor(st.color)},${assColor(st.accent)},${outCol},${backCol},0,0,0,0,100,100,0,0,${border},${outl},${shadow},${align},50,50,${mv},1`,
+    ...selloStyles(W, H, st.position === "arriba"),
     "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
+  if (st.sello) {
+    const end = Math.max(totalSec, words.length ? words[words.length - 1].e : 0, 1) + 1;
+    ass.push(`Dialogue: 1,${ts(0)},${ts(end)},SelloTag,,0,0,0,,HECHO CON`, `Dialogue: 1,${ts(0)},${ts(end)},SelloName,,0,0,0,,Creads IA`);
+  }
   const srt: string[] = [];
   const clean = (t: string) => t.replace(/[{}\\]/g, "");
   const accent = assInline(st.accent), base = assInline(st.color);

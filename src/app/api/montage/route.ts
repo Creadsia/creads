@@ -66,14 +66,15 @@ export async function POST(req: Request) {
       offset += segLen(p.clip);
     }
     const [W, H] = frameSize(aspect);
-    const cap = withCaptions && timeline.length ? captions(timeline, W, H, aspect, style) : null;
+    // captions, and/or the «Hecho con Creads IA» badge (also without captions)
+    const cap = (withCaptions && timeline.length) || style.sello ? captions(withCaptions ? timeline : [], W, H, aspect, style, offset) : null;
     const bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
 
     const stamp = Date.now();
     const ws = s.user.workspace;
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
-    const srtUrl = cap ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
-    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap ? style : null } });
+    const srtUrl = cap && cap.cues ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
+    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap && cap.cues ? style : null } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration: offset });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo armar el anuncio.") }, { status: 502 });

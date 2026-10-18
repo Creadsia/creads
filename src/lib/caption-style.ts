@@ -51,11 +51,13 @@ export interface CaptionStyle {
   punct: boolean;
   /** Spell every word as in the script (fixes what the transcription heard wrong). */
   script: boolean;
+  /** «Hecho con Creads IA» badge in a corner for the whole video (for Creads' own content). */
+  sello: boolean;
 }
 
 export const DEFAULT_STYLE: CaptionStyle = {
   look: "resaltar", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100",
-  position: "abajo", words: 3, case: "normal", punct: true, script: true,
+  position: "abajo", words: 3, case: "normal", punct: true, script: true, sello: false,
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -89,6 +91,7 @@ export function normalizeStyle(raw: unknown): CaptionStyle {
     case: oneOf(r.case, ["normal", "upper", "lower"] as const, DEFAULT_STYLE.case),
     punct: r.punct === undefined ? DEFAULT_STYLE.punct : Boolean(r.punct),
     script: r.script === undefined ? DEFAULT_STYLE.script : Boolean(r.script),
+    sello: r.sello === true,
   };
 }
 
