@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin";
+import { currentUser, isAdmin } from "@/lib/admin";
 import { campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
-import { metaAds, metaToken } from "@/lib/meta-graph";
+import { metaAds, metaToken, probarMeta } from "@/lib/meta-graph";
+import { metaConnView, saveMetaConn } from "@/lib/meta-conexiones";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,12 +18,14 @@ export async function GET() {
   const [m, ads, hoy] = await Promise.all([loadMarketing(), finishedAds(20).catch(() => []), repliesToday().catch(() => 0)]);
   let camp: Awaited<ReturnType<typeof campaigns>> | null = null, metaError = "";
   try { camp = await campaigns(); } catch (e) { metaError = e instanceof Error ? e.message : "No se pudo leer Meta."; }
+  const view = await metaConnView();
   return NextResponse.json({
     conexion: {
-      anuncios: Boolean(metaAds()), token: Boolean(metaToken()), instagramAnuncios: env("META_IG_USER_ID"),
-      webhook: env("META_WEBHOOK_VERIFY_TOKEN") && env("META_APP_SECRET"), pixel: env("NEXT_PUBLIC_META_PIXEL_ID") || env("META_PIXEL_ID"),
+      anuncios: Boolean(await metaAds()), token: Boolean(await metaToken()), instagramAnuncios: Boolean(view.igUserId.value),
+      webhook: env("META_WEBHOOK_VERIFY_TOKEN") && env("META_APP_SECRET"), pixel: Boolean(view.pixelId.value), capi: Boolean(view.capiToken.value),
       error: metaError,
     },
+    conexiones: view,
     estado: m, respuestasHoy: hoy, campanasMeta: camp?.rows ?? [], moneda: camp && "currency" in camp ? camp.currency : null, anuncios: ads,
   });
 }
@@ -31,6 +34,11 @@ export async function PATCH(req: Request) {
   if (!(await isAdmin())) return no();
   const b = await req.json().catch(() => null);
   const bad = (error: string) => NextResponse.json({ error }, { status: 400 });
+  if (b?.conexiones && typeof b.conexiones === "object") {
+    const me = await currentUser();
+    const e = await saveMetaConn(b.conexiones, me?.email ?? "panel");
+    if (e) return bad(e);
+  }
   if (b?.capUsd !== undefined && !(Number(b.capUsd) >= 0 && Number(b.capUsd) <= 5000)) return bad("El tope diario debe ser entre US$0 y US$5.000.");
   if (b?.cuenta && (!/^\d{5,30}$/.test(String(b.cuenta.igUserId ?? "")) || String(b.cuenta.nombre ?? "").trim().length < 2)) return bad("La cuenta necesita un nombre y su número de Instagram (solo dígitos).");
   await commitMarketing((s) => {
@@ -54,4 +62,12 @@ export async function PATCH(req: Request) {
     }
   });
   return GET();
+}
+
+/** POST {probar: true}: checks every connection with Meta. */
+export async function POST(req: Request) {
+  if (!(await isAdmin())) return no();
+  const b = await req.json().catch(() => null);
+  if (!b?.probar) return NextResponse.json({ error: "Nada que hacer." }, { status: 400 });
+  return NextResponse.json({ prueba: await probarMeta() });
 }

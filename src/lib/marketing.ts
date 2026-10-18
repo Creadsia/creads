@@ -98,7 +98,7 @@ export const addPedido = (p: Omit<Pedido, "id" | "at" | "estado">) =>
 // ---------------------------------------------------------------- paid campaigns (Trafficker)
 
 async function account() {
-  const cfg = metaAds();
+  const cfg = await metaAds();
   if (!cfg) return null;
   const a = await graph<{ currency: string; account_status: number; name: string }>(cfg.account, { params: { fields: "currency,account_status,name" } });
   if (a.currency !== "USD" && a.currency !== "CLP") throw new MetaError(`La cuenta publicitaria está en ${a.currency}: por ahora el estudio maneja cuentas en USD o CLP.`);
@@ -282,7 +282,7 @@ export async function setCampaignBudget(campaignId: string, usd: number, capUsd:
 
 /** Publishes a finished Creads ad as a Reel on one of the brand's Instagram accounts. Null = modo ensayo. */
 export async function publishReel(cuenta: Cuenta, adId: string, caption: string): Promise<string | null> {
-  if (!metaToken()) return null;
+  if (!(await metaToken())) return null;
   const video = await adVideo(adId);
   const c = await graph<{ id: string }>(`${cuenta.igUserId}/media`, { method: "POST", params: { media_type: "REELS", video_url: video.final_url, caption: caption.slice(0, 2200), share_to_feed: true } });
   const end = Date.now() + 150_000;
@@ -299,7 +299,7 @@ export async function publishReel(cuenta: Cuenta, adId: string, caption: string)
 
 /** Publishes a finished Creads ad as a video on the account's Facebook page. Null = modo ensayo. */
 export async function publishFacebook(cuenta: Cuenta, adId: string, caption: string): Promise<string | null> {
-  if (!metaToken()) return null;
+  if (!(await metaToken())) return null;
   if (!cuenta.pageId) throw new MetaError(`La cuenta «${cuenta.nombre}» no tiene página de Facebook: agrégale el número de la página en Marketing.`);
   const video = await adVideo(adId);
   const token = await pageToken(cuenta.pageId);
@@ -312,7 +312,7 @@ export async function organicSummary() {
   const s = await loadMarketing();
   const out: string[] = [];
   for (const c of s.cuentas.slice(0, 10)) {
-    if (!metaToken()) { out.push(`${c.nombre}: (Meta sin conectar)`); continue; }
+    if (!(await metaToken())) { out.push(`${c.nombre}: (Meta sin conectar)`); continue; }
     const m = await graph<{ data: { caption?: string; like_count?: number; comments_count?: number; timestamp: string; media_product_type?: string }[] }>(`${c.igUserId}/media`, { params: { fields: "caption,like_count,comments_count,timestamp,media_product_type", limit: 10 } }).catch((e) => ({ data: [], error: e instanceof Error ? e.message : "" }) as never);
     out.push(`${c.nombre}: ${m.data.length ? m.data.map((p) => `${p.timestamp.slice(0, 10)} ${p.media_product_type ?? ""} ❤${p.like_count ?? 0} 💬${p.comments_count ?? 0} «${(p.caption ?? "").slice(0, 60)}»`).join(" | ") : "sin publicaciones o sin acceso"}`);
   }

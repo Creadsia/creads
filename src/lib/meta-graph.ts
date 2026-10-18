@@ -3,16 +3,17 @@
 // and the Instagram/Facebook pages. Nothing here runs until the owner pastes the keys in Vercel.
 
 export const GRAPH_VERSION = () => (process.env.META_GRAPH_VERSION || "v25.0").trim();
-const env = (k: string) => (process.env[k] ?? "").trim();
+import { metaConn } from "./meta-conexiones";
 
 export interface MetaConfig { token: string; account: string; page: string; ig: string; pixel: string }
-/** The ad account setup, or null while it isn't connected (the studio then works in «modo ensayo»). */
-export function metaAds(): MetaConfig | null {
-  const token = env("META_ADS_TOKEN"), account = env("META_AD_ACCOUNT_ID"), page = env("META_PAGE_ID");
-  if (!token || !account || !page) return null;
-  return { token, account: account.startsWith("act_") ? account : `act_${account}`, page, ig: env("META_IG_USER_ID"), pixel: env("NEXT_PUBLIC_META_PIXEL_ID") || env("META_PIXEL_ID") };
+/** The ad account setup (Panel → Marketing → Conexiones, or Vercel), or null while it isn't connected
+ * (the studio then works in «modo ensayo»). */
+export async function metaAds(): Promise<MetaConfig | null> {
+  const c = await metaConn();
+  if (!c.adsToken || !c.adAccountId || !c.pageId) return null;
+  return { token: c.adsToken, account: c.adAccountId.startsWith("act_") ? c.adAccountId : `act_${c.adAccountId}`, page: c.pageId, ig: c.igUserId, pixel: c.pixelId };
 }
-export const metaToken = () => env("META_ADS_TOKEN");
+export const metaToken = async () => (await metaConn()).adsToken;
 
 export class MetaError extends Error {
   constructor(message: string, public code = 0) { super(message); }
@@ -20,8 +21,8 @@ export class MetaError extends Error {
 
 /** Calls the Graph API. GET params go in the query; POST params as a form (as Meta expects). */
 export async function graph<T = Record<string, unknown>>(path: string, o: { method?: "GET" | "POST" | "DELETE"; params?: Record<string, unknown>; token?: string; timeoutMs?: number } = {}): Promise<T> {
-  const token = o.token ?? metaToken();
-  if (!token) throw new MetaError("Falta conectar Meta (META_ADS_TOKEN en Vercel).");
+  const token = o.token ?? (await metaToken());
+  if (!token) throw new MetaError("Falta conectar Meta: pega el token en Panel → Marketing → Conexiones.");
   const method = o.method ?? "GET";
   const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION()}/${path.replace(/^\//, "")}`);
   const body = new URLSearchParams();
@@ -62,4 +63,40 @@ export function budgetUnits(usd: number, currency: string, usdRate: number) {
 export function unitsToUsd(units: number, currency: string, usdRate: number) {
   const amount = NO_CENTS.has(currency) ? units : units / 100;
   return currency === "USD" ? amount : amount / (usdRate || 1);
+}
+
+/** Checks each connection with Meta and says, in plain words, what works and what doesn't. */
+export async function probarMeta(): Promise<{ item: string; ok: boolean; detalle: string }[]> {
+  const c = await metaConn();
+  const out: { item: string; ok: boolean; detalle: string }[] = [];
+  const msg = (e: unknown) => (e instanceof Error ? e.message : "No respondió.").slice(0, 200);
+  if (!c.adsToken) out.push({ item: "Token del usuario del sistema", ok: false, detalle: "Falta pegarlo." });
+  else {
+    try { const me = await graph<{ name?: string }>("me", { params: { fields: "name" }, token: c.adsToken }); out.push({ item: "Token del usuario del sistema", ok: true, detalle: `Funciona (${me.name ?? "usuario del sistema"}).` }); }
+    catch (e) { out.push({ item: "Token del usuario del sistema", ok: false, detalle: msg(e) }); }
+    if (c.adAccountId) {
+      try {
+        const a = await graph<{ name?: string; currency?: string; account_status?: number }>(`act_${c.adAccountId.replace(/^act_/, "")}`, { params: { fields: "name,currency,account_status" }, token: c.adsToken });
+        out.push({ item: "Cuenta publicitaria", ok: a.account_status === 1, detalle: `${a.name ?? "Cuenta"} · ${a.currency ?? ""}${a.account_status === 1 ? " · activa" : " · Meta dice que no está activa: revisa el método de pago o restricciones"}` });
+      } catch (e) { out.push({ item: "Cuenta publicitaria", ok: false, detalle: `${msg(e)} Revisa que el usuario del sistema tenga la cuenta asignada con control total.` }); }
+    } else out.push({ item: "Cuenta publicitaria", ok: false, detalle: "Falta el ID." });
+    if (c.pageId) {
+      try { const p = await graph<{ name?: string }>(c.pageId, { params: { fields: "name" }, token: c.adsToken }); out.push({ item: "Página de Facebook", ok: true, detalle: p.name ?? "Conectada." }); }
+      catch (e) { out.push({ item: "Página de Facebook", ok: false, detalle: `${msg(e)} Revisa que el usuario del sistema tenga la página asignada.` }); }
+    } else out.push({ item: "Página de Facebook", ok: false, detalle: "Falta el ID." });
+    if (c.igUserId) {
+      try { const i = await graph<{ username?: string }>(c.igUserId, { params: { fields: "username" }, token: c.adsToken }); out.push({ item: "Instagram", ok: true, detalle: i.username ? `@${i.username}` : "Conectado." }); }
+      catch (e) { out.push({ item: "Instagram", ok: false, detalle: `${msg(e)} La cuenta de Instagram tiene que ser profesional y estar unida a la página.` }); }
+    }
+  }
+  const pixelToken = c.capiToken || c.adsToken;
+  if (!pixelToken) out.push({ item: "Píxel", ok: true, detalle: `ID ${c.pixelId} en la web (sin token no se puede revisar más).` });
+  else {
+    try {
+      const px = await graph<{ name?: string; last_fired_time?: string }>(c.pixelId, { params: { fields: "name,last_fired_time" }, token: pixelToken });
+      out.push({ item: "Píxel", ok: true, detalle: `${px.name ?? c.pixelId}${px.last_fired_time ? ` · último evento ${new Date(px.last_fired_time).toLocaleString("es-CL")}` : " · todavía sin eventos"}` });
+    } catch (e) { out.push({ item: "Píxel", ok: false, detalle: `${msg(e)} Revisa que el ID del píxel sea el correcto.` }); }
+  }
+  out.push(c.capiToken ? { item: "API de conversiones", ok: true, detalle: "Token guardado: las ventas y registros se avisan a Meta desde el servidor." } : { item: "API de conversiones", ok: false, detalle: "Falta el token (Administrador de eventos → tu píxel → Configuración → Generar token)." });
+  return out;
 }

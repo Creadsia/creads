@@ -9,25 +9,28 @@ import { TO_CREAR_KEY } from "@/lib/guiones";
 // The agents (Oficina) propose; the owner approves in Oficina → «Por aprobar».
 
 interface Data {
-  conexion: { anuncios: boolean; token: boolean; instagramAnuncios: boolean; webhook: boolean; pixel: boolean; error: string };
+  conexion: { anuncios: boolean; token: boolean; instagramAnuncios: boolean; webhook: boolean; pixel: boolean; capi: boolean; error: string };
+  conexiones: Record<ConnKey, { value: string; from: string | null }> & { updatedAt: string | null; by: string | null };
   estado: MarketingState; respuestasHoy: number; campanasMeta: CampaignView[]; moneda: string | null;
   anuncios: { id: string; title: string | null; format: string | null; final_url: string; created_at: string }[];
 }
+
+type ConnKey = "pixelId" | "adAccountId" | "pageId" | "igUserId" | "testEventCode" | "capiToken" | "adsToken";
+const CONN_FIELDS: { k: ConnKey; label: string; secret?: boolean; hint: string }[] = [
+  { k: "pixelId", label: "ID del píxel", hint: "Administrador de eventos → Orígenes de datos → tu píxel: el número debajo del nombre." },
+  { k: "capiToken", label: "Token de la API de conversiones", secret: true, hint: "Administrador de eventos → tu píxel → Configuración → API de conversiones → «Generar token de acceso»." },
+  { k: "adsToken", label: "Token del usuario del sistema", secret: true, hint: "Configuración del negocio → Usuarios → Usuarios del sistema → tu usuario → «Generar nuevo token» (permisos ads_management, ads_read, pages_manage_posts, pages_read_engagement, instagram_basic, instagram_content_publish, business_management; caducidad: nunca)." },
+  { k: "adAccountId", label: "ID de la cuenta publicitaria", hint: "Configuración del negocio → Cuentas → Cuentas publicitarias: el número de la cuenta (sin act_)." },
+  { k: "pageId", label: "ID de la página de Facebook", hint: "Configuración del negocio → Cuentas → Páginas: el identificador de la página." },
+  { k: "igUserId", label: "ID de Instagram (opcional)", hint: "Configuración del negocio → Cuentas → Cuentas de Instagram: el identificador de la cuenta con la que salen los anuncios." },
+  { k: "testEventCode", label: "Código de eventos de prueba (opcional)", hint: "Solo para probar: Administrador de eventos → Probar eventos. Bórralo cuando termines." },
+];
 
 const card = "flex min-w-0 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:p-5";
 const btn = "rounded-lg border border-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
 const input = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm";
 const usd = (n: number | null) => (n === null ? "—" : `US$${n.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 const day = (iso: string) => new Date(iso).toLocaleDateString("es-CL", { day: "numeric", month: "short" });
-
-function Check({ ok, label, hint }: { ok: boolean; label: string; hint: string }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className={`mt-0.5 rounded-full px-2 py-0.5 text-xs font-semibold ${ok ? "bg-good/15 text-good" : "bg-surface-2 text-muted"}`}>{ok ? "✓ Listo" : "Falta"}</span>
-      <span className="flex flex-col"><b className="text-sm">{label}</b><span className="text-xs text-muted">{hint}</span></span>
-    </li>
-  );
-}
 
 export default function Marketing() {
   const [d, setD] = useState<Data | null>(null);
@@ -75,17 +78,7 @@ export default function Marketing() {
         <p className="rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm"><b>Modo ensayo:</b> Meta todavía no está conectado. Los agentes ya pueden proponer campañas, anuncios y publicaciones; al aprobarlas quedan guardadas aquí y se suben a Meta cuando conectes la cuenta.</p>
       )}
 
-      <section className={card} aria-labelledby="h-con">
-        <h3 id="h-con" className="text-lg font-bold">Conexión con Meta</h3>
-        <ul className="flex flex-col gap-3">
-          <Check ok={c.anuncios} label="Cuenta publicitaria y página" hint="Vercel: META_ADS_TOKEN (token del usuario del sistema), META_AD_ACCOUNT_ID (empieza con act_) y META_PAGE_ID." />
-          <Check ok={c.pixel} label="Píxel" hint="Ya instalado en la web. Lo usan las campañas de leads o ventas para optimizar." />
-          <Check ok={c.instagramAnuncios} label="Instagram en los anuncios (opcional)" hint="META_IG_USER_ID: la cuenta de Instagram con la que salen los anuncios." />
-          <Check ok={c.webhook} label="Respuestas automáticas a comentarios" hint="META_APP_SECRET y META_WEBHOOK_VERIFY_TOKEN, y en la app de Meta el webhook de Instagram (comments) apuntando a https://www.creadsia.com/api/meta/webhook." />
-        </ul>
-        {c.error && <p className="text-sm text-bad">Meta respondió: {c.error}</p>}
-        <p className="text-xs text-muted">Cuando quieras conectar, pídele a Claude la guía paso a paso (unos 30–40 minutos). Nada de esto muestra tus claves.</p>
-      </section>
+      <Conexiones d={d} reload={(x) => apply(x)} />
 
       <section className={card} aria-labelledby="h-tope">
         <h3 id="h-tope" className="text-lg font-bold">Tope de gasto en campañas</h3>
@@ -201,5 +194,97 @@ export default function Marketing() {
         ) : <p className="text-sm text-muted">Los anuncios que termines en Creads (con tu cuenta) aparecen aquí y los agentes los pueden usar.</p>}
       </section>
     </div>
+  );
+}
+
+/** Panel → Marketing → Conexiones: the pixel, the Conversions API and the ad account, set from here by the
+ * owner or a partner (no Vercel). Tokens are never shown back: only their last 4 characters. */
+function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
+  const v = d.conexiones;
+  const [form, setForm] = useState<Partial<Record<ConnKey, string>>>({});
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [prueba, setPrueba] = useState<{ item: string; ok: boolean; detalle: string }[] | null>(null);
+  const [guia, setGuia] = useState(false);
+  const dirty = Object.values(form).some((x) => x !== undefined);
+
+  async function save(patch: Partial<Record<ConnKey, string>>) {
+    setBusy("save"); setMsg(null);
+    try {
+      const r = await fetch("/api/admin/marketing", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ conexiones: patch }) });
+      const x = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(x.error || "No se pudo guardar.");
+      reload(x); setForm({}); setMsg({ ok: true, text: "Guardado. Aprieta «Probar conexión» para revisar que Meta lo acepte." });
+    } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : "No se pudo guardar." }); }
+    setBusy("");
+  }
+  async function probar() {
+    setBusy("probar"); setMsg(null); setPrueba(null);
+    try {
+      const r = await fetch("/api/admin/marketing", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ probar: true }) });
+      const x = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(x.error || "No se pudo probar.");
+      setPrueba(x.prueba);
+    } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : "No se pudo probar." }); }
+    setBusy("");
+  }
+
+  return (
+    <section className={card} aria-labelledby="h-con">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <h3 id="h-con" className="text-lg font-bold">Conexiones con Meta</h3>
+          <p className="text-xs text-muted">Píxel, API de conversiones, cuenta publicitaria, página e Instagram. Las puede configurar el dueño o un socio, sin tocar Vercel. Los tokens se guardan cifrados y nunca se vuelven a mostrar.</p>
+        </div>
+        <span className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setGuia(!guia)} className={btn}>{guia ? "Ocultar guía" : "Guía paso a paso"}</button>
+          <button type="button" disabled={!!busy} onClick={probar} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-bg disabled:opacity-50">{busy === "probar" ? "Probando…" : "Probar conexión"}</button>
+        </span>
+      </div>
+
+      {guia && (
+        <ol className="flex list-decimal flex-col gap-1.5 rounded-xl border border-line bg-surface-2 p-4 pl-8 text-sm">
+          <li>Entra a <a className="text-accent-text underline" href="https://business.facebook.com/settings" target="_blank" rel="noopener noreferrer">Configuración del negocio de Meta</a> con la cuenta que administra el Business Manager de Creads.</li>
+          <li><b>Píxel:</b> en <a className="text-accent-text underline" href="https://business.facebook.com/events_manager2" target="_blank" rel="noopener noreferrer">Administrador de eventos</a> copia el ID de tu píxel y pégalo abajo. Ahí mismo, en Configuración → API de conversiones, aprieta «Generar token de acceso» y pégalo en «Token de la API de conversiones».</li>
+          <li><b>Usuario del sistema:</b> Configuración del negocio → Usuarios → Usuarios del sistema → «Agregar» (rol administrador). Luego «Asignar activos»: la cuenta publicitaria, la página y la cuenta de Instagram, todas con control total.</li>
+          <li>Con ese usuario aprieta «Generar nuevo token», elige la app de Creads, caducidad «Nunca» y marca los permisos que dice la ayuda del campo. Copia el token y pégalo en «Token del usuario del sistema».</li>
+          <li>Copia los ID de la cuenta publicitaria, la página y la cuenta de Instagram (Configuración del negocio → Cuentas) y pégalos abajo.</li>
+          <li>Aprieta <b>Guardar</b> y después <b>Probar conexión</b>: cada parte debe salir con ✓. Si algo sale mal, el mensaje dice qué revisar. También le puedes preguntar al Director de Marketing (botón «Hablar»).</li>
+        </ol>
+      )}
+
+      <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); save(form); }}>
+        {CONN_FIELDS.map((f) => {
+          const cur = v[f.k];
+          return (
+            <label key={f.k} className="flex flex-col gap-1 text-sm">
+              <span className="flex flex-wrap items-center justify-between gap-2">
+                <b>{f.label}</b>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cur.value ? "bg-good/15 text-good" : "bg-surface-2 text-muted"}`}>
+                  {cur.value ? `✓ ${f.secret ? `guardado ${cur.value}` : cur.from === "inicial" ? "el de siempre" : "listo"}${cur.from === "vercel" ? " (desde Vercel)" : ""}` : "Falta"}
+                </span>
+              </span>
+              <input type={f.secret ? "password" : "text"} autoComplete="off" spellCheck={false} value={form[f.k] ?? ""} placeholder={f.secret ? (cur.value ? "Pega uno nuevo para cambiarlo" : "Pega el token") : cur.value || "Pega el número"}
+                onChange={(e) => setForm({ ...form, [f.k]: e.target.value })} className={`${input} font-mono`} />
+              <span className="text-xs text-muted">{f.hint}</span>
+              {cur.from === "panel" && f.k !== "pixelId" && <button type="button" disabled={!!busy} onClick={() => window.confirm(`¿Quitar «${f.label}»?`) && save({ [f.k]: "" })} className="self-start text-xs text-muted hover:text-bad">Quitar</button>}
+            </label>
+          );
+        })}
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+          <button type="submit" disabled={!dirty || !!busy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50">{busy === "save" ? "Guardando…" : "Guardar"}</button>
+          {v.updatedAt && <span className="text-xs text-muted">Último cambio: {new Date(v.updatedAt).toLocaleString("es-CL")}{v.by ? ` · ${v.by}` : ""}</span>}
+        </div>
+      </form>
+
+      {msg && <p role="status" className={`text-sm ${msg.ok ? "text-good" : "text-bad"}`}>{msg.text}</p>}
+      {prueba && (
+        <ul className="flex flex-col gap-2 rounded-xl border border-line p-3 text-sm">
+          {prueba.map((p) => <li key={p.item} className="flex gap-2"><span aria-hidden>{p.ok ? "✅" : "⚠️"}</span><span><b>{p.item}:</b> {p.detalle}</span></li>)}
+        </ul>
+      )}
+      {d.conexion.error && <p className="text-sm text-bad">Meta respondió: {d.conexion.error}</p>}
+      <p className="text-xs text-muted">Respuestas automáticas a comentarios: necesitan además la app de Meta con su webhook (eso sí se configura una vez en Vercel; pídeselo a Claude cuando quieras activarlas). {d.conexion.webhook ? "✓ Ya está." : ""}</p>
+    </section>
   );
 }

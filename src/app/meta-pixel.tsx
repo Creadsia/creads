@@ -16,11 +16,16 @@ function loadPixel() {
   const n = function (...args: unknown[]) { if (n.callMethod) n.callMethod(...args); else n.queue!.push(args); } as Fbq;
   n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
   w.fbq = n; w._fbq = n;
-  const s = document.createElement("script");
-  s.async = true;
-  s.src = "https://connect.facebook.net/en_US/fbevents.js";
-  document.head.appendChild(s);
-  n("init", PIXEL_ID);
+  // the pixel ID is set in Panel → Marketing → Conexiones; events wait in the queue until it's known,
+  // and «init» goes first so Meta reads them in order
+  const start = (id: string) => {
+    n.queue!.unshift(["init", id]);
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://connect.facebook.net/en_US/fbevents.js";
+    document.head.appendChild(s);
+  };
+  fetch("/api/meta/pixel").then((r) => r.json()).then((d: { id?: string }) => start(/^\d{8,20}$/.test(d.id ?? "") ? d.id! : PIXEL_ID)).catch(() => start(PIXEL_ID));
 }
 
 const readChoice = () => {

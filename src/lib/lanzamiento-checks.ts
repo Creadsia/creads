@@ -1,4 +1,5 @@
 import { whatsappMode } from "@/lib/whatsapp";
+import { metaConn } from "@/lib/meta-conexiones";
 import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "@/lib/supabase";
 import { providerStatus } from "@/lib/providers";
 import { observedDollar, usdClpRate } from "@/lib/usd-clp";
@@ -56,11 +57,11 @@ export async function launchChecks(): Promise<Check[]> {
     p.database && (await exists("site_stats?select=day&limit=0"))
       ? { id: "stats", state: "ok", detail: "Las visitas se están contando." }
       : { id: "stats", state: "falta", detail: "Falta ejecutar supabase/stats.sql en Supabase → SQL Editor." },
-    metaAds()
+    (await metaAds().catch(() => null))
       ? { id: "meta-ads", state: "ok", detail: "Cuenta publicitaria de Meta conectada al estudio de marketing." }
       : { id: "meta-ads", state: "revisar", detail: "El estudio de marketing trabaja en modo ensayo hasta conectar Meta (Panel → Marketing)." },
     ...(await mercadoPago()),
-    env("META_CAPI_TOKEN") ? { id: "meta", state: "ok", detail: "Conversiones de Meta conectadas." } : { id: "meta", state: "falta", detail: "Falta META_CAPI_TOKEN (Meta → Administrador de eventos → tu píxel → Configuración)." },
+    (await metaConn().catch(() => null))?.capiToken ? { id: "meta", state: "ok", detail: "Conversiones de Meta conectadas." } : { id: "meta", state: "falta", detail: "Falta el token de la API de conversiones: pégalo en Panel → Marketing → Conexiones (Meta → Administrador de eventos → tu píxel → Configuración)." },
     admin.length >= 24 ? { id: "admin", state: "ok", detail: "Clave de administrador larga." } : { id: "admin", state: admin ? "revisar" : "falta", detail: admin ? `Es corta (${admin.length} caracteres): usa 24 o más.` : "Falta ADMIN_ACCESS_CODE." },
     env("RESEND_API_KEY") ? { id: "email", state: "ok", detail: "Correos automáticos activos." } : { id: "email", state: "falta", detail: "Falta RESEND_API_KEY." },
     env("CRON_SECRET").length >= 16 ? { id: "cron", state: "ok", detail: "Avisos diarios de vencimiento activos." } : { id: "cron", state: "falta", detail: "Falta CRON_SECRET (16 caracteres o más)." },

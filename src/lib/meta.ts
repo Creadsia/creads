@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
+import { metaConn } from "./meta-conexiones";
 
 // Meta Conversions API: the same events as the browser pixel, sent from our server, so they count even
 // with ad blockers, and so a payment confirmed by hand (no browser involved) still reaches Meta.
-// Needs META_CAPI_TOKEN in Vercel; without it nothing is sent. Events carry the same event_id as the
+// Needs the Conversions API token (Panel → Marketing → Conexiones, or META_CAPI_TOKEN in Vercel); without it nothing is sent. Events carry the same event_id as the
 // browser pixel, so Meta counts each one once. Only sent for people who accepted cookies.
 
-export const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "2078637222831496";
 const API = "https://graph.facebook.com/v21.0";
 
 const sha = (v: string) => createHash("sha256").update(v.trim().toLowerCase()).digest("hex");
@@ -42,8 +42,10 @@ export interface MetaEvent {
 
 /** Sends one event. Never throws (measurement must not break the product). */
 export async function sendMeta(ev: MetaEvent, v: Visitor) {
-  const token = process.env.META_CAPI_TOKEN;
-  if (!token || !v.consent) return false;
+  if (!v.consent) return false;
+  const conn = await metaConn().catch(() => null);
+  const token = conn?.capiToken;
+  if (!token || !conn) return false;
   const event_id = ev.eventId && /^[\w.:-]{6,80}$/.test(ev.eventId) ? ev.eventId : randomUUID();
   const body = {
     data: [{
@@ -64,10 +66,10 @@ export async function sendMeta(ev: MetaEvent, v: Visitor) {
         ...(ev.content ? { content_name: ev.content } : {}),
       },
     }],
-    ...(process.env.META_TEST_EVENT_CODE ? { test_event_code: process.env.META_TEST_EVENT_CODE } : {}),
+    ...(conn.testEventCode ? { test_event_code: conn.testEventCode } : {}),
   };
   try {
-    const res = await fetch(`${API}/${PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`, {
+    const res = await fetch(`${API}/${conn.pixelId}/events?access_token=${encodeURIComponent(token)}`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store",
     });
     if (!res.ok) console.error("meta capi", ev.name, res.status, (await res.text()).slice(0, 300));
