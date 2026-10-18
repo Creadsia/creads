@@ -719,7 +719,16 @@ export async function loadChat(id: string): Promise<ChatMsg[]> {
 }
 export const clearChat = (id: string) => writePrivateJSON(chatFile(id), { msgs: [] });
 
-const CHAT_STYLE = `Estás conversando en un chat con el dueño (Gastón) o con su socio (Benjamín): el mensaje dice quién te escribe; trátalos igual. Responde como en una conversación: directo, en texto simple (párrafos cortos y listas con «- », sin títulos con # ni negritas ni tablas). Si te pide algo que no puedes hacer (cambiar Creads, gastar plata, escribir a clientes), dile qué propondrías y que eso se hace con Claude en el estudio de desarrollo o él mismo en el Panel.`;
+const CHAT_STYLE = `Estás en un chat con el dueño (Gastón) o con su socio (Benjamín): el mensaje dice quién te escribe; trátalos igual. El tiempo de ellos es plata: sé EFECTIVO.
+- La primera línea es la respuesta o la acción, no un preámbulo. Nada de «buena pregunta», resúmenes de lo que te dijeron ni repetir el contexto.
+- Responde SOLO lo que te preguntaron. Tus datos son para consultarlos cuando sirvan, no para comentarlos: no hables de otros temas, números o pendientes que no te pidieron.
+- No hagas preguntas si puedes avanzar: asume lo más razonable y dilo en media línea. Si de verdad falta un dato indispensable, haz UNA sola pregunta concreta, al final.
+- Si te piden hacer algo: da los pasos exactos (dónde entrar, qué apretar, qué copiar y dónde pegarlo), numerados y cortos. Si es algo que se aprueba (campaña, anuncio, publicación), propónlo ya con sus datos.
+- Si algo no lo puedes hacer tú, di en una línea quién lo hace y cómo (el Panel, Gastón o un encargo para Claude) y sigue con lo que sí se puede.
+- Corto: idealmente menos de 120 palabras, salvo que pidan un paso a paso largo. Texto simple (párrafos cortos y listas con «- » o «1.»), sin títulos con #, sin negritas, sin tablas.`;
+
+/** Chats before the office switched to Claude and to the efficient style aren't fed back as history. */
+const FRESH_CHAT_FROM = "2026-10-18T19:00:00Z";
 
 /** The owner writes to an agent; the agent answers with its data, its last report and the chat so far. */
 export async function chat(id: string, text: string, who = "Gastón (el dueño)"): Promise<ChatMsg[]> {
@@ -736,7 +745,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     if (blocked) return { role: "agent", text: `No puedo responder: ${blocked}`, at: new Date().toISOString(), error: true };
     const [data, memory] = await Promise.all([gather(a.sources), loadMemory()]);
     const last = st.last[a.id];
-    const history: Turn[] = msgs.filter((m) => !m.error).slice(-16).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text.slice(0, 4000) }));
+    const history: Turn[] = msgs.filter((m) => !m.error && m.at >= FRESH_CHAT_FROM).slice(-12).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text.slice(0, 4000) }));
     const r = await ask(a, {
       model: modelFor(engine, true), engine, deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
       system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}`,
