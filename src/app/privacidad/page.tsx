@@ -50,7 +50,7 @@ export default function Privacidad() {
       <h2>6. Seguridad</h2>
       <p>Tus archivos se guardan en almacenamiento privado, separado por cuenta, y se entregan con enlaces temporales. Las claves se guardan cifradas, puedes activar la verificación en dos pasos y limitamos los intentos de ingreso. Ningún sistema es infalible: si detectamos un incidente que te afecte, te avisaremos.</p>
 
-      <h2>7. Tus derechos</h2>
+      <h2 id="derechos">7. Tus derechos</h2>
       <p>Puedes pedir acceso, rectificación, supresión, oposición y portabilidad de tus datos, y retirar tu consentimiento a la medición publicitaria cuando quieras (borrando las cookies o escribiéndonos). Escríbenos a <b>hola@creadsia.com</b> desde el correo de tu cuenta y te respondemos en los plazos que fija la ley.</p>
 
       <h2>8. Cookies</h2>
