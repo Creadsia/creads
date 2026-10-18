@@ -254,7 +254,7 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
         </ol>
       )}
 
-      <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); save(form); }}>
+      <form autoComplete="off" className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); save(form); }}>
         {CONN_FIELDS.map((f) => {
           const cur = v[f.k];
           return (
@@ -265,7 +265,7 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
                   {cur.value ? `✓ ${f.secret ? `guardado ${cur.value}` : cur.from === "inicial" ? "el de siempre" : "listo"}${cur.from === "vercel" ? " (desde Vercel)" : ""}` : "Falta"}
                 </span>
               </span>
-              <input type={f.secret ? "password" : "text"} autoComplete="off" spellCheck={false} value={form[f.k] ?? ""} placeholder={f.secret ? (cur.value ? "Pega uno nuevo para cambiarlo" : "Pega el token") : cur.value || "Pega el número"}
+              <input type={f.secret ? "password" : "text"} name={`creads-${f.k}`} autoComplete={f.secret ? "new-password" : "off"} data-1p-ignore data-lpignore="true" inputMode={f.secret || f.k === "testEventCode" ? undefined : "numeric"} spellCheck={false} value={form[f.k] ?? ""} placeholder={f.secret ? (cur.value ? "Pega uno nuevo para cambiarlo" : "Pega el token") : cur.value || "Pega el número"}
                 onChange={(e) => setForm({ ...form, [f.k]: e.target.value })} className={`${input} font-mono`} />
               <span className="text-xs text-muted">{f.hint}</span>
               {cur.from === "panel" && f.k !== "pixelId" && <button type="button" disabled={!!busy} onClick={() => window.confirm(`¿Quitar «${f.label}»?`) && save({ [f.k]: "" })} className="self-start text-xs text-muted hover:text-bad">Quitar</button>}
@@ -291,7 +291,7 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
         <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm">
           <li>En <a className="text-accent-text underline" href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">Meta for Developers</a> abre la app de Creads → Configuración de la app → Básica → «Clave secreta de la app» → Mostrar. Pégala aquí:
             <form className="mt-2 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (form.appSecret) save({ appSecret: form.appSecret }); }}>
-              <input type="password" autoComplete="off" spellCheck={false} value={form.appSecret ?? ""} onChange={(e) => setForm({ ...form, appSecret: e.target.value })} placeholder={v.appSecret.value ? `Guardada ${v.appSecret.value} · pega otra para cambiarla` : "Clave secreta de la app"} className={`${input} max-w-sm font-mono`} />
+              <input type="password" name="creads-appSecret" autoComplete="new-password" data-1p-ignore data-lpignore="true" spellCheck={false} value={form.appSecret ?? ""} onChange={(e) => setForm({ ...form, appSecret: e.target.value })} placeholder={v.appSecret.value ? `Guardada ${v.appSecret.value} · pega otra para cambiarla` : "Clave secreta de la app"} className={`${input} max-w-sm font-mono`} />
               <button type="submit" disabled={!form.appSecret || !!busy} className={btn}>Guardar</button>
             </form>
           </li>
