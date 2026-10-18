@@ -4,9 +4,9 @@
 export const DEFAULT_MEMORY = `MEMORIA DE CREADS (lo que todos los agentes deben saber) · octubre 2026
 
 QUÉ ES CREADS
-- Creads IA (creadsia.com) es un estudio de anuncios en video con IA para anunciantes de captación de clientes en Meta (seguros de auto, remodelación de baños, reparación de cimientos, etc.). El cliente pega un guion ganador y recibe anuncios terminados: cortes, video con IA, voz, subtítulos y revisión automática de calidad.
+- Creads IA (creadsia.com) es una plataforma de generación con IA (videos, audios y voces, UGC, avatares e imágenes) para quienes crean contenido: marketeros, agencias, creadores, marcas y negocios. FOCO (Gastón, 18 oct 2026): el único negocio es hacer crecer Creads IA; seguros, remodelaciones y otros oficios son solo ejemplos de lo que la plataforma produce, nunca el cliente ni una campaña.
 - Dueño: Gastón (Creadsia, hola@creadsia.com), en Chile. No es técnico: todo se le explica en simple.
-- Visión: competir de frente con Higgsfield y ganar Latinoamérica. Creads existe para ayudar a los marketeros a crecer, así que cuida la plata del cliente.
+- Visión: competir de frente con Higgsfield y ser la plataforma más grande de Latinoamérica y, después, del mundo. Creads existe para ayudar a los marketeros a crecer, así que cuida la plata del cliente.
 
 LOS 4 PILARES
 1. La mayor cantidad de modelos en un solo estudio simple: Veo (Google), Kling, Seedance, Nano Banana, ElevenLabs y los que vayan saliendo.
