@@ -9,7 +9,8 @@ import { CLAUDE_OFFICE_MODEL, CLAUDE_OFFICE_MODEL_CEO, claudeOfficeConfigured, c
 import { parseJSON } from "./providers/claude";
 import { dayCL } from "./stats";
 import { DEFAULT_MEMORY } from "./oficina-memoria";
-import { CONTEXTO, MARCA } from "./oficina-contexto";
+import { CONTEXTO, ESTRATEGIA_PERSONAJES, MARCA } from "./oficina-contexto";
+import { bibleText, describe as describeCharacter, type Traits } from "./influencer/traits";
 import { overview } from "./balances";
 import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
@@ -39,7 +40,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian" | "espia" | "conexiones" | "feed" | "ideas";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian" | "espia" | "conexiones" | "feed" | "ideas" | "personajes";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -54,6 +55,7 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   meta: { name: "Campañas en Meta", text: "Campañas pagadas: gasto, CTR, frecuencia, leads y costo por lead (7 días)", internal: true },
   organico: { name: "Instagram orgánico", text: "Publicaciones de las cuentas de la marca y respuestas automáticas", internal: true },
   material: { name: "Anuncios terminados", text: "Videos de Creads listos para usar y pedidos de anuncios", internal: true },
+  personajes: { name: "Personajes de Creads", text: "Los personajes propios guardados en Influencer IA (cómo se ven y su personalidad), para sus cuentas y videos", internal: true },
   ideas: { name: "Ideas del equipo", text: "Ideas, links de videos virales e imágenes de referencia que dejan Gastón o Benjamín (van primero)", internal: true },
   feed: { name: "Cómo se ve el Instagram", text: "El perfil de la cuenta de la marca y una descripción de cómo se ve su feed (colores, portadas, orden), una vez al día", internal: true },
   conexiones: { name: "Conexiones con Meta", text: "Qué está conectado (píxel, API de conversiones, cuenta publicitaria, página, Instagram) y qué falta", internal: true },
@@ -170,11 +172,11 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
   },
   marketing: {
-    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["conexiones", "ideas", "material", "meta", "organico", "visitas", "negocio", "espia"],
+    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["conexiones", "personajes", "ideas", "material", "meta", "organico", "visitas", "negocio", "espia"],
     mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Community manager) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace. Eres el responsable de que el área funcione de punta a punta: si falta conectar algo (píxel, API de conversiones, cuenta publicitaria, página, Instagram), lo dices primero y guías a quien te hable (Gastón o Benjamín, el socio a cargo de marketing) paso a paso en Panel → Marketing → Conexiones: dónde está cada dato en Meta (Administrador de eventos, Configuración del negocio, usuarios del sistema), qué copiar y dónde pegarlo, y que después apriete «Probar conexión» y te cuente qué salió. Nunca respondas solo «no puedo»: si algo no lo puedes hacer tú, explica cómo se hace o propónlo para aprobación. Nunca pidas que te peguen tokens en el chat: van solo en Conexiones. Cuando te pidan lanzar una campaña, ármala completa altiro (nombre, objetivo, países, edades, presupuesto dentro del tope, texto, título, botón, link a creadsia.com y el mejor anuncio terminado de Creads de «Anuncios terminados», o sin anuncio si te piden solo la estructura o un borrador) y déjala para aprobar; si te dijeron que la lances ya, márcala para activarse al aprobarla. Si no hay ningún anuncio terminado y quieren video, propón el pedido del anuncio; si solo quieren la estructura o un borrador, ármala sin anuncio (queda en pausa, que es el borrador en Meta). No preguntes lo que puedes decidir tú.",
   },
   creativos: {
-    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["ideas", "material", "meta", "espia"],
+    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["personajes", "ideas", "material", "meta", "espia"],
     mission: "Eres el jefe de creativos del estudio de marketing. Decides qué anuncios nuevos hacer para vender Creads (y pruebas para orgánico): miras qué está funcionando en las campañas, buscas en la web y en X ángulos y formatos que estén funcionando en anuncios de herramientas de IA y de video, y propones pedidos de anuncios con su guion listo para que Creads los genere. Usa «Espiar anuncios» (los anuncios activos en Meta de la competencia y del rubro, los que llevan más días corriendo): copia la estructura de lo que funciona (gancho, ángulo, formato, oferta), nunca el texto ni la marca de otros. Varía ángulos (ahorro de tiempo, calidad, precio, antes y después, testimonio honesto de uso) y formatos (UGC, podcast, entrevista…). Nada de promesas falsas ni testimonios inventados.",
   },
   trafico: {
@@ -182,8 +184,8 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el trafficker del estudio de marketing. Manejas las campañas pagadas en Meta: propones campañas nuevas con los anuncios terminados de Creads (se suben en pausa), y cada día revisas las que corren para escalar las ganadoras, cortar las que pierden plata y renovar anuncios cansados (frecuencia alta, CTR bajando). Reglas: una campaña nueva necesita al menos 3 días y unas 1.000 impresiones antes de juzgarla; sube el presupuesto de a 20–30%; nunca pases el tope diario; explica cada movimiento con números.",
   },
   organico: {
-    name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["ideas", "feed", "organico", "material", "espia"],
-    mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas; al aprobarlos, Creads los produce solo (producción automática, con el sello «Hecho con Creads IA») y quedan en el banco. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
+    name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["personajes", "ideas", "feed", "organico", "material", "espia"],
+    mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas; al aprobarlos, Creads los produce solo (producción automática, con el sello «Hecho con Creads IA») y quedan en el banco. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Ejecutas la ESTRATEGIA DE PERSONAJES VIRALES: manejas la cuenta de cada personaje (el principal y el secundario) y la oficial de Creads; cada video del personaje respeta su personalidad, tono, frases y gestos (están en «Personajes de Creads»); el personaje entretiene y no vende de frente, y el embudo («comenta CREADS» → mensaje automático → link) convierte. En los primeros 30 días sigues el plan de validación (2 personajes, 10–15 videos cada uno, ganchos distintos) y cada semana dices cuál personaje está pegando y por qué. Si todavía no hay personajes guardados, propón 3 conceptos originales (nombre, arquetipo, personalidad, frases, tipos de reels, bio) para crearlos en Influencer IA. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
   },
 };
 export const BUILTIN_IDS = Object.keys(BUILTIN);
@@ -425,7 +427,17 @@ ${row("Instagram", v.igUserId)}
 - Respuestas automáticas a comentarios (webhook): ${v.appSecret.value && v.webhookToken.value ? "configuradas" : "FALTA (clave secreta de la app y clave del webhook, en la misma pantalla)"}`;
 }
 
-const READERS: Record<Source, () => Promise<string>> = { ideas: ideasSummary, feed: feedLook, conexiones: srcConexiones, espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+/** The brand's own characters (saved in Influencer IA in the owner's workspace). */
+async function srcPersonajes() {
+  const rows = await sbRest<{ name: string; notes: string | null; created_at: string }[]>("avatars?owner=eq.main&select=name,notes,created_at&order=created_at.desc&limit=100");
+  const list = rows.flatMap((r) => {
+    try { const m = JSON.parse(r.notes ?? "{}") as { kind?: string; traits?: Traits }; return m.kind === "personaje" ? [{ name: r.name, t: m.traits }] : []; } catch { return []; }
+  });
+  if (!list.length) return "Todavía no hay personajes propios guardados. Se crean en el estudio → Influencer IA → Crear personaje (con su personalidad).";
+  return `Personajes propios de Creads (${list.length}):\n${list.slice(0, 10).map((p) => `- ${p.name}${p.t ? `: ${describeCharacter(p.t).slice(0, 300)}${p.t.bible ? `\n  ${bibleText(p.t.bible)}` : ""}` : ""}`).join("\n")}`;
+}
+
+const READERS: Record<Source, () => Promise<string>> = { personajes: srcPersonajes, ideas: ideasSummary, feed: feedLook, conexiones: srcConexiones, espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
 
 const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {
@@ -596,7 +608,7 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   const r = await ask(a, {
     model, engine, deadline, maxTokens: a.search && !internalOf(a) ? 8000 : 6000,
     system: `${a.mission}\n\n${STYLE}`,
-    prompt: (research) => `${COMPANY}\n${isCeo || isGeneral ? CONTEXTO : BRIEFING}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
+    prompt: (research) => `${COMPANY}\n${isCeo || isGeneral ? CONTEXTO : BRIEFING}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n${ESTRATEGIA_PERSONAJES}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
   });
   if (r.error) return fail(r.error, r.usd);
   let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown>; acciones?: unknown[] };
@@ -812,7 +824,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     const r = await ask(a, {
       model: modelFor(engine, true), engine, deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
       system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}\n\n${chatActions(rights)}`,
-      prompt: (research) => `${COMPANY}\n${CONTEXTO}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
+      prompt: (research) => `${COMPANY}\n${CONTEXTO}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n${ESTRATEGIA_PERSONAJES}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
     });
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
     // a move proposed in the chat really goes to «Por aprobar» (never just said)

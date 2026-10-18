@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import ToolRun from "../../_parts/tool-run";
 import { btnCls, cardCls, ghostCls, inputCls, PageHead } from "../../_parts/ui";
-import { TIERS, cleanTraits, fieldsFor, sheetPrompt, surprise, type Tier, type Traits } from "@/lib/influencer/traits";
+import { ARCHETYPES, TIERS, cleanTraits, fieldsFor, sheetPrompt, surprise, type Bible, type Tier, type Traits } from "@/lib/influencer/traits";
 
 // Influencer IA → Crear personaje: pick the type and each trait (or «Sorpréndeme»), see the instruction the
 // AI will get (editable), create the sheet with «Crear personaje» (price shown before), and save it.
@@ -32,7 +32,8 @@ export default function Creador() {
     const next = cur.includes(id) ? cur.filter((v) => v !== id) : max === 1 ? [id] : cur.length < max ? [...cur, id] : cur;
     return { ...x, picks: { ...x.picks, [key]: next } };
   });
-  const setTier = (tier: Tier) => setT((x) => cleanTraits({ ...x, tier }));
+  const setTier = (tier: Tier) => setT((x) => ({ ...cleanTraits({ ...x, tier }), bible: x.bible }));
+  const setBible = (b: Partial<Bible>) => setT((x) => ({ ...x, bible: { ...(x.bible ?? {}), ...b } }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,7 +55,7 @@ export default function Creador() {
 
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setT((x) => surprise(x))} className={btnCls}>🎲 Sorpréndeme</button>
-          <button type="button" onClick={() => setT((x) => ({ tier: x.tier, picks: {} }))} className={ghostCls}>Limpiar</button>
+          <button type="button" onClick={() => setT((x) => ({ tier: x.tier, picks: {}, bible: x.bible }))} className={ghostCls}>Limpiar</button>
           <span className="text-xs text-muted">«Sorpréndeme» rellena al azar lo que no elegiste.</span>
         </div>
 
@@ -86,6 +87,35 @@ export default function Creador() {
             <span className="font-semibold text-muted">Descripción libre (opcional)</span>
             <textarea rows={3} maxLength={4000} value={t.extra ?? ""} onChange={(e) => setT((x) => ({ ...x, extra: e.target.value }))} placeholder="Ej: siempre anda con una taza de café y una chaqueta de cuero gastada." className={inputCls} />
           </label>
+        </div>
+      </section>
+
+      <section className={cardCls} aria-labelledby="h-bible">
+        <div className="flex flex-col gap-1">
+          <h2 id="h-bible" className="font-semibold">Su personalidad (opcional, para sus videos)</h2>
+          <p className="text-xs text-muted">Un personaje viral no es solo una cara: es alguien reconocible, con su humor, sus frases y sus gestos. Esto no cambia la ficha; lo usan los guiones y el Community manager para que cada video suene a él.</p>
+        </div>
+        <div role="radiogroup" aria-label="Arquetipo" className="grid gap-2 sm:grid-cols-3">
+          {ARCHETYPES.map((a) => (
+            <button key={a.id} type="button" role="radio" aria-checked={t.bible?.arquetipo === a.id} onClick={() => setBible({ arquetipo: t.bible?.arquetipo === a.id ? undefined : a.id })}
+              className={`flex flex-col gap-0.5 rounded-xl border p-3 text-left ${t.bible?.arquetipo === a.id ? "border-accent bg-accent/10" : "border-line hover:border-muted"}`}>
+              <b className="text-sm">{a.label}</b><span className="text-xs text-muted">{a.hint}</span>
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            ["personalidad", "Personalidad", "Ej: un lord inglés que se toma todo con una seriedad absurda."],
+            ["tono", "Tono", "Ej: solemne, pausado, nunca se ríe de sus propios chistes."],
+            ["frases", "Frases que repite", "Ej: «Esto es inaceptable, querido.»"],
+            ["gestos", "Gestos que lo identifican", "Ej: se acomoda el monóculo antes de cada frase."],
+            ["formatos", "Tipos de reels", "Ej: reacciones a cosas cotidianas, POVs, mini historias de 3 partes."],
+          ] as [keyof Bible, string, string][]).map(([k, label, ph]) => (
+            <label key={k} className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold text-muted">{label}</span>
+              <input value={t.bible?.[k] ?? ""} maxLength={800} onChange={(e) => setBible({ [k]: e.target.value })} placeholder={ph} className={inputCls} />
+            </label>
+          ))}
         </div>
       </section>
 

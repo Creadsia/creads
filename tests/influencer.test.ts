@@ -57,3 +57,13 @@ test("a sheet without references is drawn from the text; with references it uses
   assert.equal(b.endpoint, "fal-ai/nano-banana-pro/edit");
   assert.deepEqual(b.body.image_urls, ["/api/media/ws/a.png"]);
 });
+
+test("the character's personality is kept (and trimmed) for the marketing team", async () => {
+  const { bibleText } = await import("../src/lib/influencer/traits");
+  const t = cleanTraits({ tier: "animal", picks: { especie: ["perro"] }, bible: { arquetipo: "refinado", frases: "Esto es inaceptable, querido.", tono: "x".repeat(2000), otro: "no" } as never });
+  assert.equal(t.bible?.arquetipo, "refinado");
+  assert.equal(t.bible?.tono?.length, 800);
+  assert.equal((t.bible as Record<string, unknown>).otro, undefined);
+  assert.match(bibleText(t.bible), /Tierno \/ refinado.*inaceptable/);
+  assert.equal(cleanTraits({ tier: "normal", picks: {}, bible: { arquetipo: "inventado" } }).bible, undefined);
+});

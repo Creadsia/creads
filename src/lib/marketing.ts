@@ -54,7 +54,7 @@ export const DEFAULT_MARKETING = (): MarketingState => ({
   cuentas: [],
   autoReply: {
     on: false,
-    palabras: ["dónde", "donde", "cómo lo hicieron", "como lo hicieron", "qué app", "que app", "link", "info"],
+    palabras: ["creads", "dónde", "donde", "cómo lo hicieron", "como lo hicieron", "qué app", "que app", "link", "info"],
     mensaje: "¡Gracias! 🙌 Este video lo hicimos con Creads IA. Si quieres hacer los tuyos, aquí puedes probar: https://www.creadsia.com",
     publico: "¡Gracias! Te escribimos por mensaje 🙌",
     maxPorHora: 30,

@@ -89,8 +89,18 @@ export const FIELDS: Field[] = [
   { key: "accesorios", label: "Accesorios", max: 3, opts: [o("lentes", "Lentes", "glasses"), o("audifonos", "Audífonos", "headphones"), o("joyas", "Joyas", "jewelry"), o("sombrero", "Sombrero", "a hat"), o("bolso", "Bolso", "a bag")] },
 ];
 
+/** The character's «bible»: who it is in its videos (for the Community manager and the scripts). */
+export const ARCHETYPES: { id: string; label: string; hint: string }[] = [
+  { id: "icono", label: "Absurdo / icónico", hint: "Raro, simpático, casi meme: un gurú absurdo, un viejo sabio extraño, un excéntrico en situaciones imposibles." },
+  { id: "refinado", label: "Tierno / refinado", hint: "«Internet ama esto»: un perrito lord, un zorro filósofo, un gato ejecutivo diciendo cosas ridículamente serias." },
+  { id: "caos", label: "Caos / humor", hint: "Para trends: comenta lo cotidiano, POVs, reacciones, sketches cortos." },
+];
+export interface Bible { arquetipo?: string; personalidad?: string; tono?: string; frases?: string; gestos?: string; formatos?: string }
+
 export interface Traits {
   tier: Tier;
+  /** Personality, tone, catchphrases… (optional). */
+  bible?: Bible;
   picks: Record<string, string[]>;
   /** Body/fur/skin color for Raro, Total and Animales (hex). */
   color?: string;
@@ -115,7 +125,14 @@ export function cleanTraits(t: Traits): Traits {
   }
   const color = tier !== "normal" && typeof t.color === "string" && /^#[0-9a-f]{6}$/i.test(t.color) ? t.color.toUpperCase() : undefined;
   const extra = typeof t.extra === "string" ? t.extra.trim().slice(0, 4000) : "";
-  return { tier, picks, ...(color ? { color } : {}), ...(extra ? { extra } : {}) };
+  const bible: Bible = {};
+  const src = (t.bible ?? {}) as Record<string, unknown>;
+  if (ARCHETYPES.some((a) => a.id === src.arquetipo)) bible.arquetipo = String(src.arquetipo);
+  for (const k of ["personalidad", "tono", "frases", "gestos", "formatos"] as const) {
+    const v = typeof src[k] === "string" ? (src[k] as string).trim().slice(0, 800) : "";
+    if (v) bible[k] = v;
+  }
+  return { tier, picks, ...(color ? { color } : {}), ...(extra ? { extra } : {}), ...(Object.keys(bible).length ? { bible } : {}) };
 }
 
 /** «Sorpréndeme»: fills every field that wasn't chosen with a random allowed option. */
@@ -182,4 +199,11 @@ export function characterLimit(plan: string | null, unlimited = false): number {
   if (p.includes("studio")) return Infinity;
   if (p.includes("plus")) return 3;
   return 1;
+}
+
+/** The bible in plain Spanish, for the marketing agents. */
+export function bibleText(b?: Bible): string {
+  if (!b) return "";
+  const a = ARCHETYPES.find((x) => x.id === b.arquetipo)?.label;
+  return [a && `Arquetipo: ${a}`, b.personalidad && `Personalidad: ${b.personalidad}`, b.tono && `Tono: ${b.tono}`, b.frases && `Frases repetibles: ${b.frases}`, b.gestos && `Gestos: ${b.gestos}`, b.formatos && `Tipos de reels: ${b.formatos}`].filter(Boolean).join(" · ");
 }
