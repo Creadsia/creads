@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin";
+import { currentUser, isAdmin } from "@/lib/admin";
+import { isTheOwner } from "@/lib/auth";
 import { chat, clearChat, findAgent, loadChat, loadState } from "@/lib/oficina";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,9 @@ export async function POST(req: Request) {
   if (text.length > 4000) return NextResponse.json({ error: "El mensaje es muy largo (máximo 4.000 caracteres)." }, { status: 400 });
   try {
     if (!(await known(id))) return NextResponse.json({ error: "Agente desconocido." }, { status: 400 });
-    return NextResponse.json({ msgs: await chat(id, text) });
+    const u = await currentUser();
+    const who = isTheOwner(u) ? "Gastón (el dueño)" : `${u?.name?.trim() || u?.email.split("@")[0] || "un socio"} (socio de Gastón, con acceso completo al Panel)`;
+    return NextResponse.json({ msgs: await chat(id, text, who) });
   } catch (e) {
     console.error("oficina chat", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "No se pudo guardar la conversación. Prueba de nuevo." }, { status: 502 });

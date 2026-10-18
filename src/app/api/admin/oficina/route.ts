@@ -62,6 +62,7 @@ export async function PATCH(req: Request) {
     }
     await commit((s) => {
       if (typeof b?.on === "boolean") s.on = b.on;
+      if (b?.engine === "claude" || b?.engine === "grok") s.engine = b.engine;
       if (b?.budgetUsd !== undefined) s.budgetUsd = Math.round(Number(b.budgetUsd) * 100) / 100;
       const id = typeof b?.agent === "string" ? b.agent : "";
       if (id && findAgent(s, id)) {

@@ -14,6 +14,7 @@ import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposa
 type AgentView = Agent & { cap: number };
 interface View {
   ready: boolean; model: string; modelCeo: string; maxCustom: number;
+  engine: "claude" | "grok" | null; engineWanted: "claude" | "grok"; engines: { claude: boolean; grok: boolean };
   state: Pick<OfficeState, "on" | "budgetUsd" | "spend" | "last" | "tasks" | "pending" | "encargos">;
   bridge: boolean;
   agents: AgentView[];
@@ -515,8 +516,18 @@ export default function Oficina() {
           <label htmlFor="of-tope">Tope al mes (US$)</label>
           <input id="of-tope" inputMode="decimal" value={budget} onChange={(e) => setBudget(e.target.value)} className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 font-mono" />
           <button className={btn}>Guardar</button>
-          <span className="text-xs text-muted">Cada agente usa su % del tope (el chat también cuenta); si lo gasta, para hasta el mes siguiente. Se paga con el saldo de console.x.ai.</span>
+          <span className="text-xs text-muted">Cada agente usa su % del tope (el chat también cuenta); si lo gasta, para hasta el mes siguiente. Se paga con el saldo de {v.engine === "claude" ? "Anthropic (console.anthropic.com) y, para las búsquedas, xAI" : "console.x.ai"}.</span>
         </form>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm">
+          <span className="font-semibold">Cerebro de la oficina:</span>
+          {(["claude", "grok"] as const).map((e) => (
+            <button key={e} type="button" disabled={!v.engines[e]} onClick={() => call("PATCH", { engine: e })} aria-pressed={v.engine === e}
+              className={`rounded-lg border px-3 py-1.5 font-semibold disabled:opacity-40 ${v.engine === e ? "border-accent bg-accent/15 text-accent-text" : "border-line"}`}>
+              {e === "claude" ? "Claude" : "Grok"}{!v.engines[e] ? " (falta su clave)" : ""}
+            </button>
+          ))}
+          <span className="text-xs text-muted">Piensa y conversa con {v.engine === "claude" ? "Claude" : "Grok"} ({v.model}). Las búsquedas en la web y en X siempre las hace Grok.</span>
+        </div>
       </section>
 
       <section className={card} aria-labelledby="h-mem">
@@ -537,7 +548,7 @@ export default function Oficina() {
         </details>
       </section>
 
-      <p className="text-xs text-muted">Los agentes solo leen y proponen: no pueden cambiar nada en Creads, gastar plata de clientes ni escribirles. Usan Grok ({v.model}; el CEO {v.modelCeo}). Antes de enviarles preguntas de clientes se quitan correos, teléfonos y números.</p>
+      <p className="text-xs text-muted">Los agentes solo leen y proponen: no pueden cambiar nada en Creads, gastar plata de clientes ni escribirles. Piensan con {v.engine === "claude" ? "Claude" : "Grok"} ({v.model}; los jefes {v.modelCeo}). Antes de enviarles preguntas de clientes se quitan correos, teléfonos y números.</p>
     </div>
   );
 }
