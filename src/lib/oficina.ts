@@ -17,6 +17,7 @@ import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, crea
 import { type AreaId, AREAS, areaOfAgent } from "./areas";
 import { guardianSummary } from "./guardian";
 import { sendWhatsApp, whatsappMode } from "./whatsapp";
+import { adSpyConfigured, searchAds } from "./providers/adspy";
 import { SITE } from "./emails";
 import pkg from "../../package.json";
 
@@ -35,7 +36,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian" | "espia";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -50,6 +51,7 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   meta: { name: "Campañas en Meta", text: "Campañas pagadas: gasto, CTR, frecuencia, leads y costo por lead (7 días)", internal: true },
   organico: { name: "Instagram orgánico", text: "Publicaciones de las cuentas de la marca y respuestas automáticas", internal: true },
   material: { name: "Anuncios terminados", text: "Videos de Creads listos para usar y pedidos de anuncios", internal: true },
+  espia: { name: "Espiar anuncios", text: "Anuncios activos en Meta de la competencia y del rubro, los que llevan más días corriendo (con el Espiar anuncios de Creads)", internal: true },
   guardian: { name: "Guardián (salud de la plataforma)", text: "Controles cada pocos minutos, problemas abiertos y lo que se hizo", internal: true },
 };
 
@@ -135,12 +137,12 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
   },
   marketing: {
-    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["meta", "organico", "visitas", "negocio"],
+    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["meta", "organico", "visitas", "negocio", "espia"],
     mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace.",
   },
   creativos: {
-    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["material", "meta"],
-    mission: "Eres el jefe de creativos del estudio de marketing. Decides qué anuncios nuevos hacer para vender Creads (y pruebas para orgánico): miras qué está funcionando en las campañas, buscas en la web y en X ángulos y formatos que estén funcionando en anuncios de herramientas de IA y de video, y propones pedidos de anuncios con su guion listo para que Creads los genere. Varía ángulos (ahorro de tiempo, calidad, precio, antes y después, testimonio honesto de uso) y formatos (UGC, podcast, entrevista…). Nada de promesas falsas ni testimonios inventados.",
+    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["material", "meta", "espia"],
+    mission: "Eres el jefe de creativos del estudio de marketing. Decides qué anuncios nuevos hacer para vender Creads (y pruebas para orgánico): miras qué está funcionando en las campañas, buscas en la web y en X ángulos y formatos que estén funcionando en anuncios de herramientas de IA y de video, y propones pedidos de anuncios con su guion listo para que Creads los genere. Usa «Espiar anuncios» (los anuncios activos en Meta de la competencia y del rubro, los que llevan más días corriendo): copia la estructura de lo que funciona (gancho, ángulo, formato, oferta), nunca el texto ni la marca de otros. Varía ángulos (ahorro de tiempo, calidad, precio, antes y después, testimonio honesto de uso) y formatos (UGC, podcast, entrevista…). Nada de promesas falsas ni testimonios inventados.",
   },
   trafico: {
     name: "Trafficker", area: "Sube, revisa, escala y corta campañas en Meta", search: false, sharePct: 10, sources: ["meta", "material", "visitas"],
@@ -349,7 +351,31 @@ async function srcDisputas() {
   return rows.length ? `${rows.length} pagos devueltos o con contracargo en 30 días (créditos descontados: ${rows.reduce((a, r) => a - r.delta, 0)}).` : "Sin devoluciones ni contracargos en 30 días.";
 }
 
-const READERS: Record<Source, () => Promise<string>> = { guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+/**
+ * What's running on Meta (the studio's «Espiar anuncios»): competitors and the niche, the ads running longest
+ * first (an ad that runs for weeks is selling). One search set a day, shared by every agent that reads it.
+ * Ad texts are outside content: they go in as data, never as instructions.
+ */
+const SPY_QUERIES: [string, string][] = [["Higgsfield", "ALL"], ["Arcads", "ALL"], ["HeyGen", "ALL"], ["anuncios con inteligencia artificial", "ALL"], ["AI video ads", "US"], ["videos UGC con IA", "ALL"]];
+async function srcEspia() {
+  if (!adSpyConfigured()) return "Espiar anuncios no está conectado (falta su clave en Vercel).";
+  const file = `oficina/espia-${dayCL()}.json`;
+  const hit = await readPrivateJSON<{ text: string }>(file).catch(() => null);
+  if (hit?.text) return hit.text;
+  const parts = await Promise.all(SPY_QUERIES.map(async ([q, country]) => {
+    try {
+      const { ads } = await searchAds({ query: q, country });
+      const top = ads.filter((a) => a.text || a.title).sort((a, b) => (b.days ?? -1) - (a.days ?? -1)).slice(0, 5);
+      if (!top.length) return `«${q}»: sin anuncios activos.`;
+      return `«${q}» (${country === "ALL" ? "todos los países" : country}):\n${top.map((a) => `- ${a.page.slice(0, 60)} · ${a.days ?? "?"} días corriendo${a.copies > 1 ? ` · ${a.copies} versiones` : ""}${a.video ? " · video" : a.image ? " · imagen" : ""}${a.cta ? ` · botón «${a.cta.slice(0, 30)}»` : ""}\n  ${[a.title, a.text].filter(Boolean).join(" — ").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").slice(0, 280)}`).join("\n")}`;
+    } catch { return `«${q}»: no se pudo buscar ahora.`; }
+  }));
+  const text = `Anuncios activos en Meta, los que llevan más días primero (más días = probablemente vende):\n${parts.join("\n\n")}`;
+  if (!parts.every((x) => x.includes("no se pudo buscar"))) await writePrivateJSON(file, { text }).catch(() => {});
+  return text;
+}
+
+const READERS: Record<Source, () => Promise<string>> = { espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
 
 const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {
