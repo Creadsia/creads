@@ -70,3 +70,10 @@ ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_FAST_MODEL, CLAUDE_OFFICE_MODEL, CLAUDE_
 ## 8. Cómo verificar antes de publicar
 
 `npx tsc --noEmit -p .`, `npx eslint src tests`, `npm test` (123 pruebas al 18-oct), `npm run build`. Commits en inglés; textos de la plataforma en español (tú).
+
+## Influencer IA: «Mi personaje en un video» (18 Oct 2026, night)
+- New tool `personaje-en-video` (Recrear opens it by default with a saved character): free check before charging (`/api/revisar-video`, `lib/influencer/swap.ts` analyzeVideo/judge, cached per video) → Nano Banana Pro puts the character in the first frame where the main person's upper body is visible (frame + sheet + face crop) → Claude reviews the picture (1 free redo; refunded if still wrong) → Kling v3 Motion Control with `elements` (@Element1 face lock from the face kit cut out of the sheet, stored in the avatar's `notes.face`) → Claude reviews 6 frames of the video (1 free redo) → delivered. Job id `swap:<json>`; steps advance from the status check, locked with `hit_rate` on a hash of the job.
+- Video > first shot or late start: only the usable part is cut, used and billed.
+- Editar video now takes 3–30 s (cut into ≤3 parts, edited at once, joined: `partsPlan/cutParts/joinParts`). Silent option on all recreate tools (`sound`).
+- Panel → Plataforma → Calidad de videos (`lib/calidad.ts`): clean-first-try %, free redos, failures, top review problems, failure reasons, learned rules (format `personaje`) to approve.
+- Not yet tested with real generations (costs credits). Research: project doc `claude/influencer-video-calidad.md`.
