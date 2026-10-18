@@ -40,6 +40,8 @@ export async function GET(req: Request) {
   try {
     const st = await runGuardian();
     if (!st.skipped) wakeAreaAgents(st);
+    // the automatic video producer moves forward (its own request, its own time)
+    after(async () => { const { kickProduction } = await import("@/lib/autoprod"); await kickProduction(); });
     // the office's extra rounds of the day (Oficina → «Ritmo de trabajo»), riding on this 5-minute ping
     after(async () => {
       const { officeRoundDue, runAll, runMarketingRound } = await import("@/lib/oficina");

@@ -33,6 +33,18 @@ export interface MarketingState {
   respuestas: { day: string; count: number; hour: string; hourCount: number; seen: string[] };
   /** Ideas and references the team leaves for the content agents (text, a link, a picture). */
   ideas?: Idea[];
+  /** Automatic production: approved ad requests become finished videos without anyone in the studio. */
+  autoProd?: AutoProd;
+  produccion?: ProdJob[];
+}
+export interface AutoProd { on: boolean; maxPorDia: number; modelo: string; sello: boolean }
+export const DEFAULT_AUTOPROD: AutoProd = { on: true, maxPorDia: 3, modelo: "", sello: true };
+export type ProdEstado = "cola" | "cortes" | "escenas" | "generando" | "revisando" | "armando" | "listo" | "error";
+export interface ProdJob {
+  id: string; pedidoId: string; titulo: string; at: string; updatedAt: string; estado: ProdEstado; paso?: string;
+  formato: string; idioma: "es-CL" | "en"; guion: string; modelo?: string;
+  cortes?: { tipo: string; texto: string }[]; adId?: string; clipIds?: string[]; reintentos?: Record<string, number>; revisado?: boolean;
+  videoUrl?: string; error?: string;
 }
 export interface Idea { id: string; at: string; by: string; texto: string; link?: string; imagenUrl?: string; imagenDesc?: string; estado: "nueva" | "usada" | "descartada" }
 
@@ -96,8 +108,11 @@ async function adVideo(adId: string) {
 
 /** What the «Abrir en Crear anuncio» button needs (the studio reads it from sessionStorage). */
 export const handoffKey = TO_CREAR_KEY;
-export const addPedido = (p: Omit<Pedido, "id" | "at" | "estado">) =>
-  commitMarketing((s) => { s.pedidos = [{ ...p, id: uid("ped"), at: new Date().toISOString(), estado: "pendiente" as const }, ...s.pedidos].slice(0, 60); });
+export async function addPedido(p: Omit<Pedido, "id" | "at" | "estado">): Promise<Pedido> {
+  const pedido: Pedido = { ...p, id: uid("ped"), at: new Date().toISOString(), estado: "pendiente" };
+  await commitMarketing((s) => { s.pedidos = [pedido, ...s.pedidos].slice(0, 60); });
+  return pedido;
+}
 
 // ---------------------------------------------------------------- paid campaigns (Trafficker)
 

@@ -43,13 +43,13 @@ export const DEFAULT_PIXEL = "2078637222831496";
 // ---------------------------------------------------------------- encryption
 
 const key = () => createHash("sha256").update(`creads:meta-conexiones:${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`).digest();
-function seal(text: string) {
+export function seal(text: string) {
   const iv = randomBytes(12);
   const c = createCipheriv("aes-256-gcm", key(), iv);
   const body = Buffer.concat([c.update(text, "utf8"), c.final()]);
   return `v1.${iv.toString("base64url")}.${c.getAuthTag().toString("base64url")}.${body.toString("base64url")}`;
 }
-function open(sealed: string): string {
+export function open(sealed: string): string {
   const [v, iv, tag, body] = sealed.split(".");
   if (v !== "v1" || !iv || !tag || !body) return "";
   try {

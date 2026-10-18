@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CampaignView, Idea, MarketingState, Pedido } from "@/lib/marketing";
+import type { AutoProd, CampaignView, Idea, MarketingState, Pedido, ProdJob } from "@/lib/marketing";
 import { TO_CREAR_KEY } from "@/lib/guiones";
 
 // Panel → Marketing: the marketing studio's controls. Connection with Meta, the daily cap, the campaigns
@@ -10,6 +10,7 @@ import { TO_CREAR_KEY } from "@/lib/guiones";
 
 interface Data {
   conexion: { anuncios: boolean; token: boolean; instagramAnuncios: boolean; webhook: boolean; pixel: boolean; capi: boolean; error: string };
+  autoProd: AutoProd; modelosVideo: { id: string; label: string; usdPorSeg: number }[];
   conexiones: Record<ConnKey, { value: string; from: string | null }> & { updatedAt: string | null; by: string | null };
   estado: MarketingState; respuestasHoy: number; campanasMeta: CampaignView[]; moneda: string | null;
   anuncios: { id: string; title: string | null; format: string | null; final_url: string; created_at: string }[];
@@ -124,6 +125,8 @@ export default function Marketing() {
         )}
       </section>
 
+      <Produccion d={d} patch={(body) => call("PATCH", body)} />
+
       <section className={card} aria-labelledby="h-ped">
         <h3 id="h-ped" className="text-lg font-bold">Pedidos de anuncios (de Creativos)</h3>
         {s.pedidos.length ? (
@@ -138,7 +141,10 @@ export default function Marketing() {
                 </div>
                 {p.idea && <p className="text-xs text-muted">{p.idea}</p>}
                 <details><summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver guion</summary><p className="whitespace-pre-wrap pt-2 text-sm">{p.guion}</p></details>
-                <button type="button" onClick={() => openInCrear(p)} className={`${btn} self-start`}>Abrir en Crear anuncio</button>
+                <span className="flex flex-wrap gap-2">
+                  {p.estado === "pendiente" && d.autoProd.on && !(s.produccion ?? []).some((j) => j.pedidoId === p.id) && <button type="button" onClick={() => call("PATCH", { producir: p.id })} className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink">Producir automáticamente</button>}
+                  <button type="button" onClick={() => openInCrear(p)} className={`${btn} self-start`}>Abrir en Crear anuncio</button>
+                </span>
               </li>
             ))}
           </ul>
@@ -388,6 +394,58 @@ function Ideas({ ideas, reload, patch }: { ideas: Idea[]; reload: (x: Data) => v
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+const PROD_LABEL: Record<ProdJob["estado"], string> = { cola: "En cola", cortes: "Dividiendo el guion", escenas: "Dirigiendo escenas", generando: "Generando video", revisando: "Revisión de calidad", armando: "Armando con subtítulos y sello", listo: "✓ Listo", error: "⚠ Se detuvo" };
+
+/** Marketing → Producción automática: approved requests become finished videos without anyone in the studio. */
+function Produccion({ d, patch }: { d: Data; patch: (body: unknown) => Promise<boolean> }) {
+  const a = d.autoProd;
+  const jobs = d.estado.produccion ?? [];
+  const today = new Date().toISOString().slice(0, 10);
+  const hoy = jobs.filter((j) => j.estado !== "cola" && j.at.slice(0, 10) === today).length;
+  return (
+    <section className={card} aria-labelledby="h-prod">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-col gap-1">
+          <h3 id="h-prod" className="text-lg font-bold">Producción automática de videos</h3>
+          <p className="text-xs text-muted">Cuando apruebas un pedido de video (de Creativos o del Community manager), Creads lo hace solo: divide el guion, dirige las escenas, genera, revisa la calidad (rehace gratis lo grave), lo arma con subtítulos {a.sello ? "y el sello «Hecho con Creads IA»" : ""} y lo deja en el banco de contenido. Avanza cada 5 minutos; un video toma unos 15–30 minutos.</p>
+        </div>
+        <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={a.on} onChange={(e) => patch({ autoProd: { on: e.target.checked } })} className="h-4 w-4 accent-[var(--accent)]" />Encendida</label>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <label className="flex items-center gap-2">Máximo de videos nuevos al día
+          <select value={a.maxPorDia} onChange={(e) => patch({ autoProd: { maxPorDia: Number(e.target.value) } })} className="rounded-lg border border-line bg-surface px-2 py-1">
+            {[1, 2, 3, 5, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-2">Modelo
+          <select value={a.modelo} onChange={(e) => patch({ autoProd: { modelo: e.target.value } })} className="rounded-lg border border-line bg-surface px-2 py-1">
+            <option value="">El más económico disponible</option>
+            {d.modelosVideo.map((m) => <option key={m.id} value={m.id}>{m.label} (~US${(m.usdPorSeg * 30).toFixed(2)} por video de 30 s)</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={a.sello} onChange={(e) => patch({ autoProd: { sello: e.target.checked } })} className="accent-[var(--accent)]" />Sello «Hecho con Creads IA»</label>
+        <span className="text-xs text-muted">Hoy: {hoy} de {a.maxPorDia}</span>
+      </div>
+      {jobs.length ? (
+        <ul className="flex flex-col divide-y divide-line">
+          {jobs.slice(0, 15).map((j) => (
+            <li key={j.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+              <span className="flex min-w-0 flex-col">
+                <b className="truncate">{j.titulo}</b>
+                <span className={`text-xs ${j.estado === "error" ? "text-bad" : "text-muted"}`}>{PROD_LABEL[j.estado]}{j.estado === "error" ? `: ${j.error ?? ""}` : j.paso ? ` · ${j.paso}` : ""}</span>
+              </span>
+              <span className="flex gap-2">
+                {j.videoUrl && <a href={j.videoUrl} target="_blank" rel="noopener noreferrer" className={btn}>Ver video</a>}
+                {j.estado === "error" && <button type="button" onClick={() => patch({ reintentar: j.pedidoId })} className={btn}>Reintentar</button>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-sm text-muted">Todavía no hay videos en producción. Aprueba un pedido de video y aparece aquí.</p>}
     </section>
   );
 }

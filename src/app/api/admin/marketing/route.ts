@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { currentUser, isAdmin } from "@/lib/admin";
 import { addIdea, campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
 import { metaAds, metaToken, probarMeta } from "@/lib/meta-graph";
+import { videoProviders } from "@/lib/providers";
+import { DEFAULT_AUTOPROD } from "@/lib/marketing";
 import { metaConnView, saveMetaConn } from "@/lib/meta-conexiones";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +27,8 @@ export async function GET() {
       error: metaError,
     },
     conexiones: view,
+    autoProd: { ...DEFAULT_AUTOPROD, ...(m.autoProd ?? {}) },
+    modelosVideo: videoProviders.filter((p) => p.configured() && !p.silent && !p.needsImage).map((p) => ({ id: p.id, label: p.label, usdPorSeg: p.usdPerSecond })),
     estado: m, respuestasHoy: hoy, campanasMeta: camp?.rows ?? [], moneda: camp && "currency" in camp ? camp.currency : null, anuncios: ads,
   });
 }
@@ -37,6 +41,16 @@ export async function PATCH(req: Request) {
     const me = await currentUser();
     const e = await saveMetaConn(b.conexiones, me?.email ?? "panel");
     if (e) return bad(e);
+  }
+  if (typeof b?.producir === "string" || typeof b?.reintentar === "string") {
+    const { enqueue, kickProduction } = await import("@/lib/autoprod");
+    if (typeof b.reintentar === "string") await commitMarketing((s) => { s.produccion = (s.produccion ?? []).filter((j) => !(j.pedidoId === b.reintentar && j.estado === "error")); });
+    const ped = (await loadMarketing()).pedidos.find((p) => p.id === (b.producir ?? b.reintentar));
+    if (!ped) return bad("Ese pedido ya no existe.");
+    const ok = await enqueue(ped);
+    if (!ok) return bad("La producción automática está apagada o ese pedido ya está en producción.");
+    await kickProduction();
+    return GET();
   }
   if (b?.capUsd !== undefined && !(Number(b.capUsd) >= 0 && Number(b.capUsd) <= 5000)) return bad("El tope diario debe ser entre US$0 y US$5.000.");
   if (b?.cuenta && (!/^\d{5,30}$/.test(String(b.cuenta.igUserId ?? "")) || String(b.cuenta.nombre ?? "").trim().length < 2)) return bad("La cuenta necesita un nombre y su número de Instagram (solo dígitos).");
@@ -58,6 +72,16 @@ export async function PATCH(req: Request) {
     if (typeof b?.idea === "string" && ["nueva", "usada", "descartada"].includes(b.estado)) {
       const i = (s.ideas ?? []).find((x) => x.id === b.idea);
       if (i) i.estado = b.estado;
+    }
+    if (b?.autoProd && typeof b.autoProd === "object") {
+      const cur = { ...DEFAULT_AUTOPROD, ...(s.autoProd ?? {}) };
+      const a = b.autoProd;
+      s.autoProd = {
+        on: typeof a.on === "boolean" ? a.on : cur.on,
+        maxPorDia: a.maxPorDia !== undefined ? Math.max(0, Math.min(20, Math.round(Number(a.maxPorDia) || 0))) : cur.maxPorDia,
+        modelo: typeof a.modelo === "string" ? (a.modelo === "" || videoProviders.some((p) => p.id === a.modelo) ? a.modelo : cur.modelo) : cur.modelo,
+        sello: typeof a.sello === "boolean" ? a.sello : cur.sello,
+      };
     }
     if (typeof b?.borrarIdea === "string") s.ideas = (s.ideas ?? []).filter((x) => x.id !== b.borrarIdea);
     if (typeof b?.pedido === "string" && ["pendiente", "en producción", "listo"].includes(b.estado)) {

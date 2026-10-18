@@ -183,7 +183,7 @@ const BUILTIN: Record<string, AgentConfig> = {
   },
   organico: {
     name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["ideas", "feed", "organico", "material", "espia"],
-    mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
+    mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas; al aprobarlos, Creads los produce solo (producción automática, con el sello «Hecho con Creads IA») y quedan en el banco. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
   },
 };
 export const BUILTIN_IDS = Object.keys(BUILTIN);
@@ -983,9 +983,15 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
       return { ok: true, mensaje: "Agregado a la Memoria de Creads." };
     }
     if (a.tipo === "anuncio") {
-      await addPedido({ titulo: a.titulo, formato: a.formato, idioma: a.idioma, guion: a.guion, idea: a.idea });
-      await finish("aprobada", "Pedido creado: ábrelo en Marketing → Pedidos de anuncios para generarlo en Creads.");
-      return { ok: true, mensaje: "Pedido de anuncio creado (Marketing → Pedidos de anuncios)." };
+      const pedido = await addPedido({ titulo: a.titulo, formato: a.formato, idioma: a.idioma, guion: a.guion, idea: a.idea });
+      const { enqueue, kickProduction } = await import("./autoprod");
+      const auto = await enqueue(pedido).catch(() => false);
+      if (auto) await kickProduction();
+      const msg = auto
+        ? "Video en producción automática: Creads lo genera, lo revisa y lo arma solo (unos 15–30 minutos). Lo ves avanzar en Marketing → Producción automática y queda en el banco de contenido."
+        : "Pedido creado: ábrelo en Marketing → Pedidos de anuncios para generarlo en Creads.";
+      await finish("aprobada", msg);
+      return { ok: true, mensaje: msg };
     }
     if (a.tipo === "campana") {
       const r = await createPausedCampaign(a.spec);
