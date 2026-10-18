@@ -40,7 +40,8 @@ REGLAS DE LA MARCA
 ESTADO DEL LANZAMIENTO
 - Todavía no está lanzado al público. Se lanza primero en Chile, pensando en ir a todo el mundo (versión en inglés en /en).
 - Hecho: cobros con Mercado Pago, correos automáticos, resumen diario del dueño, alarmas de errores, límites antifraude, estadísticas, guías de ayuda, revisión independiente del código.
-- Falta (lo principal): pasarela de cobro mensual automático (Flow o Stripe, esperando la SpA), ambiente de pruebas, Vercel Pro y Supabase Pro, verificación en dos pasos en todas las cuentas, topes de gasto en proveedores, abogado (términos, privacidad, uso de caras y voces), contador (IVA, boletas), cuota de Veo con Google, beta cerrada con 5 a 10 clientes reales y el «Día 1».
+- Cobros: decidido (17 oct) abrir una LLC en EE.UU. y cobrar en US$ con Stripe (planes con renovación automática, recibos en US$).
+- Falta (lo principal): la LLC y Stripe conectado, ambiente de pruebas, Vercel Pro y Supabase Pro, verificación en dos pasos en todas las cuentas, topes de gasto en proveedores, abogado (términos, privacidad, uso de caras y voces), contador (IVA, boletas), cuota de Veo con Google, beta cerrada con 5 a 10 clientes reales y el «Día 1».
 - Trabajo técnico pendiente: fila de generación por proveedor, prueba de carga, pruebas automáticas del recorrido completo, gasto real por proveedor en el Panel.
 
 EQUIPO
