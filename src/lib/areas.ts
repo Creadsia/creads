@@ -4,7 +4,7 @@
 
 export type AreaId = "direccion" | "lanzamiento" | "numeros" | "marketing" | "clientes" | "plataforma";
 export type PanelTab =
-  | "oficina" | "lanzamiento"
+  | "oficina" | "equipo" | "lanzamiento"
   | "estadisticas" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "modelos"
   | "marketing"
   | "clientes" | "registros"
@@ -22,7 +22,7 @@ export interface Area {
 }
 
 export const AREAS: Area[] = [
-  { id: "direccion", name: "Dirección", what: "Tu CEO General: el resumen del día, lo que espera tu aprobación y todo el equipo.", tabs: [["oficina", "CEO General y equipo"]], agents: ["general"] },
+  { id: "direccion", name: "Dirección", what: "Tu CEO General: el resumen del día, lo que espera tu aprobación y todo el equipo.", tabs: [["oficina", "CEO General y agentes"], ["equipo", "Personas y accesos"]], agents: ["general"] },
   { id: "lanzamiento", name: "Lanzamiento", what: "Todo lo que falta para abrir Creads al público, en orden.", tabs: [["lanzamiento", "Lista de lanzamiento"]], agents: [] },
   {
     id: "numeros", name: "Ventas y finanzas", what: "Cuánto vendes, cuánto cuesta y cuánto queda.",

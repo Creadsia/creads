@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeleteButton, Field, PageHead, btnCls, cardCls, inputCls } from "../_parts/ui";
 
 interface U { id: string; email: string; name: string | null; role: "owner" | "admin" | "member"; active: boolean; created_at: string; last_login: string | null }
-const ROLE = { owner: "Dueño", admin: "Socio", member: "Miembro" } as const;
+const ROLE = { owner: "Dueño", admin: "Completo + Panel interno", member: "Estudio completo" } as const;
 
 export default function Equipo() {
   const [users, setUsers] = useState<U[] | null>(null);
@@ -54,7 +54,7 @@ export default function Equipo() {
 
   return (
     <>
-      <PageHead title="Equipo" lead="Personas que trabajan contigo en TU cuenta: ven tus avatares, tus anuncios y usan tus créditos." />
+      <PageHead title="Equipo" lead="Personas que trabajan contigo en TU cuenta: ven tus avatares, tus anuncios y usan tus créditos. «Estudio completo» usa todo el estudio; «Completo + Panel interno» además entra al Panel (con verificación en dos pasos). Solo tú, el dueño, puedes quitarle el acceso a alguien con Panel interno." />
       <p className="rounded-xl border border-warn/50 bg-warn/10 px-4 py-3 text-sm">
         <b>¿Es un cliente o un lead?</b> No lo agregues aquí: créalo en <a href="/admin" className="font-semibold underline">Panel interno → Clientes</a> o mándale el link <b>creadsia.com/empezar</b>. Así tiene su propia cuenta, vacía, con sus propios créditos. Si ya agregaste a alguien por error, usa «Pasar a cuenta de cliente».
       </p>
@@ -66,8 +66,8 @@ export default function Equipo() {
           <Field label="Nombre (opcional)"><input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></Field>
           <Field label="Rol">
             <select value={role} onChange={(e) => setRole(e.target.value as "member" | "admin")} className={inputCls}>
-              <option value="member">Miembro: crea anuncios</option>
-              {isOwner && <option value="admin">Socio: acceso total como tú (Panel interno incluido)</option>}
+              <option value="member">Estudio completo (sin Panel interno)</option>
+              {isOwner && <option value="admin">Completo + Panel interno (socio): igual que tú</option>}
             </select>
           </Field>
         </div>
@@ -105,8 +105,8 @@ export default function Equipo() {
                     <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold">{ROLE[u.role]}</span>
                   ) : (
                     <select aria-label={`Rol de ${u.email}`} value={u.role} onChange={(e) => patch(u.id, { role: e.target.value })} className={inputCls}>
-                      <option value="member">Miembro</option>
-                      <option value="admin">Socio (acceso total)</option>
+                      <option value="member">Estudio completo</option>
+                      <option value="admin">Completo + Panel interno</option>
                     </select>
                   )}
                   {u.role !== "owner" && u.id !== me && (isOwner || u.role === "member") && (

@@ -5,6 +5,7 @@ import Estadisticas from "./estadisticas";
 import { AREAS, type PanelTab, areaOfTab } from "@/lib/areas";
 import { AUTO, type LaunchCheck, MANUAL, RED_ORDER } from "@/lib/lanzamiento";
 import Oficina, { AreaTeam } from "./oficina";
+import Equipo from "@/app/app/equipo/equipo";
 import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
 import {
@@ -184,7 +185,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
@@ -1040,33 +1041,6 @@ function Pedidos({ reload }: { reload: () => void }) {
   );
 }
 
-function ImportarWinnerLab() {
-  const [msg, setMsg] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function pick(file: File | undefined) {
-    if (!file) return;
-    setBusy(true); setMsg("");
-    try {
-      const body = await file.text();
-      const r = await fetch("/api/admin/importar", { method: "POST", headers: { "content-type": "application/json" }, body });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "No se pudo importar.");
-      const x = d.done;
-      setMsg(`Listo: ${x.guiones} guiones, ${x.avatares} avatares, ${x.productos} productos, ${x.videos} videos con ${x.cortes} cortes y ${x.imagenes} imágenes${x.yaEstaban ? ` (${x.yaEstaban} ya estaban)` : ""}.`);
-    } catch (e) { setMsg(e instanceof Error ? e.message : "No se pudo importar."); } finally { setBusy(false); }
-  }
-  return (
-    <section className={card}>
-      <h3 className="font-display text-lg font-bold">Traer lo de WinnerLab</h3>
-      <p className="text-sm text-muted">Sube el archivo <b>winnerlab-import.json</b> que te mandé. Pasa a tu cuenta los guiones, avatares, productos, videos con sus cortes, anuncios terminados e imágenes del prototipo. Si lo subes dos veces, no duplica nada.</p>
-      <label className={`${btn} w-fit cursor-pointer`}>
-        {busy ? "Trayendo… (puede tardar un minuto)" : "Subir archivo"}
-        <input type="file" accept="application/json,.json" className="sr-only" disabled={busy} onChange={(e) => pick(e.target.files?.[0])} />
-      </label>
-      {msg && <p className="text-sm" role="status">{msg}</p>}
-    </section>
-  );
-}
 
 function Clientes({ planes }: { planes: Plan[] }) {
   const [rows, setRows] = useState<Cliente[] | null>(null);
@@ -1136,7 +1110,6 @@ function Clientes({ planes }: { planes: Plan[] }) {
       </section>
 
       <Pedidos reload={load} />
-      <ImportarWinnerLab />
 
       {!rows && !err && <p className="text-muted">Cargando…</p>}
       {clients.map((c) => <ClienteCard key={c.id} c={c} reload={load} planes={planes} />)}
