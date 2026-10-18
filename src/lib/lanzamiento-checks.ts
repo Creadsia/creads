@@ -77,7 +77,7 @@ export async function launchChecks(): Promise<Check[]> {
   checks.push((env("GUARDIAN_TOKEN").length >= 24
     ? { id: "guardian", state: "ok", detail: "El Guardián tiene su clave. Falta solo que el monitor externo lo llame cada 5 minutos (Plataforma → Guardián)." }
     : { id: "guardian", state: "revisar", detail: "Falta GUARDIAN_TOKEN en Vercel para que el Guardián revise cada pocos minutos." }) as Check);
-  checks.push((whatsappMode() ? { id: "whatsapp", state: "ok", detail: "Las alertas críticas también te llegan por WhatsApp." } : { id: "whatsapp", state: "revisar", detail: "Alertas por WhatsApp sin conectar (opcional, recomendado)." }) as Check);
+  checks.push((whatsappMode() ? { id: "whatsapp", state: "ok", detail: `Las alertas críticas también te llegan por ${whatsappMode() === "telegram" ? "Telegram" : "WhatsApp"}.` } : { id: "whatsapp", state: "revisar", detail: "Alertas al celular sin conectar (opcional, recomendado)." }) as Check);
   return checks;
 }
 

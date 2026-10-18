@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { cleanConfig, commitGuard, loadGuard, runGuardian } from "@/lib/guardian";
 import { pauseModel, pausedModels, unpauseModel } from "@/lib/model-pause";
-import { sendWhatsApp, whatsappMode } from "@/lib/whatsapp";
+import { linkTelegram, sendWhatsApp, whatsappMode } from "@/lib/whatsapp";
 import { videoProviders } from "@/lib/providers";
 import { SITE } from "@/lib/emails";
 
@@ -43,6 +43,10 @@ export async function PATCH(req: Request) {
   if (typeof b?.reactivar === "string") await unpauseModel(b.reactivar);
   if (typeof b?.cerrar === "string") await commitGuard((s) => { const i = s.incidents.find((x) => x.key === b.cerrar && x.abierto); if (i) { i.abierto = false; i.resueltoAt = new Date().toISOString(); i.acciones = [...i.acciones, "Cerrado a mano por el dueño."]; } });
   if (b?.probarWhatsapp) {
+    if (whatsappMode() === "telegram") {
+      const l = await linkTelegram();
+      if (!l.ok) return NextResponse.json({ error: l.error }, { status: 400 });
+    }
     const r = await sendWhatsApp("✅ Creads · Prueba del Guardián: así te van a llegar las alertas importantes.");
     if (!r.ok) return NextResponse.json({ error: r.error ?? "No se pudo enviar." }, { status: 502 });
   }

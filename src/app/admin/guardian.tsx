@@ -9,7 +9,7 @@ import { AREAS } from "@/lib/areas";
 // open problems (and what the Guardián already did about them), paused models, the thresholds, and how
 // alerts reach the owner (email, WhatsApp, outside monitor).
 
-interface View extends GuardState { paused: Record<string, Pause>; modelos: { id: string; label: string }[]; whatsapp: "meta" | "callmebot" | null; monitorUrl: string | null }
+interface View extends GuardState { paused: Record<string, Pause>; modelos: { id: string; label: string }[]; whatsapp: "meta" | "callmebot" | "telegram" | null; monitorUrl: string | null }
 
 const card = "flex min-w-0 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:p-5";
 const btn = "rounded-lg border border-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
@@ -139,7 +139,7 @@ export default function Guardian() {
         <h3 id="h-avisos" className="text-lg font-bold">Cómo te avisa</h3>
         <ul className="flex flex-col gap-2 text-sm">
           <li>📧 <b>Correo:</b> cada problema crítico (máximo uno cada 6 horas por problema).</li>
-          <li>💬 <b>WhatsApp:</b> {v.whatsapp ? <>conectado ({v.whatsapp === "meta" ? "WhatsApp de Meta" : "CallMeBot"}). Te llegan los críticos y cuando se resuelven (máximo 12 al día). <button type="button" disabled={!!busy} onClick={async () => { if (await run("PATCH", { probarWhatsapp: true }, "wa")) setNote("Te mandé un WhatsApp de prueba."); }} className={`${btn} ml-1 text-xs`}>{busy === "wa" ? "Enviando…" : "Mandarme uno de prueba"}</button></> : <>todavía sin conectar. Está en la lista de Lanzamiento con el paso a paso.</>}</li>
+          <li>💬 <b>{v.whatsapp === "telegram" ? "Telegram" : "WhatsApp"}:</b> {v.whatsapp ? <>conectado ({v.whatsapp === "meta" ? "WhatsApp de Meta" : v.whatsapp === "telegram" ? "tu bot de Telegram" : "CallMeBot"}). Te llegan los críticos y cuando se resuelven (máximo 12 al día). <button type="button" disabled={!!busy} onClick={async () => { if (await run("PATCH", { probarWhatsapp: true }, "wa")) setNote(v.whatsapp === "telegram" ? "Te mandé un mensaje de prueba a Telegram." : "Te mandé un WhatsApp de prueba."); }} className={`${btn} ml-1 text-xs`}>{busy === "wa" ? "Enviando…" : "Mandarme uno de prueba"}</button></> : <>todavía sin conectar (WhatsApp o Telegram). Está en la lista de Lanzamiento con el paso a paso.</>}</li>
           <li>👀 <b>Monitor cada 5 minutos:</b> {v.monitorUrl ? (
             <>en <a href="https://uptimerobot.com" target="_blank" rel="noopener noreferrer" className="text-accent-text underline">UptimeRobot</a> crea un monitor «Keyword», palabra <b>OK</b>, cada 5 minutos, con esta dirección:
               <span className="mt-1 flex flex-wrap items-center gap-2"><code className="max-w-full truncate rounded bg-surface-2 px-2 py-1 text-xs">{v.monitorUrl}</code><button type="button" onClick={() => navigator.clipboard.writeText(v.monitorUrl!).then(() => setNote("Dirección copiada.")).catch(() => {})} className={`${btn} text-xs`}>Copiar</button></span>
