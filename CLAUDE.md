@@ -1,6 +1,6 @@
 # Creads
 
-Creads is a SaaS for lead-gen advertisers on Meta (auto insurance, bath remodel, foundation repair…): the user pastes a winning script and gets finished video ads — cuts, AI video, voice, subtitles and automatic QA. Owner: Creadsia (hola@creadsia.com), domain creadsia.com. The owner is non-technical and speaks Spanish: talk to him in plain Spanish (Chile), no jargon.
+Creads is an AI generation platform (videos, audio/voices, UGC, avatars, images in one simple studio). Focus (owner, 18 Oct 2026): the only business is growing Creads IA; lead-gen trades (insurance, remodeling…) are only examples of what it makes, never the customer. **Read `docs/handoff.md` first: full state, decisions and pending work as of 18 Oct 2026.** Owner: Creadsia (hola@creadsia.com), domain creadsia.com. The owner is non-technical and speaks Spanish: talk to him in plain Spanish (Chile), no jargon.
 
 ## Vision (owner's words, Oct 2026)
 Compete head-on with Higgsfield and win Latin America. Creads exists to help marketers grow, so it protects the customer's money:
@@ -30,5 +30,5 @@ Compete head-on with Higgsfield and win Latin America. Creads exists to help mar
 
 ## Rules
 - UI copy in Spanish; code and comments in English.
-- Dark "modo suave" theme with violet accent (`--accent`, `--grad`) as in the prototype.
+- Look: black/neutral with the brand gradient (`--grad`: #FF2BD6 → #8A5CFF → #19E3FF), Unbounded + Geist; see `MARCA` in src/lib/oficina-contexto.ts.
 - Don't spend generation credits on tests without telling the owner.
