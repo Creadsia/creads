@@ -821,6 +821,10 @@ function ClienteCard({ c, reload, planes }: { c: Cliente; reload: () => void; pl
     const d = await call("/api/admin/personas", "PATCH", { workspace: c.id, id: p.id, resetPassword: true });
     if (d) setSecret({ email: p.email, password: d.password });
   }
+  async function toTeam(p: Persona) {
+    if (!window.confirm(`¿Pasar a ${p.email} a tu equipo como socio («Completo + Panel interno»)?\n\nEntra con el mismo correo y clave, deja de ver lo de esta cuenta de cliente (sus anuncios y créditos quedan guardados aquí) y para entrar al Panel interno tendrá que activar la verificación en dos pasos. Solo tú puedes quitarlo después.`)) return;
+    if (await call("/api/admin/personas", "PATCH", { workspace: c.id, id: p.id, toTeam: true })) { window.alert(`Listo: ${p.email} ya es socio. Lo ves en Dirección → Personas y accesos.`); reload(); }
+  }
   async function remove(p: Persona) {
     if (!window.confirm(`¿Quitar a ${p.email}? Ya no podrá entrar.`)) return;
     if (await call(`/api/admin/personas?workspace=${encodeURIComponent(c.id)}&id=${p.id}`, "DELETE")) reload();
@@ -873,6 +877,7 @@ function ClienteCard({ c, reload, planes }: { c: Cliente; reload: () => void; pl
                 <button type="button" onClick={() => reset(p)} className="text-muted hover:text-ink">Nueva clave</button>
                 <button type="button" onClick={async () => { if (await call("/api/admin/personas", "PATCH", { workspace: c.id, id: p.id, active: !p.active })) reload(); }} className="text-muted hover:text-ink">{p.active ? "Pausar" : "Reactivar"}</button>
                 <button type="button" onClick={() => remove(p)} className="text-muted hover:text-bad">Quitar</button>
+                {c.people.length === 1 && <button type="button" onClick={() => toTeam(p)} className="font-semibold text-accent-text hover:underline">Pasar a mi equipo como socio</button>}
               </span>
             </li>
           ))}

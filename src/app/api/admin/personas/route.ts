@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import { isAdmin } from "@/lib/admin";
-import { createUser, deleteUser, findUserByEmail, getUserIn, updateUser } from "@/lib/auth";
+import { currentUser, isAdmin } from "@/lib/admin";
+import { createUser, deleteUser, findUserByEmail, getUserIn, isTheOwner, listUsers, moveUser, updateUser } from "@/lib/auth";
 import { WORKSPACE_RE } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 // People inside a customer's workspace, managed only by Creadsia's owner.
 // POST {workspace, email, name?} adds someone (temporary password returned once).
 // PATCH {workspace, id, active?, resetPassword?} pauses/resumes them or gives a new temporary password.
+// PATCH {workspace, id, toTeam: true} brings a one-person customer account into Creadsia's team as a
+//   partner (same email and password). Only Creadsia's owner; the old workspace stays, empty.
 // DELETE ?workspace=…&id=… removes them.
 // Creadsia's own workspace ("main") is managed in the studio's "Equipo" page, never from here.
 
@@ -38,6 +40,15 @@ export async function PATCH(req: Request) {
   if (!clientWs(b?.workspace)) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
   try {
     const target = await getUserIn(b.workspace, String(b?.id ?? ""));
+    if (b?.toTeam === true) {
+      if (!isTheOwner(await currentUser())) return NextResponse.json({ error: "Solo el dueño puede sumar socios." }, { status: 403 });
+      if (!target) return NextResponse.json({ error: "Persona no encontrada." }, { status: 404 });
+      const others = (await listUsers(b.workspace)).filter((u) => u.id !== target.id);
+      if (others.length) return NextResponse.json({ error: "Esta cuenta tiene más personas: primero quítalas, para no dejarlas sin dueño." }, { status: 409 });
+      await moveUser(target.id, "main");
+      const user = await updateUser(target.id, { role: "admin" });
+      return NextResponse.json({ user, moved: true });
+    }
     if (!target || target.role === "owner") return NextResponse.json({ error: "Persona no encontrada." }, { status: 404 });
     const patch: Parameters<typeof updateUser>[1] = {};
     if (typeof b?.active === "boolean") patch.active = b.active;
