@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Estadisticas from "./estadisticas";
+import { AREAS, type PanelTab, areaOfTab } from "@/lib/areas";
 import { AUTO, type LaunchCheck, MANUAL, RED_ORDER } from "@/lib/lanzamiento";
-import Oficina from "./oficina";
+import Oficina, { AreaTeam } from "./oficina";
 import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
 import {
@@ -22,33 +23,9 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "lanzamiento" | "estadisticas" | "oficina" | "marketing" | "rentabilidad" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
-const TABS: [Tab, string][] = [
-  ["lanzamiento", "Lanzamiento"],
-  ["estadisticas", "Estadísticas"],
-  ["oficina", "Oficina"],
-  ["marketing", "Marketing"],
-  ["errores", "Errores y alarmas"],
-  ["resumen", "Resumen"],
-  ["rentabilidad", "Rentabilidad"],
-  ["saldos", "Saldos y alertas"],
-  ["clientes", "Clientes y accesos"],
-  ["planes", "Planes y afiliados"],
-  ["movs", "Movimientos"],
-  ["fijos", "Costos fijos"],
-  ["modelos", "Costo por modelo"],
-  ["cuentas", "Cuentas y accesos"],
-  ["registros", "Registros"],
-  ["estado", "Estado"],
-];
-/** How the side menu groups the tabs (on phones the menu is a single scrolling row). */
-const GROUPS: [string, Tab[]][] = [
-  ["Día a día", ["lanzamiento", "estadisticas", "oficina", "marketing", "errores"]],
-  ["Plata", ["resumen", "rentabilidad", "saldos", "planes", "movs", "fijos", "modelos"]],
-  ["Personas", ["clientes", "cuentas", "registros"]],
-  ["Sistema", ["estado"]],
-];
-const LABEL = Object.fromEntries(TABS) as Record<Tab, string>;
+// The menu is one item per area (lib/areas.ts); each area has its pages and the agents in charge of it.
+type Tab = PanelTab;
+const ALL_TABS = AREAS.flatMap((a) => a.tabs.map(([k]) => k));
 
 const fmtUsd = (n: number, d = 0) =>
   `${n < 0 ? "−" : ""}US$${Math.abs(n).toLocaleString("es-CL", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
@@ -116,7 +93,8 @@ function Del({ onDelete }: { onDelete: () => void }) {
 }
 
 export default function AdminPanel() {
-  const [tab, setTab] = useState<Tab>("lanzamiento");
+  const [tab, setTab] = useState<Tab>("oficina");
+  const area = areaOfTab(tab) ?? AREAS[0];
   const [data, setData] = useState<Finanzas | null>(null);
   const [status, setStatus] = useState("Cargando…");
   const saveT = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,7 +103,7 @@ export default function AdminPanel() {
     try {
       // a link from an alarm email (?tab=errores) wins over the last tab used
       const t = (new URLSearchParams(location.search).get("tab") ?? localStorage.getItem("admin-tab")) as Tab | null;
-      if (t && TABS.some(([k]) => k === t)) setTab(t);
+      if (t && ALL_TABS.includes(t)) setTab(t);
     } catch {}
     fetch("/api/admin/finanzas")
       .then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setData(d); setStatus(d.actualizado ? `Guardado ${new Date(d.actualizado).toLocaleString("es-CL")}` : "Datos iniciales (aún no guardados)"); })
@@ -160,10 +138,10 @@ export default function AdminPanel() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-3xl font-extrabold tracking-tight">Control de Creads</h1>
-          <p className="text-sm text-muted">{status}</p>
+          {area.id === "numeros" && <p className="text-sm text-muted">{status}</p>}
         </div>
         <div className="flex items-end gap-3">
-          {data && (
+          {data && area.id === "numeros" && (
             <>
               <Field label="Dólar de respaldo (CLP)"><Num id="usdclp" value={data.config.usdClp} step={5} onChange={(v) => setCfg((c) => { c.usdClp = v || 950; })} /></Field>
               <Field label="Colchón de cambio (%)"><Num id="colchon" value={data.config.cambioColchon ?? 2} step={0.5} max={10} onChange={(v) => setCfg((c) => { c.cambioColchon = v; })} /></Field>
@@ -174,21 +152,35 @@ export default function AdminPanel() {
       </div>
 
       <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-      <nav aria-label="Secciones" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-line bg-bg px-1 py-2 lg:top-4 lg:mx-0 lg:max-h-[calc(100vh-2rem)] lg:flex-col lg:gap-4 lg:overflow-y-auto lg:rounded-2xl lg:border lg:bg-surface lg:p-3">
-        {GROUPS.map(([group, tabs]) => (
-          <div key={group} className="contents lg:flex lg:flex-col lg:gap-0.5">
-            <span className="hidden px-3 pb-1 text-xs font-semibold text-muted lg:block">{group}</span>
-            {tabs.map((k) => (
-              <button key={k} type="button" onClick={() => pick(k)} aria-current={tab === k ? "page" : undefined}
-                className={`flex-none rounded-full px-3 py-1.5 text-sm font-semibold lg:rounded-lg lg:py-2 lg:text-left ${tab === k ? "bg-ink text-bg" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
-                {LABEL[k]}
-              </button>
-            ))}
-          </div>
-        ))}
+      <nav aria-label="Áreas" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-line bg-bg px-1 py-2 lg:top-4 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:rounded-2xl lg:border lg:bg-surface lg:p-2">
+        {AREAS.map((a) => {
+          const on = area.id === a.id;
+          return (
+            <button key={a.id} type="button" onClick={() => pick(a.tabs[0][0])} aria-current={on ? "page" : undefined}
+              className={`flex-none rounded-full px-3 py-1.5 text-sm font-semibold lg:flex lg:flex-col lg:items-start lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-left ${on ? "bg-ink text-bg" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
+              <span>{a.name}</span>
+              {a.agents.length > 0 && <span className={`hidden text-[11px] font-normal lg:block ${on ? "opacity-70" : "text-muted"}`}>{a.id === "direccion" ? "CEO General" : `${a.agents.length} agente${a.agents.length > 1 ? "s" : ""}`}</span>}
+            </button>
+          );
+        })}
       </nav>
 
-      <div className="flex min-w-0 flex-col gap-5">
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="font-display text-2xl font-extrabold tracking-tight">{area.name}</h2>
+            <p className="text-sm text-muted">{area.what}</p>
+          </div>
+          {area.tabs.length > 1 && (
+            <div role="tablist" aria-label={`Páginas de ${area.name}`} className="-mx-1 flex gap-1 overflow-x-auto px-1">
+              {area.tabs.map(([k, label]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => pick(k)}
+                  className={`flex-none rounded-full border px-3 py-1.5 text-sm font-semibold ${tab === k ? "border-transparent bg-accent/15 text-accent-text" : "border-line text-muted hover:text-ink"}`}>{label}</button>
+              ))}
+            </div>
+          )}
+          {area.id !== "direccion" && area.agents.length > 0 && <AreaTeam key={area.id} area={area.id} />}
+        </div>
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}

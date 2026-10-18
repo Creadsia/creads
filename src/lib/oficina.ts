@@ -14,10 +14,11 @@ import { launchChecks, launchDone } from "./lanzamiento-checks";
 import { AUTO, MANUAL } from "./lanzamiento";
 import { FORMATS } from "./formats";
 import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
+import { type AreaId, AREAS, areaOfAgent } from "./areas";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
-// day, write a short report and propose what to do. The Director Creads (id "ceo") reads its team's
+// day, write a short report and propose what to do. The Director de Plataforma (id "ceo") reads its team's
 // reports and suggests what each one should look at next. Above it, the CEO General (id "general") sees
 // both businesses with every number, writes the one official morning brief (also by email) and can
 // PROPOSE a short list of moves (an assignment for Claude, a line in the memory, turning an agent on or
@@ -53,7 +54,7 @@ export interface Report {
   at: string; estado: Estado; resumen: string; informe: string; propuestas: string[]; fuentes: string[]; usd: number; model: string;
   prioridades?: string[]; error?: string;
 }
-export interface AgentConfig { name: string; area: string; mission: string; search: boolean; sharePct: number; sources: Source[] }
+export interface AgentConfig { name: string; area: string; mission: string; search: boolean; sharePct: number; sources: Source[]; equipo?: AreaId }
 export interface OfficeState {
   on: boolean;
   budgetUsd: number; // per month, all agents together
@@ -97,28 +98,32 @@ export const MAX_CUSTOM = 12;
 
 const BUILTIN: Record<string, AgentConfig> = {
   general: {
-    name: "CEO General", area: "Mano derecha de Gastón: ve todo y prioriza", search: false, sharePct: 12,
+    name: "CEO General", area: "Mano derecha de Gastón: ve todas las áreas y prioriza", search: false, sharePct: 12,
     sources: ["negocio", "visitas", "finanzas", "rentabilidad", "lanzamiento", "disputas"],
-    mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Lees el informe del Director Creads, del Director de Marketing y de sus equipos, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
+    mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Diriges el Panel por áreas: Plataforma (Director de Plataforma y su equipo), Marketing (Director de Marketing y su estudio), Ventas y finanzas (Finanzas y ventas) y Clientes (Atención al cliente). Lees todos sus informes, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
   },
   ceo: {
-    name: "Director Creads", area: "Dirige el equipo de Creads", search: false, sharePct: 8, sources: ["negocio", "produccion"],
-    mission: "Eres el Director de Creads: diriges al equipo de agentes de la plataforma y le reportas al CEO General. Lees los informes de tu equipo y los números de Creads, resumes qué está pasando en la plataforma y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
+    name: "Director de Plataforma", area: "Que Creads funcione: producción, seguridad y novedades", search: false, sharePct: 6, sources: ["produccion", "finanzas"],
+    mission: "Eres el Director de Plataforma de Creads: diriges a Producción, Ciberseguridad y Novedades IA, y le reportas al CEO General. Tu meta es que la plataforma funcione sin errores, con los mejores modelos al mejor costo. Lees los informes de tu equipo y los números de Creads, resumes qué está pasando en la plataforma y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
   },
   produccion: {
-    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 10, sources: ["produccion"],
+    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 9, sources: ["produccion"],
     mission: "Eres el jefe de producción de anuncios. Vigilas que los videos de los clientes salgan bien: qué modelo está fallando más, por qué (según los mensajes de error), cuánta plata se pierde en fallas, anuncios trabados y las reglas aprendidas que esperan aprobación. Propones cambios concretos (ej.: «recomendar Veo en vez de Seedance para caras reales», «revisar el error X»).",
   },
   seguridad: {
-    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 10, sources: ["seguridad"],
+    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 8, sources: ["seguridad"],
     mission: "Eres el encargado de ciberseguridad. Buscas señales de ataque o abuso (muchos intentos de entrar, cuentas nuevas en masa, errores raros) y fallas de seguridad conocidas y recientes en las versiones que usa Creads (Next.js y React). Explicas el riesgo en simple y qué hacer. No alarmes sin motivo: si todo está normal, dilo en una línea.",
   },
   novedades: {
-    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 20, sources: ["modelos"],
+    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 15, sources: ["modelos"],
     mission: "Eres el analista de novedades. Buscas en la web y en X lo nuevo de los ÚLTIMOS 7 DÍAS: modelos de video, imagen y voz recién lanzados o con mejores precios (y si se pueden usar por API, por ejemplo en fal.ai o Google), y qué lanzó o cambió la competencia (funciones, precios, promociones, cómo se están vendiendo). Por cada novedad di si Creads debería sumarla o responder, y por qué. Solo cosas nuevas y comprobadas, con su fuente; nada de rumores viejos.",
   },
+  finanzas: {
+    name: "Finanzas y ventas", area: "Ventas, estadísticas, márgenes y gastos", search: false, sharePct: 10, sources: ["negocio", "visitas", "rentabilidad", "finanzas", "disputas"],
+    mission: "Eres el encargado de Finanzas y ventas de Creads y le reportas directo al CEO General. Miras las estadísticas (visitas, embudo, ventas por canal), la rentabilidad (costo por anuncio, fallas que cuestan plata, margen por plan), el gasto en IA y los saldos de los proveedores, y los contracargos. Explicas en simple qué cambió, dónde se gana y dónde se pierde plata, y propones ajustes concretos de precios, descuentos, topes de gasto o modelos más baratos, con números. No inventes cifras: si un dato no está, dilo.",
+  },
   soporte: {
-    name: "Servicio al cliente", area: "Dudas, reclamos y cancelaciones", search: false, sharePct: 8, sources: ["soporte"],
+    name: "Atención al cliente", area: "Dudas, reclamos, cancelaciones y clientes", search: false, sharePct: 8, sources: ["soporte", "negocio"],
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
   },
   marketing: {
@@ -170,16 +175,17 @@ export async function commit(mutate: (s: OfficeState) => void): Promise<OfficeSt
 }
 
 export function agentsOf(st: OfficeState): Agent[] {
-  const b = BUILTIN_IDS.map((id) => ({ ...BUILTIN[id], mission: st.missions[id] || BUILTIN[id].mission, id, builtin: true, on: st.agents[id]?.on !== false }));
-  const c = Object.entries(st.custom).map(([id, a]) => ({ ...a, id, builtin: false, on: st.agents[id]?.on !== false }));
+  const b = BUILTIN_IDS.map((id) => ({ ...BUILTIN[id], mission: st.missions[id] || BUILTIN[id].mission, equipo: areaOfAgent(id), id, builtin: true, on: st.agents[id]?.on !== false }));
+  const c = Object.entries(st.custom).map(([id, a]) => ({ ...a, equipo: areaOfAgent(id, a.equipo), id, builtin: false, on: st.agents[id]?.on !== false }));
   return [...b, ...c];
 }
 export const findAgent = (st: OfficeState, id: string) => agentsOf(st).find((a) => a.id === id);
 export const LEADERS = ["general", "ceo", "marketing"];
-const MARKETING_TEAM = ["creativos", "trafico", "organico"];
 const workersOf = (st: OfficeState) => agentsOf(st).filter((a) => !LEADERS.includes(a.id));
-/** Who reports to a director: the marketing studio to «marketing», everyone else to the Director Creads. */
-const teamOf = (st: OfficeState, director: string) => workersOf(st).filter((w) => (director === "marketing") === MARKETING_TEAM.includes(w.id));
+/** Each director leads the agents of its area (Plataforma, Marketing); the rest report straight to the CEO General. */
+const DIRECTOR_OF: Partial<Record<AreaId, string>> = { plataforma: "ceo", marketing: "marketing" };
+const teamOf = (st: OfficeState, director: string) => workersOf(st).filter((w) => DIRECTOR_OF[w.equipo ?? "direccion"] === director);
+const directReports = (st: OfficeState) => workersOf(st).filter((w) => !DIRECTOR_OF[w.equipo ?? "direccion"]);
 /** Which moves each agent may propose (the owner still approves each one). */
 const RIGHTS: Record<string, Action["tipo"][]> = {
   general: ["encargo", "memoria", "agente"],
@@ -361,7 +367,7 @@ const formatCeo = (ids: string[]) => `Responde SOLO un JSON válido, sin texto a
 {"estado":"ok|atencion|urgente","resumen":"una frase: cómo está Creads hoy","prioridades":["lo 1º que el dueño debería hacer hoy","2º","3º"],"informe":"el resumen del día en texto simple (párrafos cortos y listas con «- », máximo ~250 palabras): qué dijo cada agente que importa y qué decides","temas":{${ids.map((id) => `"${id}":"tema corto para su próximo turno"`).join(",")}}}`;
 
 const formatGeneral = `Responde SOLO un JSON válido, sin texto antes ni después:
-{"estado":"ok|atencion|urgente","resumen":"una frase: cómo están los negocios hoy","prioridades":["lo 1º que Gastón debe hacer hoy","2º","3º"],"informe":"el resumen oficial del día en texto simple (párrafos cortos y listas con «- », máximo ~300 palabras), con los números que importan","temas":{"ceo":"tema corto para el Director Creads","marketing":"tema corto para el Director de Marketing"},"acciones":[]}
+{"estado":"ok|atencion|urgente","resumen":"una frase: cómo están los negocios hoy","prioridades":["lo 1º que Gastón debe hacer hoy","2º","3º"],"informe":"el resumen oficial del día en texto simple (párrafos cortos y listas con «- », máximo ~300 palabras), con los números que importan","temas":{"ceo":"tema corto para el Director de Plataforma","marketing":"tema corto para el Director de Marketing","finanzas":"tema corto para Finanzas y ventas","soporte":"tema corto para Atención al cliente"},"acciones":[]}
 En "acciones" propón SOLO si hace falta (máximo 3), de estos tipos:
 {"tipo":"encargo","titulo":"…","problema":"qué problema resuelve","que":"qué debe hacer Claude","para":"para quién","listo":"cómo se sabe que quedó bien"}
 {"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads (una decisión o un dato que todos deben saber)"}
@@ -464,8 +470,10 @@ const generalInput = (st: OfficeState) => {
   const dir = findAgent(st, "ceo");
   const pend = st.pending.filter((p) => p.estado === "pendiente");
   const mk = findAgent(st, "marketing");
-  return `\n<datos>\nINFORME DEL DIRECTOR CREADS:\n${reportLine(dir?.name ?? "Director Creads", "ceo", dir?.on !== false, st.last.ceo)}\n\nINFORMES DEL EQUIPO DE CREADS:\n${teamOf(st, "ceo").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
-\nINFORME DEL DIRECTOR DE MARKETING:\n${reportLine(mk?.name ?? "Director de Marketing", "marketing", mk?.on !== false, st.last.marketing)}\n\nINFORMES DEL ESTUDIO DE MARKETING:\n${teamOf(st, "marketing").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
+  const area = (id?: AreaId) => AREAS.find((a) => a.id === id)?.name ?? "Dirección";
+  return `\n<datos>\nÁREA PLATAFORMA · INFORME DEL DIRECTOR DE PLATAFORMA:\n${reportLine(dir?.name ?? "Director de Plataforma", "ceo", dir?.on !== false, st.last.ceo)}\n\nINFORMES DEL EQUIPO DE PLATAFORMA:\n${teamOf(st, "ceo").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
+\nJEFES DE ÁREA QUE TE REPORTAN DIRECTO:\n${directReports(st).map((w) => reportLine(`${w.name} (área ${area(w.equipo)})`, w.id, w.on, st.last[w.id])).join("\n\n") || "ninguno"}
+\nÁREA MARKETING · INFORME DEL DIRECTOR DE MARKETING:\n${reportLine(mk?.name ?? "Director de Marketing", "marketing", mk?.on !== false, st.last.marketing)}\n\nINFORMES DEL ESTUDIO DE MARKETING:\n${teamOf(st, "marketing").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
 \nNEGOCIO DE AFILIADOS: todavía no está conectado (falta conectar RedTrack y Meta).
 \nACCIONES YA PENDIENTES DE APROBACIÓN: ${pend.map((p) => describe(p.action)).join(" | ") || "ninguna"}
 \nACCIONES QUE GASTÓN RECHAZÓ ESTA SEMANA (no las vuelvas a proponer): ${st.pending.filter((p) => p.estado === "rechazada").slice(0, 8).map((p) => describe(p.action)).join(" | ") || "ninguna"}
@@ -499,7 +507,7 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   if (!clip(j.resumen, 10)) return fail("su respuesta vino vacía. Prueba de nuevo.", r.usd);
   const temas: Record<string, string> = {};
   if (isCeo && j.temas && typeof j.temas === "object") for (const id of workerIds) { const t = topic(j.temas[id]); if (t) temas[id] = t; }
-  if (isGeneral && j.temas && typeof j.temas === "object") for (const d of ["ceo", "marketing"]) { const t = topic(j.temas[d]); if (t) temas[d] = t; }
+  if (isGeneral && j.temas && typeof j.temas === "object") for (const d of ["ceo", "marketing", ...directReports(st).map((w) => w.id)]) { const t = topic(j.temas[d]); if (t) temas[d] = t; }
   const acciones = Array.isArray(j.acciones) ? j.acciones.map((x) => cleanAction(x, st, cap)).filter((x): x is Action => Boolean(x) && rights.includes(x!.tipo)).slice(0, 3) : [];
   return {
     temas, acciones,
@@ -552,7 +560,7 @@ export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]
 }
 
 /**
- * The daily round, within Vercel's 300 s: the team (in parallel, up to ~110 s), then the Director Creads
+ * The daily round, within Vercel's 300 s: the team (in parallel, up to ~110 s), then the directors
  * with their reports, then the CEO General with everything. Returns the brief to email (the CEO General's,
  * or the Director's if the CEO General couldn't work).
  */
@@ -842,7 +850,8 @@ export function cleanAgent(b: Partial<AgentConfig> | null | undefined): AgentCon
   const sharePct = Math.round(Number(b?.sharePct));
   if (!Number.isFinite(sharePct) || sharePct < 1 || sharePct > 60) return "Su parte del presupuesto debe ser entre 1% y 60%.";
   const sources = [...new Set((Array.isArray(b?.sources) ? b!.sources : []).filter((s): s is Source => SOURCE_IDS.includes(s as Source)))];
-  return { name, area: area || "Agente creado por ti", mission, search: b?.search === true, sharePct, sources };
+  const equipo = AREAS.some((x) => x.id === b?.equipo && x.id !== "lanzamiento") ? b!.equipo : "direccion";
+  return { name, area: area || "Agente creado por ti", mission, search: b?.search === true, sharePct, sources, equipo };
 }
 
 export function newAgentId(st: OfficeState, name: string) {

@@ -47,7 +47,7 @@ ESTADO DEL LANZAMIENTO
 EQUIPO
 - Gastón (dueño). Benjamín apoya en el área comercial (ventas, conectar píxeles y campañas), con acceso limitado.
 - Claude (en el estudio de desarrollo) programa y publica los cambios de la plataforma: es la «mano izquierda». Los agentes de la oficina analizan y proponen; no cambian el sistema.
-- Estructura (decidida el 17 oct, opción A): Gastón → CEO General (mano derecha, en este Panel; escribe el único resumen oficial del día y propone movimientos que Gastón aprueba) → Director Creads (equipo de la plataforma) y, más adelante, Director Afiliados (RedTrack, Meta, espía de ganadores, creativos hechos en Creads). Los bots de Gastón en grok.com sirven para pensar en voz alta; no ven datos.
+- Estructura (decidida el 17-18 oct): Gastón → CEO General (mano derecha, en el Panel; escribe el único resumen oficial del día y propone movimientos que Gastón aprueba). El Panel está ordenado por áreas, cada una con su encargado: Plataforma (Director de Plataforma con Producción, Ciberseguridad y Novedades IA), Marketing (Director de Marketing con Creativos, Trafficker y Contenido orgánico), Ventas y finanzas (Finanzas y ventas), Clientes (Atención al cliente). Más adelante, Afiliados. Los bots de Gastón en grok.com sirven para pensar en voz alta; no ven datos.
 
 ESTUDIO DE MARKETING (decidido el 18 oct)
 - Director de Marketing + Creativos (piden anuncios a Creads), Trafficker (campañas en Meta) y Contenido orgánico (cuentas de Instagram de la marca).

