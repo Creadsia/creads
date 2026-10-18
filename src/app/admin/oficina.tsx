@@ -14,6 +14,7 @@ import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposa
 type AgentView = Agent & { cap: number };
 interface View {
   ready: boolean; model: string; modelCeo: string; maxCustom: number;
+  ritmo: { extra: 0 | 2 | 5; scope: "marketing" | "todos" };
   engine: "claude" | "grok" | null; engineWanted: "claude" | "grok"; engines: { claude: boolean; grok: boolean };
   state: Pick<OfficeState, "on" | "budgetUsd" | "spend" | "last" | "tasks" | "pending" | "encargos">;
   bridge: boolean;
@@ -527,6 +528,17 @@ export default function Oficina() {
             </button>
           ))}
           <span className="text-xs text-muted">Piensa y conversa con {v.engine === "claude" ? "Claude" : "Grok"} ({v.model}). Las búsquedas en la web y en X siempre las hace Grok.</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm">
+          <label htmlFor="of-ritmo" className="font-semibold">Ritmo de trabajo:</label>
+          <select id="of-ritmo" value={`${v.ritmo.extra}-${v.ritmo.scope}`} onChange={(e) => { const [extra, scope] = e.target.value.split("-"); call("PATCH", { ritmo: { extra: Number(extra), scope } }); }} className="rounded-lg border border-line bg-surface px-2 py-1.5">
+            <option value="0-marketing">Todos 1 vez al día (8:00) · ~US$60/mes</option>
+            <option value="2-marketing">+ Marketing 2 veces más (13:00 y 18:00) · ~US$90/mes</option>
+            <option value="5-marketing">+ Marketing cada 2 horas (10 a 18) · ~US$140/mes</option>
+            <option value="2-todos">Todos 3 veces al día (8, 13 y 18) · ~US$180/mes</option>
+            <option value="5-todos">Todos cada 2 horas (8 a 18) · ~US$360/mes</option>
+          </select>
+          <span className="text-xs text-muted">Montos aproximados con Claude, sin contar el chat. El tope al mes manda: si se gasta, paran hasta el mes siguiente.</span>
         </div>
       </section>
 

@@ -79,7 +79,13 @@ export interface OfficeState {
   encargos: Encargo[]; // assignments for Claude, newest first
   /** Who thinks: Claude (default when its key is set) or Grok. Web and X searches always go through Grok. */
   engine?: Engine;
+  /** Extra rounds a day besides the 8:00 one (Chile time), for the marketing team or everyone. */
+  ritmo?: Ritmo;
 }
+export interface Ritmo { extra: 0 | 2 | 5; scope: "marketing" | "todos" }
+export const DEFAULT_RITMO: Ritmo = { extra: 0, scope: "marketing" };
+/** The hours (Chile) of the extra rounds. */
+export const RITMO_HOURS: Record<Ritmo["extra"], number[]> = { 0: [], 2: [13, 18], 5: [10, 12, 14, 16, 18] };
 export type Engine = "claude" | "grok";
 /** The brain in effect: the owner's choice if its key is set, else whichever is configured. */
 export const engineOf = (st: Pick<OfficeState, "engine">): Engine | null => {
@@ -660,6 +666,34 @@ export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]
   return on.map((w) => w.id);
 }
 
+/** The marketing area works now: its team in parallel, then the Director de Marketing with their reports. */
+export async function runMarketingRound(): Promise<string[]> {
+  const start = Date.now();
+  const st = await loadState();
+  if (!st.on) return [];
+  const memory = (await loadMemory()).text;
+  const team = teamOf(st, "marketing").filter((w) => w.on);
+  const outs = await Promise.all(team.map((w) => work(st, w, memory, start + 140_000)));
+  const fresh = await commit((s) => team.forEach((w, i) => save(s, w.id, outs[i])));
+  await escalate(fresh, team.map((w) => w.id), outs.map((o) => o.report));
+  const dir = findAgent(fresh, "marketing");
+  if (!dir?.on) return team.map((w) => w.id);
+  const out = await work(fresh, dir, memory, start + 260_000);
+  await commit((s) => save(s, "marketing", out));
+  await escalate(fresh, ["marketing"], [out.report]);
+  return [...team.map((w) => w.id), "marketing"];
+}
+
+/** Whether an extra round is due now (called every 5 minutes by the Guardián's monitor). Each slot runs once. */
+export async function officeRoundDue(): Promise<Ritmo["scope"] | null> {
+  const st = await loadState().catch(() => null);
+  if (!st?.on) return null;
+  const r = st.ritmo ?? DEFAULT_RITMO;
+  const hour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Santiago", hour: "numeric", hourCycle: "h23" }).format(new Date()));
+  if (!RITMO_HOURS[r.extra]?.includes(hour)) return null;
+  return (await once(`oficina:ronda:${dayCL()}:${hour}`, 3 * 3600)) ? r.scope : null;
+}
+
 /**
  * The daily round, within Vercel's 300 s: the team (in parallel, up to ~110 s), then the directors
  * with their reports, then the CEO General with everything. Returns the brief to email (the CEO General's,
@@ -980,6 +1014,7 @@ export function newAgentId(st: OfficeState, name: string) {
 export async function officeView() {
   const [st, memory] = await Promise.all([loadState(), loadMemory()]);
   return {
+    ritmo: st.ritmo ?? DEFAULT_RITMO,
     ready: Boolean(engineOf(st)), engine: engineOf(st), engineWanted: st.engine ?? "claude", engines: { claude: claudeOfficeConfigured(), grok: grokConfigured() },
     model: engineOf(st) ? modelFor(engineOf(st)!, false) : "—", modelCeo: engineOf(st) ? modelFor(engineOf(st)!, true) : "—", maxCustom: MAX_CUSTOM,
     state: { on: st.on, budgetUsd: st.budgetUsd, spend: st.spend, last: st.last, tasks: st.tasks, pending: st.pending.slice(0, 30), encargos: await refreshEncargos(st.encargos.slice(0, 30)) },

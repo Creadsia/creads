@@ -40,6 +40,13 @@ export async function GET(req: Request) {
   try {
     const st = await runGuardian();
     if (!st.skipped) wakeAreaAgents(st);
+    // the office's extra rounds of the day (Oficina → «Ritmo de trabajo»), riding on this 5-minute ping
+    after(async () => {
+      const { officeRoundDue, runAll, runMarketingRound } = await import("@/lib/oficina");
+      const due = await officeRoundDue().catch(() => null);
+      if (due === "todos") await runAll().catch((e) => console.error("oficina ronda", e instanceof Error ? e.message : e));
+      else if (due === "marketing") await runMarketingRound().catch((e) => console.error("oficina ronda", e instanceof Error ? e.message : e));
+    });
     const critical = st.incidents.filter((i) => i.abierto && i.severidad === "critico");
     const text = critical.length ? `ALERTA · ${critical.map((i) => i.titulo).join(" | ")}` : `OK · ${st.checks.filter((c) => c.estado === "ok").length}/${st.checks.length} controles bien`;
     return new NextResponse(text, { status: 200, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
