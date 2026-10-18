@@ -29,8 +29,17 @@ export default function Equipo() {
   async function invite(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setErr("");
-    const res = await fetch("/api/team", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, name, role }) });
-    const d = await res.json().catch(() => ({}));
+    const send = (traer = false) => fetch("/api/team", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, name, role, traer }) });
+    let res = await send();
+    let d = await res.json().catch(() => ({}));
+    if (res.status === 409 && d.canBring && window.confirm(`${email} ya tiene su propia cuenta en Creads.\n\n¿Traerla a tu equipo? Entra con el mismo correo y la misma clave, y deja de ver lo de su cuenta anterior (sus anuncios y créditos quedan guardados allá).`)) {
+      res = await send(true);
+      d = await res.json().catch(() => ({}));
+      setBusy(false);
+      if (!res.ok) return setErr(d.error || "No se pudo traer la cuenta.");
+      setEmail(""); setName(""); load();
+      return window.alert(`Listo: ${email} ya está en tu equipo. Entra con su correo y clave de siempre.`);
+    }
     setBusy(false);
     if (!res.ok) return setErr(d.error || "No se pudo crear la cuenta.");
     setSecret({ email: d.user.email, password: d.password });
