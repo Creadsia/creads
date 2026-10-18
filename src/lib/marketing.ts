@@ -20,7 +20,8 @@ export interface CampanaSpec {
   presupuestoUsd: number; link: string; texto: string; titulo: string; cta: string; adId: string;
 }
 export interface CampanaRow { id: string; at: string; spec: CampanaSpec; estado: "ensayo" | "subida en pausa" | "activa" | "pausada" | "error"; metaId?: string; adsetId?: string; adId?: string; error?: string }
-export interface Publicacion { id: string; at: string; cuenta: string; adId: string; texto: string; estado: "ensayo" | "publicada" | "error"; mediaId?: string; error?: string }
+export type Destino = "instagram" | "facebook" | "ambos";
+export interface Publicacion { id: string; at: string; cuenta: string; adId: string; texto: string; estado: "ensayo" | "publicada" | "error"; destino?: Destino; mediaId?: string; fbId?: string; error?: string }
 export interface MarketingState {
   capUsd: number; // max US$ per day across all active campaigns
   cuentas: Cuenta[];
@@ -294,6 +295,16 @@ export async function publishReel(cuenta: Cuenta, adId: string, caption: string)
   }
   const p = await graph<{ id: string }>(`${cuenta.igUserId}/media_publish`, { method: "POST", params: { creation_id: c.id } });
   return p.id;
+}
+
+/** Publishes a finished Creads ad as a video on the account's Facebook page. Null = modo ensayo. */
+export async function publishFacebook(cuenta: Cuenta, adId: string, caption: string): Promise<string | null> {
+  if (!metaToken()) return null;
+  if (!cuenta.pageId) throw new MetaError(`La cuenta «${cuenta.nombre}» no tiene página de Facebook: agrégale el número de la página en Marketing.`);
+  const video = await adVideo(adId);
+  const token = await pageToken(cuenta.pageId);
+  const r = await graph<{ id: string }>(`${cuenta.pageId}/videos`, { method: "POST", token, params: { file_url: video.final_url, description: caption.slice(0, 5000), published: true }, timeoutMs: 120_000 });
+  return r.id;
 }
 
 /** Last posts of each account (for the agents): likes, comments and how many auto-replies went out. */

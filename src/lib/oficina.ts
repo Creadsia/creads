@@ -13,7 +13,7 @@ import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
 import { AUTO, MANUAL } from "./lanzamiento";
 import { FORMATS } from "./formats";
-import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
+import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
@@ -77,7 +77,7 @@ export type Action =
   | { tipo: "campana"; spec: CampanaSpec; motivo: string }
   | { tipo: "campana_estado"; campaignId: string; nombre: string; on: boolean; motivo: string }
   | { tipo: "presupuesto"; campaignId: string; nombre: string; usd: number; motivo: string }
-  | { tipo: "publicacion"; cuenta: string; adId: string; texto: string; motivo: string };
+  | { tipo: "publicacion"; cuenta: string; adId: string; texto: string; motivo: string; destino?: "instagram" | "facebook" | "ambos" };
 export interface Proposal { id: string; at: string; by: string; action: Action; estado: "pendiente" | "aprobando" | "aprobada" | "rechazada" | "error"; resultado?: string; decidedAt?: string }
 /** An assignment for Claude (the developer): a GitHub issue when the bridge is set up, else copied by hand. */
 export interface Encargo { id: string; at: string; titulo: string; texto: string; issue?: number; url?: string; estado: "por enviar" | "enviado" | "en curso" | "listo"; respuesta?: string }
@@ -135,7 +135,7 @@ const BUILTIN: Record<string, AgentConfig> = {
   },
   organico: {
     name: "Contenido orgánico", area: "Publica en los Instagram de la marca y cuida la comunidad", search: false, sharePct: 6, sources: ["organico", "material"],
-    mission: "Eres el encargado de contenido orgánico. Publicas en las cuentas de Instagram de la marca videos hechos con Creads que se vean bonitos y naturales, de esos que hacen que la gente comente «¿dónde lo hacen?». Propones qué video publicar en qué cuenta y con qué texto: cercano, sin parecer aviso, y siempre transparente (las cuentas dicen que el contenido está hecho con Creads; nunca te haces pasar por un cliente o una persona cualquiera). Revisas qué publicaciones funcionan mejor y propones el plan de la semana.",
+    mission: "Eres el encargado de contenido orgánico. Publicas en las cuentas de Instagram y en las páginas de Facebook de la marca videos hechos con Creads que se vean bonitos y naturales, de esos que hacen que la gente comente «¿dónde lo hacen?». Propones qué video publicar en qué cuenta y con qué texto: cercano, sin parecer aviso, y siempre transparente (las cuentas dicen que el contenido está hecho con Creads; nunca te haces pasar por un cliente o una persona cualquiera). Revisas qué publicaciones funcionan mejor y propones el plan de la semana.",
   },
 };
 export const BUILTIN_IDS = Object.keys(BUILTIN);
@@ -376,7 +376,7 @@ const ACTION_SPEC: Record<Action["tipo"], string> = {
   campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/… (solo creadsia.com)","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","motivo":"por qué"}`,
   campana_estado: `{"tipo":"campana_estado","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","on":false,"motivo":"por qué pausarla o activarla, con números"}`,
   presupuesto: `{"tipo":"presupuesto","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","usd":15,"motivo":"por qué, con números"}`,
-  publicacion: `{"tipo":"publicacion","cuenta":"nombre exacto de la cuenta de Instagram","adId":"id de un anuncio terminado de Creads","texto":"texto del post, cercano y transparente","motivo":"por qué este video"}`,
+  publicacion: `{"tipo":"publicacion","cuenta":"nombre exacto de la cuenta de la marca","destino":"instagram|facebook|ambos","adId":"id de un anuncio terminado de Creads","texto":"texto del post, cercano y transparente","motivo":"por qué este video"}`,
 };
 const actionsFormat = (tipos: Action["tipo"][]) => tipos.length ? `\nAdemás puedes agregar "acciones":[…] (máximo 3, solo si hacen falta) con movimientos concretos que Gastón aprueba, de estos tipos:\n${tipos.map((t) => ACTION_SPEC[t]).join("\n")}\nNo repitas acciones ya pendientes ni rechazadas.` : "";
 
@@ -650,7 +650,7 @@ export function describe(a: Action): string {
     case "campana": return `Subir campaña en pausa: ${a.spec.nombre}`;
     case "campana_estado": return `${a.on ? "Activar" : "Pausar"} la campaña ${a.nombre || a.campaignId}`;
     case "presupuesto": return `Presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`;
-    case "publicacion": return `Publicar en ${a.cuenta} el anuncio ${a.adId.slice(0, 8)}`;
+    case "publicacion": return `Publicar en ${a.cuenta} (${a.destino === "ambos" ? "Instagram y Facebook" : a.destino === "facebook" ? "Facebook" : "Instagram"}) el anuncio ${a.adId.slice(0, 8)}`;
   }
 }
 
@@ -687,7 +687,8 @@ export function cleanAction(x: unknown, st: OfficeState, capUsd = 30): Action | 
   }
   if (o.tipo === "publicacion" && /^[0-9a-f-]{36}$/i.test(String(o.adId ?? ""))) {
     const texto = t(o.texto, 2000);
-    return texto.length >= 5 ? { tipo: "publicacion", cuenta: t(o.cuenta, 60), adId: String(o.adId), texto, motivo: t(o.motivo, 400) } : null;
+    const destino = o.destino === "facebook" || o.destino === "ambos" ? o.destino : "instagram";
+    return texto.length >= 5 ? { tipo: "publicacion", cuenta: t(o.cuenta, 60), adId: String(o.adId), texto, motivo: t(o.motivo, 400), destino } : null;
   }
   return null;
 }
@@ -800,9 +801,17 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
       const m = await loadMarketing();
       const cuenta = m.cuentas.find((c) => c.nombre.toLowerCase() === a.cuenta.toLowerCase());
       if (!cuenta) { await finish("error", `No hay una cuenta llamada «${a.cuenta}» en Marketing.`); return { ok: false, mensaje: `Agrega la cuenta «${a.cuenta}» en Marketing primero.` }; }
-      const mediaId = await publishReel(cuenta, a.adId, a.texto);
-      await commitMarketing((x) => { x.publicaciones = [{ id: `pub-${pid}`, at: new Date().toISOString(), cuenta: cuenta.nombre, adId: a.adId, texto: a.texto, estado: (mediaId ? "publicada" : "ensayo") as "publicada" | "ensayo", mediaId: mediaId ?? undefined }, ...x.publicaciones].slice(0, 100); });
-      const msg = mediaId ? `Publicado en ${cuenta.nombre}.` : "Modo ensayo: la publicación quedó guardada en Marketing (no se publicó). Cuando conectes Meta, se vuelve a proponer.";
+      const destino = a.destino ?? "instagram";
+      const mediaId = destino !== "facebook" ? await publishReel(cuenta, a.adId, a.texto) : null;
+      let fbId: string | null = null, fbError = "";
+      if (destino !== "instagram") {
+        try { fbId = await publishFacebook(cuenta, a.adId, a.texto); }
+        catch (e) { if (destino === "facebook") throw e; fbError = e instanceof Error ? e.message : "no se pudo publicar en Facebook"; }
+      }
+      const done = Boolean(mediaId || fbId);
+      await commitMarketing((x) => { x.publicaciones = [{ id: `pub-${pid}`, at: new Date().toISOString(), cuenta: cuenta.nombre, adId: a.adId, texto: a.texto, destino, estado: (done ? "publicada" : "ensayo") as "publicada" | "ensayo", mediaId: mediaId ?? undefined, fbId: fbId ?? undefined, error: fbError || undefined }, ...x.publicaciones].slice(0, 100); });
+      const where = [mediaId && "Instagram", fbId && "Facebook"].filter(Boolean).join(" y ");
+      const msg = done ? `Publicado en ${cuenta.nombre} (${where}).${fbError ? ` Facebook falló: ${fbError}` : ""}` : "Modo ensayo: la publicación quedó guardada en Marketing (no se publicó). Cuando conectes Meta, se vuelve a proponer.";
       await finish("aprobada", msg);
       return { ok: true, mensaje: msg };
     }
