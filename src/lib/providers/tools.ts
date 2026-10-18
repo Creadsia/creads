@@ -242,16 +242,18 @@ export function swapFramePrompt(extra?: string) {
   ].filter(Boolean).join("\n");
 }
 
-/** The earliest of these frames where the main person is clearly visible (0 if unsure). */
+const NO_BODY = "En este video la persona principal no aparece clara de la cintura para arriba (por ejemplo, está dentro de un auto o tapada). Usa un video donde se le vea de frente, con cabeza, hombros, brazos y torso. No se te cobró.";
+
+/** The earliest of these frames where the main person's whole upper body is clearly seen (-1 if none, 0 if unsure). */
 async function firstClearFrame(frames: string[]): Promise<number> {
   if (frames.length < 2 || !claude.configured()) return 0;
   try {
     const out = await claude.complete({
       fast: true, json: true, maxTokens: 1000, images: frames,
-      prompt: `These are ${frames.length} frames of one video, in order (frame 0 to ${frames.length - 1}). Find the main person of the video (the one it is about, usually the one the camera follows). Answer the number of the EARLIEST frame where that main person is clearly visible: face and most of the body, not hidden inside a car, behind a door or cut by the edge. JSON: {"frame": number}`,
+      prompt: `These are ${frames.length} frames of one video, in order (frame 0 to ${frames.length - 1}). Find the main person of the video (the one it is about, usually the one the camera follows). Answer the number of the EARLIEST frame where that main person's COMPLETE upper body is clearly visible: head, both shoulders, both arms and the torso down to the waist, all inside the picture, not inside a car, not behind a car door or any object, not cut by the edge, ideally standing and facing the camera. Being only partly out of a car does NOT count. If no frame shows it, answer -1. JSON: {"frame": number}`,
     });
     const n = Number(JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1)).frame);
-    return Number.isInteger(n) && n >= 0 && n < frames.length ? n : 0;
+    return Number.isInteger(n) && n >= -1 && n < frames.length ? n : 0;
   } catch { return 0; }
 }
 
@@ -262,10 +264,12 @@ async function startSwap(input: ToolInput, ws: string, what: string): Promise<st
     const src = `${dir}/src.mp4`;
     await download(input.video!, src);
     const dur = input.videoSecs || (await probe(src)).dur;
-    // candidates in the first seconds (the video must still last 3 s from there)
-    const times = [0, 0.5, 1, 1.5, 2, 3, 4].filter((t) => t === 0 || t <= dur - 3.2);
+    // candidates along the video, one per second (the video must still last 3 s from there)
+    const times = [0, 0.5, ...Array.from({ length: 14 }, (_, i) => i + 1)].filter((t) => t === 0 || t <= dur - 3.2);
     const small = await Promise.all(times.map(async (t, i) => { const f = `${dir}/c${i}.jpg`; await still(src, t, f, 360); return `data:image/jpeg;base64,${(await readFile(f)).toString("base64")}`; }));
-    const at = times[await firstClearFrame(small)];
+    const pick = await firstClearFrame(small);
+    if (pick < 0) throw new Error(NO_BODY); // before spending anything: the start refunds it
+    const at = times[pick];
     await still(src, at, `${dir}/frame.jpg`, null);
     const frameUrl = await fetchableUrl(await saveMedia(ws, "tools/personaje", await readFile(`${dir}/frame.jpg`), "image/jpeg"), ws);
     // the video from that moment on, so the picture and the first frame of the motion match
@@ -294,7 +298,12 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
       state: "running",
       advance: async () => {
         const video = await fetchableUrl(sj.v, ws);
-        const j = await falSubmit(MOTION, { image_url: frame, video_url: video, character_orientation: "video", keep_original_sound: sj.snd === 1, ...(sj.p ? { prompt: sj.p } : {}) }, t.name);
+        const j = await falSubmit(MOTION, { image_url: frame, video_url: video, character_orientation: "video", keep_original_sound: sj.snd === 1, ...(sj.p ? { prompt: sj.p } : {}) }, t.name)
+          .catch((e: unknown) => {
+            // Kling checks the picture for a full upper body: say it plainly
+            if (/upper body|body detected|recognition failed/i.test(e instanceof Error ? e.message : "")) throw new Error("No se vio el cuerpo completo del personaje de la cintura para arriba en la escena. Prueba con un video donde la persona aparezca de frente y entera desde la cintura en algún momento. Te devolvimos los créditos.");
+            throw e;
+          });
         return SWAP + JSON.stringify({ ...sj, s: 2, j, frame } satisfies SwapJob);
       },
     };

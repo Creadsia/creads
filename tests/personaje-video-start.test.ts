@@ -42,7 +42,7 @@ test("step 1 starts at the first clear moment: the frame and the video from ther
   }) as typeof fetch;
 
   const job = await startTool(findTool("personaje-en-video")!, { video: "https://video.test/in.mp4", videoRef: "/api/media/ws/w01/uploads/in.mp4", videoSecs: 12, image: "https://sheet.test/s.png", sound: false }, "w01");
-  assert.equal(claudeImages, 7, "seven candidate moments");
+  assert.equal(claudeImages, 10, "one candidate per second");
   const sj = JSON.parse(job.slice("swap:".length));
   assert.equal(sj.s, 1);
   assert.equal(sj.snd, 0);
