@@ -73,6 +73,37 @@ function Body({ r }: { r: Report }) {
 
 // ---------------------------------------------------------------- chat
 
+/** Approve a move right in the chat (the same as Oficina → Por aprobar). */
+function ChatApprovals({ items, pending, onDone }: { items: { id: string; texto: string }[]; pending: View["state"]["pending"]; onDone: () => void }) {
+  const [busy, setBusy] = useState("");
+  const [done, setDone] = useState<Record<string, string>>({});
+  const decide = async (id: string, aprobar: boolean) => {
+    setBusy(id);
+    try { const x = await api<{ mensaje?: string }>("/api/admin/oficina", "PATCH", { decide: id, aprobar }); setDone((d) => ({ ...d, [id]: x.mensaje || (aprobar ? "Aprobado." : "Rechazado.") })); onDone(); }
+    catch (e) { setDone((d) => ({ ...d, [id]: e instanceof Error ? e.message : "No se pudo." })); }
+    setBusy("");
+  };
+  return (
+    <ul className="flex flex-col gap-2 border-t border-line pt-2">
+      {items.map((it) => {
+        const p = pending.find((x) => x.id === it.id);
+        const state = done[it.id] ?? (p && p.estado !== "pendiente" ? (p.resultado ?? p.estado) : "");
+        return (
+          <li key={it.id} className="flex flex-col gap-1.5">
+            <b className="text-xs">{it.texto}</b>
+            {state ? <span className="text-xs text-muted">{state}</span> : (
+              <span className="flex flex-wrap gap-2">
+                <button type="button" disabled={!!busy} onClick={() => decide(it.id, true)} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink disabled:opacity-50">{busy === it.id ? "Haciéndolo… (hasta 3 min)" : "Aprobar y hacerlo"}</button>
+                <button type="button" disabled={!!busy} onClick={() => decide(it.id, false)} className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold disabled:opacity-50">Rechazar</button>
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function Chat({ v, agent, setAgent, onSpent, ids, title = "Habla con tu oficina" }: { v: View; agent: string; setAgent: (id: string) => void; onSpent: () => void; ids?: string[]; title?: string }) {
   const list = ids ? v.agents.filter((x) => ids.includes(x.id)) : v.agents;
   const [msgs, setMsgs] = useState<ChatMsg[] | null>(null);
@@ -124,6 +155,7 @@ function Chat({ v, agent, setAgent, onSpent, ids, title = "Habla con tu oficina"
         ) : msgs.map((m, i) => (
           <div key={i} className={`flex max-w-[92%] flex-col gap-1.5 rounded-2xl px-3.5 py-2.5 text-sm ${m.role === "user" ? "self-end bg-ink text-bg" : m.error ? "self-start border border-warn/40 bg-warn/10" : "self-start border border-line bg-surface"}`}>
             <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+            {m.role === "agent" && !!m.pendientes?.length && <ChatApprovals items={m.pendientes} pending={v.state.pending} onDone={onSpent} />}
             {m.role === "agent" && <Links urls={m.fuentes} />}
             {m.role === "agent" && !!m.usd && <span className="text-[11px] text-muted">{when(m.at)} · {usd(m.usd)}</span>}
           </div>
@@ -217,7 +249,7 @@ function actionText(a: Action) {
   if (a.tipo === "anuncio") return { title: `Pedir anuncio a Creads: ${a.titulo}`, body: `Formato: ${a.formato} · ${a.idioma === "en" ? "inglés" : "español"}\nIdea: ${a.idea || "—"}\n\nGuion:\n${a.guion}` };
   if (a.tipo === "campana") {
     const c = a.spec;
-    return { title: `Subir campaña EN PAUSA: ${c.nombre}`, body: `Objetivo: ${c.objetivo} · Países: ${c.paises.join(", ")} · Edad ${c.edadMin}–${c.edadMax}\nPresupuesto: US$${c.presupuestoUsd}/día (no gasta hasta que la actives)\nTexto: ${c.texto}\nTítulo: ${c.titulo} · Botón: ${c.cta}\nLink: ${c.link}\nAnuncio de Creads: ${c.adId.slice(0, 8)}…\n\nPor qué: ${a.motivo || "—"}` };
+    return { title: a.activar ? `LANZAR campaña en Meta (queda corriendo y gastando): ${c.nombre}` : `Subir campaña EN PAUSA: ${c.nombre}`, body: `Objetivo: ${c.objetivo} · Países: ${c.paises.join(", ")} · Edad ${c.edadMin}–${c.edadMax}\nPresupuesto: US$${c.presupuestoUsd}/día ${a.activar ? "(empieza a gastar al aprobarla, siempre dentro del tope diario)" : "(no gasta hasta que la actives)"}\nTexto: ${c.texto}\nTítulo: ${c.titulo} · Botón: ${c.cta}\nLink: ${c.link}\nAnuncio de Creads: ${c.adId.slice(0, 8)}…\n\nPor qué: ${a.motivo || "—"}` };
   }
   if (a.tipo === "campana_estado") return { title: `${a.on ? "ACTIVAR (empieza a gastar)" : "Pausar"} la campaña ${a.nombre || a.campaignId}`, body: a.motivo };
   if (a.tipo === "presupuesto") return { title: `Cambiar presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`, body: a.motivo };

@@ -102,14 +102,14 @@ export type Action =
   | { tipo: "memoria"; texto: string }
   | { tipo: "agente"; id: string; on: boolean; motivo: string }
   | { tipo: "anuncio"; titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; idea: string }
-  | { tipo: "campana"; spec: CampanaSpec; motivo: string }
+  | { tipo: "campana"; spec: CampanaSpec; motivo: string; activar?: boolean }
   | { tipo: "campana_estado"; campaignId: string; nombre: string; on: boolean; motivo: string }
   | { tipo: "presupuesto"; campaignId: string; nombre: string; usd: number; motivo: string }
   | { tipo: "publicacion"; cuenta: string; adId: string; texto: string; motivo: string; destino?: "instagram" | "facebook" | "ambos" };
 export interface Proposal { id: string; at: string; by: string; action: Action; estado: "pendiente" | "aprobando" | "aprobada" | "rechazada" | "error"; resultado?: string; decidedAt?: string }
 /** An assignment for Claude (the developer): a GitHub issue when the bridge is set up, else copied by hand. */
 export interface Encargo { id: string; at: string; titulo: string; texto: string; issue?: number; url?: string; estado: "por enviar" | "enviado" | "en curso" | "listo"; respuesta?: string }
-export interface ChatMsg { role: "user" | "agent"; text: string; at: string; usd?: number; fuentes?: string[]; error?: boolean }
+export interface ChatMsg { role: "user" | "agent"; text: string; at: string; usd?: number; fuentes?: string[]; error?: boolean; pendientes?: { id: string; texto: string }[] }
 
 const FILE = "oficina/estado.json";
 const MEMORY = "oficina/memoria.json";
@@ -158,8 +158,8 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
   },
   marketing: {
-    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["conexiones", "meta", "organico", "visitas", "negocio", "espia"],
-    mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace. Eres el responsable de que el área funcione de punta a punta: si falta conectar algo (píxel, API de conversiones, cuenta publicitaria, página, Instagram), lo dices primero y guías a quien te hable (Gastón o Benjamín, el socio a cargo de marketing) paso a paso en Panel → Marketing → Conexiones: dónde está cada dato en Meta (Administrador de eventos, Configuración del negocio, usuarios del sistema), qué copiar y dónde pegarlo, y que después apriete «Probar conexión» y te cuente qué salió. Nunca respondas solo «no puedo»: si algo no lo puedes hacer tú, explica cómo se hace o propónlo para aprobación. Nunca pidas que te peguen tokens en el chat: van solo en Conexiones.",
+    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["conexiones", "material", "meta", "organico", "visitas", "negocio", "espia"],
+    mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace. Eres el responsable de que el área funcione de punta a punta: si falta conectar algo (píxel, API de conversiones, cuenta publicitaria, página, Instagram), lo dices primero y guías a quien te hable (Gastón o Benjamín, el socio a cargo de marketing) paso a paso en Panel → Marketing → Conexiones: dónde está cada dato en Meta (Administrador de eventos, Configuración del negocio, usuarios del sistema), qué copiar y dónde pegarlo, y que después apriete «Probar conexión» y te cuente qué salió. Nunca respondas solo «no puedo»: si algo no lo puedes hacer tú, explica cómo se hace o propónlo para aprobación. Nunca pidas que te peguen tokens en el chat: van solo en Conexiones. Cuando te pidan lanzar una campaña, ármala completa altiro (nombre, objetivo, países, edades, presupuesto dentro del tope, texto, título, botón, link a creadsia.com y el mejor anuncio terminado de Creads de «Anuncios terminados») y déjala para aprobar; si te dijeron que la lances ya, márcala para activarse al aprobarla. Si no hay ningún anuncio terminado, propón primero el pedido del anuncio. No preguntes lo que puedes decidir tú.",
   },
   creativos: {
     name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["material", "meta", "espia"],
@@ -466,7 +466,7 @@ const ACTION_SPEC: Record<Action["tipo"], string> = {
   memoria: `{"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads"}`,
   agente: `{"tipo":"agente","id":"id del agente","on":true,"motivo":"por qué prenderlo o apagarlo"}`,
   anuncio: `{"tipo":"anuncio","titulo":"nombre corto","formato":"${FORMATS.map((f) => f.id).join("|")}","idioma":"es-CL","guion":"el guion completo, lo que dice la persona","idea":"ángulo y por qué debería funcionar"}`,
-  campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/… (solo creadsia.com)","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","motivo":"por qué"}`,
+  campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/… (solo creadsia.com)","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","activar":false,"motivo":"por qué"}` + ` («activar»: true SOLO si te pidieron lanzarla ya: al aprobarla se sube y queda corriendo; si no, se sube en pausa)`,
   campana_estado: `{"tipo":"campana_estado","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","on":false,"motivo":"por qué pausarla o activarla, con números"}`,
   presupuesto: `{"tipo":"presupuesto","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","usd":15,"motivo":"por qué, con números"}`,
   publicacion: `{"tipo":"publicacion","cuenta":"nombre exacto de la cuenta de la marca","destino":"instagram|facebook|ambos","adId":"id de un anuncio terminado de Creads","texto":"texto del post, cercano y transparente","motivo":"por qué este video"}`,
@@ -613,15 +613,16 @@ function save(s: OfficeState, id: string, out: WorkOut) {
 }
 
 /** Adds proposed moves to «Por aprobar» (skipping ones already pending or rejected this week). Returns the added ones. */
-function addPending(s: OfficeState, by: string, acciones: Action[]): Action[] {
+function addPending(s: OfficeState, by: string, acciones: Action[]): Proposal[] {
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
   const open = new Set(s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando" || (p.estado === "rechazada" && (p.decidedAt ?? "") > weekAgo)).map((p) => describe(p.action)));
-  const added: Action[] = [];
+  const added: Proposal[] = [];
   for (const action of acciones) {
     if (open.has(describe(action))) continue;
     open.add(describe(action));
-    s.pending.unshift({ id: `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), by, action, estado: "pendiente" });
-    added.push(action);
+    const p: Proposal = { id: `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), by, action, estado: "pendiente" };
+    s.pending.unshift(p);
+    added.push(p);
   }
   // keep every pending one; trim only decided ones
   const decided = s.pending.filter((p) => p.estado !== "pendiente" && p.estado !== "aprobando");
@@ -804,6 +805,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
     // a move proposed in the chat really goes to «Por aprobar» (never just said)
     let text = r.text;
+    let pendientes: ChatMsg["pendientes"];
     const k = text.indexOf(ACTIONS_MARK);
     if (k >= 0) {
       const raw = text.slice(k + ACTIONS_MARK.length);
@@ -812,13 +814,14 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
       try { const j = parseJSON<unknown>(raw); list = Array.isArray(j) ? j : [j]; } catch { list = []; }
       const cap = rights.length ? (await loadMarketing().catch(() => null))?.capUsd ?? 30 : 30;
       const acciones = list.map((x) => cleanAction(x, st, cap)).filter((x): x is Action => Boolean(x) && rights.includes(x!.tipo)).slice(0, 3);
-      let added: Action[] = [];
+      let added: Proposal[] = [];
       if (acciones.length) await commit((s) => { added = addPending(s, id, acciones); });
+      pendientes = added.map((p) => ({ id: p.id, texto: describe(p.action) }));
       text += added.length
-        ? `\n\n✅ Quedó en Oficina → Por aprobar:\n${added.map((x) => `- ${describe(x)}`).join("\n")}`
+        ? "\n\n✅ Lo dejé listo para aprobar (aquí abajo o en Oficina → Por aprobar)."
         : acciones.length ? "\n\nℹ️ Eso ya estaba en Oficina → Por aprobar (o se rechazó esta semana)." : "\n\n⚠️ No pude dejar la propuesta en «Por aprobar»: le faltaban datos. Pídemela de nuevo con lo que falte.";
     }
-    return { role: "agent", text: clip(text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources };
+    return { role: "agent", text: clip(text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources, ...(pendientes?.length ? { pendientes } : {}) };
   };
   const reply = await answer();
   const list = [...msgs, mine, reply].slice(-80);
@@ -836,7 +839,7 @@ export function describe(a: Action): string {
     case "memoria": return `Agregar a la Memoria: ${a.texto}`;
     case "agente": return `${a.on ? "Prender" : "Apagar"} el agente ${a.id}`;
     case "anuncio": return `Pedir anuncio a Creads: ${a.titulo}`;
-    case "campana": return `Subir campaña en pausa: ${a.spec.nombre}`;
+    case "campana": return a.activar ? `Lanzar campaña en Meta (queda activa, US$${a.spec.presupuestoUsd}/día): ${a.spec.nombre}` : `Subir campaña en pausa: ${a.spec.nombre}`;
     case "campana_estado": return `${a.on ? "Activar" : "Pausar"} la campaña ${a.nombre || a.campaignId}`;
     case "presupuesto": return `Presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`;
     case "publicacion": return `Publicar en ${a.cuenta} (${a.destino === "ambos" ? "Instagram y Facebook" : a.destino === "facebook" ? "Facebook" : "Instagram"}) el anuncio ${a.adId.slice(0, 8)}`;
@@ -866,7 +869,7 @@ export function cleanAction(x: unknown, st: OfficeState, capUsd = 30): Action | 
   }
   if (o.tipo === "campana") {
     const spec = cleanCampaign({ ...o, nombre: t(o.nombre, 80), texto: t(o.texto, 600), titulo: t(o.titulo, 60) }, capUsd);
-    return typeof spec === "string" ? null : { tipo: "campana", spec, motivo: t(o.motivo, 400) };
+    return typeof spec === "string" ? null : { tipo: "campana", spec, motivo: t(o.motivo, 400), ...(o.activar === true ? { activar: true } : {}) };
   }
   const cid = String(o.campaignId ?? "");
   if (o.tipo === "campana_estado" && /^\d{5,25}$/.test(cid) && typeof o.on === "boolean") return { tipo: "campana_estado", campaignId: cid, nombre: t(o.nombre, 80), on: o.on, motivo: t(o.motivo, 400) };
@@ -975,7 +978,17 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
     if (a.tipo === "campana") {
       const r = await createPausedCampaign(a.spec);
       await commitMarketing((m) => { m.campanas = [{ id: `c-${pid}`, at: new Date().toISOString(), spec: a.spec, estado: (r ? "subida en pausa" : "ensayo") as "subida en pausa" | "ensayo", metaId: r?.campaignId, adsetId: r?.adsetId, adId: r?.adId }, ...m.campanas].slice(0, 60); });
-      const msg = r ? "Campaña subida a Meta EN PAUSA. Revísala en el Administrador de anuncios y actívala cuando quieras." : "Modo ensayo: la campaña quedó guardada en Marketing (no se subió). Cuando conectes Meta, el Trafficker la vuelve a proponer para subirla.";
+      let msg = r ? "Campaña subida a Meta EN PAUSA. Revísala en el Administrador de anuncios y actívala cuando quieras." : "Modo ensayo: la campaña quedó guardada en Marketing (no se subió). Cuando conectes Meta, el Trafficker la vuelve a proponer para subirla.";
+      // «lánzala ya»: the approval also turns it on, always within the daily cap
+      if (r && a.activar) {
+        try {
+          await setCampaignStatus(r.campaignId, true, (await loadMarketing()).capUsd);
+          await commitMarketing((m) => { const row = m.campanas.find((x) => x.metaId === r.campaignId); if (row) row.estado = "activa"; });
+          msg = `Campaña lanzada en Meta: ya está corriendo con US$${a.spec.presupuestoUsd} al día. La ves en Marketing → Campañas (los primeros datos aparecen en unas horas).`;
+        } catch (e) {
+          msg = `Campaña subida a Meta, pero quedó EN PAUSA: ${e instanceof Error ? e.message : "no se pudo activar"}`;
+        }
+      }
       await finish("aprobada", msg);
       return { ok: true, mensaje: msg };
     }
