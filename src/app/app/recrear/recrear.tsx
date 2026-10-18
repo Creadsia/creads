@@ -34,7 +34,7 @@ type Personaje = { sheet: string; nombre?: string };
 
 /** The instruction that swaps the person in the video for the saved character (its sheet is photo 1). */
 const swapPrompt = (nombre?: string) =>
-  `Cambia a la persona del video por ${nombre ? `${nombre}, ` : ""}el personaje de la foto 1: misma cara, cuerpo, ropa y colores de su ficha. Mantén igual sus movimientos, gestos, el lugar y la cámara.`;
+  `Replace ONLY the main person of the video (the one the camera follows) with ${nombre ? `${nombre}, ` : ""}the character in foto 1: same face, nose, hair, glasses, body and clothes as in foto 1. foto 1 is a reference sheet of ONE single character seen from several angles: there must be only ONE of him in the video. Every other person stays exactly as in the original video. Do not add objects that are not in the original video. Keep exactly the same movements, timing and camera motion, and the same place and light. Photorealistic, natural phone-video look.`;
 
 /** Keeps the chosen character (and the sound choice) while moving between the gallery and the tool. */
 function carry(p?: Personaje, sound?: boolean) {
