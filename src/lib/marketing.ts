@@ -177,10 +177,12 @@ export function cleanCampaign(x: Record<string, unknown>, capUsd: number): Campa
   try { host = new URL(link).hostname; } catch { /* below */ }
   if (!/^https:\/\//.test(link) || !host) return "El link debe ser una dirección https completa.";
   if (!/^(www\.)?creadsia\.com$/.test(host)) return "Por ahora las campañas solo pueden llevar a creadsia.com.";
-  if (!/^[0-9a-f-]{36}$/i.test(String(x.adId ?? ""))) return "Falta elegir el anuncio terminado de Creads (adId).";
+  // no ad: only the structure (campaign, ad set and a link creative with the page's own image), no video upload
+  const adId = String(x.adId ?? "").trim();
+  if (adId && !/^[0-9a-f-]{36}$/i.test(adId)) return "El anuncio de Creads (adId) no es válido: elige uno de «Anuncios terminados» o déjalo vacío para armar solo la estructura.";
   return {
     nombre: clip(x.nombre, 80) || "Campaña Creads", objetivo, paises, edadMin, edadMax, presupuestoUsd, link,
-    texto: clip(x.texto, 600), titulo: clip(x.titulo, 60), cta, adId: String(x.adId),
+    texto: clip(x.texto, 600), titulo: clip(x.titulo, 60), cta, adId,
   };
 }
 
@@ -206,7 +208,7 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
   const acc = await account();
   if (!acc) return null;
   const { cfg } = acc;
-  const video = await adVideo(spec.adId);
+  const video = spec.adId ? await adVideo(spec.adId) : null;
   const created: string[] = [];
   try {
     const camp = await graph<{ id: string }>(`${cfg.account}/campaigns`, { method: "POST", params: {
@@ -222,18 +224,25 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
       // with Advantage+ audience Meta takes the age as a suggestion (age_range); hard limits stay wide
       targeting: { geo_locations: { countries: spec.paises }, age_min: Math.min(spec.edadMin, 25), age_max: 65, age_range: [spec.edadMin, spec.edadMax], targeting_automation: { advantage_audience: 1 } },
     } });
-    const vid = await graph<{ id: string }>(`${cfg.account}/advideos`, { method: "POST", params: { file_url: video.final_url, name: spec.nombre }, timeoutMs: left(100_000) });
-    await waitVideo(vid.id, left(100_000) - 30_000);
-    const thumbs = await graph<{ data: { uri: string; is_preferred?: boolean }[] }>(`${vid.id}/thumbnails`).catch(() => ({ data: [] }));
-    const thumb = thumbs.data.find((t) => t.is_preferred)?.uri ?? thumbs.data[0]?.uri;
-    if (!thumb) throw new MetaError("Meta todavía está procesando el video. Aprueba de nuevo en unos minutos.");
-    const creative = await graph<{ id: string }>(`${cfg.account}/adcreatives`, { method: "POST", params: {
-      name: `${spec.nombre} · video`,
-      object_story_spec: {
-        page_id: cfg.page, ...(cfg.ig ? { instagram_user_id: cfg.ig } : {}),
-        video_data: { video_id: vid.id, image_url: thumb, message: spec.texto, title: spec.titulo, call_to_action: { type: spec.cta, value: { link: spec.link } } },
-      },
-    } });
+    const ig = cfg.ig ? { instagram_user_id: cfg.ig } : {};
+    let storySpec: Record<string, unknown>;
+    if (video) {
+      const vid = await graph<{ id: string }>(`${cfg.account}/advideos`, { method: "POST", params: { file_url: video.final_url, name: spec.nombre }, timeoutMs: left(100_000) });
+      await waitVideo(vid.id, left(100_000) - 30_000);
+      const thumbs = await graph<{ data: { uri: string; is_preferred?: boolean }[] }>(`${vid.id}/thumbnails`).catch(() => ({ data: [] }));
+      const thumb = thumbs.data.find((t) => t.is_preferred)?.uri ?? thumbs.data[0]?.uri;
+      if (!thumb) throw new MetaError("Meta todavía está procesando el video. Aprueba de nuevo en unos minutos.");
+      storySpec = { page_id: cfg.page, video_data: { video_id: vid.id, image_url: thumb, message: spec.texto, title: spec.titulo, call_to_action: { type: spec.cta, value: { link: spec.link } } } };
+    } else {
+      // structure only: a link ad that takes the image of the page it links to (nothing uploaded)
+      storySpec = { page_id: cfg.page, link_data: { link: spec.link, message: spec.texto, name: spec.titulo, call_to_action: { type: spec.cta, value: { link: spec.link } } } };
+    }
+    // with Instagram if it's connected; if Meta refuses the Instagram account, the creative goes out without it
+    const creative = await graph<{ id: string }>(`${cfg.account}/adcreatives`, { method: "POST", params: { name: `${spec.nombre} · ${video ? "video" : "link"}`, object_story_spec: { ...storySpec, ...ig } } })
+      .catch(async (e) => {
+        if (!cfg.ig) throw e;
+        return graph<{ id: string }>(`${cfg.account}/adcreatives`, { method: "POST", params: { name: `${spec.nombre} · ${video ? "video" : "link"}`, object_story_spec: storySpec } });
+      });
     const ad = await graph<{ id: string }>(`${cfg.account}/ads`, { method: "POST", params: { name: `${spec.nombre} · anuncio`, adset_id: adset.id, creative: { creative_id: creative.id }, status: "PAUSED" } });
     return { campaignId: camp.id, adsetId: adset.id, adId: ad.id };
   } catch (e) {

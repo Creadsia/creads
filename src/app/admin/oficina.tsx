@@ -249,7 +249,7 @@ function actionText(a: Action) {
   if (a.tipo === "anuncio") return { title: `Pedir anuncio a Creads: ${a.titulo}`, body: `Formato: ${a.formato} · ${a.idioma === "en" ? "inglés" : "español"}\nIdea: ${a.idea || "—"}\n\nGuion:\n${a.guion}` };
   if (a.tipo === "campana") {
     const c = a.spec;
-    return { title: a.activar ? `LANZAR campaña en Meta (queda corriendo y gastando): ${c.nombre}` : `Subir campaña EN PAUSA: ${c.nombre}`, body: `Objetivo: ${c.objetivo} · Países: ${c.paises.join(", ")} · Edad ${c.edadMin}–${c.edadMax}\nPresupuesto: US$${c.presupuestoUsd}/día ${a.activar ? "(empieza a gastar al aprobarla, siempre dentro del tope diario)" : "(no gasta hasta que la actives)"}\nTexto: ${c.texto}\nTítulo: ${c.titulo} · Botón: ${c.cta}\nLink: ${c.link}\nAnuncio de Creads: ${c.adId.slice(0, 8)}…\n\nPor qué: ${a.motivo || "—"}` };
+    return { title: a.activar ? `LANZAR campaña en Meta (queda corriendo y gastando): ${c.nombre}` : `Subir campaña EN PAUSA: ${c.nombre}`, body: `Objetivo: ${c.objetivo} · Países: ${c.paises.join(", ")} · Edad ${c.edadMin}–${c.edadMax}\nPresupuesto: US$${c.presupuestoUsd}/día ${a.activar ? "(empieza a gastar al aprobarla, siempre dentro del tope diario)" : "(no gasta hasta que la actives)"}\nTexto: ${c.texto}\nTítulo: ${c.titulo} · Botón: ${c.cta}\nLink: ${c.link}\nAnuncio de Creads: ${c.adId ? `${c.adId.slice(0, 8)}…` : "sin video (solo estructura, con la imagen de la web)"}\n\nPor qué: ${a.motivo || "—"}` };
   }
   if (a.tipo === "campana_estado") return { title: `${a.on ? "ACTIVAR (empieza a gastar)" : "Pausar"} la campaña ${a.nombre || a.campaignId}`, body: a.motivo };
   if (a.tipo === "presupuesto") return { title: `Cambiar presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`, body: a.motivo };
