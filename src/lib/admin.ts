@@ -13,7 +13,7 @@ export async function currentUser(): Promise<User | null> {
  * Partners the owner let into the Panel WITHOUT two-step verification for a few days (his call, 18 Oct 2026),
  * by the SHA-256 of their email (no addresses in the code). Each one ends by itself on its date.
  */
-const NO_2FA_UNTIL: Record<string, string> = { "58bcecc823168ecffc0738a2f5d393ea5a67063de3d9072e4a692ae0bc822cd0": "2026-10-25T23:59:59-03:00" };
+const NO_2FA_UNTIL: Record<string, string> = { "58bcecc823168ecffc0738a2f5d393ea5a67063de3d9072e4a692ae0bc822cd0": "2026-11-18T23:59:59-03:00" };
 const skips2fa = (u: User) => { const until = NO_2FA_UNTIL[createHash("sha256").update(u.email.trim().toLowerCase()).digest("hex")]; return Boolean(until && Date.now() < Date.parse(until)); };
 
 /** Who may open the Panel interno: the owner, or a partner with two-step verification turned on. */
