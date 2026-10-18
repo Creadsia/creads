@@ -45,7 +45,7 @@ ESTADO DEL LANZAMIENTO
 - Trabajo técnico pendiente: fila de generación por proveedor, prueba de carga, pruebas automáticas del recorrido completo, gasto real por proveedor en el Panel.
 
 EQUIPO
-- Gastón (dueño). Benjamín apoya en el área comercial (ventas, conectar píxeles y campañas), con acceso limitado.
+- Gastón (dueño). Benjamín es socio, a cargo de marketing, con acceso completo al Panel.
 - Claude (en el estudio de desarrollo) programa y publica los cambios de la plataforma: es la «mano izquierda». Los agentes de la oficina analizan y proponen; no cambian el sistema.
 - Estructura (decidida el 17-18 oct): Gastón → CEO General (mano derecha, en el Panel; escribe el único resumen oficial del día y propone movimientos que Gastón aprueba). El Panel está ordenado por áreas, cada una con su encargado: Plataforma (Director de Plataforma con Producción, Ciberseguridad y Novedades IA), Marketing (Director de Marketing con Creativos, Trafficker y Contenido orgánico), Ventas y finanzas (Finanzas y ventas), Clientes (Atención al cliente). Más adelante, Afiliados. Los bots de Gastón en grok.com sirven para pensar en voz alta; no ven datos.
 

@@ -9,6 +9,7 @@ import { CLAUDE_OFFICE_MODEL, CLAUDE_OFFICE_MODEL_CEO, claudeOfficeConfigured, c
 import { parseJSON } from "./providers/claude";
 import { dayCL } from "./stats";
 import { DEFAULT_MEMORY } from "./oficina-memoria";
+import { CONTEXTO } from "./oficina-contexto";
 import { overview } from "./balances";
 import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
@@ -227,7 +228,7 @@ const OLD_WHAT = /es un estudio de anuncios en video con IA para anunciantes de 
 const NEW_WHAT = "es una plataforma de generación con IA (videos, audios y voces, UGC, avatares e imágenes) para quienes crean contenido: marketeros, agencias, creadores, marcas y negocios. FOCO (Gastón, 18 oct 2026): el único negocio es hacer crecer Creads IA; seguros, remodelaciones y otros oficios son solo ejemplos de lo que la plataforma produce, nunca el cliente ni una campaña.";
 export async function loadMemory(): Promise<{ text: string; updated: string | null }> {
   const m = await readPrivateJSON<{ text: string; updated: string }>(MEMORY).catch(() => null);
-  return m?.text ? { ...m, text: m.text.replace(OLD_WHAT, NEW_WHAT) } : { text: DEFAULT_MEMORY, updated: null };
+  return m?.text ? { ...m, text: m.text.replace(OLD_WHAT, NEW_WHAT).replace("Benjamín apoya en el área comercial (ventas, conectar píxeles y campañas), con acceso limitado.", "Benjamín es socio, a cargo de marketing, con acceso completo al Panel.") } : { text: DEFAULT_MEMORY, updated: null };
 }
 export const saveMemory = (text: string) => writePrivateJSON(MEMORY, { text: text.slice(0, 20_000), updated: new Date().toISOString() });
 
@@ -577,7 +578,7 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   const r = await ask(a, {
     model, engine, deadline, maxTokens: a.search && !internalOf(a) ? 8000 : 6000,
     system: `${a.mission}\n\n${STYLE}`,
-    prompt: (research) => `${COMPANY}\n${BRIEFING}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
+    prompt: (research) => `${COMPANY}\n${isCeo || isGeneral ? CONTEXTO : BRIEFING}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
   });
   if (r.error) return fail(r.error, r.usd);
   let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown>; acciones?: unknown[] };
@@ -739,7 +740,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     const r = await ask(a, {
       model: modelFor(engine, true), engine, deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
       system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}`,
-      prompt: (research) => `${COMPANY}\n${BRIEFING}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
+      prompt: (research) => `${COMPANY}\n${CONTEXTO}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
     });
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
     return { role: "agent", text: clip(r.text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources };
