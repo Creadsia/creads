@@ -102,11 +102,11 @@ export const TOOLS: ToolDef[] = [
     id: "editar-video",
     name: "Editar video",
     short: "Cambia la cara, el lugar o lo que quieras de un video, escribiéndolo.",
-    lead: "Sube un video de 3 a 10 segundos (por ejemplo un UGC) y escribe el cambio: «cambia el fondo por una cocina moderna», «ponle una polera roja», «reemplaza a la persona por la de la foto 1», «que tenga en la mano el producto de la foto 2». Se mantienen el movimiento y el audio originales.",
+    lead: "Sube un video de 3 a 30 segundos (por ejemplo un UGC) y escribe el cambio: «cambia el fondo por una cocina moderna», «ponle una polera roja», «reemplaza a la persona por la de la foto 1», «que tenga en la mano el producto de la foto 2». Se mantienen el movimiento y el audio originales.",
     output: "video",
     model: "Kling O1 Edit",
     inputs: {
-      video: { min: 3, max: 10 },
+      video: { min: 3, max: 30 },
       images: 4,
       imagesOptional: true,
       prompt: "required",

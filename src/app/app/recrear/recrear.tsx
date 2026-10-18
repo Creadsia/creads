@@ -14,7 +14,7 @@ type Mode = "editar-video" | "copiar-movimiento";
 interface Example { id: string; title: string; tag: string; prompt: string; mode: Mode; secs: number; play: string }
 
 const MODES: { id: Mode; title: string; text: string; model: string; max: number }[] = [
-  { id: "editar-video", title: "Cambiar personaje u objetos", text: "Mismo video, mismo movimiento y audio: cambia la persona, el producto, la ropa o el lugar con tus fotos.", model: "Kling O1", max: 10 },
+  { id: "editar-video", title: "Cambiar personaje u objetos", text: "Mismo video, mismo movimiento y audio: cambia la persona, el producto, la ropa o el lugar con tus fotos.", model: "Kling O1", max: 30 },
   { id: "copiar-movimiento", title: "Copiar movimiento", text: "Tu personaje (una foto) hace exactamente los mismos gestos, poses y movimientos de cámara.", model: "Kling 3.0", max: 30 },
 ];
 
@@ -48,7 +48,7 @@ export default function Recrear({ video, mode, prompt, personaje, sound }: { vid
   const router = useRouter();
   const back = () => { const q = carry(personaje, sound).toString(); router.push(`/app/recrear${q ? `?${q}` : ""}`); };
   const secs = useLength(video);
-  const tooLongToEdit = secs > 10.5;
+  const tooLongToEdit = secs > 30.5;
   const [picked, setPicked] = useState<Mode | null>(mode ?? (personaje && video ? "editar-video" : null));
   // a long video can only be recreated by copying its motion
   const current: Mode | null = picked === "editar-video" && tooLongToEdit ? "copiar-movimiento" : picked ?? (video ? (tooLongToEdit ? "copiar-movimiento" : "editar-video") : null);
@@ -84,7 +84,7 @@ export default function Recrear({ video, mode, prompt, personaje, sound }: { vid
       </div>
       <ToolRun key={current} toolId={current} initial={{ video, prompt: startPrompt, image: personaje?.sheet, sound }} />
       <p className="text-xs text-muted">
-        ¿Tu video es más largo? Recréalo por partes de hasta {current === "editar-video" ? 10 : 30} s y júntalas en «Crear anuncio». <button type="button" onClick={() => { setPicked(null); back(); }} className="underline">Ver ejemplos</button>
+        {current === "editar-video" && secs > 10.5 ? "Como dura más de 10 s, lo hacemos en partes y te entregamos un solo video unido. " : ""}¿Tu video dura más de 30 s? Recréalo por partes y júntalas en «Crear anuncio». <button type="button" onClick={() => { setPicked(null); back(); }} className="underline">Ver ejemplos</button>
       </p>
     </div>
   );
@@ -125,7 +125,7 @@ function Gallery({ onOwn, personaje, sound }: { onOwn: (m: Mode) => void; person
       // with a character, every example opens as the swap (the example's own instruction is for its own use)
       const q = carry(personaje, sound);
       q.set("video", d.video);
-      if (personaje) { if (e.secs > 10.5) q.set("modo", "copiar-movimiento"); }
+      if (personaje) { if (e.secs > 30.5) q.set("modo", "copiar-movimiento"); }
       else { q.set("modo", d.mode); if (d.prompt) q.set("prompt", d.prompt); }
       router.push(`/app/recrear?${q}`);
     } catch (x) {

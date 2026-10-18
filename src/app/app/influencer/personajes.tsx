@@ -64,7 +64,7 @@ export default function Personajes() {
         <h2 className="font-semibold">Cómo darle vida</h2>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
           <li>Toca «Recrear un video» en tu personaje.</li>
-          <li>Elige un video de la galería o sube el tuyo (hasta 10 segundos para cambiar a la persona; hasta 30 copiando sus movimientos).</li>
+          <li>Elige un video de la galería o sube el tuyo (de 3 a 30 segundos).</li>
           <li>Elige si quieres el audio original o el video sin audio. Ves el precio antes de generar.</li>
         </ol>
       </section>

@@ -1,5 +1,7 @@
 import type { ToolDef, ToolId } from "../tools";
-import { saveMedia } from "../media";
+import { readFile, rm } from "node:fs/promises";
+import { fetchableUrl, saveMedia } from "../media";
+import { cutParts, download, joinParts, partsPlan, workdir } from "../montage";
 import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
@@ -18,6 +20,8 @@ export interface ToolInput {
   instrumental?: boolean;
   /** editar-video / copiar-movimiento: keep the original video's sound (default true). */
   sound?: boolean;
+  /** editar-video: the measured length of the video (over 10 s it's done in parts). */
+  videoSecs?: number;
 }
 
 export type ToolCheck =
@@ -123,6 +127,7 @@ export async function startTool(t: ToolDef, input: ToolInput, ws: string): Promi
   }
   const f = FAL[t.id];
   if (!f) throw new Error("Herramienta desconocida.");
+  if (t.id === "editar-video" && (input.videoSecs ?? 0) > EDIT_MAX) return startInParts(f, input, ws, t.name);
   return falSubmit(typeof f.endpoint === "function" ? f.endpoint(input) : f.endpoint, f.build(input), t.name);
 }
 
@@ -134,6 +139,7 @@ const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp
 
 export async function checkTool(t: ToolDef, job: string): Promise<ToolCheck> {
   if (job.startsWith("url:")) return { state: "done", url: job.slice(4) };
+  if (job.startsWith(PARTS)) return checkParts(t, job);
   if (job.startsWith("el:")) {
     const [, id, lang] = job.split(":");
     const st = await dubStatus(id);
@@ -156,6 +162,55 @@ export async function checkTool(t: ToolDef, job: string): Promise<ToolCheck> {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`No se pudo descargar el resultado (${res.status}).`);
       return res.arrayBuffer();
+    },
+  };
+}
+
+// ---------------------------------------------------------------- long videos in parts (Editar video)
+// The edit model takes at most 10 s. A longer video (up to 30 s) is cut into equal parts, each part is edited
+// with the same instruction and photos (all at once), and the results are joined back into one video.
+// The job id carries every part's job: "parts:<1|0 sound>:<json list>".
+
+const EDIT_MAX = 10.05;
+const PARTS = "parts:";
+
+async function startInParts(f: FalTool, input: ToolInput, ws: string, what: string): Promise<string> {
+  const dir = await workdir(`parts-${Date.now().toString(36)}`);
+  try {
+    const src = `${dir}/src.mp4`;
+    await download(input.video!, src);
+    const files = await cutParts(dir, src, partsPlan(input.videoSecs!));
+    const urls = await Promise.all(files.map(async (file) => fetchableUrl(await saveMedia(ws, "tools/partes", await readFile(file), "video/mp4"), ws)));
+    const jobs = await Promise.all(urls.map((video) => falSubmit(typeof f.endpoint === "function" ? f.endpoint({ ...input, video }) : f.endpoint, f.build({ ...input, video }), what)));
+    return `${PARTS}${input.sound === false ? 0 : 1}:${JSON.stringify(jobs)}`;
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => null);
+  }
+}
+
+async function checkParts(t: ToolDef, job: string): Promise<ToolCheck> {
+  const m = job.match(/^parts:([01]):(\[.*\])$/);
+  const f = FAL[t.id];
+  if (!m || !f) return { state: "failed", error: "Trabajo inválido." };
+  const jobs = JSON.parse(m[2]) as string[];
+  const st = await Promise.all(jobs.map((j) => falPoll(j, t.name)));
+  const bad = st.find((x) => x.state === "failed");
+  if (bad && bad.state === "failed") return bad;
+  if (st.some((x) => x.state === "queued")) return { state: "queued" };
+  if (st.some((x) => x.state !== "done")) return { state: "running" };
+  const urls = st.map((x) => (x.state === "done" ? f.pick(x.out) : undefined));
+  if (urls.some((u) => !u)) return { state: "failed", error: `${t.name}: una parte no devolvió video.` };
+  return {
+    state: "done", mime: "video/mp4", ext: "mp4",
+    fetch: async () => {
+      const dir = await workdir(`join-${Date.now().toString(36)}`);
+      try {
+        const files = await Promise.all(urls.map(async (u, i) => { const file = `${dir}/r${i}.mp4`; await download(u!, file); return file; }));
+        const out = await joinParts(dir, files, m[1] === "1");
+        return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
+      } finally {
+        await rm(dir, { recursive: true, force: true }).catch(() => null);
+      }
     },
   };
 }

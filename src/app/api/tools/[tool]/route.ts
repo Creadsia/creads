@@ -11,7 +11,7 @@ import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { publicError } from "@/lib/public-error";
 import { isOwner } from "@/lib/auth";
 
-export const maxDuration = 120;
+export const maxDuration = 300; // long videos are cut into parts on start and joined when done
 
 // POST starts a "Crear" tool and records the job (so a closed tab never loses work that was paid for).
 // GET ?id=<job row> checks it; when it's finished the result is copied to our storage once.
@@ -75,6 +75,7 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     seconds = d;
     // recreated videos can come out silent (e.g. a character with no voice, for music or a later voice-over)
     if (t.id === "editar-video" || t.id === "copiar-movimiento") input.sound = b.sound !== false;
+    if (t.id === "editar-video") input.videoSecs = d;
   }
   if (need.audio) {
     if (!mine(b.audio)) return "Sube un audio o genera la voz.";

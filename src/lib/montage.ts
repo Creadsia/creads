@@ -391,3 +391,61 @@ export async function workdir(id: string) {
   await mkdir(dir, { recursive: true });
   return dir;
 }
+
+/**
+ * Long videos for tools whose model takes at most `max` seconds (Editar video: 10 s): the plan to cut them
+ * into equal parts, at most 3. 25 s → three parts of 8.3 s.
+ */
+export function partsPlan(secs: number, max = 10, most = 3): { a: number; len: number }[] {
+  const n = Math.min(most, Math.max(1, Math.ceil((secs - 0.05) / max)));
+  const len = secs / n;
+  return Array.from({ length: n }, (_, i) => ({ a: +(i * len).toFixed(3), len: +len.toFixed(3) }));
+}
+
+/** Cuts a video into the planned parts (re-encoded so every cut is exact). Returns the part files. */
+export async function cutParts(dir: string, file: string, plan: { a: number; len: number }[]) {
+  const out: string[] = [];
+  for (const [i, p] of plan.entries()) {
+    const f = path.join(dir, `part${i}.mp4`);
+    await ff(["-y", "-v", "error", "-ss", p.a.toFixed(3), "-i", file, "-t", p.len.toFixed(3),
+      "-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f], 120_000);
+    out.push(f);
+  }
+  return out;
+}
+
+/** Width and height of a video's picture (0×0 if unknown). */
+async function sizeOf(file: string): Promise<[number, number]> {
+  const log = await run(ffmpeg(), ["-hide_banner", "-i", file], { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 })
+    .then((r) => r.stderr + r.stdout)
+    .catch((e: { stderr?: string }) => e.stderr ?? "");
+  const m = log.match(/Stream #\d+:\d+[^\n]*Video:[^\n]*?, (\d{2,5})x(\d{2,5})/);
+  return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+}
+
+/** Joins the finished parts back into one video, with their sound or silent. */
+export async function joinParts(dir: string, files: string[], withSound: boolean) {
+  let [W, H] = await sizeOf(files[0]);
+  if (!W || !H) [W, H] = [720, 1280];
+  W -= W % 2; H -= H % 2;
+  const args: string[] = ["-y", "-v", "error"];
+  const parts: string[] = [];
+  let n = 0;
+  for (const [i, f] of files.entries()) {
+    const vi = n++; args.push("-i", f);
+    // every part to the size of the first one (same model, so normally they already match)
+    parts.push(`[${vi}:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=30,setsar=1,setpts=PTS-STARTPTS[v${i}]`);
+    if (withSound) {
+      const pr = await probe(f);
+      let ai = vi;
+      if (!pr.audio) { ai = n++; args.push("-f", "lavfi", "-t", (pr.dur || 10).toFixed(3), "-i", "anullsrc=r=44100:cl=stereo"); }
+      parts.push(`[${ai}:a]aresample=44100,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a${i}]`);
+    }
+  }
+  parts.push(`${files.map((_, i) => `[v${i}]${withSound ? `[a${i}]` : ""}`).join("")}concat=n=${files.length}:v=1:a=${withSound ? 1 : 0}${withSound ? "[vc][ac]" : "[vc]"}`);
+  const out = path.join(dir, "joined.mp4");
+  args.push("-filter_complex", parts.join(";"), "-map", "[vc]", ...(withSound ? ["-map", "[ac]", "-c:a", "aac", "-b:a", "160k"] : ["-an"]),
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out);
+  await ff(args, 240_000);
+  return readFile(out);
+}
