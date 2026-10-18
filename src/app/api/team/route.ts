@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const email = String(b?.email ?? "").trim();
   const role: Role = b?.role === "admin" ? "admin" : "member";
-  if (role === "admin" && me!.role !== "owner") return NextResponse.json({ error: "Solo el dueño puede crear administradores." }, { status: 403 });
+  if (role === "admin" && me!.role !== "owner") return NextResponse.json({ error: "Solo el dueño puede nombrar socios." }, { status: 403 });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: "Correo inválido." }, { status: 400 });
   if (await findUserByEmail(email)) return NextResponse.json({ error: "Ya existe una cuenta con ese correo." }, { status: 409 });
   const password = tempPassword();

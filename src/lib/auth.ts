@@ -251,8 +251,14 @@ export const userFromRequest = (req: Request) => userFromToken(tokenFromCookieHe
 
 export const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: SESSION_DAYS * 86400 };
 
-/** Creadsia's owner: the only one who sees finances, every customer, accesses and the shared rules. */
-export const isOwner = (u: User | null) => u?.role === "owner" && u.workspace === "main";
+/** The owner's own account: can't be removed, and is the only one who names or removes partners. */
+export const isTheOwner = (u: User | null) => u?.role === "owner" && u.workspace === "main";
+/**
+ * Full access to Creadsia (finances, every customer, the Panel interno, shared rules): the owner and his
+ * partners ("socios" = role admin in the owner's team). Only the owner can name, change or remove a
+ * partner (see /api/team), and the Panel also asks partners for two-step verification (lib/admin.ts).
+ */
+export const isOwner = (u: User | null) => u?.workspace === "main" && (u.role === "owner" || u.role === "admin");
 /** Only the owner gives or removes access (to Creadsia's team here; to customers in the Panel interno). */
 export const canManageTeam = (u: User | null) => isOwner(u);
 /** "Solo anuncios" accounts can use Crear anuncio and what it needs, nothing else. */

@@ -7,7 +7,7 @@ process.env.SUPABASE_URL = "https://proj.supabase.co";
 import { canEditRules, allowedWrite, canRead, canRemove } from "../src/lib/data-api";
 import { ownsMedia, pathOf, workspaceOf } from "../src/lib/media";
 import { allowed } from "../src/lib/voices";
-import { canManageTeam, hasFullStudio, isOwner, type User } from "../src/lib/auth";
+import { canManageTeam, hasFullStudio, isOwner, isTheOwner, type User } from "../src/lib/auth";
 
 const A = "/api/media/ws/cliente-a/uploads/images/1.png";
 const legacy = "https://proj.supabase.co/storage/v1/object/public/media/uploads/images/x.png";
@@ -80,13 +80,17 @@ test("cloned voices are private to their customer", () => {
 
 const user = (p: Partial<User>): User => ({ id: "1", email: "x@y.z", name: null, role: "member", workspace: "main", active: true, created_at: "", last_login: null, ...p });
 
-test("only Creadsia's owner manages access, finances and shared rules", () => {
+test("only Creadsia's owner and his partners manage access, finances and shared rules", () => {
   assert.equal(isOwner(user({ role: "owner", workspace: "main" })), true);
-  // an "owner" role anywhere else is not the platform owner
+  // an "owner" or "admin" role anywhere else is not the platform owner
   assert.equal(isOwner(user({ role: "owner", workspace: "cliente-a" })), false);
-  assert.equal(isOwner(user({ role: "admin", workspace: "main" })), false);
+  assert.equal(isOwner(user({ role: "admin", workspace: "cliente-a" })), false);
+  assert.equal(isOwner(user({ role: "member", workspace: "main" })), false);
+  // a partner ("socio" = admin of the owner's team) has full access, but is not THE owner
+  assert.equal(isOwner(user({ role: "admin", workspace: "main" })), true);
+  assert.equal(isTheOwner(user({ role: "admin", workspace: "main" })), false);
+  assert.equal(isTheOwner(user({ role: "owner", workspace: "main" })), true);
   assert.equal(canManageTeam(user({ role: "admin", workspace: "cliente-a" })), false);
-  assert.equal(canManageTeam(user({ role: "admin", workspace: "main" })), false);
   assert.equal(canEditRules(user({ role: "member", workspace: "cliente-a" })), false);
   assert.equal(canManageTeam(null), false);
 });

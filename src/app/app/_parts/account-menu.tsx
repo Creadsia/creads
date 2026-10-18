@@ -101,7 +101,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
 
   const plan = info?.unlimited ? "Cuenta del dueño" : info?.plan ? `Plan ${PLAN_NAMES[info.plan.toLowerCase()] ?? info.plan}${info.expired ? " · vencido" : ""}` : "Sin plan activo";
   const until = info?.paidUntil && !info.expired ? new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" }) : null;
-  const role = user.owner ? "Dueño" : user.role === "admin" ? "Administrador" : user.access === "ads" ? "Solo anuncios" : "Acceso completo";
+  const role = user.owner ? (user.role === "admin" ? "Socio" : "Dueño") : user.role === "admin" ? "Socio" : user.access === "ads" ? "Solo anuncios" : "Acceso completo";
 
   const item = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink outline-none hover:bg-surface-2 focus-visible:bg-surface-2";
   const close = () => setOpen(false);

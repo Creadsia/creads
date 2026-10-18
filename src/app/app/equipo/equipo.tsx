@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DeleteButton, Field, PageHead, btnCls, cardCls, inputCls } from "../_parts/ui";
 
 interface U { id: string; email: string; name: string | null; role: "owner" | "admin" | "member"; active: boolean; created_at: string; last_login: string | null }
-const ROLE = { owner: "Dueño", admin: "Administrador", member: "Miembro" } as const;
+const ROLE = { owner: "Dueño", admin: "Socio", member: "Miembro" } as const;
 
 export default function Equipo() {
   const [users, setUsers] = useState<U[] | null>(null);
@@ -67,7 +67,7 @@ export default function Equipo() {
           <Field label="Rol">
             <select value={role} onChange={(e) => setRole(e.target.value as "member" | "admin")} className={inputCls}>
               <option value="member">Miembro: crea anuncios</option>
-              {isOwner && <option value="admin">Administrador: además maneja el equipo</option>}
+              {isOwner && <option value="admin">Socio: acceso total como tú (Panel interno incluido)</option>}
             </select>
           </Field>
         </div>
@@ -106,10 +106,10 @@ export default function Equipo() {
                   ) : (
                     <select aria-label={`Rol de ${u.email}`} value={u.role} onChange={(e) => patch(u.id, { role: e.target.value })} className={inputCls}>
                       <option value="member">Miembro</option>
-                      <option value="admin">Administrador</option>
+                      <option value="admin">Socio (acceso total)</option>
                     </select>
                   )}
-                  {u.role !== "owner" && (
+                  {u.role !== "owner" && u.id !== me && (isOwner || u.role === "member") && (
                     <>
                       <label className="flex items-center gap-1.5 text-xs text-muted">
                         <input type="checkbox" checked={u.active} onChange={(e) => patch(u.id, { active: e.target.checked })} /> Puede entrar
