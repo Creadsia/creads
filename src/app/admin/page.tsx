@@ -15,7 +15,7 @@ export default async function AdminPage() {
   const access = await panelAccess(user);
   const ok = access === "ok";
   return (
-    <main lang="es" className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+    <main lang="es" className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Logo size={26} href="/app" />

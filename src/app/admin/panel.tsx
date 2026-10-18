@@ -36,6 +36,14 @@ const TABS: [Tab, string][] = [
   ["registros", "Registros"],
   ["estado", "Estado"],
 ];
+/** How the side menu groups the tabs (on phones the menu is a single scrolling row). */
+const GROUPS: [string, Tab[]][] = [
+  ["Día a día", ["lanzamiento", "estadisticas", "oficina", "errores"]],
+  ["Plata", ["resumen", "saldos", "planes", "movs", "fijos", "modelos"]],
+  ["Personas", ["clientes", "cuentas", "registros"]],
+  ["Sistema", ["estado"]],
+];
+const LABEL = Object.fromEntries(TABS) as Record<Tab, string>;
 
 const fmtUsd = (n: number, d = 0) =>
   `${n < 0 ? "−" : ""}US$${Math.abs(n).toLocaleString("es-CL", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
@@ -160,14 +168,22 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <nav aria-label="Secciones" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-line bg-bg px-1 py-2">
-        {TABS.map(([k, label]) => (
-          <button key={k} type="button" onClick={() => pick(k)} aria-current={tab === k ? "page" : undefined}
-            className={`flex-none rounded-full px-3 py-1.5 text-sm font-semibold ${tab === k ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>
-            {label}
-          </button>
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <nav aria-label="Secciones" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-line bg-bg px-1 py-2 lg:top-4 lg:mx-0 lg:max-h-[calc(100vh-2rem)] lg:flex-col lg:gap-4 lg:overflow-y-auto lg:rounded-2xl lg:border lg:bg-surface lg:p-3">
+        {GROUPS.map(([group, tabs]) => (
+          <div key={group} className="contents lg:flex lg:flex-col lg:gap-0.5">
+            <span className="hidden px-3 pb-1 text-xs font-semibold text-muted lg:block">{group}</span>
+            {tabs.map((k) => (
+              <button key={k} type="button" onClick={() => pick(k)} aria-current={tab === k ? "page" : undefined}
+                className={`flex-none rounded-full px-3 py-1.5 text-sm font-semibold lg:rounded-lg lg:py-2 lg:text-left ${tab === k ? "bg-ink text-bg" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
+                {LABEL[k]}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
+
+      <div className="flex min-w-0 flex-col gap-5">
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
@@ -184,6 +200,8 @@ export default function AdminPanel() {
           {tab === "clientes" && <Clientes planes={data.config.planes} />}
         </>
       )}
+      </div>
+      </div>
     </div>
   );
 }
