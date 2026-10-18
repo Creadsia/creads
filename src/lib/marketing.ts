@@ -1,6 +1,7 @@
-import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "./supabase";
 import { MetaError, budgetUnits, graph, metaAds, metaToken, unitsToUsd } from "./meta-graph";
-import { usdClpRate } from "./usd-clp";
+import { observedDollar, usdClpRate } from "./usd-clp";
+import { FORMATS } from "./formats";
 import { TO_CREAR_KEY } from "./guiones";
 
 // The owner's marketing studio: paid campaigns in Meta and organic content on the brand's Instagram
@@ -18,7 +19,7 @@ export interface CampanaSpec {
   nombre: string; objetivo: "leads" | "trafico" | "ventas"; paises: string[]; edadMin: number; edadMax: number;
   presupuestoUsd: number; link: string; texto: string; titulo: string; cta: string; adId: string;
 }
-export interface CampanaRow { id: string; at: string; spec: CampanaSpec; estado: "ensayo" | "subida en pausa" | "activa" | "pausada" | "error"; metaId?: string; error?: string }
+export interface CampanaRow { id: string; at: string; spec: CampanaSpec; estado: "ensayo" | "subida en pausa" | "activa" | "pausada" | "error"; metaId?: string; adsetId?: string; adId?: string; error?: string }
 export interface Publicacion { id: string; at: string; cuenta: string; adId: string; texto: string; estado: "ensayo" | "publicada" | "error"; mediaId?: string; error?: string }
 export interface MarketingState {
   capUsd: number; // max US$ per day across all active campaigns
@@ -57,6 +58,19 @@ export async function commitMarketing(mutate: (s: MarketingState) => void) {
   return s;
 }
 
+/**
+ * An atomic «only once / at most N» check in the database (the same counter as the rate limits), so two
+ * requests at the same time can't both pass. Fails closed: if it can't be checked, the answer is no.
+ */
+export async function once(key: string, windowSec: number, max = 1) {
+  try { return Boolean(await sbRpc<boolean>("hit_rate", { p_key: key.slice(0, 200), p_window: windowSec, p_max: max })); } catch { return false; }
+}
+/** How many times a counter was hit in its current window (0 if unknown). */
+async function hits(key: string) {
+  const r = await sbRest<{ hits: number }[]>(`rate_limits?key=eq.${encodeURIComponent(key)}&select=hits&limit=1`).catch(() => []);
+  return r[0]?.hits ?? 0;
+}
+
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const clip = (v: unknown, n: number) => String(v ?? "").replace(/\u0000/g, "").trim().slice(0, n);
 
@@ -87,7 +101,8 @@ async function account() {
   if (!cfg) return null;
   const a = await graph<{ currency: string; account_status: number; name: string }>(cfg.account, { params: { fields: "currency,account_status,name" } });
   if (a.currency !== "USD" && a.currency !== "CLP") throw new MetaError(`La cuenta publicitaria está en ${a.currency}: por ahora el estudio maneja cuentas en USD o CLP.`);
-  const rate = a.currency === "CLP" ? await usdClpRate() : 1;
+  // the plain observed dollar (not the checkout's cushioned rate), so the cap in US$ is real
+  const rate = a.currency === "CLP" ? (await observedDollar().catch(() => null))?.valor ?? (await usdClpRate()) : 1;
   return { cfg, currency: a.currency, rate, status: a.account_status, name: a.name };
 }
 
@@ -115,10 +130,31 @@ export async function campaigns() {
 }
 export interface CampaignView { id: string; nombre: string; estado: string; objetivo: string; presupuestoUsd: number | null; gasto7d: number; impresiones: number; clics: number; ctr: number; frecuencia: number; leads: number; compras: number; costoPorLead: number | null }
 
-/** US$ per day already committed by campaigns that are running. */
-async function activeDailyUsd(acc: NonNullable<Awaited<ReturnType<typeof account>>>, except?: string) {
-  const r = await graph<{ data: { id: string; daily_budget?: string; effective_status: string }[] }>(`${acc.cfg.account}/campaigns`, { params: { fields: "id,daily_budget,effective_status", limit: 200 } });
-  return r.data.filter((c) => c.id !== except && c.effective_status === "ACTIVE").reduce((a, c) => a + unitsToUsd(Number(c.daily_budget ?? 0), acc.currency, acc.rate), 0);
+type Acc = NonNullable<Awaited<ReturnType<typeof account>>>;
+interface BudgetInfo { id: string; account_id?: string; status: string; daily_budget?: string; lifetime_budget?: string; adsets?: { data: { id: string; status: string; daily_budget?: string; lifetime_budget?: string }[] } }
+const BUDGET_FIELDS = "id,account_id,status,daily_budget,lifetime_budget,adsets.limit(100){id,status,daily_budget,lifetime_budget}";
+/** A campaign's daily budget in US$: at campaign level, or the sum of its switched-on ad sets. Lifetime budgets are refused. */
+function dailyOf(c: BudgetInfo, acc: Acc) {
+  if (Number(c.lifetime_budget ?? 0) > 0 || (c.adsets?.data ?? []).some((a) => Number(a.lifetime_budget ?? 0) > 0)) {
+    throw new MetaError("Hay campañas con presupuesto total (lifetime) en la cuenta: el estudio solo maneja presupuestos diarios. Cámbialas a diario en el Administrador de anuncios.");
+  }
+  if (Number(c.daily_budget ?? 0) > 0) return unitsToUsd(Number(c.daily_budget), acc.currency, acc.rate);
+  return (c.adsets?.data ?? []).filter((a) => a.status === "ACTIVE").reduce((t, a) => t + unitsToUsd(Number(a.daily_budget ?? 0), acc.currency, acc.rate), 0);
+}
+/** US$ per day already committed by campaigns that are switched on (configured status, not delivery). */
+async function activeDailyUsd(acc: Acc, except?: string) {
+  const r = await graph<{ data: BudgetInfo[] }>(`${acc.cfg.account}/campaigns`, { params: { fields: BUDGET_FIELDS, limit: 200, filtering: [{ field: "status", operator: "IN", value: ["ACTIVE"] }] } });
+  return r.data.filter((c) => c.id !== except && c.status === "ACTIVE").reduce((t, c) => t + dailyOf(c, acc), 0);
+}
+async function ownCampaign(acc: Acc, campaignId: string) {
+  if (!/^\d{5,25}$/.test(campaignId)) throw new MetaError("Campaña no válida.");
+  const c = await graph<BudgetInfo>(campaignId, { params: { fields: BUDGET_FIELDS } });
+  if (`act_${c.account_id}` !== acc.cfg.account) throw new MetaError("Esa campaña no es de la cuenta publicitaria conectada.");
+  return c;
+}
+/** Only one money move at a time (a second approval waits), so two moves can't both pass the same cap check. */
+async function moneyLock() {
+  if (!(await once("meta:money-move", 90))) throw new MetaError("Hay otro movimiento de plata en curso. Espera un minuto y aprueba de nuevo.");
 }
 
 const OBJECTIVE = { leads: "OUTCOME_LEADS", trafico: "OUTCOME_TRAFFIC", ventas: "OUTCOME_SALES" } as const;
@@ -139,6 +175,7 @@ export function cleanCampaign(x: Record<string, unknown>, capUsd: number): Campa
   let host = "";
   try { host = new URL(link).hostname; } catch { /* below */ }
   if (!/^https:\/\//.test(link) || !host) return "El link debe ser una dirección https completa.";
+  if (!/^(www\.)?creadsia\.com$/.test(host)) return "Por ahora las campañas solo pueden llevar a creadsia.com.";
   if (!/^[0-9a-f-]{36}$/i.test(String(x.adId ?? ""))) return "Falta elegir el anuncio terminado de Creads (adId).";
   return {
     nombre: clip(x.nombre, 80) || "Campaña Creads", objetivo, paises, edadMin, edadMax, presupuestoUsd, link,
@@ -146,15 +183,15 @@ export function cleanCampaign(x: Record<string, unknown>, capUsd: number): Campa
   };
 }
 
-async function waitVideo(videoId: string, maxMs = 90_000) {
-  const end = Date.now() + maxMs;
+async function waitVideo(videoId: string, maxMs: number) {
+  const end = Date.now() + Math.max(10_000, maxMs);
   while (Date.now() < end) {
     const v = await graph<{ status?: { video_status?: string } }>(videoId, { params: { fields: "status" } }).catch(() => null);
     if (v?.status?.video_status === "ready") return true;
     if (v?.status?.video_status === "error") throw new MetaError("Meta no pudo procesar el video.");
     await new Promise((r) => setTimeout(r, 5000));
   }
-  return false;
+  throw new MetaError("Meta todavía está procesando el video. Aprueba de nuevo en unos minutos (la campaña a medias se borró).");
 }
 
 /**
@@ -162,7 +199,9 @@ async function waitVideo(videoId: string, maxMs = 90_000) {
  * ad set, the Creads video, the creative and the ad. Nothing spends until someone turns it on.
  * Returns null in «modo ensayo» (Meta not connected).
  */
-export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaignId: string } | null> {
+export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaignId: string; adsetId: string; adId: string } | null> {
+  const deadline = Date.now() + 240_000; // the approval runs inside a 300 s function: leave room to clean up
+  const left = (cap: number) => Math.max(8_000, Math.min(cap, deadline - Date.now() - 20_000));
   const acc = await account();
   if (!acc) return null;
   const { cfg } = acc;
@@ -179,10 +218,11 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
       name: `${spec.nombre} · público`, campaign_id: camp.id, status: "PAUSED", billing_event: "IMPRESSIONS",
       optimization_goal: conv ? "OFFSITE_CONVERSIONS" : "LINK_CLICKS",
       ...(conv ? { promoted_object: { pixel_id: cfg.pixel, custom_event_type: spec.objetivo === "ventas" ? "PURCHASE" : "LEAD" } } : {}),
-      targeting: { geo_locations: { countries: spec.paises }, age_min: spec.edadMin, age_max: spec.edadMax, targeting_automation: { advantage_audience: 1 } },
+      // with Advantage+ audience Meta takes the age as a suggestion (age_range); hard limits stay wide
+      targeting: { geo_locations: { countries: spec.paises }, age_min: Math.min(spec.edadMin, 25), age_max: 65, age_range: [spec.edadMin, spec.edadMax], targeting_automation: { advantage_audience: 1 } },
     } });
-    const vid = await graph<{ id: string }>(`${cfg.account}/advideos`, { method: "POST", params: { file_url: video.final_url, name: spec.nombre }, timeoutMs: 120_000 });
-    await waitVideo(vid.id);
+    const vid = await graph<{ id: string }>(`${cfg.account}/advideos`, { method: "POST", params: { file_url: video.final_url, name: spec.nombre }, timeoutMs: left(100_000) });
+    await waitVideo(vid.id, left(100_000) - 30_000);
     const thumbs = await graph<{ data: { uri: string; is_preferred?: boolean }[] }>(`${vid.id}/thumbnails`).catch(() => ({ data: [] }));
     const thumb = thumbs.data.find((t) => t.is_preferred)?.uri ?? thumbs.data[0]?.uri;
     if (!thumb) throw new MetaError("Meta todavía está procesando el video. Aprueba de nuevo en unos minutos.");
@@ -193,8 +233,8 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
         video_data: { video_id: vid.id, image_url: thumb, message: spec.texto, title: spec.titulo, call_to_action: { type: spec.cta, value: { link: spec.link } } },
       },
     } });
-    await graph(`${cfg.account}/ads`, { method: "POST", params: { name: `${spec.nombre} · anuncio`, adset_id: adset.id, creative: { creative_id: creative.id }, status: "PAUSED" } });
-    return { campaignId: camp.id };
+    const ad = await graph<{ id: string }>(`${cfg.account}/ads`, { method: "POST", params: { name: `${spec.nombre} · anuncio`, adset_id: adset.id, creative: { creative_id: creative.id }, status: "PAUSED" } });
+    return { campaignId: camp.id, adsetId: adset.id, adId: ad.id };
   } catch (e) {
     // a half-made campaign is removed so nothing incomplete stays in the account
     for (const id of created) await graph(id, { method: "DELETE" }).catch(() => {});
@@ -202,33 +242,36 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
   }
 }
 
-/** Turns a campaign on or off. Turning on never passes the daily cap. */
+/**
+ * Turns a campaign on or off. Turning on never passes the daily cap (counting every switched-on campaign of
+ * the account) and only switches on the ad set and ad the studio created, never ones paused by hand.
+ */
 export async function setCampaignStatus(campaignId: string, on: boolean, capUsd: number) {
   const acc = await account();
   if (!acc) return null;
-  if (!/^\d{5,25}$/.test(campaignId)) throw new MetaError("Campaña no válida.");
+  const c = await ownCampaign(acc, campaignId);
   if (on) {
-    const c = await graph<{ daily_budget?: string }>(campaignId, { params: { fields: "daily_budget" } });
-    const mine = unitsToUsd(Number(c.daily_budget ?? 0), acc.currency, acc.rate);
+    await moneyLock();
+    const mine = dailyOf(c, acc);
     const others = await activeDailyUsd(acc, campaignId);
     if (others + mine > capUsd + 0.01) throw new MetaError(`Activarla dejaría US$${(others + mine).toFixed(2)}/día en campañas: pasa el tope de US$${capUsd}. Sube el tope en Marketing o pausa otra.`);
-    // the campaign, its ad sets and ads were created paused: turn them all on
-    const sets = await graph<{ data: { id: string }[] }>(`${campaignId}/adsets`, { params: { fields: "id", limit: 50 } });
-    const ads = await graph<{ data: { id: string }[] }>(`${campaignId}/ads`, { params: { fields: "id", limit: 50 } });
-    for (const x of [...sets.data, ...ads.data]) await graph(x.id, { method: "POST", params: { status: "ACTIVE" } });
+    const row = (await loadMarketing()).campanas.find((x) => x.metaId === campaignId);
+    for (const id of [row?.adsetId, row?.adId]) if (id && /^\d{5,25}$/.test(id)) await graph(id, { method: "POST", params: { status: "ACTIVE" } });
   }
   await graph(campaignId, { method: "POST", params: { status: on ? "ACTIVE" : "PAUSED" } });
+  await commitMarketing((m) => { const r = m.campanas.find((x) => x.metaId === campaignId); if (r) r.estado = on ? "activa" : "pausada"; }).catch(() => {});
   return true;
 }
 
-/** Changes a campaign's daily budget, never past the cap (counting the campaigns already running). */
+/** Changes a campaign's daily budget, never past the cap (counting the campaigns already switched on). */
 export async function setCampaignBudget(campaignId: string, usd: number, capUsd: number) {
   const acc = await account();
   if (!acc) return null;
-  if (!/^\d{5,25}$/.test(campaignId)) throw new MetaError("Campaña no válida.");
   if (!(usd >= 1)) throw new MetaError("El presupuesto debe ser de al menos US$1 al día.");
-  const c = await graph<{ effective_status: string }>(campaignId, { params: { fields: "effective_status" } });
-  const others = c.effective_status === "ACTIVE" ? await activeDailyUsd(acc, campaignId) : 0;
+  const c = await ownCampaign(acc, campaignId);
+  if (!(Number(c.daily_budget ?? 0) > 0)) throw new MetaError("Esa campaña no tiene presupuesto diario a nivel de campaña: cámbialo en el Administrador de anuncios.");
+  await moneyLock();
+  const others = c.status === "ACTIVE" ? await activeDailyUsd(acc, campaignId) : 0;
   if (others + usd > capUsd + 0.01) throw new MetaError(`Con ese presupuesto quedarían US$${(others + usd).toFixed(2)}/día en campañas: pasa el tope de US$${capUsd}.`);
   await graph(campaignId, { method: "POST", params: { daily_budget: budgetUnits(usd, acc.currency, acc.rate) } });
   return true;
@@ -262,7 +305,7 @@ export async function organicSummary() {
     const m = await graph<{ data: { caption?: string; like_count?: number; comments_count?: number; timestamp: string; media_product_type?: string }[] }>(`${c.igUserId}/media`, { params: { fields: "caption,like_count,comments_count,timestamp,media_product_type", limit: 10 } }).catch((e) => ({ data: [], error: e instanceof Error ? e.message : "" }) as never);
     out.push(`${c.nombre}: ${m.data.length ? m.data.map((p) => `${p.timestamp.slice(0, 10)} ${p.media_product_type ?? ""} ❤${p.like_count ?? 0} 💬${p.comments_count ?? 0} «${(p.caption ?? "").slice(0, 60)}»`).join(" | ") : "sin publicaciones o sin acceso"}`);
   }
-  return `Cuentas orgánicas (${s.cuentas.length}):\n${out.map((x) => `- ${x}`).join("\n") || "- ninguna configurada"}\nRespuestas automáticas: ${s.autoReply.on ? "encendidas" : "apagadas"}; hoy ${s.respuestas.day === new Date().toISOString().slice(0, 10) ? s.respuestas.count : 0}.
+  return `Cuentas orgánicas (${s.cuentas.length}):\n${out.map((x) => `- ${x}`).join("\n") || "- ninguna configurada"}\nRespuestas automáticas: ${s.autoReply.on ? "encendidas" : "apagadas"}; hoy ${await repliesToday()}.
 Publicaciones recientes del estudio: ${s.publicaciones.slice(0, 8).map((p) => `${p.at.slice(0, 10)} ${p.cuenta} (${p.estado})`).join(" | ") || "ninguna"}`;
 }
 
@@ -275,30 +318,41 @@ export function matchesKeywords(text: string, palabras: string[]) {
   return palabras.some((p) => p.trim() && t.includes(norm(p.trim())));
 }
 
-/** One Instagram comment from the webhook: replies (privately, and optionally in public) once. */
+const pageTokens = new Map<string, { token: string; at: number }>();
+/** The page's access token (private replies to Instagram comments go through the linked Facebook page). */
+async function pageToken(pageId: string) {
+  const hit = pageTokens.get(pageId);
+  if (hit && Date.now() - hit.at < 3600_000) return hit.token;
+  const r = await graph<{ access_token?: string }>(pageId, { params: { fields: "access_token" } });
+  if (!r.access_token) throw new MetaError("No se pudo obtener el acceso de la página.");
+  pageTokens.set(pageId, { token: r.access_token, at: Date.now() });
+  return r.access_token;
+}
+
+/**
+ * One Instagram comment from the webhook: replies once (Meta retries the same webhook), within the hourly
+ * limit. The counters live in the database (atomic), never in the settings file the owner edits.
+ */
 export async function handleComment(c: { igUserId: string; commentId: string; text: string; fromId?: string }) {
   const s = await loadMarketing();
   const cuenta = s.cuentas.find((x) => x.igUserId === c.igUserId);
   if (!cuenta || !s.autoReply.on || !metaToken()) return "ignorado";
   if (c.fromId && c.fromId === c.igUserId) return "propio";
+  if (s.autoReply.publico.trim() && c.text.trim() === s.autoReply.publico.trim()) return "propio";
   if (!/^\d{5,30}$/.test(c.commentId) || !matchesKeywords(c.text, s.autoReply.palabras)) return "sin palabra";
-  const day = new Date().toISOString().slice(0, 10), hour = new Date().toISOString().slice(0, 13);
-  // claim it first (no double replies when Meta retries the webhook) and respect the hourly limit
-  let ok = false;
-  await commitMarketing((m) => {
-    if (m.respuestas.seen.includes(c.commentId)) return;
-    if (m.respuestas.hour !== hour) { m.respuestas.hour = hour; m.respuestas.hourCount = 0; }
-    if (m.respuestas.hourCount >= m.autoReply.maxPorHora) return;
-    if (m.respuestas.day !== day) { m.respuestas.day = day; m.respuestas.count = 0; }
-    m.respuestas.seen = [c.commentId, ...m.respuestas.seen].slice(0, 1000);
-    m.respuestas.hourCount++; m.respuestas.count++;
-    ok = true;
-  });
-  if (!ok) return "repetido o límite";
-  await graph(`${c.igUserId}/messages`, { method: "POST", params: { recipient: { comment_id: c.commentId }, message: { text: s.autoReply.mensaje.slice(0, 900) } } }).catch((e) => console.warn("auto-reply dm", e instanceof Error ? e.message : e));
+  if (!(await once(`igc:${c.commentId}`, 7 * 86400))) return "repetido";
+  const hour = new Date().toISOString().slice(0, 13), day = new Date().toISOString().slice(0, 10);
+  if (!(await once(`igr:${c.igUserId}:${hour}`, 3600, s.autoReply.maxPorHora))) return "límite";
+  await once(`igd:${day}`, 86400, 1_000_000); // daily count for the panel
+  if (cuenta.pageId) {
+    const token = await pageToken(cuenta.pageId).catch(() => null);
+    if (token) await graph(`${cuenta.pageId}/messages`, { method: "POST", token, params: { recipient: { comment_id: c.commentId }, message: { text: s.autoReply.mensaje.slice(0, 900) } } }).catch((e) => console.warn("auto-reply dm", e instanceof Error ? e.message : e));
+  }
   if (s.autoReply.publico.trim()) await graph(`${c.commentId}/replies`, { method: "POST", params: { message: s.autoReply.publico.slice(0, 300) } }).catch((e) => console.warn("auto-reply public", e instanceof Error ? e.message : e));
   return "respondido";
 }
+/** Automatic replies sent today (for the panel and the agents). */
+export const repliesToday = () => hits(`igd:${new Date().toISOString().slice(0, 10)}`);
 
 /** What the agents read about paid campaigns. */
 export async function paidSummary() {

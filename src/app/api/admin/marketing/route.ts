@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { campaigns, commitMarketing, finishedAds, loadMarketing } from "@/lib/marketing";
+import { campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
 import { metaAds, metaToken } from "@/lib/meta-graph";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ const env = (k: string) => Boolean((process.env[k] ?? "").trim());
 
 export async function GET() {
   if (!(await isAdmin())) return no();
-  const [m, ads] = await Promise.all([loadMarketing(), finishedAds(20).catch(() => [])]);
+  const [m, ads, hoy] = await Promise.all([loadMarketing(), finishedAds(20).catch(() => []), repliesToday().catch(() => 0)]);
   let camp: Awaited<ReturnType<typeof campaigns>> | null = null, metaError = "";
   try { camp = await campaigns(); } catch (e) { metaError = e instanceof Error ? e.message : "No se pudo leer Meta."; }
   return NextResponse.json({
@@ -23,7 +23,7 @@ export async function GET() {
       webhook: env("META_WEBHOOK_VERIFY_TOKEN") && env("META_APP_SECRET"), pixel: env("NEXT_PUBLIC_META_PIXEL_ID") || env("META_PIXEL_ID"),
       error: metaError,
     },
-    estado: m, campanasMeta: camp?.rows ?? [], moneda: camp && "currency" in camp ? camp.currency : null, anuncios: ads,
+    estado: m, respuestasHoy: hoy, campanasMeta: camp?.rows ?? [], moneda: camp && "currency" in camp ? camp.currency : null, anuncios: ads,
   });
 }
 

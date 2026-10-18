@@ -22,7 +22,8 @@ test("campaigns are checked: cap, link, ad and audience", () => {
   assert.equal(ok.cta, "LEARN_MORE");
   assert.equal(typeof cleanCampaign({ presupuestoUsd: 50, link: "https://a.com", adId: ad }, 30), "string"); // over the cap
   assert.equal(typeof cleanCampaign({ presupuestoUsd: 5, link: "http://a.com", adId: ad }, 30), "string"); // not https
-  assert.equal(typeof cleanCampaign({ presupuestoUsd: 5, link: "https://a.com", adId: "x" }, 30), "string"); // no ad
+  assert.equal(typeof cleanCampaign({ presupuestoUsd: 5, link: "https://www.creadsia.com", adId: "x" }, 30), "string"); // no ad
+  assert.equal(typeof cleanCampaign({ presupuestoUsd: 5, link: "https://otro-sitio.com", adId: ad }, 30), "string"); // only creadsia.com
 });
 
 test("auto-reply keywords ignore accents and case", () => {

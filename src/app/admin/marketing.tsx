@@ -10,7 +10,7 @@ import { TO_CREAR_KEY } from "@/lib/guiones";
 
 interface Data {
   conexion: { anuncios: boolean; token: boolean; instagramAnuncios: boolean; webhook: boolean; pixel: boolean; error: string };
-  estado: MarketingState; campanasMeta: CampaignView[]; moneda: string | null;
+  estado: MarketingState; respuestasHoy: number; campanasMeta: CampaignView[]; moneda: string | null;
   anuncios: { id: string; title: string | null; format: string | null; final_url: string; created_at: string }[];
 }
 
@@ -94,7 +94,7 @@ export default function Marketing() {
           <input id="mk-cap" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 font-mono" />
           <button className={btn}>Guardar</button>
         </form>
-        <p className="text-xs text-muted">Ningún agente puede activar una campaña ni subir un presupuesto si eso pasa este tope. Las campañas nuevas siempre se suben en pausa.</p>
+        <p className="text-xs text-muted">Ningún agente puede activar una campaña ni subir un presupuesto si la suma de presupuestos diarios pasa este tope. Las campañas nuevas siempre se suben en pausa. Ojo: Meta puede gastar hasta ~1,75 veces el presupuesto un día puntual, pero en la semana respeta el promedio.</p>
       </section>
 
       <section className={card} aria-labelledby="h-camp">
@@ -160,7 +160,7 @@ export default function Marketing() {
         <form className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]" onSubmit={async (e) => { e.preventDefault(); if (await call("PATCH", { cuenta: nueva })) setNueva({ nombre: "", igUserId: "", pageId: "" }); }}>
           <input aria-label="Nombre de la cuenta" placeholder="Nombre (ej: creads.videos)" value={nueva.nombre} onChange={(e) => setNueva({ ...nueva, nombre: e.target.value })} className={input} />
           <input aria-label="Número de la cuenta de Instagram" placeholder="Número de Instagram (ID)" inputMode="numeric" value={nueva.igUserId} onChange={(e) => setNueva({ ...nueva, igUserId: e.target.value.trim() })} className={`${input} font-mono`} />
-          <input aria-label="Número de la página de Facebook (opcional)" placeholder="Página de Facebook (opcional)" inputMode="numeric" value={nueva.pageId} onChange={(e) => setNueva({ ...nueva, pageId: e.target.value.trim() })} className={`${input} font-mono`} />
+          <input aria-label="Número de la página de Facebook conectada" placeholder="Página de Facebook (para mensajes)" inputMode="numeric" value={nueva.pageId} onChange={(e) => setNueva({ ...nueva, pageId: e.target.value.trim() })} className={`${input} font-mono`} />
           <button className={btn}>Agregar</button>
         </form>
         <p className="text-xs text-muted">Cada cuenta debe decir en su bio que el contenido está hecho con Creads IA. Así el tráfico orgánico es transparente y Meta no la marca como no auténtica.</p>
@@ -179,7 +179,7 @@ export default function Marketing() {
             <label className="flex flex-wrap items-center gap-2 text-sm font-semibold">Máximo de respuestas por hora<input inputMode="numeric" value={ar.maxPorHora} onChange={(e) => setAr({ ...ar, maxPorHora: e.target.value })} className="w-20 rounded-lg border border-line bg-surface px-2 py-1.5 font-mono" /></label>
             <button className={`${btn} self-start`}>Guardar respuesta</button>
           </form>
-          <p className="text-xs text-muted">Responde la cuenta, como la cuenta, una sola vez por comentario. Hoy: {s.respuestas.day === new Date().toISOString().slice(0, 10) ? s.respuestas.count : 0} respuestas. Necesita el webhook conectado (ver Conexión).</p>
+          <p className="text-xs text-muted">Responde la cuenta, como la cuenta, una sola vez por comentario. Hoy: {d.respuestasHoy} respuestas. El mensaje privado necesita la página de Facebook de la cuenta. Necesita el webhook conectado (ver Conexión).</p>
         </section>
       )}
 

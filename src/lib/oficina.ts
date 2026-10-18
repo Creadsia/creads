@@ -12,7 +12,8 @@ import { overview } from "./balances";
 import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
 import { AUTO, MANUAL } from "./lanzamiento";
-import { type CampanaSpec, addPedido, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
+import { FORMATS } from "./formats";
+import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
@@ -371,8 +372,8 @@ const ACTION_SPEC: Record<Action["tipo"], string> = {
   encargo: `{"tipo":"encargo","titulo":"…","problema":"qué problema resuelve","que":"qué debe hacer Claude","para":"para quién","listo":"cómo se sabe que quedó bien"}`,
   memoria: `{"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads"}`,
   agente: `{"tipo":"agente","id":"id del agente","on":true,"motivo":"por qué prenderlo o apagarlo"}`,
-  anuncio: `{"tipo":"anuncio","titulo":"nombre corto","formato":"ugc|podcast|entrevista|ronda|noticiero|comentario|drive-thru","idioma":"es-CL","guion":"el guion completo, lo que dice la persona","idea":"ángulo y por qué debería funcionar"}`,
-  campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/…","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","motivo":"por qué"}`,
+  anuncio: `{"tipo":"anuncio","titulo":"nombre corto","formato":"${FORMATS.map((f) => f.id).join("|")}","idioma":"es-CL","guion":"el guion completo, lo que dice la persona","idea":"ángulo y por qué debería funcionar"}`,
+  campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/… (solo creadsia.com)","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","motivo":"por qué"}`,
   campana_estado: `{"tipo":"campana_estado","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","on":false,"motivo":"por qué pausarla o activarla, con números"}`,
   presupuesto: `{"tipo":"presupuesto","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","usd":15,"motivo":"por qué, con números"}`,
   publicacion: `{"tipo":"publicacion","cuenta":"nombre exacto de la cuenta de Instagram","adId":"id de un anuncio terminado de Creads","texto":"texto del post, cercano y transparente","motivo":"por qué este video"}`,
@@ -671,7 +672,7 @@ export function cleanAction(x: unknown, st: OfficeState, capUsd = 30): Action | 
   }
   if (o.tipo === "anuncio") {
     const guion = t(o.guion, 4000), titulo = t(o.titulo, 100);
-    const formato = /^(ugc|podcast|entrevista|ronda|noticiero|comentario|drive-thru)$/.test(String(o.formato)) ? String(o.formato) : "ugc";
+    const formato = FORMATS.some((f) => f.id === o.formato) ? String(o.formato) : "ugc";
     return guion.length >= 40 && titulo.length >= 3 ? { tipo: "anuncio", titulo, formato, idioma: o.idioma === "en" ? "en" : "es-CL", guion, idea: t(o.idea, 600) } : null;
   }
   if (o.tipo === "campana") {
@@ -742,7 +743,9 @@ async function refreshEncargos(list: Encargo[]): Promise<Encargo[]> {
 
 /** The owner approves or rejects a proposed move. Approving does it right away. */
 export async function decide(proposalId: string, approve: boolean): Promise<{ ok: boolean; mensaje: string }> {
-  // claim it first, so a double click, a second tab or a retry can't do the same move twice
+  // claim it first, so a double click, a second tab or a retry can't do the same move twice: an atomic
+  // check in the database, then the proposal marked «aprobando» in the office file
+  if (!(await once(`decide:${proposalId}`, 600))) return { ok: false, mensaje: "Esa propuesta ya se está procesando. Espera unos minutos." };
   let p: Proposal | undefined;
   await commit((s) => {
     const q = s.pending.find((x) => x.id === proposalId);
@@ -781,8 +784,8 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
     }
     if (a.tipo === "campana") {
       const r = await createPausedCampaign(a.spec);
-      await commitMarketing((m) => { m.campanas = [{ id: `c-${pid}`, at: new Date().toISOString(), spec: a.spec, estado: (r ? "subida en pausa" : "ensayo") as "subida en pausa" | "ensayo", metaId: r?.campaignId }, ...m.campanas].slice(0, 60); });
-      const msg = r ? "Campaña subida a Meta EN PAUSA. Revísala en el Administrador de anuncios y actívala cuando quieras." : "Modo ensayo: la campaña quedó guardada; se subirá cuando conectes Meta.";
+      await commitMarketing((m) => { m.campanas = [{ id: `c-${pid}`, at: new Date().toISOString(), spec: a.spec, estado: (r ? "subida en pausa" : "ensayo") as "subida en pausa" | "ensayo", metaId: r?.campaignId, adsetId: r?.adsetId, adId: r?.adId }, ...m.campanas].slice(0, 60); });
+      const msg = r ? "Campaña subida a Meta EN PAUSA. Revísala en el Administrador de anuncios y actívala cuando quieras." : "Modo ensayo: la campaña quedó guardada en Marketing (no se subió). Cuando conectes Meta, el Trafficker la vuelve a proponer para subirla.";
       await finish("aprobada", msg);
       return { ok: true, mensaje: msg };
     }
@@ -799,7 +802,7 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
       if (!cuenta) { await finish("error", `No hay una cuenta llamada «${a.cuenta}» en Marketing.`); return { ok: false, mensaje: `Agrega la cuenta «${a.cuenta}» en Marketing primero.` }; }
       const mediaId = await publishReel(cuenta, a.adId, a.texto);
       await commitMarketing((x) => { x.publicaciones = [{ id: `pub-${pid}`, at: new Date().toISOString(), cuenta: cuenta.nombre, adId: a.adId, texto: a.texto, estado: (mediaId ? "publicada" : "ensayo") as "publicada" | "ensayo", mediaId: mediaId ?? undefined }, ...x.publicaciones].slice(0, 100); });
-      const msg = mediaId ? `Publicado en ${cuenta.nombre}.` : "Modo ensayo: la publicación quedó guardada; se hará cuando conectes Meta.";
+      const msg = mediaId ? `Publicado en ${cuenta.nombre}.` : "Modo ensayo: la publicación quedó guardada en Marketing (no se publicó). Cuando conectes Meta, se vuelve a proponer.";
       await finish("aprobada", msg);
       return { ok: true, mensaje: msg };
     }
