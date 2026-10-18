@@ -609,15 +609,24 @@ function save(s: OfficeState, id: string, out: WorkOut) {
   record(s, id, out.report);
   if (!out.report.error) delete s.tasks[id]; // the suggestion was looked at
   Object.assign(s.tasks, out.temas);
+  addPending(s, id, out.acciones);
+}
+
+/** Adds proposed moves to «Por aprobar» (skipping ones already pending or rejected this week). Returns the added ones. */
+function addPending(s: OfficeState, by: string, acciones: Action[]): Action[] {
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
   const open = new Set(s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando" || (p.estado === "rechazada" && (p.decidedAt ?? "") > weekAgo)).map((p) => describe(p.action)));
-  for (const action of out.acciones) {
+  const added: Action[] = [];
+  for (const action of acciones) {
     if (open.has(describe(action))) continue;
-    s.pending.unshift({ id: `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), by: id, action, estado: "pendiente" });
+    open.add(describe(action));
+    s.pending.unshift({ id: `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), by, action, estado: "pendiente" });
+    added.push(action);
   }
   // keep every pending one; trim only decided ones
   const decided = s.pending.filter((p) => p.estado !== "pendiente" && p.estado !== "aprobando");
   s.pending = [...s.pending.filter((p) => p.estado === "pendiente" || p.estado === "aprobando"), ...decided.slice(0, 20)].sort((a, b) => b.at.localeCompare(a.at));
+  return added;
 }
 
 /**
@@ -761,6 +770,12 @@ const CHAT_STYLE = `Estás en un chat con el dueño (Gastón) o con su socio (Be
 - Si algo no lo puedes hacer tú, di en una línea quién lo hace y cómo (el Panel, Gastón o un encargo para Claude) y sigue con lo que sí se puede.
 - Corto: idealmente menos de 120 palabras, salvo que pidan un paso a paso largo. Texto simple (párrafos cortos y listas con «- » o «1.»), sin títulos con #, sin negritas, sin tablas.`;
 
+const ACTIONS_MARK = "<<ACCIONES>>";
+/** How an agent leaves a move for approval from the chat (and never claims it did when it can't). */
+const chatActions = (tipos: Action["tipo"][]) => tipos.length
+  ? `DEJAR ALGO PARA APROBAR: si en esta respuesta propones una acción concreta que tú puedes proponer, agrega al FINAL de tu mensaje una línea que empiece exactamente con ${ACTIONS_MARK} seguida de un arreglo JSON con las acciones (máximo 3), de estos tipos:\n${tipos.map((t) => ACTION_SPEC[t]).join("\n")}\nSolo así queda en Oficina → Por aprobar (el sistema lo confirma solo, no lo anuncies tú). Si no agregas esa línea, NO digas que algo quedó para aprobar.`
+  : "Tú no puedes dejar acciones en «Por aprobar»: nunca digas que algo quedó para aprobar. Si hace falta una, di qué agente la propone (por ejemplo el Director de Marketing para campañas y anuncios) o que se pida como encargo.";
+
 /** Chats before the office switched to Claude and to the efficient style aren't fed back as history. */
 const FRESH_CHAT_FROM = "2026-10-18T19:00:00Z";
 
@@ -772,6 +787,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
   const msgs = await loadChat(id);
   const at = new Date().toISOString();
   const mine: ChatMsg = { role: "user", text: clip(text, 4000), at };
+  const rights = RIGHTS[a.id] ?? [];
   const answer = async (): Promise<ChatMsg> => {
     const engine = engineOf(st);
     if (!engine) return { role: "agent", text: `No puedo responder: ${NO_ENGINE}`, at: new Date().toISOString(), error: true };
@@ -782,11 +798,27 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     const history: Turn[] = msgs.filter((m) => !m.error && m.at >= FRESH_CHAT_FROM).slice(-12).map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.text.slice(0, 4000) }));
     const r = await ask(a, {
       model: modelFor(engine, true), engine, deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
-      system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}`,
+      system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}\n\n${chatActions(rights)}`,
       prompt: (research) => `${COMPANY}\n${CONTEXTO}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
     });
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
-    return { role: "agent", text: clip(r.text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources };
+    // a move proposed in the chat really goes to «Por aprobar» (never just said)
+    let text = r.text;
+    const k = text.indexOf(ACTIONS_MARK);
+    if (k >= 0) {
+      const raw = text.slice(k + ACTIONS_MARK.length);
+      text = text.slice(0, k).trim();
+      let list: unknown[] = [];
+      try { const j = parseJSON<unknown>(raw); list = Array.isArray(j) ? j : [j]; } catch { list = []; }
+      const cap = rights.length ? (await loadMarketing().catch(() => null))?.capUsd ?? 30 : 30;
+      const acciones = list.map((x) => cleanAction(x, st, cap)).filter((x): x is Action => Boolean(x) && rights.includes(x!.tipo)).slice(0, 3);
+      let added: Action[] = [];
+      if (acciones.length) await commit((s) => { added = addPending(s, id, acciones); });
+      text += added.length
+        ? `\n\n✅ Quedó en Oficina → Por aprobar:\n${added.map((x) => `- ${describe(x)}`).join("\n")}`
+        : acciones.length ? "\n\nℹ️ Eso ya estaba en Oficina → Por aprobar (o se rechazó esta semana)." : "\n\n⚠️ No pude dejar la propuesta en «Por aprobar»: le faltaban datos. Pídemela de nuevo con lo que falte.";
+    }
+    return { role: "agent", text: clip(text, 12_000), at: new Date().toISOString(), usd: +r.usd.toFixed(4), fuentes: r.sources };
   };
   const reply = await answer();
   const list = [...msgs, mine, reply].slice(-80);
