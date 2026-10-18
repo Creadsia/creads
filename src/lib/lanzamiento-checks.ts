@@ -1,6 +1,7 @@
 import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "@/lib/supabase";
 import { providerStatus } from "@/lib/providers";
 import { observedDollar, usdClpRate } from "@/lib/usd-clp";
+import { metaAds } from "@/lib/meta-graph";
 
 
 // The launch checklist (owner only): checks by itself everything that can be checked from the server
@@ -54,6 +55,9 @@ export async function launchChecks(): Promise<Check[]> {
     p.database && (await exists("site_stats?select=day&limit=0"))
       ? { id: "stats", state: "ok", detail: "Las visitas se están contando." }
       : { id: "stats", state: "falta", detail: "Falta ejecutar supabase/stats.sql en Supabase → SQL Editor." },
+    metaAds()
+      ? { id: "meta-ads", state: "ok", detail: "Cuenta publicitaria de Meta conectada al estudio de marketing." }
+      : { id: "meta-ads", state: "revisar", detail: "El estudio de marketing trabaja en modo ensayo hasta conectar Meta (Panel → Marketing)." },
     ...(await mercadoPago()),
     env("META_CAPI_TOKEN") ? { id: "meta", state: "ok", detail: "Conversiones de Meta conectadas." } : { id: "meta", state: "falta", detail: "Falta META_CAPI_TOKEN (Meta → Administrador de eventos → tu píxel → Configuración)." },
     admin.length >= 24 ? { id: "admin", state: "ok", detail: "Clave de administrador larga." } : { id: "admin", state: admin ? "revisar" : "falta", detail: admin ? `Es corta (${admin.length} caracteres): usa 24 o más.` : "Falta ADMIN_ACCESS_CODE." },

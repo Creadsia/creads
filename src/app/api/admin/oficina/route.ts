@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { BUILTIN_IDS, commit, decide, dismiss, findAgent, markEncargo, loadState, officeView, runAll, runOne, runTeam, saveMemory } from "@/lib/oficina";
+import { BUILTIN_IDS, commit, decide, dismiss, findAgent, markEncargo, loadState, officeView, runAll, runDirectors, runOne, runTeam, saveMemory } from "@/lib/oficina";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     if (agent === "todos") {
       if (!st.on) return NextResponse.json({ error: "La oficina está apagada: enciéndela primero." }, { status: 400 });
       await runAll();
+    } else if (agent === "directores") {
+      if (!st.on) return NextResponse.json({ error: "La oficina está apagada: enciéndela primero." }, { status: 400 });
+      await runDirectors();
     } else if (agent === "equipo") {
       if (!st.on) return NextResponse.json({ error: "La oficina está apagada: enciéndela primero." }, { status: 400 });
       await runTeam();

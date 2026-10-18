@@ -13,6 +13,7 @@ export const AUTO: Record<string, { title: string; how: string }> = {
   cron: { title: "Avisos de plan por vencer", how: "Vercel: CRON_SECRET con una clave larga inventada." },
   dolar: { title: "Dólar automático", how: "Se lee solo del Banco Central cada día. Si falla, se usa el «Dólar de respaldo» de arriba en el Panel." },
   stats: { title: "Contador de visitas (Estadísticas)", how: "Supabase → SQL Editor → New query → pega todo supabase/stats.sql → Run. Desde ese momento la pestaña Estadísticas cuenta visitas, dispositivos, ubicación y canal (anónimo, sin datos personales)." },
+  "meta-ads": { title: "Meta conectado al estudio de marketing", how: "Para que los agentes suban campañas (en pausa), lean métricas y publiquen en Instagram. Pídele a Claude la guía: app de Meta, usuario del sistema, token y los números de cuenta publicitaria y página en Vercel." },
   ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
 };
 /** `urgent`: blocks the launch (shown in red). `who`: "tu" = the owner, "claude" = pending work of the AI developer. */

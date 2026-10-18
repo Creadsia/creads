@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Estadisticas from "./estadisticas";
 import { AUTO, type LaunchCheck, MANUAL, RED_ORDER } from "@/lib/lanzamiento";
 import Oficina from "./oficina";
+import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
 import {
   type Config,
@@ -21,11 +22,12 @@ import {
 
 // The owner's control room: money, models, accounts, sign-ups and service status in one place.
 
-type Tab = "lanzamiento" | "estadisticas" | "oficina" | "rentabilidad" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
+type Tab = "lanzamiento" | "estadisticas" | "oficina" | "marketing" | "rentabilidad" | "errores" | "resumen" | "saldos" | "clientes" | "planes" | "movs" | "fijos" | "modelos" | "cuentas" | "registros" | "estado";
 const TABS: [Tab, string][] = [
   ["lanzamiento", "Lanzamiento"],
   ["estadisticas", "Estadísticas"],
   ["oficina", "Oficina"],
+  ["marketing", "Marketing"],
   ["errores", "Errores y alarmas"],
   ["resumen", "Resumen"],
   ["rentabilidad", "Rentabilidad"],
@@ -41,7 +43,7 @@ const TABS: [Tab, string][] = [
 ];
 /** How the side menu groups the tabs (on phones the menu is a single scrolling row). */
 const GROUPS: [string, Tab[]][] = [
-  ["Día a día", ["lanzamiento", "estadisticas", "oficina", "errores"]],
+  ["Día a día", ["lanzamiento", "estadisticas", "oficina", "marketing", "errores"]],
   ["Plata", ["resumen", "rentabilidad", "saldos", "planes", "movs", "fijos", "modelos"]],
   ["Personas", ["clientes", "cuentas", "registros"]],
   ["Sistema", ["estado"]],
@@ -190,7 +192,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>

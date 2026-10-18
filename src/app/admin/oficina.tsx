@@ -201,8 +201,18 @@ function AgentForm({ v, a, onDone }: { v: View; a?: AgentView; onDone: (view?: V
 function actionText(a: Action) {
   if (a.tipo === "encargo") return { title: `Encargo para Claude: ${a.titulo}`, body: `Problema: ${a.problema || "—"}\nQué hacer: ${a.que}\nPara quién: ${a.para || "Gastón"}\nCómo se sabe que quedó bien: ${a.listo || "—"}` };
   if (a.tipo === "memoria") return { title: "Agregar a la Memoria de Creads", body: a.texto };
-  return { title: `${a.on ? "Prender" : "Apagar"} el agente «${a.id}»`, body: a.motivo };
+  if (a.tipo === "agente") return { title: `${a.on ? "Prender" : "Apagar"} el agente «${a.id}»`, body: a.motivo };
+  if (a.tipo === "anuncio") return { title: `Pedir anuncio a Creads: ${a.titulo}`, body: `Formato: ${a.formato} · ${a.idioma === "en" ? "inglés" : "español"}\nIdea: ${a.idea || "—"}\n\nGuion:\n${a.guion}` };
+  if (a.tipo === "campana") {
+    const c = a.spec;
+    return { title: `Subir campaña EN PAUSA: ${c.nombre}`, body: `Objetivo: ${c.objetivo} · Países: ${c.paises.join(", ")} · Edad ${c.edadMin}–${c.edadMax}\nPresupuesto: US$${c.presupuestoUsd}/día (no gasta hasta que la actives)\nTexto: ${c.texto}\nTítulo: ${c.titulo} · Botón: ${c.cta}\nLink: ${c.link}\nAnuncio de Creads: ${c.adId.slice(0, 8)}…\n\nPor qué: ${a.motivo || "—"}` };
+  }
+  if (a.tipo === "campana_estado") return { title: `${a.on ? "ACTIVAR (empieza a gastar)" : "Pausar"} la campaña ${a.nombre || a.campaignId}`, body: a.motivo };
+  if (a.tipo === "presupuesto") return { title: `Cambiar presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`, body: a.motivo };
+  return { title: `Publicar en Instagram (${a.cuenta})`, body: `Video de Creads: ${a.adId.slice(0, 8)}…\nTexto:\n${a.texto}\n\nPor qué: ${a.motivo || "—"}` };
 }
+
+const AGENT_NAMES: Record<string, string> = { general: "el CEO General", ceo: "el Director Creads", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
 
 function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: string, ok: boolean) => void; busy: string | null }) {
   const pending = list.filter((p) => p.estado === "pendiente");
@@ -220,7 +230,7 @@ function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: 
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" disabled={!!busy} onClick={() => onDecide(p.id, true)} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-bg disabled:opacity-50">{busy === p.id ? "Haciendo…" : "Aprobar"}</button>
                 <button type="button" disabled={!!busy} onClick={() => onDecide(p.id, false)} className={btn}>Rechazar</button>
-                <span className="text-xs text-muted">Propuesto por el CEO General · {when(p.at)}</span>
+                <span className="text-xs text-muted">Propuesto por {AGENT_NAMES[p.by] ?? p.by} · {when(p.at)}</span>
               </div>
             </li>
           ); })}
@@ -292,7 +302,7 @@ export default function Oficina() {
     setBusy(agent);
     // the whole office in three steps (each well inside the server's time limit): the team, the Director, the CEO General
     if (agent === "todos") {
-      if (await call("POST", { agent: "equipo" })) { setBusy("ceo"); if (await call("POST", { agent: "ceo" })) { setBusy("general"); await call("POST", { agent: "general" }); } }
+      if (await call("POST", { agent: "equipo" })) { setBusy("ceo"); if (await call("POST", { agent: "directores" })) { setBusy("general"); await call("POST", { agent: "general" }); } }
     }
     else await call("POST", { agent });
     setBusy(null);
@@ -311,7 +321,7 @@ export default function Oficina() {
   if (!v) return <div className={card}>{err ? <p role="alert" className="text-bad">{err}</p> : <p className="text-muted">Cargando la oficina…</p>}</div>;
   const st = v.state;
   const ceo = st.last.general; // the official brief comes from the CEO General
-  const workers = v.agents.filter((a) => a.id !== "ceo" && a.id !== "general");
+  const workers = v.agents.filter((a) => !["general", "ceo", "marketing"].includes(a.id));
   const customs = workers.filter((a) => !a.builtin).length;
   const pct = st.budgetUsd ? Math.min(100, (st.spend.usd / st.budgetUsd) * 100) : 100;
 
@@ -328,7 +338,7 @@ export default function Oficina() {
           </div>
           <span className="flex flex-wrap items-center gap-2"><Badge r={ceo} />
             <button type="button" disabled={!!busy || !v.ready || !st.on} onClick={() => run("todos")} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">
-              {busy === "todos" ? "1/3 · El equipo está trabajando…" : busy === "ceo" ? "2/3 · El Director Creads está escribiendo…" : busy === "general" ? "3/3 · El CEO General está escribiendo…" : "Hacer trabajar a todos ahora"}
+              {busy === "todos" ? "1/3 · El equipo está trabajando…" : busy === "ceo" ? "2/3 · Los directores están escribiendo…" : busy === "general" ? "3/3 · El CEO General está escribiendo…" : "Hacer trabajar a todos ahora"}
             </button>
           </span>
         </div>
@@ -366,7 +376,7 @@ export default function Oficina() {
       {edit === "nuevo" && <section className={card} aria-label="Nuevo agente"><h4 className="font-bold">Nuevo agente</h4><AgentForm v={v} onDone={(x) => { if (x) apply(x); setEdit(null); }} /></section>}
 
       <div className="grid items-start gap-3 lg:grid-cols-2">
-        {[...v.agents.filter((a) => a.id === "general" || a.id === "ceo"), ...workers].map((a) => {
+        {[...["general", "ceo", "marketing"].flatMap((id) => v.agents.filter((a) => a.id === id)), ...workers].map((a) => {
           const r = st.last[a.id];
           const task = st.tasks[a.id];
           return (
@@ -379,7 +389,7 @@ export default function Oficina() {
                 <Badge r={r} />
               </div>
               {a.id !== "general" && (r ? <p className={`text-sm ${r.error ? "text-warn" : ""}`}>{r.resumen}</p> : <p className="text-sm text-muted">Todavía no ha trabajado.</p>)}
-              {task && <p className="rounded-lg border border-line px-3 py-2 text-xs"><b>{a.id === "ceo" ? "El CEO General sugiere mirar:" : "El Director sugiere mirar:"}</b> {task}</p>}
+              {task && <p className="rounded-lg border border-line px-3 py-2 text-xs"><b>{a.id === "ceo" || a.id === "marketing" ? "El CEO General sugiere mirar:" : "Su director sugiere mirar:"}</b> {task}</p>}
               {a.id !== "general" && r && !r.error && (
                 <>
                   <button type="button" onClick={() => setOpen((o) => ({ ...o, [a.id]: !o[a.id] }))} aria-expanded={!!open[a.id]} className="self-start text-sm font-semibold text-accent-text">
@@ -403,10 +413,7 @@ export default function Oficina() {
             </section>
           );
         })}
-        <section className={`${card} border-dashed opacity-60`}>
-          <div className="flex items-start justify-between gap-2"><h3 className="font-bold">Campañas</h3><span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">Etapa 2</span></div>
-          <p className="text-sm text-muted">Preparará campañas de Meta completas que tú lanzas con un botón «Aprobar». Necesita conectar tu cuenta publicitaria.</p>
-        </section>
+
       </div>
 
       <section className={card} aria-labelledby="h-budget">

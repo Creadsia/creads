@@ -12,6 +12,7 @@ import { overview } from "./balances";
 import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
 import { AUTO, MANUAL } from "./lanzamiento";
+import { type CampanaSpec, addPedido, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
@@ -29,7 +30,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -41,6 +42,9 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   rentabilidad: { name: "Rentabilidad", text: "Costo por anuncio, fallas por proveedor, margen por plan y dónde se pierde plata", internal: true },
   lanzamiento: { name: "Lista de lanzamiento", text: "Cuánto falta para lanzar y qué bloquea", internal: true },
   disputas: { name: "Devoluciones y contracargos", text: "Pagos devueltos o desconocidos con el banco (30 días)", internal: true },
+  meta: { name: "Campañas en Meta", text: "Campañas pagadas: gasto, CTR, frecuencia, leads y costo por lead (7 días)", internal: true },
+  organico: { name: "Instagram orgánico", text: "Publicaciones de las cuentas de la marca y respuestas automáticas", internal: true },
+  material: { name: "Anuncios terminados", text: "Videos de Creads listos para usar y pedidos de anuncios", internal: true },
 };
 
 export type Estado = "ok" | "atencion" | "urgente";
@@ -67,7 +71,12 @@ export interface Agent extends AgentConfig { id: string; builtin: boolean; on: b
 export type Action =
   | { tipo: "encargo"; titulo: string; problema: string; que: string; para: string; listo: string }
   | { tipo: "memoria"; texto: string }
-  | { tipo: "agente"; id: string; on: boolean; motivo: string };
+  | { tipo: "agente"; id: string; on: boolean; motivo: string }
+  | { tipo: "anuncio"; titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; idea: string }
+  | { tipo: "campana"; spec: CampanaSpec; motivo: string }
+  | { tipo: "campana_estado"; campaignId: string; nombre: string; on: boolean; motivo: string }
+  | { tipo: "presupuesto"; campaignId: string; nombre: string; usd: number; motivo: string }
+  | { tipo: "publicacion"; cuenta: string; adId: string; texto: string; motivo: string };
 export interface Proposal { id: string; at: string; by: string; action: Action; estado: "pendiente" | "aprobando" | "aprobada" | "rechazada" | "error"; resultado?: string; decidedAt?: string }
 /** An assignment for Claude (the developer): a GitHub issue when the bridge is set up, else copied by hand. */
 export interface Encargo { id: string; at: string; titulo: string; texto: string; issue?: number; url?: string; estado: "por enviar" | "enviado" | "en curso" | "listo"; respuesta?: string }
@@ -87,29 +96,45 @@ export const MAX_CUSTOM = 12;
 
 const BUILTIN: Record<string, AgentConfig> = {
   general: {
-    name: "CEO General", area: "Mano derecha de Gastón: ve todo y prioriza", search: false, sharePct: 15,
+    name: "CEO General", area: "Mano derecha de Gastón: ve todo y prioriza", search: false, sharePct: 12,
     sources: ["negocio", "visitas", "finanzas", "rentabilidad", "lanzamiento", "disputas"],
-    mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Lees el informe del Director Creads y de su equipo, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
+    mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Lees el informe del Director Creads, del Director de Marketing y de sus equipos, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
   },
   ceo: {
-    name: "Director Creads", area: "Dirige el equipo de Creads", search: false, sharePct: 10, sources: ["negocio", "produccion"],
+    name: "Director Creads", area: "Dirige el equipo de Creads", search: false, sharePct: 8, sources: ["negocio", "produccion"],
     mission: "Eres el Director de Creads: diriges al equipo de agentes de la plataforma y le reportas al CEO General. Lees los informes de tu equipo y los números de Creads, resumes qué está pasando en la plataforma y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
   },
   produccion: {
-    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 15, sources: ["produccion"],
+    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 10, sources: ["produccion"],
     mission: "Eres el jefe de producción de anuncios. Vigilas que los videos de los clientes salgan bien: qué modelo está fallando más, por qué (según los mensajes de error), cuánta plata se pierde en fallas, anuncios trabados y las reglas aprendidas que esperan aprobación. Propones cambios concretos (ej.: «recomendar Veo en vez de Seedance para caras reales», «revisar el error X»).",
   },
   seguridad: {
-    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 15, sources: ["seguridad"],
+    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 10, sources: ["seguridad"],
     mission: "Eres el encargado de ciberseguridad. Buscas señales de ataque o abuso (muchos intentos de entrar, cuentas nuevas en masa, errores raros) y fallas de seguridad conocidas y recientes en las versiones que usa Creads (Next.js y React). Explicas el riesgo en simple y qué hacer. No alarmes sin motivo: si todo está normal, dilo en una línea.",
   },
   novedades: {
-    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 30, sources: ["modelos"],
+    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 20, sources: ["modelos"],
     mission: "Eres el analista de novedades. Buscas en la web y en X lo nuevo de los ÚLTIMOS 7 DÍAS: modelos de video, imagen y voz recién lanzados o con mejores precios (y si se pueden usar por API, por ejemplo en fal.ai o Google), y qué lanzó o cambió la competencia (funciones, precios, promociones, cómo se están vendiendo). Por cada novedad di si Creads debería sumarla o responder, y por qué. Solo cosas nuevas y comprobadas, con su fuente; nada de rumores viejos.",
   },
   soporte: {
-    name: "Servicio al cliente", area: "Dudas, reclamos y cancelaciones", search: false, sharePct: 15, sources: ["soporte"],
+    name: "Servicio al cliente", area: "Dudas, reclamos y cancelaciones", search: false, sharePct: 8, sources: ["soporte"],
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
+  },
+  marketing: {
+    name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["meta", "organico", "visitas", "negocio"],
+    mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace.",
+  },
+  creativos: {
+    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 8, sources: ["material", "meta"],
+    mission: "Eres el jefe de creativos del estudio de marketing. Decides qué anuncios nuevos hacer para vender Creads (y pruebas para orgánico): miras qué está funcionando en las campañas, buscas en la web y en X ángulos y formatos que estén funcionando en anuncios de herramientas de IA y de video, y propones pedidos de anuncios con su guion listo para que Creads los genere. Varía ángulos (ahorro de tiempo, calidad, precio, antes y después, testimonio honesto de uso) y formatos (UGC, podcast, entrevista…). Nada de promesas falsas ni testimonios inventados.",
+  },
+  trafico: {
+    name: "Trafficker", area: "Sube, revisa, escala y corta campañas en Meta", search: false, sharePct: 10, sources: ["meta", "material", "visitas"],
+    mission: "Eres el trafficker del estudio de marketing. Manejas las campañas pagadas en Meta: propones campañas nuevas con los anuncios terminados de Creads (se suben en pausa), y cada día revisas las que corren para escalar las ganadoras, cortar las que pierden plata y renovar anuncios cansados (frecuencia alta, CTR bajando). Reglas: una campaña nueva necesita al menos 3 días y unas 1.000 impresiones antes de juzgarla; sube el presupuesto de a 20–30%; nunca pases el tope diario; explica cada movimiento con números.",
+  },
+  organico: {
+    name: "Contenido orgánico", area: "Publica en los Instagram de la marca y cuida la comunidad", search: false, sharePct: 6, sources: ["organico", "material"],
+    mission: "Eres el encargado de contenido orgánico. Publicas en las cuentas de Instagram de la marca videos hechos con Creads que se vean bonitos y naturales, de esos que hacen que la gente comente «¿dónde lo hacen?». Propones qué video publicar en qué cuenta y con qué texto: cercano, sin parecer aviso, y siempre transparente (las cuentas dicen que el contenido está hecho con Creads; nunca te haces pasar por un cliente o una persona cualquiera). Revisas qué publicaciones funcionan mejor y propones el plan de la semana.",
   },
 };
 export const BUILTIN_IDS = Object.keys(BUILTIN);
@@ -149,8 +174,19 @@ export function agentsOf(st: OfficeState): Agent[] {
   return [...b, ...c];
 }
 export const findAgent = (st: OfficeState, id: string) => agentsOf(st).find((a) => a.id === id);
-export const LEADERS = ["general", "ceo"];
+export const LEADERS = ["general", "ceo", "marketing"];
+const MARKETING_TEAM = ["creativos", "trafico", "organico"];
 const workersOf = (st: OfficeState) => agentsOf(st).filter((a) => !LEADERS.includes(a.id));
+/** Who reports to a director: the marketing studio to «marketing», everyone else to the Director Creads. */
+const teamOf = (st: OfficeState, director: string) => workersOf(st).filter((w) => (director === "marketing") === MARKETING_TEAM.includes(w.id));
+/** Which moves each agent may propose (the owner still approves each one). */
+const RIGHTS: Record<string, Action["tipo"][]> = {
+  general: ["encargo", "memoria", "agente"],
+  marketing: ["anuncio", "campana", "campana_estado", "presupuesto", "publicacion"],
+  creativos: ["anuncio"],
+  trafico: ["campana", "campana_estado", "presupuesto"],
+  organico: ["publicacion"],
+};
 
 // ---------------------------------------------------------------- memory
 
@@ -297,7 +333,7 @@ async function srcDisputas() {
   return rows.length ? `${rows.length} pagos devueltos o con contracargo en 30 días (créditos descontados: ${rows.reduce((a, r) => a - r.delta, 0)}).` : "Sin devoluciones ni contracargos en 30 días.";
 }
 
-const READERS: Record<Source, () => Promise<string>> = { negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+const READERS: Record<Source, () => Promise<string>> = { meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
 
 const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {
@@ -324,12 +360,24 @@ const formatCeo = (ids: string[]) => `Responde SOLO un JSON válido, sin texto a
 {"estado":"ok|atencion|urgente","resumen":"una frase: cómo está Creads hoy","prioridades":["lo 1º que el dueño debería hacer hoy","2º","3º"],"informe":"el resumen del día en texto simple (párrafos cortos y listas con «- », máximo ~250 palabras): qué dijo cada agente que importa y qué decides","temas":{${ids.map((id) => `"${id}":"tema corto para su próximo turno"`).join(",")}}}`;
 
 const formatGeneral = `Responde SOLO un JSON válido, sin texto antes ni después:
-{"estado":"ok|atencion|urgente","resumen":"una frase: cómo están los negocios hoy","prioridades":["lo 1º que Gastón debe hacer hoy","2º","3º"],"informe":"el resumen oficial del día en texto simple (párrafos cortos y listas con «- », máximo ~300 palabras), con los números que importan","temas":{"ceo":"tema corto para el Director Creads"},"acciones":[]}
+{"estado":"ok|atencion|urgente","resumen":"una frase: cómo están los negocios hoy","prioridades":["lo 1º que Gastón debe hacer hoy","2º","3º"],"informe":"el resumen oficial del día en texto simple (párrafos cortos y listas con «- », máximo ~300 palabras), con los números que importan","temas":{"ceo":"tema corto para el Director Creads","marketing":"tema corto para el Director de Marketing"},"acciones":[]}
 En "acciones" propón SOLO si hace falta (máximo 3), de estos tipos:
 {"tipo":"encargo","titulo":"…","problema":"qué problema resuelve","que":"qué debe hacer Claude","para":"para quién","listo":"cómo se sabe que quedó bien"}
 {"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads (una decisión o un dato que todos deben saber)"}
 {"tipo":"agente","id":"id del agente","on":true,"motivo":"por qué prenderlo o apagarlo"}
 No repitas acciones que ya están pendientes de aprobación.`;
+
+const ACTION_SPEC: Record<Action["tipo"], string> = {
+  encargo: `{"tipo":"encargo","titulo":"…","problema":"qué problema resuelve","que":"qué debe hacer Claude","para":"para quién","listo":"cómo se sabe que quedó bien"}`,
+  memoria: `{"tipo":"memoria","texto":"una línea nueva para la Memoria de Creads"}`,
+  agente: `{"tipo":"agente","id":"id del agente","on":true,"motivo":"por qué prenderlo o apagarlo"}`,
+  anuncio: `{"tipo":"anuncio","titulo":"nombre corto","formato":"ugc|podcast|entrevista|ronda|noticiero|comentario|drive-thru","idioma":"es-CL","guion":"el guion completo, lo que dice la persona","idea":"ángulo y por qué debería funcionar"}`,
+  campana: `{"tipo":"campana","nombre":"…","objetivo":"leads|trafico|ventas","paises":["CL"],"edadMin":25,"edadMax":55,"presupuestoUsd":10,"link":"https://www.creadsia.com/…","texto":"texto principal del anuncio","titulo":"título corto","cta":"LEARN_MORE|SIGN_UP","adId":"id de un anuncio terminado de Creads","motivo":"por qué"}`,
+  campana_estado: `{"tipo":"campana_estado","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","on":false,"motivo":"por qué pausarla o activarla, con números"}`,
+  presupuesto: `{"tipo":"presupuesto","campaignId":"id numérico de Meta","nombre":"nombre de la campaña","usd":15,"motivo":"por qué, con números"}`,
+  publicacion: `{"tipo":"publicacion","cuenta":"nombre exacto de la cuenta de Instagram","adId":"id de un anuncio terminado de Creads","texto":"texto del post, cercano y transparente","motivo":"por qué este video"}`,
+};
+const actionsFormat = (tipos: Action["tipo"][]) => tipos.length ? `\nAdemás puedes agregar "acciones":[…] (máximo 3, solo si hacen falta) con movimientos concretos que Gastón aprueba, de estos tipos:\n${tipos.map((t) => ACTION_SPEC[t]).join("\n")}\nNo repitas acciones ya pendientes ni rechazadas.` : "";
 
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/\u0000/g, "").trim().slice(0, n);
 /** Text from reports, the web or customers can't open or close the prompt's <datos>-style blocks. */
@@ -399,7 +447,7 @@ async function ask(a: Agent, o: { prompt: (research: string) => string; system: 
   }
 }
 
-const ceoInput = (st: OfficeState) => `\n<datos>\nINFORMES DE TUS AGENTES (los más recientes):\n${workersOf(st).map((w) => {
+const ceoInput = (st: OfficeState, director = "ceo") => `\n<datos>\nINFORMES DE TU EQUIPO (los más recientes):\n${teamOf(st, director).map((w) => {
   const r = st.last[w.id];
   if (!w.on) return `## ${w.name} [${w.id}]: apagado por el dueño.`;
   if (!r) return `## ${w.name} [${w.id}]: todavía no ha informado.`;
@@ -414,7 +462,9 @@ const reportLine = (name: string, id: string, on: boolean, r?: Report) =>
 const generalInput = (st: OfficeState) => {
   const dir = findAgent(st, "ceo");
   const pend = st.pending.filter((p) => p.estado === "pendiente");
-  return `\n<datos>\nINFORME DEL DIRECTOR CREADS:\n${reportLine(dir?.name ?? "Director Creads", "ceo", dir?.on !== false, st.last.ceo)}\n\nINFORMES DEL EQUIPO DE CREADS:\n${workersOf(st).map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
+  const mk = findAgent(st, "marketing");
+  return `\n<datos>\nINFORME DEL DIRECTOR CREADS:\n${reportLine(dir?.name ?? "Director Creads", "ceo", dir?.on !== false, st.last.ceo)}\n\nINFORMES DEL EQUIPO DE CREADS:\n${teamOf(st, "ceo").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
+\nINFORME DEL DIRECTOR DE MARKETING:\n${reportLine(mk?.name ?? "Director de Marketing", "marketing", mk?.on !== false, st.last.marketing)}\n\nINFORMES DEL ESTUDIO DE MARKETING:\n${teamOf(st, "marketing").map((w) => reportLine(w.name, w.id, w.on, st.last[w.id])).join("\n\n")}
 \nNEGOCIO DE AFILIADOS: todavía no está conectado (falta conectar RedTrack y Meta).
 \nACCIONES YA PENDIENTES DE APROBACIÓN: ${pend.map((p) => describe(p.action)).join(" | ") || "ninguna"}
 \nACCIONES QUE GASTÓN RECHAZÓ ESTA SEMANA (no las vuelvas a proponer): ${st.pending.filter((p) => p.estado === "rechazada").slice(0, 8).map((p) => describe(p.action)).join(" | ") || "ninguna"}
@@ -425,7 +475,7 @@ const generalInput = (st: OfficeState) => {
 type WorkOut = { report: Report; temas: Record<string, string>; acciones: Action[] };
 async function work(st: OfficeState, a: Agent, memory: string, deadline: number): Promise<WorkOut> {
   const at = new Date().toISOString();
-  const isCeo = a.id === "ceo", isGeneral = a.id === "general";
+  const isGeneral = a.id === "general", isCeo = a.id === "ceo" || a.id === "marketing";
   const model = isCeo || isGeneral ? GROK_MODEL_CEO() : GROK_MODEL();
   const fail = (error: string, usd = 0): WorkOut => ({ report: { at, estado: "atencion", resumen: `No pudo trabajar: ${error}`, informe: "", propuestas: [], fuentes: [], usd, model, error }, temas: {}, acciones: [] });
   if (!grokConfigured()) return fail("falta la clave XAI_API_KEY en Vercel.");
@@ -433,11 +483,14 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   if (blocked) return fail(blocked);
   const data = await gather(a.sources);
   const task = st.tasks[a.id];
-  const workerIds = workersOf(st).filter((w) => w.on).map((w) => w.id);
+  const workerIds = teamOf(st, a.id).filter((w) => w.on).map((w) => w.id);
+  const rights = RIGHTS[a.id] ?? [];
+  const cap = rights.length ? (await loadMarketing().catch(() => null))?.capUsd ?? 30 : 30;
+  const pend = st.pending.filter((p) => p.estado === "pendiente").map((p) => describe(p.action));
   const r = await ask(a, {
     model, deadline, maxTokens: a.search && !internalOf(a) ? 8000 : 6000,
     system: `${a.mission}\n\n${STYLE}`,
-    prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st) : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}`,
+    prompt: (research) => `${COMPANY}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
   });
   if (r.error) return fail(r.error, r.usd);
   let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown>; acciones?: unknown[] };
@@ -445,8 +498,8 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   if (!clip(j.resumen, 10)) return fail("su respuesta vino vacía. Prueba de nuevo.", r.usd);
   const temas: Record<string, string> = {};
   if (isCeo && j.temas && typeof j.temas === "object") for (const id of workerIds) { const t = topic(j.temas[id]); if (t) temas[id] = t; }
-  if (isGeneral && j.temas && typeof j.temas === "object") { const t = topic(j.temas.ceo); if (t) temas.ceo = t; }
-  const acciones = isGeneral && Array.isArray(j.acciones) ? j.acciones.map((x) => cleanAction(x, st)).filter((x): x is Action => Boolean(x)).slice(0, 3) : [];
+  if (isGeneral && j.temas && typeof j.temas === "object") for (const d of ["ceo", "marketing"]) { const t = topic(j.temas[d]); if (t) temas[d] = t; }
+  const acciones = Array.isArray(j.acciones) ? j.acciones.map((x) => cleanAction(x, st, cap)).filter((x): x is Action => Boolean(x) && rights.includes(x!.tipo)).slice(0, 3) : [];
   return {
     temas, acciones,
     report: {
@@ -502,6 +555,16 @@ export async function runTeam(deadline = Date.now() + 240_000): Promise<string[]
  * with their reports, then the CEO General with everything. Returns the brief to email (the CEO General's,
  * or the Director's if the CEO General couldn't work).
  */
+/** Both directors in parallel (the panel runs this between the team and the CEO General). */
+export async function runDirectors(): Promise<string[]> {
+  const st = await loadState();
+  const memory = (await loadMemory()).text;
+  const dirs = ["ceo", "marketing"].map((id) => findAgent(st, id)).filter((d): d is Agent => Boolean(d?.on));
+  const outs = await Promise.all(dirs.map((d) => work(st, d, memory, Date.now() + 200_000)));
+  await commit((s) => dirs.forEach((d, i) => save(s, d.id, outs[i])));
+  return dirs.map((d) => d.id);
+}
+
 export async function runAll(): Promise<{ brief: Report | null; by: string | null; ran: string[] }> {
   const start = Date.now();
   const st = await loadState();
@@ -512,11 +575,12 @@ export async function runAll(): Promise<{ brief: Report | null; by: string | nul
   let fresh = await commit((s) => on.forEach((w, i) => save(s, w.id, outs[i])));
   const ran = on.map((w) => w.id);
   let director: Report | null = null, general: Report | null = null;
-  const dir = findAgent(fresh, "ceo");
-  if (fresh.on && dir?.on) {
-    const out = await work(fresh, dir, memory, start + 185_000);
-    fresh = await commit((s) => save(s, "ceo", out));
-    director = out.report; ran.push("ceo");
+  const dirs = ["ceo", "marketing"].map((id) => findAgent(fresh, id)).filter((d): d is Agent => Boolean(d?.on));
+  if (fresh.on && dirs.length) {
+    const outs2 = await Promise.all(dirs.map((d) => work(fresh, d, memory, start + 185_000)));
+    fresh = await commit((s) => dirs.forEach((d, i) => save(s, d.id, outs2[i])));
+    director = outs2[dirs.findIndex((d) => d.id === "ceo")]?.report ?? null;
+    ran.push(...dirs.map((d) => d.id));
   }
   const gen = findAgent(fresh, "general");
   // the CEO General only starts if there's time to finish (else the Director's brief is the email)
@@ -577,13 +641,20 @@ export async function chat(id: string, text: string): Promise<ChatMsg[]> {
 
 /** One line that says what a move does (also used to avoid proposing the same move twice). */
 export function describe(a: Action): string {
-  if (a.tipo === "encargo") return `Encargo para Claude: ${a.titulo}`;
-  if (a.tipo === "memoria") return `Agregar a la Memoria: ${a.texto}`;
-  return `${a.on ? "Prender" : "Apagar"} el agente ${a.id}`;
+  switch (a.tipo) {
+    case "encargo": return `Encargo para Claude: ${a.titulo}`;
+    case "memoria": return `Agregar a la Memoria: ${a.texto}`;
+    case "agente": return `${a.on ? "Prender" : "Apagar"} el agente ${a.id}`;
+    case "anuncio": return `Pedir anuncio a Creads: ${a.titulo}`;
+    case "campana": return `Subir campaña en pausa: ${a.spec.nombre}`;
+    case "campana_estado": return `${a.on ? "Activar" : "Pausar"} la campaña ${a.nombre || a.campaignId}`;
+    case "presupuesto": return `Presupuesto de ${a.nombre || a.campaignId} a US$${a.usd}/día`;
+    case "publicacion": return `Publicar en ${a.cuenta} el anuncio ${a.adId.slice(0, 8)}`;
+  }
 }
 
 /** Turns what the model wrote into a valid move, or null (unknown type, missing fields, unknown agent). */
-export function cleanAction(x: unknown, st: OfficeState): Action | null {
+export function cleanAction(x: unknown, st: OfficeState, capUsd = 30): Action | null {
   const o = (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
   const t = (v: unknown, n: number) => untag(clip(v, n));
   if (o.tipo === "encargo") {
@@ -597,6 +668,25 @@ export function cleanAction(x: unknown, st: OfficeState): Action | null {
   if (o.tipo === "agente" && typeof o.id === "string" && typeof o.on === "boolean") {
     if (o.id === "general" || !findAgent(st, o.id)) return null; // it can't switch itself off
     return { tipo: "agente", id: o.id, on: o.on, motivo: t(o.motivo, 300) };
+  }
+  if (o.tipo === "anuncio") {
+    const guion = t(o.guion, 4000), titulo = t(o.titulo, 100);
+    const formato = /^(ugc|podcast|entrevista|ronda|noticiero|comentario|drive-thru)$/.test(String(o.formato)) ? String(o.formato) : "ugc";
+    return guion.length >= 40 && titulo.length >= 3 ? { tipo: "anuncio", titulo, formato, idioma: o.idioma === "en" ? "en" : "es-CL", guion, idea: t(o.idea, 600) } : null;
+  }
+  if (o.tipo === "campana") {
+    const spec = cleanCampaign({ ...o, nombre: t(o.nombre, 80), texto: t(o.texto, 600), titulo: t(o.titulo, 60) }, capUsd);
+    return typeof spec === "string" ? null : { tipo: "campana", spec, motivo: t(o.motivo, 400) };
+  }
+  const cid = String(o.campaignId ?? "");
+  if (o.tipo === "campana_estado" && /^\d{5,25}$/.test(cid) && typeof o.on === "boolean") return { tipo: "campana_estado", campaignId: cid, nombre: t(o.nombre, 80), on: o.on, motivo: t(o.motivo, 400) };
+  if (o.tipo === "presupuesto" && /^\d{5,25}$/.test(cid)) {
+    const usd = Math.round(Number(o.usd) * 100) / 100;
+    return usd >= 1 && usd <= capUsd ? { tipo: "presupuesto", campaignId: cid, nombre: t(o.nombre, 80), usd, motivo: t(o.motivo, 400) } : null;
+  }
+  if (o.tipo === "publicacion" && /^[0-9a-f-]{36}$/i.test(String(o.adId ?? ""))) {
+    const texto = t(o.texto, 2000);
+    return texto.length >= 5 ? { tipo: "publicacion", cuenta: t(o.cuenta, 60), adId: String(o.adId), texto, motivo: t(o.motivo, 400) } : null;
   }
   return null;
 }
@@ -684,6 +774,35 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
       await finish("aprobada", "Agregado a la Memoria.");
       return { ok: true, mensaje: "Agregado a la Memoria de Creads." };
     }
+    if (a.tipo === "anuncio") {
+      await addPedido({ titulo: a.titulo, formato: a.formato, idioma: a.idioma, guion: a.guion, idea: a.idea });
+      await finish("aprobada", "Pedido creado: ábrelo en Marketing → Pedidos de anuncios para generarlo en Creads.");
+      return { ok: true, mensaje: "Pedido de anuncio creado (Marketing → Pedidos de anuncios)." };
+    }
+    if (a.tipo === "campana") {
+      const r = await createPausedCampaign(a.spec);
+      await commitMarketing((m) => { m.campanas = [{ id: `c-${pid}`, at: new Date().toISOString(), spec: a.spec, estado: (r ? "subida en pausa" : "ensayo") as "subida en pausa" | "ensayo", metaId: r?.campaignId }, ...m.campanas].slice(0, 60); });
+      const msg = r ? "Campaña subida a Meta EN PAUSA. Revísala en el Administrador de anuncios y actívala cuando quieras." : "Modo ensayo: la campaña quedó guardada; se subirá cuando conectes Meta.";
+      await finish("aprobada", msg);
+      return { ok: true, mensaje: msg };
+    }
+    if (a.tipo === "campana_estado" || a.tipo === "presupuesto") {
+      const cap = (await loadMarketing()).capUsd;
+      const r = a.tipo === "campana_estado" ? await setCampaignStatus(a.campaignId, a.on, cap) : await setCampaignBudget(a.campaignId, a.usd, cap);
+      const msg = !r ? "Meta no está conectado: no se hizo nada." : a.tipo === "presupuesto" ? `Presupuesto cambiado a US$${a.usd}/día.` : a.on ? "Campaña activada." : "Campaña pausada.";
+      await finish(r ? "aprobada" : "error", msg);
+      return { ok: Boolean(r), mensaje: msg };
+    }
+    if (a.tipo === "publicacion") {
+      const m = await loadMarketing();
+      const cuenta = m.cuentas.find((c) => c.nombre.toLowerCase() === a.cuenta.toLowerCase());
+      if (!cuenta) { await finish("error", `No hay una cuenta llamada «${a.cuenta}» en Marketing.`); return { ok: false, mensaje: `Agrega la cuenta «${a.cuenta}» en Marketing primero.` }; }
+      const mediaId = await publishReel(cuenta, a.adId, a.texto);
+      await commitMarketing((x) => { x.publicaciones = [{ id: `pub-${pid}`, at: new Date().toISOString(), cuenta: cuenta.nombre, adId: a.adId, texto: a.texto, estado: (mediaId ? "publicada" : "ensayo") as "publicada" | "ensayo", mediaId: mediaId ?? undefined }, ...x.publicaciones].slice(0, 100); });
+      const msg = mediaId ? `Publicado en ${cuenta.nombre}.` : "Modo ensayo: la publicación quedó guardada; se hará cuando conectes Meta.";
+      await finish("aprobada", msg);
+      return { ok: true, mensaje: msg };
+    }
     let e: Encargo = { id: `e-${pid}`, at: new Date().toISOString(), titulo: a.titulo, texto: encargoText(a), estado: "por enviar" };
     let note = "Guardado: cópialo y pásaselo a Claude.";
     try { e = await sendToClaude(e); if (e.issue) note = `Enviado a Claude (tarea #${e.issue}).`; }
@@ -691,8 +810,9 @@ export async function decide(proposalId: string, approve: boolean): Promise<{ ok
     await finish("aprobada", note, (s) => { if (!s.encargos.some((x) => x.id === e.id)) s.encargos = [e, ...s.encargos].slice(0, 60); });
     return { ok: true, mensaje: note };
   } catch (err) {
-    await finish("error", err instanceof Error ? err.message : "No se pudo hacer.").catch(() => {});
-    return { ok: false, mensaje: "No se pudo hacer. Prueba de nuevo." };
+    const msg = err instanceof Error ? err.message : "No se pudo hacer.";
+    await finish("error", msg).catch(() => {});
+    return { ok: false, mensaje: `No se pudo hacer: ${msg}` };
   }
 }
 

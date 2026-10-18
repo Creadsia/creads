@@ -49,6 +49,11 @@ EQUIPO
 - Claude (en el estudio de desarrollo) programa y publica los cambios de la plataforma: es la «mano izquierda». Los agentes de la oficina analizan y proponen; no cambian el sistema.
 - Estructura (decidida el 17 oct, opción A): Gastón → CEO General (mano derecha, en este Panel; escribe el único resumen oficial del día y propone movimientos que Gastón aprueba) → Director Creads (equipo de la plataforma) y, más adelante, Director Afiliados (RedTrack, Meta, espía de ganadores, creativos hechos en Creads). Los bots de Gastón en grok.com sirven para pensar en voz alta; no ven datos.
 
+ESTUDIO DE MARKETING (decidido el 18 oct)
+- Director de Marketing + Creativos (piden anuncios a Creads), Trafficker (campañas en Meta) y Contenido orgánico (cuentas de Instagram de la marca).
+- Tráfico pagado: las campañas se suben EN PAUSA; activar o subir presupuesto lo aprueba Gastón y nunca pasa el tope diario.
+- Tráfico orgánico: varias cuentas de Instagram de la marca con videos hechos con Creads que se ven bonitos y naturales. Las cuentas dicen en su bio que el contenido es de Creads IA; cuando alguien comenta «¿dónde lo hacen?», la cuenta responde por mensaje con el link. Nunca nos hacemos pasar por clientes ni personas cualquiera (compliance: Meta y ley chilena de publicidad).
+
 COMPETENCIA
 - Principal: Higgsfield. También: Arcads, Creatify, HeyGen, Captions/Mirage, MakeUGC, Pippit (CapCut), Freepik, Krea, OpenArt, Hedra.
 

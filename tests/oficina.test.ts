@@ -12,7 +12,7 @@ test("customer text leaves without emails, phones or links", () => {
 test("built-in agents' shares add up to the whole budget", () => {
   const total = agentsOf(DEFAULT_STATE()).reduce((a, x) => a + x.sharePct, 0);
   assert.equal(total, 100);
-  assert.deepEqual(BUILTIN_IDS, ["general", "ceo", "produccion", "seguridad", "novedades", "soporte"]);
+  assert.deepEqual(BUILTIN_IDS, ["general", "ceo", "produccion", "seguridad", "novedades", "soporte", "marketing", "creativos", "trafico", "organico"]);
 });
 
 test("budget left per agent and in total", () => {
@@ -34,7 +34,7 @@ test("owner's agents: checked, named, edited instructions win", () => {
   assert.equal(newAgentId(st, "Márketing!"), "a-marketing-2");
   st.missions.ceo = "Instrucciones nuevas del dueño para el CEO.";
   assert.equal(agentsOf(st).find((x) => x.id === "ceo")!.mission, "Instrucciones nuevas del dueño para el CEO.");
-  assert.equal(agentsOf(st).length, 7);
+  assert.equal(agentsOf(st).length, 11);
 });
 
 test("cost: the API's own figure wins, otherwise tokens, reasoning and searches", () => {
