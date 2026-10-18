@@ -93,7 +93,7 @@ export default function ToolsHub() {
         <h2 id="edit" className="text-lg font-semibold">Editar y mejorar</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {TOOLS.filter((t) => t.output !== "audio").map((t) => (
-            <Link key={t.id} href={`/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
+            <Link key={t.id} href={t.id === "crear-personaje" ? "/app/influencer/nuevo" : `/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-text"><Glyph d={ICON[t.id]} /></span>
               <span className="flex min-w-0 flex-col gap-1">
                 <b className="font-semibold">{t.name}</b>
@@ -109,7 +109,7 @@ export default function ToolsHub() {
         <h2 id="audio" className="text-lg font-semibold">Audio</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {TOOLS.filter((t) => t.output === "audio").map((t) => (
-            <Link key={t.id} href={`/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
+            <Link key={t.id} href={t.id === "crear-personaje" ? "/app/influencer/nuevo" : `/app/herramientas/${t.id}`} className="flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted/60">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-text"><Glyph d={ICON[t.id]} /></span>
               <span className="flex min-w-0 flex-col gap-1">
                 <b className="font-semibold">{t.name}</b>

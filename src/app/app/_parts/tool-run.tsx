@@ -195,7 +195,7 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 
 // ---------- results ----------
 
-function Result({ job, output }: { job: Job; output: "image" | "video" | "audio" }) {
+function Result({ job, output, extra }: { job: Job; output: "image" | "video" | "audio"; extra?: (url: string) => React.ReactNode }) {
   if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "No se pudo crear. Si se usaron créditos, ya volvieron a tu saldo."}</p>;
   if (job.status === "stuck") return <p className="text-sm text-warn">{job.error}</p>;
   if (job.status !== "done" || !job.url) return (
@@ -217,6 +217,7 @@ function Result({ job, output }: { job: Job; output: "image" | "video" | "audio"
       ) : (
         <video src={job.url} controls playsInline className="max-h-[520px] w-fit rounded-xl bg-black" />
       )}
+      {extra?.(job.url)}
       <div className="flex flex-wrap items-center gap-2">
         <a href={job.url} download className={btnCls}>Descargar</a>
         {output === "video" && (
@@ -236,14 +237,41 @@ function Result({ job, output }: { job: Job; output: "image" | "video" | "audio"
 
 // ---------- the tool page ----------
 
-export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: { image?: string; video?: string; prompt?: string } }) {
+/** Saved characters (Influencer IA), to pick as the photo in «Copiar movimiento». */
+function Characters({ onPick, selected }: { onPick: (u: string) => void; selected: string }) {
+  const [list, setList] = useState<{ id: string; name: string; sheet: string | null }[] | null>(null);
+  useEffect(() => { fetch("/api/personajes").then((r) => r.json()).then((d) => setList(d.personajes ?? [])).catch(() => setList([])); }, []);
+  if (!list?.length) return <p className="text-xs text-muted">¿Quieres usar un personaje propio? Créalo en <Link href="/app/influencer/nuevo" className="font-semibold underline">Influencer IA</Link> y aparece aquí.</p>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {list.filter((p) => p.sheet).map((p) => (
+        <button key={p.id} type="button" onClick={() => onPick(p.sheet!)} aria-pressed={selected === p.sheet} title={p.name}
+          className={`flex w-24 flex-col gap-1 overflow-hidden rounded-lg border p-1 text-left text-xs ${selected === p.sheet ? "border-accent ring-2 ring-accent/40" : "border-line hover:border-muted"}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p.sheet!} alt={p.name} className="aspect-video w-full rounded object-cover" loading="lazy" />
+          <span className="truncate font-semibold">{p.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function ToolRun({ toolId, initial, promptValue, resultExtra, imagesLabel }: {
+  toolId: ToolId; initial: { image?: string; video?: string; prompt?: string };
+  /** When the page builds the instruction (Crear personaje), it stays in sync and editable here. */
+  promptValue?: string;
+  /** An extra action under a finished result (e.g. «Guardar personaje»). */
+  resultExtra?: (url: string) => React.ReactNode;
+  imagesLabel?: string;
+}) {
   const t = findTool(toolId)!;
   const library = useTable<Img>("images");
   const [image, setImage] = useState(initial.image ?? "");
   const [images, setImages] = useState<string[]>(initial.image ? [initial.image] : []);
   const [video, setVideo] = useState<{ url: string; secs: number } | null>(null);
   const [audio, setAudio] = useState<{ url: string; secs: number } | null>(null);
-  const [prompt, setPrompt] = useState(initial.prompt ?? "");
+  const [prompt, setPrompt] = useState(promptValue ?? initial.prompt ?? "");
+  useEffect(() => { if (promptValue !== undefined) setPrompt(promptValue); }, [promptValue]);
   const [target, setTarget] = useState<string>("es");
   const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
   const [instrumental, setInstrumental] = useState(true);
@@ -301,7 +329,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
     (n.video && !video) ? "Sube un video." :
     (n.audio && !audio) ? "Agrega el audio: súbelo o escríbelo y genera la voz." :
     (n.prompt === "required" && prompt.trim().length < 4) ? "Escribe qué quieres que haga." :
-    (t.consent && !consent) ? "Confirma el permiso de la persona." : "";
+    ((t.consent || (t.id === "crear-personaje" && images.length > 0)) && !consent) ? "Confirma el permiso de la persona." : "";
 
   async function run() {
     setBusy(true); setErr("");
@@ -330,9 +358,10 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section className={cardCls} aria-label="Lo que necesitas">
+        {n.image && t.id === "copiar-movimiento" && <Group label="Tus personajes" hint="Toca uno para usarlo como la foto: sale con la misma cara de su ficha."><Characters selected={image} onPick={setImage} /></Group>}
         {n.image && <Group label="Foto"><ImageInput value={image} onChange={setImage} library={imgs} /></Group>}
         {n.images && (
-          <Group label={n.imagesOptional ? `Fotos de referencia (opcional, hasta ${n.images})` : `Fotos (hasta ${n.images})`} hint={n.imagesOptional ? "Una cara nueva, un producto o un lugar. Nómbralas en tu instrucción como «foto 1», «foto 2»." : "La primera es la principal."}>
+          <Group label={imagesLabel ?? (n.imagesOptional ? `Fotos de referencia (opcional, hasta ${n.images})` : `Fotos (hasta ${n.images})`)} hint={t.id === "crear-personaje" ? "La primera puede ser una cara de guía (no se copia exacta: mandan los rasgos que elegiste); las otras, imágenes de estilo." : n.imagesOptional ? "Una cara nueva, un producto o un lugar. Nómbralas en tu instrucción como «foto 1», «foto 2»." : "La primera es la principal."}>
             <div className="flex flex-col gap-3">
               {images.map((u, i) => (
                 <ImageInput key={i} value={u} library={imgs} onChange={(v) => setImages((l) => (v ? l.map((x, j) => (j === i ? v : x)) : l.filter((_, j) => j !== i)))} />
@@ -344,8 +373,8 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
         {n.video && <Group label="Video"><MediaInput kind="video" value={video} onChange={setVideo} limits={n.video} /></Group>}
         {n.audio && <Group label="Audio"><AudioInput value={audio} onChange={setAudio} limits={n.audio} /></Group>}
         {n.prompt && (
-          <Field label={n.prompt === "required" ? "Qué quieres" : "Instrucción (opcional)"} hint={n.promptHint}>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className={inputCls} />
+          <Field label={t.id === "crear-personaje" ? "Instrucción para la IA (se arma sola con tus opciones; puedes editarla)" : n.prompt === "required" ? "Qué quieres" : "Instrucción (opcional)"} hint={t.id === "crear-personaje" ? undefined : n.promptHint}>
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={t.id === "crear-personaje" ? 6 : 3} className={inputCls} />
           </Field>
         )}
         {n.prompt && t.ideas && (
@@ -380,10 +409,10 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
             <span>Solo instrumental (sin voz cantada)</span>
           </label>
         )}
-        {t.consent && (
+        {(t.consent || (t.id === "crear-personaje" && images.length > 0)) && (
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />
-            <span>Tengo permiso de la persona que aparece o habla para usar su cara y su voz en este contenido.</span>
+            <span>{t.id === "crear-personaje" ? "Las fotos son mías o tengo permiso para usarlas. No es una persona famosa ni alguien que no lo autorizó." : "Tengo permiso de la persona que aparece o habla para usar su cara y su voz en este contenido."}</span>
           </label>
         )}
 
@@ -403,7 +432,7 @@ export default function ToolRun({ toolId, initial }: { toolId: ToolId; initial: 
 
       <section className={cardCls} aria-label="Resultado">
         <h2 className="font-semibold">Resultado</h2>
-        {latest ? <Result job={latest} output={t.output} /> : <p className="text-sm text-muted">Aquí aparece lo que crees. Lo que hagas queda guardado en «Tus creaciones».</p>}
+        {latest ? <Result job={latest} output={t.output} extra={resultExtra} /> : <p className="text-sm text-muted">Aquí aparece lo que crees. Lo que hagas queda guardado en «Tus creaciones».</p>}
         {jobs.length > 1 && (
           <div className="flex flex-col gap-2 border-t border-line pt-4">
             <h3 className="text-sm font-semibold text-muted">Antes con esta herramienta</h3>

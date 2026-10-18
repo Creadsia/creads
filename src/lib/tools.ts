@@ -9,6 +9,7 @@ export type ToolId =
   | "mejorar-video"
   | "editar-video"
   | "copiar-movimiento"
+  | "crear-personaje"
   | "avatar-habla"
   | "sincronizar-labios"
   | "doblaje"
@@ -122,6 +123,17 @@ export const TOOLS: ToolDef[] = [
       "Cambia el fondo por un living cálido de casa chilena.",
       "Ponle una polera del color de mi marca y deja todo lo demás igual.",
     ],
+  },
+  {
+    id: "crear-personaje",
+    name: "Crear personaje",
+    short: "La ficha de un personaje nuevo: frente, perfil, espalda y cara, siempre igual.",
+    lead: "Arma un personaje eligiendo sus rasgos (o describiéndolo) y recibe su ficha: frente, perfil, espalda y primer plano. Guárdalo y úsalo en todos tus videos con la misma cara.",
+    output: "image",
+    model: "Nano Banana Pro",
+    inputs: { images: 4, imagesOptional: true, prompt: "required", promptHint: "Describe el personaje. Lo más fácil es armarlo en Influencer IA → Crear personaje." },
+    estimate: () => 0.15,
+    priceNote: "US$0,15 por ficha",
   },
   {
     id: "copiar-movimiento",

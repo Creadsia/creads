@@ -1,0 +1,123 @@
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import ToolRun from "../../_parts/tool-run";
+import { btnCls, cardCls, ghostCls, inputCls, PageHead } from "../../_parts/ui";
+import { TIERS, cleanTraits, fieldsFor, sheetPrompt, surprise, type Tier, type Traits } from "@/lib/influencer/traits";
+
+// Influencer IA → Crear personaje: pick the type and each trait (or «Sorpréndeme»), see the instruction the
+// AI will get (editable), create the sheet with «Crear personaje» (price shown before), and save it.
+
+export default function Creador() {
+  const q = useSearchParams();
+  const [t, setT] = useState<Traits>({ tier: "normal", picks: {} });
+  const [note, setNote] = useState("");
+  const fields = useMemo(() => fieldsFor(t.tier), [t.tier]);
+  const prompt = useMemo(() => sheetPrompt(t), [t]);
+
+  // «Duplicar y cambiar»: start from a saved character's traits
+  useEffect(() => {
+    const id = q.get("desde");
+    if (!id) return;
+    fetch("/api/personajes").then((r) => r.json()).then((d) => {
+      const p = (d.personajes ?? []).find((x: { id: string }) => x.id === id);
+      if (p?.traits) { setT(cleanTraits(p.traits)); setNote(`Partiendo de «${p.name}»: cambia lo que quieras.`); }
+    }).catch(() => {});
+  }, [q]);
+
+  const toggle = (key: string, id: string, max: number) => setT((x) => {
+    const cur = x.picks[key] ?? [];
+    const next = cur.includes(id) ? cur.filter((v) => v !== id) : max === 1 ? [id] : cur.length < max ? [...cur, id] : cur;
+    return { ...x, picks: { ...x.picks, [key]: next } };
+  });
+  const setTier = (tier: Tier) => setT((x) => cleanTraits({ ...x, tier }));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHead title="Crear personaje" lead="Elige el tipo y sus rasgos, o toca «Sorpréndeme». Recibes su ficha (frente, perfil, espalda y cara) y la guardas para usarla en todos tus videos.">
+        <Link href="/app/influencer" className={ghostCls}>Mis personajes</Link>
+      </PageHead>
+      {note && <p className="text-sm text-muted">{note}</p>}
+
+      <section className={cardCls} aria-label="Rasgos del personaje">
+        <div role="radiogroup" aria-label="Tipo de personaje" className="grid gap-2 sm:grid-cols-4">
+          {TIERS.map((x) => (
+            <button key={x.id} type="button" role="radio" aria-checked={t.tier === x.id} onClick={() => setTier(x.id)}
+              className={`flex flex-col gap-0.5 rounded-xl border p-3 text-left ${t.tier === x.id ? "border-accent bg-accent/10" : "border-line hover:border-muted"}`}>
+              <b className="text-sm">{x.label}</b>
+              <span className="text-xs text-muted">{x.hint}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setT((x) => surprise(x))} className={btnCls}>🎲 Sorpréndeme</button>
+          <button type="button" onClick={() => setT((x) => ({ tier: x.tier, picks: {} }))} className={ghostCls}>Limpiar</button>
+          <span className="text-xs text-muted">«Sorpréndeme» rellena al azar lo que no elegiste.</span>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {fields.map((f) => (
+            <div key={f.key} role="group" aria-label={f.label} className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-muted">{f.label}{f.max > 1 ? ` (hasta ${f.max})` : ""}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {f.opts.map((o) => {
+                  const on = (t.picks[f.key] ?? []).includes(o.id);
+                  return (
+                    <button key={o.id} type="button" aria-pressed={on} onClick={() => toggle(f.key, o.id, f.max)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-accent bg-accent/15 text-ink" : "border-line text-muted hover:border-muted hover:text-ink"}`}>
+                      {o.es}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {t.tier !== "normal" && (
+            <label className="flex items-center gap-3 text-sm">
+              <span className="font-semibold text-muted">Color del cuerpo{t.tier === "animal" ? " o pelaje" : ""}</span>
+              <input type="color" value={t.color ?? "#8A5CFF"} onChange={(e) => setT((x) => ({ ...x, color: e.target.value }))} className="h-8 w-12 rounded border border-line" />
+              {t.color && <button type="button" onClick={() => setT((x) => ({ ...x, color: undefined }))} className="text-xs text-muted hover:text-ink">Quitar</button>}
+            </label>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold text-muted">Descripción libre (opcional)</span>
+            <textarea rows={3} maxLength={4000} value={t.extra ?? ""} onChange={(e) => setT((x) => ({ ...x, extra: e.target.value }))} placeholder="Ej: siempre anda con una taza de café y una chaqueta de cuero gastada." className={inputCls} />
+          </label>
+        </div>
+      </section>
+
+      <ToolRun toolId="crear-personaje" initial={{}} promptValue={prompt} imagesLabel="Referencias (opcional): 1 foto de cara de guía + hasta 3 de estilo"
+        resultExtra={(url) => <Guardar sheet={url} traits={t} />} />
+      <p className="text-xs text-muted">Cada ficha es una tirada: si no te convence, vuelve a crearla (cambia algún rasgo o toca «Sorpréndeme»). Nunca uses la cara de una persona famosa o de alguien sin su permiso.</p>
+    </div>
+  );
+}
+
+function Guardar({ sheet, traits }: { sheet: string; traits: Traits }) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true); setMsg(null);
+    try {
+      const r = await fetch("/api/personajes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, sheet, traits }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "No se pudo guardar.");
+      setMsg({ ok: true, text: `${name} quedó guardado en «Mis personajes».` });
+    } catch (err) { setMsg({ ok: false, text: err instanceof Error ? err.message : "No se pudo guardar." }); }
+    setBusy(false);
+  }
+  if (msg?.ok) return <p className="text-sm text-good">{msg.text} <Link href="/app/influencer" className="font-semibold underline">Ver mis personajes</Link></p>;
+  return (
+    <form onSubmit={save} className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/40 bg-accent/5 p-3">
+      <label htmlFor="pj-name" className="text-sm font-semibold">¿Te gusta? Guárdalo:</label>
+      <input id="pj-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Nombre del personaje" className={`${inputCls} max-w-xs`} />
+      <button type="submit" disabled={busy || name.trim().length < 2} className={btnCls}>{busy ? "Guardando…" : "Guardar personaje"}</button>
+      {msg && <span className="text-sm text-bad">{msg.text}</span>}
+    </form>
+  );
+}

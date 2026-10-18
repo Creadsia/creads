@@ -43,9 +43,11 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     const list = Array.isArray(b.images) ? b.images.filter(mine).slice(0, need.images) : [];
     if (!list.length && !need.imagesOptional) return "Sube al menos una foto.";
     if (list.length) input.images = list;
+    // a face from a photo is only a guide, but still needs the person's permission
+    if (t.id === "crear-personaje" && list.length && b.consent !== true) return "Confirma que la foto es tuya o que tienes permiso de esa persona.";
   }
   if (need.prompt) {
-    const p = typeof b.prompt === "string" ? b.prompt.trim().slice(0, 2000) : "";
+    const p = typeof b.prompt === "string" ? b.prompt.trim().slice(0, t.id === "crear-personaje" ? 5000 : 2000) : "";
     if (need.prompt === "required" && p.length < 4) return "Escribe qué quieres que haga.";
     if (p) input.prompt = p;
   }

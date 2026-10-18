@@ -25,7 +25,7 @@ export type ToolCheck =
   | { state: "done"; url: string };
 
 interface FalTool {
-  endpoint: string;
+  endpoint: string | ((i: ToolInput) => string);
   build: (i: ToolInput) => Record<string, unknown>;
   /** Where the result file is in fal's answer. */
   pick: (out: Record<string, unknown>) => string | undefined;
@@ -62,6 +62,12 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
     build: (i) => ({ prompt: videoEditPrompt(i.prompt ?? "", i.images?.length ?? 0), video_url: i.video, keep_audio: true, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}) }),
     pick: vid,
   },
+  "crear-personaje": {
+    // with reference photos the edit model takes them as guides; without, it draws from the description
+    endpoint: (i) => (i.images?.length ? "fal-ai/nano-banana-pro/edit" : "fal-ai/nano-banana-pro"),
+    build: (i) => ({ prompt: i.prompt, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}), aspect_ratio: "16:9", resolution: "1K", output_format: "png", num_images: 1 }),
+    pick: imgs,
+  },
   "copiar-movimiento": {
     endpoint: "fal-ai/kling-video/v3/standard/motion-control",
     // "video": the character follows the reference video's motion and framing (up to 30 s)
@@ -93,7 +99,7 @@ export function videoEditPrompt(p: string, photos: number) {
 /** The exact request each tool sends (exported for tests). */
 export const toolRequest = (id: ToolId, i: ToolInput) => {
   const t = FAL[id];
-  return t ? { endpoint: t.endpoint, body: t.build(i) } : null;
+  return t ? { endpoint: typeof t.endpoint === "function" ? t.endpoint(i) : t.endpoint, body: t.build(i) } : null;
 };
 
 const ELEVEN: ToolId[] = ["doblaje", "musica", "efectos"];
@@ -115,7 +121,7 @@ export async function startTool(t: ToolDef, input: ToolInput, ws: string): Promi
   }
   const f = FAL[t.id];
   if (!f) throw new Error("Herramienta desconocida.");
-  return falSubmit(f.endpoint, f.build(input), t.name);
+  return falSubmit(typeof f.endpoint === "function" ? f.endpoint(input) : f.endpoint, f.build(input), t.name);
 }
 
 const extOf = (url: string, fallback: string) => {

@@ -81,6 +81,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
       { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
       { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
       { href: "/app/recrear", label: "Recrear video", icon: I.redo, full: true },
+      { href: "/app/influencer", label: "Influencer IA", icon: I.user, full: true },
     ],
   },
 ];
