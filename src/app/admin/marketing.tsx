@@ -15,7 +15,7 @@ interface Data {
   anuncios: { id: string; title: string | null; format: string | null; final_url: string; created_at: string }[];
 }
 
-type ConnKey = "pixelId" | "adAccountId" | "pageId" | "igUserId" | "testEventCode" | "capiToken" | "adsToken";
+type ConnKey = "pixelId" | "adAccountId" | "pageId" | "igUserId" | "testEventCode" | "capiToken" | "adsToken" | "appSecret" | "webhookToken";
 const CONN_FIELDS: { k: ConnKey; label: string; secret?: boolean; hint: string }[] = [
   { k: "pixelId", label: "ID del píxel", hint: "Administrador de eventos → Orígenes de datos → tu píxel: el número debajo del nombre." },
   { k: "capiToken", label: "Token de la API de conversiones", secret: true, hint: "Administrador de eventos → tu píxel → Configuración → API de conversiones → «Generar token de acceso»." },
@@ -247,6 +247,7 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
           <li>Entra a <a className="text-accent-text underline" href="https://business.facebook.com/settings" target="_blank" rel="noopener noreferrer">Configuración del negocio de Meta</a> con la cuenta que administra el Business Manager de Creads.</li>
           <li><b>Píxel:</b> en <a className="text-accent-text underline" href="https://business.facebook.com/events_manager2" target="_blank" rel="noopener noreferrer">Administrador de eventos</a> copia el ID de tu píxel y pégalo abajo. Ahí mismo, en Configuración → API de conversiones, aprieta «Generar token de acceso» y pégalo en «Token de la API de conversiones».</li>
           <li><b>Usuario del sistema:</b> Configuración del negocio → Usuarios → Usuarios del sistema → «Agregar» (rol administrador). Luego «Asignar activos»: la cuenta publicitaria, la página y la cuenta de Instagram, todas con control total.</li>
+          <li>Si todavía no hay una app de Creads: en <a className="text-accent-text underline" href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">Meta for Developers</a> → «Crear app» → tipo «Empresa» (o «Otro» → «Empresa») → elige el Business Manager de Creads. Después, en Configuración del negocio → Apps, asígnale la app al usuario del sistema.</li>
           <li>Con ese usuario aprieta «Generar nuevo token», elige la app de Creads, caducidad «Nunca» y marca los permisos que dice la ayuda del campo. Copia el token y pégalo en «Token del usuario del sistema».</li>
           <li>Copia los ID de la cuenta publicitaria, la página y la cuenta de Instagram (Configuración del negocio → Cuentas) y pégalos abajo.</li>
           <li>Aprieta <b>Guardar</b> y después <b>Probar conexión</b>: cada parte debe salir con ✓. Si algo sale mal, el mensaje dice qué revisar. También le puedes preguntar al Director de Marketing (botón «Hablar»).</li>
@@ -284,7 +285,28 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
         </ul>
       )}
       {d.conexion.error && <p className="text-sm text-bad">Meta respondió: {d.conexion.error}</p>}
-      <p className="text-xs text-muted">Respuestas automáticas a comentarios: necesitan además la app de Meta con su webhook (eso sí se configura una vez en Vercel; pídeselo a Claude cuando quieras activarlas). {d.conexion.webhook ? "✓ Ya está." : ""}</p>
+
+      <details className="rounded-xl border border-line p-4" open={!d.conexion.webhook && !!v.adsToken.value}>
+        <summary className="cursor-pointer text-sm font-bold">Respuestas automáticas a comentarios (webhook de Instagram) {d.conexion.webhook ? "· ✓ listo" : "· falta"}</summary>
+        <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm">
+          <li>En <a className="text-accent-text underline" href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">Meta for Developers</a> abre la app de Creads → Configuración de la app → Básica → «Clave secreta de la app» → Mostrar. Pégala aquí:
+            <form className="mt-2 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (form.appSecret) save({ appSecret: form.appSecret }); }}>
+              <input type="password" autoComplete="off" spellCheck={false} value={form.appSecret ?? ""} onChange={(e) => setForm({ ...form, appSecret: e.target.value })} placeholder={v.appSecret.value ? `Guardada ${v.appSecret.value} · pega otra para cambiarla` : "Clave secreta de la app"} className={`${input} max-w-sm font-mono`} />
+              <button type="submit" disabled={!form.appSecret || !!busy} className={btn}>Guardar</button>
+            </form>
+          </li>
+          <li>Clave de verificación del webhook:{" "}
+            {v.webhookToken.value
+              ? <><code className="rounded bg-surface-2 px-2 py-0.5 text-xs">{v.webhookToken.value}</code> <button type="button" onClick={() => navigator.clipboard.writeText(v.webhookToken.value).then(() => setMsg({ ok: true, text: "Clave copiada." })).catch(() => {})} className={`${btn} text-xs`}>Copiar</button></>
+              : <button type="button" disabled={!!busy} onClick={() => { const a = new Uint8Array(18); crypto.getRandomValues(a); save({ webhookToken: Array.from(a, (x) => x.toString(16).padStart(2, "0")).join("") }); }} className={`${btn} text-xs`}>Crear clave</button>}
+          </li>
+          <li>En la app → Webhooks (o Casos de uso → Instagram → Webhooks) elige <b>Instagram</b>, aprieta «Suscribirse a este objeto» y pega:
+            <span className="mt-1 flex flex-wrap items-center gap-2"><span className="text-xs text-muted">URL de devolución de llamada:</span><code className="rounded bg-surface-2 px-2 py-0.5 text-xs">https://www.creadsia.com/api/meta/webhook</code><button type="button" onClick={() => navigator.clipboard.writeText("https://www.creadsia.com/api/meta/webhook").then(() => setMsg({ ok: true, text: "URL copiada." })).catch(() => {})} className={`${btn} text-xs`}>Copiar</button></span>
+            <span className="block text-xs text-muted">Token de verificación: la clave del paso 2. Después activa el campo <b>comments</b>.</span>
+          </li>
+          <li>Más abajo, en «Respuesta automática», escribe las palabras y el mensaje, y enciéndela.</li>
+        </ol>
+      </details>
     </section>
   );
 }

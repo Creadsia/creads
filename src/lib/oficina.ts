@@ -390,7 +390,8 @@ ${row("API de conversiones (token)", v.capiToken, true)}
 ${row("Token del usuario del sistema (cuenta publicitaria)", v.adsToken, true)}
 ${row("Cuenta publicitaria", v.adAccountId)}
 ${row("Página de Facebook", v.pageId)}
-${row("Instagram", v.igUserId)}`;
+${row("Instagram", v.igUserId)}
+- Respuestas automáticas a comentarios (webhook): ${v.appSecret.value && v.webhookToken.value ? "configuradas" : "FALTA (clave secreta de la app y clave del webhook, en la misma pantalla)"}`;
 }
 
 const READERS: Record<Source, () => Promise<string>> = { conexiones: srcConexiones, espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };

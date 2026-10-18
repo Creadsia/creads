@@ -11,7 +11,6 @@ export const maxDuration = 60;
 // publications and the finished Creads ads. PATCH: the cap, the Instagram accounts, the auto-reply and the
 // state of an ad request.
 const no = () => NextResponse.json({ error: "No autorizado." }, { status: 401 });
-const env = (k: string) => Boolean((process.env[k] ?? "").trim());
 
 export async function GET() {
   if (!(await isAdmin())) return no();
@@ -22,7 +21,7 @@ export async function GET() {
   return NextResponse.json({
     conexion: {
       anuncios: Boolean(await metaAds()), token: Boolean(await metaToken()), instagramAnuncios: Boolean(view.igUserId.value),
-      webhook: env("META_WEBHOOK_VERIFY_TOKEN") && env("META_APP_SECRET"), pixel: Boolean(view.pixelId.value), capi: Boolean(view.capiToken.value),
+      webhook: Boolean(view.webhookToken.value && view.appSecret.value), pixel: Boolean(view.pixelId.value), capi: Boolean(view.capiToken.value),
       error: metaError,
     },
     conexiones: view,

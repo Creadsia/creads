@@ -97,6 +97,7 @@ export async function probarMeta(): Promise<{ item: string; ok: boolean; detalle
       out.push({ item: "Píxel", ok: true, detalle: `${px.name ?? c.pixelId}${px.last_fired_time ? ` · último evento ${new Date(px.last_fired_time).toLocaleString("es-CL")}` : " · todavía sin eventos"}` });
     } catch (e) { out.push({ item: "Píxel", ok: false, detalle: `${msg(e)} Revisa que el ID del píxel sea el correcto.` }); }
   }
+  out.push(c.appSecret && c.webhookToken ? { item: "Respuestas a comentarios", ok: true, detalle: "Clave secreta y clave del webhook guardadas. Si Meta aceptó la URL al suscribirte, ya llegan los comentarios." } : { item: "Respuestas a comentarios (opcional)", ok: false, detalle: `Falta ${c.appSecret ? "" : "la clave secreta de la app"}${!c.appSecret && !c.webhookToken ? " y " : ""}${c.webhookToken ? "" : "crear la clave del webhook"} (sección «Respuestas automáticas a comentarios»).` });
   out.push(c.capiToken ? { item: "API de conversiones", ok: true, detalle: "Token guardado: las ventas y registros se avisan a Meta desde el servidor." } : { item: "API de conversiones", ok: false, detalle: "Falta el token (Administrador de eventos → tu píxel → Configuración → Generar token)." });
   return out;
 }
