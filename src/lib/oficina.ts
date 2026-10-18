@@ -81,6 +81,8 @@ export interface OfficeState {
   engine?: Engine;
   /** Extra rounds a day besides the 8:00 one (Chile time), for the marketing team or everyone. */
   ritmo?: Ritmo;
+  /** Brain per agent (overrides the office's), chosen with the little Claude/Grok badge. */
+  agentEngine?: Record<string, Engine>;
 }
 export interface Ritmo { extra: 0 | 2 | 5; scope: "marketing" | "todos" }
 export const DEFAULT_RITMO: Ritmo = { extra: 0, scope: "marketing" };
@@ -92,6 +94,14 @@ export const engineOf = (st: Pick<OfficeState, "engine">): Engine | null => {
   const want = st.engine ?? "claude";
   if (want === "claude" ? claudeOfficeConfigured() : grokConfigured()) return want;
   return claudeOfficeConfigured() ? "claude" : grokConfigured() ? "grok" : null;
+};
+/** Agents that think with Grok unless the owner changes it: the ones that live on the web and X. */
+const DEFAULT_AGENT_ENGINE: Record<string, Engine> = { organico: "grok", novedades: "grok" };
+/** The brain of one agent: its own choice (or its default), if that key is set; else the office's. */
+export const engineFor = (st: OfficeState, id: string): Engine | null => {
+  const want = st.agentEngine?.[id] ?? DEFAULT_AGENT_ENGINE[id];
+  if (want && (want === "claude" ? claudeOfficeConfigured() : grokConfigured())) return want;
+  return engineOf(st);
 };
 const modelFor = (engine: Engine, leader: boolean) => (engine === "claude" ? (leader ? CLAUDE_OFFICE_MODEL_CEO() : CLAUDE_OFFICE_MODEL()) : leader ? GROK_MODEL_CEO() : GROK_MODEL());
 const NO_ENGINE = "falta la clave de la IA de la oficina (ANTHROPIC_API_KEY o XAI_API_KEY en Vercel).";
@@ -159,7 +169,7 @@ const BUILTIN: Record<string, AgentConfig> = {
   },
   marketing: {
     name: "Director de Marketing", area: "Dirige el estudio de marketing: pagado y orgánico", search: false, sharePct: 8, sources: ["conexiones", "material", "meta", "organico", "visitas", "negocio", "espia"],
-    mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace. Eres el responsable de que el área funcione de punta a punta: si falta conectar algo (píxel, API de conversiones, cuenta publicitaria, página, Instagram), lo dices primero y guías a quien te hable (Gastón o Benjamín, el socio a cargo de marketing) paso a paso en Panel → Marketing → Conexiones: dónde está cada dato en Meta (Administrador de eventos, Configuración del negocio, usuarios del sistema), qué copiar y dónde pegarlo, y que después apriete «Probar conexión» y te cuente qué salió. Nunca respondas solo «no puedo»: si algo no lo puedes hacer tú, explica cómo se hace o propónlo para aprobación. Nunca pidas que te peguen tokens en el chat: van solo en Conexiones. Cuando te pidan lanzar una campaña, ármala completa altiro (nombre, objetivo, países, edades, presupuesto dentro del tope, texto, título, botón, link a creadsia.com y el mejor anuncio terminado de Creads de «Anuncios terminados», o sin anuncio si te piden solo la estructura o un borrador) y déjala para aprobar; si te dijeron que la lances ya, márcala para activarse al aprobarla. Si no hay ningún anuncio terminado y quieren video, propón el pedido del anuncio; si solo quieren la estructura o un borrador, ármala sin anuncio (queda en pausa, que es el borrador en Meta). No preguntes lo que puedes decidir tú.",
+    mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Community manager) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace. Eres el responsable de que el área funcione de punta a punta: si falta conectar algo (píxel, API de conversiones, cuenta publicitaria, página, Instagram), lo dices primero y guías a quien te hable (Gastón o Benjamín, el socio a cargo de marketing) paso a paso en Panel → Marketing → Conexiones: dónde está cada dato en Meta (Administrador de eventos, Configuración del negocio, usuarios del sistema), qué copiar y dónde pegarlo, y que después apriete «Probar conexión» y te cuente qué salió. Nunca respondas solo «no puedo»: si algo no lo puedes hacer tú, explica cómo se hace o propónlo para aprobación. Nunca pidas que te peguen tokens en el chat: van solo en Conexiones. Cuando te pidan lanzar una campaña, ármala completa altiro (nombre, objetivo, países, edades, presupuesto dentro del tope, texto, título, botón, link a creadsia.com y el mejor anuncio terminado de Creads de «Anuncios terminados», o sin anuncio si te piden solo la estructura o un borrador) y déjala para aprobar; si te dijeron que la lances ya, márcala para activarse al aprobarla. Si no hay ningún anuncio terminado y quieren video, propón el pedido del anuncio; si solo quieren la estructura o un borrador, ármala sin anuncio (queda en pausa, que es el borrador en Meta). No preguntes lo que puedes decidir tú.",
   },
   creativos: {
     name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["material", "meta", "espia"],
@@ -170,8 +180,8 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el trafficker del estudio de marketing. Manejas las campañas pagadas en Meta: propones campañas nuevas con los anuncios terminados de Creads (se suben en pausa), y cada día revisas las que corren para escalar las ganadoras, cortar las que pierden plata y renovar anuncios cansados (frecuencia alta, CTR bajando). Reglas: una campaña nueva necesita al menos 3 días y unas 1.000 impresiones antes de juzgarla; sube el presupuesto de a 20–30%; nunca pases el tope diario; explica cada movimiento con números.",
   },
   organico: {
-    name: "Contenido orgánico", area: "Publica en los Instagram y Facebook de la marca y cuida la comunidad", search: false, sharePct: 6, sources: ["organico", "material"],
-    mission: "Eres el encargado de contenido orgánico. Publicas en las cuentas de Instagram y en las páginas de Facebook de la marca videos hechos con Creads que se vean bonitos y naturales, de esos que hacen que la gente comente «¿dónde lo hacen?». Propones qué video publicar en qué cuenta y con qué texto: cercano, sin parecer aviso, y siempre transparente (las cuentas dicen que el contenido está hecho con Creads; nunca te haces pasar por un cliente o una persona cualquiera). Revisas qué publicaciones funcionan mejor y propones el plan de la semana.",
+    name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["organico", "material", "espia"],
+    mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
   },
 };
 export const BUILTIN_IDS = Object.keys(BUILTIN);
@@ -224,7 +234,7 @@ const RIGHTS: Record<string, Action["tipo"][]> = {
   marketing: ["anuncio", "campana", "campana_estado", "presupuesto", "publicacion"],
   creativos: ["anuncio"],
   trafico: ["campana", "campana_estado", "presupuesto"],
-  organico: ["publicacion"],
+  organico: ["publicacion", "anuncio"],
 };
 
 // ---------------------------------------------------------------- memory
@@ -569,7 +579,7 @@ type WorkOut = { report: Report; temas: Record<string, string>; acciones: Action
 async function work(st: OfficeState, a: Agent, memory: string, deadline: number): Promise<WorkOut> {
   const at = new Date().toISOString();
   const isGeneral = a.id === "general", isCeo = a.id === "ceo" || a.id === "marketing";
-  const engine = engineOf(st);
+  const engine = engineFor(st, a.id);
   const model = engine ? modelFor(engine, isCeo || isGeneral) : "—";
   const fail = (error: string, usd = 0): WorkOut => ({ report: { at, estado: "atencion", resumen: `No pudo trabajar: ${error}`, informe: "", propuestas: [], fuentes: [], usd, model, error }, temas: {}, acciones: [] });
   if (!engine) return fail(NO_ENGINE);
@@ -790,7 +800,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
   const mine: ChatMsg = { role: "user", text: clip(text, 4000), at };
   const rights = RIGHTS[a.id] ?? [];
   const answer = async (): Promise<ChatMsg> => {
-    const engine = engineOf(st);
+    const engine = engineFor(st, a.id);
     if (!engine) return { role: "agent", text: `No puedo responder: ${NO_ENGINE}`, at: new Date().toISOString(), error: true };
     const blocked = canSpend(st, a);
     if (blocked) return { role: "agent", text: `No puedo responder: ${blocked}`, at: new Date().toISOString(), error: true };
@@ -1064,7 +1074,7 @@ export async function officeView() {
     model: engineOf(st) ? modelFor(engineOf(st)!, false) : "—", modelCeo: engineOf(st) ? modelFor(engineOf(st)!, true) : "—", maxCustom: MAX_CUSTOM,
     state: { on: st.on, budgetUsd: st.budgetUsd, spend: st.spend, last: st.last, tasks: st.tasks, pending: st.pending.slice(0, 30), encargos: await refreshEncargos(st.encargos.slice(0, 30)) },
     bridge: bridgeReady(),
-    agents: agentsOf(st).map((a) => ({ ...a, cap: +((st.budgetUsd * a.sharePct) / 100).toFixed(2) })),
+    agents: agentsOf(st).map((a) => ({ ...a, cap: +((st.budgetUsd * a.sharePct) / 100).toFixed(2), engine: engineFor(st, a.id) })),
     sources: SOURCES,
     memory,
   };

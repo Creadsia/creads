@@ -5,7 +5,7 @@ import { FORMATS } from "./formats";
 import { TO_CREAR_KEY } from "./guiones";
 
 // The owner's marketing studio: paid campaigns in Meta and organic content on the brand's Instagram
-// accounts, run by the office agents (Director de Marketing, Creativos, Trafficker, Contenido orgánico).
+// accounts, run by the office agents (Director de Marketing, Creativos, Trafficker, Community manager).
 // Rules:
 // - every move is proposed by an agent and done only when the owner presses «Aprobar» (lib/oficina.ts);
 // - campaigns are created PAUSED; turning one on or raising a budget can never pass the daily cap;
@@ -287,7 +287,7 @@ export async function setCampaignBudget(campaignId: string, usd: number, capUsd:
   return true;
 }
 
-// ---------------------------------------------------------------- organic (Contenido orgánico)
+// ---------------------------------------------------------------- organic (Community manager)
 
 /** Publishes a finished Creads ad as a Reel on one of the brand's Instagram accounts. Null = modo ensayo. */
 export async function publishReel(cuenta: Cuenta, adId: string, caption: string): Promise<string | null> {

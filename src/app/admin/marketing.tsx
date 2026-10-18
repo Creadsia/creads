@@ -182,7 +182,7 @@ export default function Marketing() {
           <ul className="flex flex-col divide-y divide-line text-sm">
             {s.publicaciones.map((p) => <li key={p.id} className="flex flex-wrap justify-between gap-2 py-2"><span><b>{p.cuenta}</b> · {p.texto.slice(0, 80)}{p.texto.length > 80 ? "…" : ""}</span><span className="text-xs text-muted">{day(p.at)} · {p.estado}</span></li>)}
           </ul>
-        ) : <p className="text-sm text-muted">Cuando apruebes una publicación de Contenido orgánico aparece aquí.</p>}
+        ) : <p className="text-sm text-muted">Cuando apruebes una publicación de Community manager aparece aquí.</p>}
       </section>
 
       <section className={card} aria-labelledby="h-mat">

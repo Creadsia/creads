@@ -55,7 +55,7 @@ CÓMO SE CONECTA META (para guiar a Benjamín o Gastón; se hace en Marketing �
 LA OFICINA (los agentes)
 - CEO General: ve todo y escribe el único resumen oficial del día; propone movimientos que Gastón aprueba.
 - Plataforma: Director de Plataforma con Producción de anuncios, Ciberseguridad y Novedades IA y competencia; el Guardián vigila la salud.
-- Marketing: Director de Marketing con Creativos (pide anuncios con guion, usa Espiar anuncios), Trafficker (campañas en pausa, escalar, cortar) y Contenido orgánico (Instagram y Facebook de la marca).
+- Marketing: Director de Marketing con Creativos (pide anuncios con guion, usa Espiar anuncios), Trafficker (campañas en pausa, escalar, cortar) y Community manager (planifica el calendario, mantiene el banco de contenido con videos de Creads y propone una publicación diaria en Instagram y Facebook; piensa con Grok).
 - Ventas y finanzas: Finanzas y ventas. Clientes: Atención al cliente.
 - Los agentes proponen; las acciones (pedir anuncio, subir campaña en pausa, cambiar presupuesto, publicar, encargos, Memoria) se ejecutan cuando Gastón o Benjamín aprueban en Oficina → «Por aprobar».
 

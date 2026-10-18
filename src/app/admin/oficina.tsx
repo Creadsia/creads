@@ -11,7 +11,7 @@ import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposa
 // one official brief and proposes moves that only happen when the owner approves them. The owner can chat with any of
 // them, edit their instructions, create new ones and edit the «Memoria de Creads» they all read.
 
-type AgentView = Agent & { cap: number };
+type AgentView = Agent & { cap: number; engine: "claude" | "grok" | null };
 interface View {
   ready: boolean; model: string; modelCeo: string; maxCustom: number;
   ritmo: { extra: 0 | 2 | 5; scope: "marketing" | "todos" };
@@ -256,7 +256,7 @@ function actionText(a: Action) {
   return { title: `Publicar en Instagram (${a.cuenta})`, body: `Video de Creads: ${a.adId.slice(0, 8)}…\nTexto:\n${a.texto}\n\nPor qué: ${a.motivo || "—"}` };
 }
 
-const AGENT_NAMES: Record<string, string> = { general: "el CEO General", guardian: "el Guardián", ceo: "el Director de Plataforma", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
+const AGENT_NAMES: Record<string, string> = { general: "el CEO General", guardian: "el Guardián", ceo: "el Director de Plataforma", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Community manager" };
 
 function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: string, ok: boolean) => void; busy: string | null }) {
   const pending = list.filter((p) => p.estado === "pendiente");
@@ -323,6 +323,20 @@ const rank = (order: string[], id: string) => { const i = order.indexOf(id); ret
 // ---------------------------------------------------------------- an area's team (shown on top of each area of the panel)
 
 /** The agents in charge of one area: their last report and a chat with them, right where their pages are. */
+/** Which brain an agent uses; tap to switch between Claude and Grok. */
+function EngineBadge({ a, v, onChange }: { a: AgentView; v: View; onChange: (id: string, e: "claude" | "grok") => void }) {
+  if (!a.engine) return null;
+  const other = a.engine === "claude" ? "grok" : "claude";
+  const can = v.engines[other];
+  return (
+    <button type="button" disabled={!can} onClick={() => onChange(a.id, other)} title={can ? `Piensa con ${a.engine === "claude" ? "Claude" : "Grok"}. Toca para cambiar a ${other === "claude" ? "Claude" : "Grok"}.` : `Piensa con ${a.engine === "claude" ? "Claude" : "Grok"}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 align-middle text-[10px] font-bold leading-none ${a.engine === "claude" ? "border-[#d97757]/50 bg-[#d97757]/10 text-[#c2653f] dark:text-[#e9a283]" : "border-line bg-surface-2 text-ink"}`}>
+      <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${a.engine === "claude" ? "bg-[#d97757]" : "bg-ink"}`} />
+      {a.engine === "claude" ? "Claude" : "Grok"}
+    </button>
+  );
+}
+
 export function AreaTeam({ area }: { area: AreaId }) {
   const [v, setV] = useState<View | null>(null);
   const [err, setErr] = useState("");
@@ -361,7 +375,7 @@ export function AreaTeam({ area }: { area: AreaId }) {
             <li key={a.id} className="flex flex-col gap-2 py-2 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex min-w-0 flex-col">
-                  <b className="text-sm">{a.name}{i === 0 && team.length > 1 ? <span className="ml-1.5 text-xs font-normal text-muted">· encargado del área</span> : null}{!a.on && <span className="ml-1.5 text-xs font-normal text-muted">· apagado</span>}</b>
+                  <b className="text-sm">{a.name} <EngineBadge a={a} v={v} onChange={(id, e) => api<View>("/api/admin/oficina", "PATCH", { agent: id, agentEngine: e }).then(setV).catch(() => {})} />{i === 0 && team.length > 1 ? <span className="ml-1.5 text-xs font-normal text-muted">· encargado del área</span> : null}{!a.on && <span className="ml-1.5 text-xs font-normal text-muted">· apagado</span>}</b>
                   <span className={`text-xs ${r?.error ? "text-warn" : "text-muted"}`}>{r ? r.resumen : a.area}</span>
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
@@ -498,7 +512,7 @@ export default function Oficina() {
             <section key={a.id} className={`${card} ${a.on ? "" : "opacity-60"}`} aria-labelledby={`h-${a.id}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-col">
-                  <h3 id={`h-${a.id}`} className="font-bold">{a.name}{!a.builtin && <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted">creado por ti</span>}</h3>
+                  <h3 id={`h-${a.id}`} className="font-bold">{a.name} <EngineBadge a={a} v={v} onChange={(id, e) => call("PATCH", { agent: id, agentEngine: e })} />{!a.builtin && <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-muted">creado por ti</span>}</h3>
                   <span className="text-xs text-muted">{a.area}{a.search ? " · busca en la web y en X" : ""}</span>
                 </div>
                 <Badge r={r} />
