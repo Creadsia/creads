@@ -10,6 +10,7 @@ import { chargedSince, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { publicError } from "@/lib/public-error";
 import { isOwner } from "@/lib/auth";
+import { sbRpc } from "@/lib/supabase";
 
 export const maxDuration = 300; // long videos are cut into parts on start and joined when done
 
@@ -74,8 +75,9 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
     // recreated videos can come out silent (e.g. a character with no voice, for music or a later voice-over)
-    if (t.id === "editar-video" || t.id === "copiar-movimiento") input.sound = b.sound !== false;
-    if (t.id === "editar-video") input.videoSecs = d;
+    if (t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video") input.sound = b.sound !== false;
+    if (t.id === "editar-video" || t.id === "personaje-en-video") input.videoSecs = d;
+    if (t.id === "personaje-en-video") input.videoRef = b.video;
   }
   if (need.audio) {
     if (!mine(b.audio)) return "Sube un audio o genera la voz.";
@@ -175,7 +177,20 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
       return NextResponse.json({ state: "queued" });
     }
 
-    const st = await checkTool(t, String(row.provider_job));
+    const st = await checkTool(t, String(row.provider_job), s.user.workspace);
+    // a job in steps (Mi personaje en un video): start the next step once, even with two tabs checking
+    if ((st.state === "running" || st.state === "queued") && st.advance) {
+      if (await sbRpc<boolean>("hit_rate", { p_key: `tool-step:${id}:${String(row.provider_job).length}`, p_window: 3600, p_max: 1 }).catch(() => false)) {
+        try {
+          await db.update("clips", id, { provider_job: await st.advance() });
+        } catch (err) {
+          const error = await explainFailure(err instanceof Error ? err : new Error(String(err)), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
+          if (await db.claim("clips", id, { notIn: ["done", "failed"] }, { status: "failed", error })) await refundJob(s.user.workspace, id);
+          return NextResponse.json({ state: "failed", error });
+        }
+      }
+      return NextResponse.json({ state: "running" });
+    }
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
       // only the check that flips it to failed gives the credits back (two tabs can't refund twice)

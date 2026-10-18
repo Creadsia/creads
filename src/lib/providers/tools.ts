@@ -1,7 +1,8 @@
 import type { ToolDef, ToolId } from "../tools";
 import { readFile, rm } from "node:fs/promises";
 import { fetchableUrl, saveMedia } from "../media";
-import { cutParts, download, joinParts, partsPlan, workdir } from "../montage";
+import { cutParts, download, joinParts, partsPlan, probe, still, workdir } from "../montage";
+import { claude } from "./claude";
 import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
@@ -22,10 +23,12 @@ export interface ToolInput {
   sound?: boolean;
   /** editar-video: the measured length of the video (over 10 s it's done in parts). */
   videoSecs?: number;
+  /** personaje-en-video: the customer's own link to the video (signed again for the second step). */
+  videoRef?: string;
 }
 
 export type ToolCheck =
-  | { state: "queued" | "running" }
+  | { state: "queued" | "running"; /** a next step to start (once): returns the new job id */ advance?: () => Promise<string> }
   | { state: "failed"; error: string }
   | { state: "done"; fetch: () => Promise<ArrayBuffer>; mime: string; ext: string }
   | { state: "done"; url: string };
@@ -125,6 +128,7 @@ export async function startTool(t: ToolDef, input: ToolInput, ws: string): Promi
     const id = await dubStart(input.video!, lang, `Creads · ${lang}`);
     return `el:${id}:${lang}`;
   }
+  if (t.id === "personaje-en-video") return startSwap(input, ws, t.name);
   const f = FAL[t.id];
   if (!f) throw new Error("Herramienta desconocida.");
   if (t.id === "editar-video" && (input.videoSecs ?? 0) > EDIT_MAX) return startInParts(f, input, ws, t.name);
@@ -137,9 +141,10 @@ const extOf = (url: string, fallback: string) => {
 };
 const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp: "image/webp", mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm", mp3: "audio/mpeg" };
 
-export async function checkTool(t: ToolDef, job: string): Promise<ToolCheck> {
+export async function checkTool(t: ToolDef, job: string, ws = ""): Promise<ToolCheck> {
   if (job.startsWith("url:")) return { state: "done", url: job.slice(4) };
   if (job.startsWith(PARTS)) return checkParts(t, job);
+  if (job.startsWith(SWAP)) return checkSwap(t, job, ws);
   if (job.startsWith("el:")) {
     const [, id, lang] = job.split(":");
     const st = await dubStatus(id);
@@ -211,6 +216,97 @@ async function checkParts(t: ToolDef, job: string): Promise<ToolCheck> {
       } finally {
         await rm(dir, { recursive: true, force: true }).catch(() => null);
       }
+    },
+  };
+}
+
+// ---------------------------------------------------------------- your character in a video (personaje-en-video)
+// Swapping the person straight in the video (Editar video) duplicates the character and invents objects, and
+// over 10 s it's done in parts. This way is steadier: (1) Claude picks the first moment the main person is
+// clearly seen; (2) Nano Banana puts the character in that frame, in that person's place and pose, only once;
+// (3) Kling Motion Control makes that picture repeat the video's movements and camera, in one go (up to 30 s).
+// The video starts at that moment. Job id: "swap:<json>", step 1 (the picture) then step 2 (the video).
+
+const SWAP = "swap:";
+const MOTION = "fal-ai/kling-video/v3/standard/motion-control";
+interface SwapJob { s: 1 | 2; snd: 0 | 1; v: string; j: string; p?: string; frame?: string }
+
+export function swapFramePrompt(extra?: string) {
+  return [
+    "Image 1 is a frame from a real phone video. Image 2 is a reference sheet of ONE single fictional character seen from several angles (front, side, back and a face close-up): it is one person, not several.",
+    "Edit image 1: replace ONLY the main person (the most prominent person, the one the video is about) with this character: exactly the same face, nose, hair, glasses, facial hair, body type and clothes as in image 2.",
+    "Keep that person's exact pose, position, size in the frame and whatever they hold in their hands.",
+    "Everything else stays identical to image 1: the place, the background, the light, the camera angle and every other person.",
+    "There must be only ONE of this character in the picture. Do not add any object that is not in image 1. Photorealistic, same photo quality and grain as image 1, no text.",
+    extra ? `Also: ${extra}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+/** The earliest of these frames where the main person is clearly visible (0 if unsure). */
+async function firstClearFrame(frames: string[]): Promise<number> {
+  if (frames.length < 2 || !claude.configured()) return 0;
+  try {
+    const out = await claude.complete({
+      fast: true, json: true, maxTokens: 1000, images: frames,
+      prompt: `These are ${frames.length} frames of one video, in order (frame 0 to ${frames.length - 1}). Find the main person of the video (the one it is about, usually the one the camera follows). Answer the number of the EARLIEST frame where that main person is clearly visible: face and most of the body, not hidden inside a car, behind a door or cut by the edge. JSON: {"frame": number}`,
+    });
+    const n = Number(JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1)).frame);
+    return Number.isInteger(n) && n >= 0 && n < frames.length ? n : 0;
+  } catch { return 0; }
+}
+
+async function startSwap(input: ToolInput, ws: string, what: string): Promise<string> {
+  if (!input.videoRef) throw new Error("Falta el video.");
+  const dir = await workdir(`swap-${Date.now().toString(36)}`);
+  try {
+    const src = `${dir}/src.mp4`;
+    await download(input.video!, src);
+    const dur = input.videoSecs || (await probe(src)).dur;
+    // candidates in the first seconds (the video must still last 3 s from there)
+    const times = [0, 0.5, 1, 1.5, 2, 3, 4].filter((t) => t === 0 || t <= dur - 3.2);
+    const small = await Promise.all(times.map(async (t, i) => { const f = `${dir}/c${i}.jpg`; await still(src, t, f, 360); return `data:image/jpeg;base64,${(await readFile(f)).toString("base64")}`; }));
+    const at = times[await firstClearFrame(small)];
+    await still(src, at, `${dir}/frame.jpg`, null);
+    const frameUrl = await fetchableUrl(await saveMedia(ws, "tools/personaje", await readFile(`${dir}/frame.jpg`), "image/jpeg"), ws);
+    // the video from that moment on, so the picture and the first frame of the motion match
+    let videoRef = input.videoRef;
+    if (at > 0) {
+      const [cut] = await cutParts(dir, src, [{ a: at, len: +(dur - at).toFixed(3) }]);
+      videoRef = await saveMedia(ws, "tools/partes", await readFile(cut), "video/mp4");
+    }
+    const j = await falSubmit("fal-ai/nano-banana-pro/edit", { prompt: swapFramePrompt(input.prompt), image_urls: [frameUrl, input.image], aspect_ratio: "auto", resolution: "2K", output_format: "png", num_images: 1 }, what);
+    const job: SwapJob = { s: 1, snd: input.sound === false ? 0 : 1, v: videoRef, j, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}) };
+    return SWAP + JSON.stringify(job);
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => null);
+  }
+}
+
+async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck> {
+  let sj: SwapJob;
+  try { sj = JSON.parse(job.slice(SWAP.length)) as SwapJob; } catch { return { state: "failed", error: "Trabajo inválido." }; }
+  const r = await falPoll(sj.j, t.name);
+  if (r.state !== "done") return r;
+  if (sj.s === 1) {
+    const frame = imgs(r.out) ?? img(r.out);
+    if (!frame) return { state: "failed", error: `${t.name}: no se pudo poner al personaje en la escena.` };
+    return {
+      state: "running",
+      advance: async () => {
+        const video = await fetchableUrl(sj.v, ws);
+        const j = await falSubmit(MOTION, { image_url: frame, video_url: video, character_orientation: "video", keep_original_sound: sj.snd === 1, ...(sj.p ? { prompt: sj.p } : {}) }, t.name);
+        return SWAP + JSON.stringify({ ...sj, s: 2, j, frame } satisfies SwapJob);
+      },
+    };
+  }
+  const url = vid(r.out);
+  if (!url) return { state: "failed", error: `${t.name}: no devolvió video.` };
+  return {
+    state: "done", mime: "video/mp4", ext: "mp4",
+    fetch: async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`No se pudo descargar el resultado (${res.status}).`);
+      return res.arrayBuffer();
     },
   };
 }

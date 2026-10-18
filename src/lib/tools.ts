@@ -9,6 +9,7 @@ export type ToolId =
   | "mejorar-video"
   | "editar-video"
   | "copiar-movimiento"
+  | "personaje-en-video"
   | "crear-personaje"
   | "avatar-habla"
   | "sincronizar-labios"
@@ -157,6 +158,24 @@ export const TOOLS: ToolDef[] = [
       "En un living cálido, cámara en mano estilo UGC.",
       "En la calle, de día, estilo video de celular.",
     ],
+  },
+  {
+    id: "personaje-en-video",
+    name: "Mi personaje en un video",
+    short: "Tu personaje toma el lugar de la persona de un video y repite sus movimientos.",
+    lead: "Elige tu personaje y sube un video (de 3 a 30 segundos). Primero ponemos a tu personaje en la escena, en lugar de la persona principal, y después repite exactamente sus movimientos y los de la cámara, de una sola vez. Las demás personas y el lugar quedan igual.",
+    output: "video",
+    model: "Nano Banana Pro + Kling 3.0",
+    inputs: {
+      image: true,
+      video: { min: 3, max: 30 },
+      prompt: "optional",
+      promptHint: "Opcional: algo que cuidar, por ejemplo «que mantenga el vaso de café en la mano». No pidas objetos que no están en el video: el modelo los duplica.",
+    },
+    // the scene picture (US$0.15) + the motion, billed per second of video
+    estimate: (s) => +(0.15 + 0.126 * Math.max(3, Math.ceil(s))).toFixed(2),
+    priceNote: "US$0,15 + ≈ US$0,13 por segundo de video",
+    consent: true,
   },
   {
     id: "avatar-habla",

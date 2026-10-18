@@ -25,6 +25,7 @@ const ICON: Record<string, string> = {
   "mejorar-video": "M4 6h12v12H4zM16 10l4-2v8l-4-2M7 9h3M7 12h6",
   "editar-video": "M3 6h12v12H3zM15 10l4-2v8l-4-2M6 15l5-5 2 2",
   "copiar-movimiento": "M8 4a2 2 0 1 0 0 .01M6 21l2-6 3 2v4M8 15l-1-5 4-2 3 3h3M16 4a2 2 0 1 0 0 .01",
+  "personaje-en-video": "M9 7a3 3 0 1 0 0 .01M4 20c0-3 2.2-5 5-5s5 2 5 5M15 8h6M18 5v6",
   "avatar-habla": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 9-6.7M17 15v5M20 16.5v2M14 16.5v2",
   "sincronizar-labios": "M4 12c2.5-3 5-4.5 8-4.5s5.5 1.5 8 4.5c-2.5 3-5 4.5-8 4.5S6.5 15 4 12ZM4 12h16",
   doblaje: "M4 5h9v6H8l-4 3V5ZM11 13v2h5l4 3v-9h-4",

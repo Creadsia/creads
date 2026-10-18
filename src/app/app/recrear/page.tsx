@@ -13,7 +13,7 @@ const media = (v: string | string[] | undefined) => (typeof v === "string" && v.
 export default async function RecrearPage({ searchParams }: Props) {
   const q = await searchParams;
   const video = media(q.video);
-  const mode = q.modo === "copiar-movimiento" ? "copiar-movimiento" : q.modo === "editar-video" ? "editar-video" : undefined;
+  const mode = q.modo === "copiar-movimiento" || q.modo === "editar-video" || q.modo === "personaje-en-video" ? q.modo : undefined;
   const prompt = typeof q.prompt === "string" ? q.prompt.slice(0, 600) : undefined;
   // «Recrear con mi personaje» (from Influencer IA): the character's sheet, its name, and whether the result is silent
   const personaje = media(q.personaje);

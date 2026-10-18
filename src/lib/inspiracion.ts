@@ -6,7 +6,7 @@ import { readPrivateJSON, writePrivateJSON } from "./supabase";
 // The list lives in the private bucket; the videos stay in Creadsia's workspace and are copied into
 // the customer's own folder only when they press "Recrear".
 
-export type RecreateMode = "editar-video" | "copiar-movimiento";
+export type RecreateMode = "editar-video" | "copiar-movimiento" | "personaje-en-video";
 
 export interface Example {
   id: string;
@@ -25,7 +25,7 @@ export interface Example {
 }
 
 const FILE = "inspiracion.json";
-export const MODES: RecreateMode[] = ["editar-video", "copiar-movimiento"];
+export const MODES: RecreateMode[] = ["editar-video", "copiar-movimiento", "personaje-en-video"];
 
 export async function listExamples(): Promise<Example[]> {
   const list = await readPrivateJSON<Example[]>(FILE);

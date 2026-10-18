@@ -86,8 +86,8 @@ export async function trimPoints(file: string, dur: number) {
 }
 
 /** Grabs one still per clip (for the visual review). */
-export async function still(file: string, at: number, out: string) {
-  await ff(["-y", "-v", "error", "-ss", at.toFixed(2), "-i", file, "-frames:v", "1", "-vf", "scale=-2:480", out]);
+export async function still(file: string, at: number, out: string, height: number | null = 480) {
+  await ff(["-y", "-v", "error", "-ss", at.toFixed(2), "-i", file, "-frames:v", "1", ...(height ? ["-vf", `scale=-2:${height}`] : []), "-q:v", "2", out]);
 }
 
 // ---------- captions ----------
