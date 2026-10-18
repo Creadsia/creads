@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Estadisticas from "./estadisticas";
+import Calidad from "./calidad";
 import { AREAS, type PanelTab, areaOfTab } from "@/lib/areas";
 import { AUTO, type LaunchCheck, MANUAL, RED_ORDER } from "@/lib/lanzamiento";
 import Oficina, { AreaTeam } from "./oficina";
@@ -186,7 +187,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>

@@ -8,7 +8,7 @@ export type PanelTab =
   | "estadisticas" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "modelos"
   | "marketing"
   | "clientes" | "registros"
-  | "guardian" | "errores" | "saldos" | "estado" | "cuentas";
+  | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas";
 
 export interface Area {
   id: AreaId;
@@ -33,7 +33,7 @@ export const AREAS: Area[] = [
   { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["clientes", "Clientes y accesos"], ["registros", "Registros"]], agents: ["soporte"] },
   {
     id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores, seguridad y novedades de IA.",
-    tabs: [["guardian", "Guardián (salud)"], ["errores", "Errores y alarmas"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],
+    tabs: [["guardian", "Guardián (salud)"], ["errores", "Errores y alarmas"], ["calidad", "Calidad de videos"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],
     agents: ["ceo", "produccion", "seguridad", "novedades"],
   },
 ];

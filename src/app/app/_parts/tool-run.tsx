@@ -8,7 +8,7 @@ import { refreshCredits, useCredits } from "./use-credits";
 
 // One "Crear" tool: pick the inputs, see the price, run it, and get the result (kept in "Tus creaciones").
 
-interface Job extends Row { kind: string; status: string; url: string | null; image_url: string | null; prompt: string | null; error: string | null; usd: number | null; text: string | null }
+interface Job extends Row { kind: string; status: string; url: string | null; image_url: string | null; prompt: string | null; error: string | null; usd: number | null; text: string | null; paso?: string }
 export interface Img extends Row { url: string; prompt: string | null }
 interface Voice { id: string; name: string; category: string }
 
@@ -200,7 +200,7 @@ function Result({ job, output, extra }: { job: Job; output: "image" | "video" | 
   if (job.status === "stuck") return <p className="text-sm text-warn">{job.error}</p>;
   if (job.status !== "done" || !job.url) return (
     <div className="flex flex-col gap-1 text-sm">
-      <Working key={job.id} since={job.created_at} label={output === "image" ? "Creando tu imagen…" : output === "audio" ? "Creando tu audio…" : "Creando tu video…"} className="font-semibold" />
+      <Working key={job.id} since={job.created_at} label={job.paso ?? (output === "image" ? "Creando tu imagen…" : output === "audio" ? "Creando tu audio…" : "Creando tu video…")} className="font-semibold" />
       <p className="text-muted">Puedes cerrar esta página: queda guardado en «Tus creaciones».</p>
     </div>
   );
@@ -238,6 +238,28 @@ function Result({ job, output, extra }: { job: Job; output: "image" | "video" | 
 // ---------- the tool page ----------
 
 /** Saved characters (Influencer IA), to pick as the photo in «Copiar movimiento». */
+interface VideoCheck { level: "verde" | "amarillo" | "rojo"; checks: { level: "verde" | "amarillo" | "rojo"; text: string }[]; start: number; usable: number; dur: number }
+
+const DOT = { verde: "bg-good", amarillo: "bg-warn", rojo: "bg-bad" } as const;
+const TITLE = { verde: "Tu video está listo para esto", amarillo: "Funciona, pero ojo", rojo: "Este video no va a funcionar" } as const;
+
+/** The traffic light: what the free check found, in plain words, before paying. */
+function CheckPanel({ check }: { check: VideoCheck | "busy" | "error" }) {
+  if (check === "busy") return <p role="status" className="rounded-xl border border-line p-3 text-sm text-muted">Revisando tu video (gratis): que se vea bien a la persona, sin cambios de toma ni cosas que suelen fallar…</p>;
+  if (check === "error") return <p className="rounded-xl border border-line p-3 text-sm text-muted">No pudimos revisar el video ahora. Igual puedes generarlo: funciona mejor con una sola persona, de frente, de la cintura para arriba y sin nada grande en las manos.</p>;
+  return (
+    <section aria-label="Revisión del video" className={`flex flex-col gap-2 rounded-xl border p-3 ${check.level === "rojo" ? "border-bad/50 bg-bad/5" : check.level === "amarillo" ? "border-warn/50 bg-warn/5" : "border-good/40 bg-good/5"}`}>
+      <p className="flex items-center gap-2 text-sm font-semibold"><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${DOT[check.level]}`} />{TITLE[check.level]}</p>
+      <ul className="flex flex-col gap-1">
+        {check.checks.map((c, i) => (
+          <li key={i} className="flex gap-2 text-sm"><span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[c.level]}`} /><span className={c.level === "verde" ? "text-muted" : ""}>{c.text}</span></li>
+        ))}
+      </ul>
+      {check.level !== "rojo" && check.usable > 0 && check.usable < check.dur - 0.2 && <p className="text-xs text-muted">Se usan {check.usable.toFixed(1).replace(".", ",")} s de tu video y pagas solo esos segundos.</p>}
+    </section>
+  );
+}
+
 function Characters({ onPick, selected }: { onPick: (u: string) => void; selected: string }) {
   const [list, setList] = useState<{ id: string; name: string; sheet: string | null }[] | null>(null);
   useEffect(() => { fetch("/api/personajes").then((r) => r.json()).then((d) => setList(d.personajes ?? [])).catch(() => setList([])); }, []);
@@ -277,6 +299,19 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   const [instrumental, setInstrumental] = useState(true);
   const [sound, setSound] = useState(initial.sound ?? true);
   const recreates = t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video";
+  // «Mi personaje en un video»: the free check of the video (traffic light) before paying
+  const checks = t.id === "personaje-en-video";
+  const [check, setCheck] = useState<VideoCheck | "busy" | "error" | null>(null);
+  useEffect(() => {
+    if (!checks || !video?.url) { setCheck(null); return; }
+    let live = true;
+    setCheck("busy");
+    fetch("/api/revisar-video", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ video: video.url }) })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => { if (live) setCheck(ok ? (d as VideoCheck) : "error"); })
+      .catch(() => { if (live) setCheck("error"); });
+    return () => { live = false; };
+  }, [checks, video?.url]);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -299,6 +334,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
           setJobs((js) => js.map((j) => (j.id === id ? { ...j, status: d.state, url: d.url ?? null, error: d.error ?? null } : j)));
           return;
         }
+        if (d.paso) setJobs((js) => js.map((j) => (j.id === id && j.paso !== d.paso ? { ...j, paso: d.paso } : j)));
         timers.current.set(id, setTimeout(() => check(id), t.output === "video" ? 10000 : 4000));
       })
       .catch(() => {
@@ -322,13 +358,15 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   }, [t.id, poll]);
 
   const n = t.inputs;
-  const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : video?.secs ?? 0;
+  const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : checks && typeof check === "object" && check?.usable ? Math.min(check.usable, video?.secs ?? check.usable) : video?.secs ?? 0;
   const usd = t.estimate(seconds);
   const { price: money, covers, info } = useCredits();
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :
     (n.images && !n.imagesOptional && images.length === 0) ? "Sube o elige al menos una foto." :
     (n.video && !video) ? "Sube un video." :
+    (checks && check === "busy") ? "Estamos revisando tu video…" :
+    (checks && typeof check === "object" && check?.level === "rojo") ? "Este video no sirve para esto: mira el aviso en rojo." :
     (n.audio && !audio) ? "Agrega el audio: súbelo o escríbelo y genera la voz." :
     (n.prompt === "required" && prompt.trim().length < 4) ? "Escribe qué quieres que haga." :
     ((t.consent || (t.id === "crear-personaje" && images.length > 0)) && !consent) ? "Confirma el permiso de la persona." : "";
@@ -374,6 +412,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
           </Group>
         )}
         {n.video && <Group label="Video"><MediaInput kind="video" value={video} onChange={setVideo} limits={n.video} /></Group>}
+        {checks && check && <CheckPanel check={check} />}
         {n.audio && <Group label="Audio"><AudioInput value={audio} onChange={setAudio} limits={n.audio} /></Group>}
         {n.prompt && (
           <Field label={t.id === "crear-personaje" ? "Instrucción para la IA (se arma sola con tus opciones; puedes editarla)" : n.prompt === "required" ? "Qué quieres" : "Instrucción (opcional)"} hint={t.id === "crear-personaje" ? undefined : n.promptHint}>

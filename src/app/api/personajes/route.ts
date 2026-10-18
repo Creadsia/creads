@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { faceKitFor } from "@/lib/influencer/swap";
 import { fullSession } from "@/lib/access";
 import type { Db } from "@/lib/db";
 import { creditStatus } from "@/lib/credits";
@@ -53,6 +54,8 @@ export async function POST(req: Request) {
       description: (traits ? describe(traits) : "Personaje creado con Creads").slice(0, 1000),
       notes: JSON.stringify({ kind: KIND, ...(traits ? { traits } : {}) }),
     });
+    // its face kit (identity lock for videos), made now so the first video doesn't wait for it
+    after(() => faceKitFor(s.db, String(b.sheet), s.user.workspace).catch(() => null));
     return NextResponse.json({ personaje: parse(row as unknown as Row) });
   } catch (err) { return failJson(err); }
 }

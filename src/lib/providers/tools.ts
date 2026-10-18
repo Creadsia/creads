@@ -2,7 +2,7 @@ import type { ToolDef, ToolId } from "../tools";
 import { readFile, rm } from "node:fs/promises";
 import { fetchableUrl, saveMedia } from "../media";
 import { cutParts, download, joinParts, partsPlan, probe, still, workdir } from "../montage";
-import { claude } from "./claude";
+import { type Analysis, type FaceKit, framePrompt, learnSwap, motionPrompt, reviewFrame, reviewVideo, swapRules } from "../influencer/swap";
 import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
@@ -23,8 +23,12 @@ export interface ToolInput {
   sound?: boolean;
   /** editar-video: the measured length of the video (over 10 s it's done in parts). */
   videoSecs?: number;
-  /** personaje-en-video: the customer's own link to the video (signed again for the second step). */
+  /** personaje-en-video: the customer's own links (signed again at each step), the check made before charging
+   *  and the character's face kit (media links). */
   videoRef?: string;
+  imageRef?: string;
+  analysis?: Analysis;
+  face?: FaceKit | null;
 }
 
 export type ToolCheck =
@@ -222,68 +226,77 @@ async function checkParts(t: ToolDef, job: string): Promise<ToolCheck> {
 
 // ---------------------------------------------------------------- your character in a video (personaje-en-video)
 // Swapping the person straight in the video (Editar video) duplicates the character and invents objects, and
-// over 10 s it's done in parts. This way is steadier: (1) Claude picks the first moment the main person is
-// clearly seen; (2) Nano Banana puts the character in that frame, in that person's place and pose, only once;
-// (3) Kling Motion Control makes that picture repeat the video's movements and camera, in one go (up to 30 s).
-// The video starts at that moment. Job id: "swap:<json>", step 1 (the picture) then step 2 (the video).
+// over 10 s it's done in parts. This way is steadier (see lib/influencer/swap.ts for the checks):
+//  1. the picture: Nano Banana puts the character in the first frame where the main person is clearly seen
+//     (found by the check before charging), only once, with the face from its face kit;
+//  2. a review of that picture (redone once, free, if it's wrong; refunded if it's still wrong);
+//  3. Kling Motion Control makes the picture repeat the video's movements in one go, the face locked (@Element1);
+//  4. a review of the video (redone once, free, if it's wrong).
+// Job id: "swap:<json>". Files are kept as the customer's media links and signed again at each step.
 
 const SWAP = "swap:";
 const MOTION = "fal-ai/kling-video/v3/standard/motion-control";
-interface SwapJob { s: 1 | 2; snd: 0 | 1; v: string; j: string; p?: string; frame?: string }
-
-export function swapFramePrompt(extra?: string) {
-  return [
-    "Image 1 is a frame from a real phone video. Image 2 is a reference sheet of ONE single fictional character seen from several angles (front, side, back and a face close-up): it is one person, not several.",
-    "Edit image 1: replace ONLY the main person (the most prominent person, the one the video is about) with this character: exactly the same face, nose, hair, glasses, facial hair, body type and clothes as in image 2.",
-    "Keep that person's exact pose, position, size in the frame and whatever they hold in their hands.",
-    "Everything else stays identical to image 1: the place, the background, the light, the camera angle and every other person.",
-    "There must be only ONE of this character in the picture. Do not add any object that is not in image 1. Photorealistic, same photo quality and grain as image 1, no text.",
-    extra ? `Also: ${extra}` : "",
-  ].filter(Boolean).join("\n");
+interface SwapJob {
+  s: 1 | 2; snd: 0 | 1;
+  /** the video (from the usable start), the original frame, the character's sheet, its face kit */
+  v: string; of: string; sh: string; fk?: FaceKit | null;
+  j: string; p?: string; main?: string; frame?: string;
+  r1?: number; r2?: number; q1?: string[]; q2?: string[]; qa?: "ok" | "aviso";
 }
 
-const NO_BODY = "En este video la persona principal no aparece clara de la cintura para arriba (por ejemplo, está dentro de un auto o tapada). Usa un video donde se le vea de frente, con cabeza, hombros, brazos y torso. No se te cobró.";
+/** Kept for the tests and other callers: the scene instruction with the defaults. */
+export const swapFramePrompt = (extra?: string) => framePrompt({ extra });
 
-/** The earliest of these frames where the main person's whole upper body is clearly seen (-1 if none, 0 if unsure). */
-async function firstClearFrame(frames: string[]): Promise<number> {
-  if (frames.length < 2 || !claude.configured()) return 0;
-  try {
-    const out = await claude.complete({
-      fast: true, json: true, maxTokens: 1000, images: frames,
-      prompt: `These are ${frames.length} frames of one video, in order (frame 0 to ${frames.length - 1}). Find the main person of the video (the one it is about, usually the one the camera follows). Answer the number of the EARLIEST frame where that main person's COMPLETE upper body is clearly visible: head, both shoulders, both arms and the torso down to the waist, all inside the picture, not inside a car, not behind a car door or any object, not cut by the edge, ideally standing and facing the camera. Being only partly out of a car does NOT count. If no frame shows it, answer -1. JSON: {"frame": number}`,
-    });
-    const n = Number(JSON.parse(out.slice(out.indexOf("{"), out.lastIndexOf("}") + 1)).frame);
-    return Number.isInteger(n) && n >= -1 && n < frames.length ? n : 0;
-  } catch { return 0; }
-}
+const nanoBody = (frame: string, sheet: string, face: string | undefined, prompt: string) =>
+  ({ prompt, image_urls: [frame, sheet, ...(face ? [face] : [])], aspect_ratio: "auto", resolution: "2K", output_format: "png", num_images: 1 });
 
 async function startSwap(input: ToolInput, ws: string, what: string): Promise<string> {
-  if (!input.videoRef) throw new Error("Falta el video.");
+  if (!input.videoRef || !input.imageRef) throw new Error("Falta el video o el personaje.");
+  const a = input.analysis;
+  if (a && a.level === "rojo") throw new Error(a.checks.find((c) => c.level === "rojo")?.text ?? "Este video no sirve para esto.");
   const dir = await workdir(`swap-${Date.now().toString(36)}`);
   try {
     const src = `${dir}/src.mp4`;
     await download(input.video!, src);
     const dur = input.videoSecs || (await probe(src)).dur;
-    // candidates along the video, one per second (the video must still last 3 s from there)
-    const times = [0, 0.5, ...Array.from({ length: 14 }, (_, i) => i + 1)].filter((t) => t === 0 || t <= dur - 3.2);
-    const small = await Promise.all(times.map(async (t, i) => { const f = `${dir}/c${i}.jpg`; await still(src, t, f, 360); return `data:image/jpeg;base64,${(await readFile(f)).toString("base64")}`; }));
-    const pick = await firstClearFrame(small);
-    if (pick < 0) throw new Error(NO_BODY); // before spending anything: the start refunds it
-    const at = times[pick];
-    await still(src, at, `${dir}/frame.jpg`, null);
-    const frameUrl = await fetchableUrl(await saveMedia(ws, "tools/personaje", await readFile(`${dir}/frame.jpg`), "image/jpeg"), ws);
-    // the video from that moment on, so the picture and the first frame of the motion match
-    let videoRef = input.videoRef;
-    if (at > 0) {
-      const [cut] = await cutParts(dir, src, [{ a: at, len: +(dur - at).toFixed(3) }]);
-      videoRef = await saveMedia(ws, "tools/partes", await readFile(cut), "video/mp4");
+    const start = a?.start ?? 0;
+    const len = a?.usable ? Math.min(a.usable, dur - start) : dur - start;
+    await still(src, start, `${dir}/frame.jpg`, null);
+    const of = await saveMedia(ws, "tools/personaje", await readFile(`${dir}/frame.jpg`), "image/jpeg");
+    // the video from that moment, only the first shot: the picture and the motion's first frame match
+    let v = input.videoRef;
+    if (start > 0 || len < dur - 0.15) {
+      const [cut] = await cutParts(dir, src, [{ a: start, len: +len.toFixed(3) }]);
+      v = await saveMedia(ws, "tools/partes", await readFile(cut), "video/mp4");
     }
-    const j = await falSubmit("fal-ai/nano-banana-pro/edit", { prompt: swapFramePrompt(input.prompt), image_urls: [frameUrl, input.image], aspect_ratio: "auto", resolution: "2K", output_format: "png", num_images: 1 }, what);
-    const job: SwapJob = { s: 1, snd: input.sound === false ? 0 : 1, v: videoRef, j, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}) };
+    const fk = input.face ?? null;
+    const rules = await swapRules();
+    const prompt = framePrompt({ extra: input.prompt, main: a?.main, withFace: Boolean(fk), rules });
+    const j = await falSubmit("fal-ai/nano-banana-pro/edit", nanoBody(await fetchableUrl(of, ws), input.image!, fk ? await fetchableUrl(fk.front, ws) : undefined, prompt), what);
+    const job: SwapJob = { s: 1, snd: input.sound === false ? 0 : 1, v, of, sh: input.imageRef, fk, j, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}), ...(a?.main ? { main: a.main.slice(0, 160) } : {}) };
     return SWAP + JSON.stringify(job);
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => null);
   }
+}
+
+const BAD_SCENE = "No logramos poner al personaje en la escena sin errores con este video (lo intentamos dos veces). Prueba con un video donde la persona se vea más grande, de frente y sola. Te devolvimos los créditos.";
+const BODY_ERR = "No se vio el cuerpo completo del personaje de la cintura para arriba en la escena. Prueba con un video donde la persona aparezca de frente y entera desde la cintura. Te devolvimos los créditos.";
+
+async function submitMotion(sj: SwapJob, frame: string, ws: string, what: string, fix?: string[]) {
+  const video = await fetchableUrl(sj.v, ws);
+  const fk = sj.fk;
+  const front = fk ? await fetchableUrl(fk.front, ws) : null;
+  const refs = fk ? await Promise.all((fk.refs.length ? fk.refs : [sj.sh]).map((r) => fetchableUrl(r, ws))) : [];
+  const prompt = motionPrompt({ extra: sj.p, withFace: Boolean(front), fix, rules: await swapRules() });
+  return falSubmit(MOTION, {
+    image_url: frame, video_url: video, character_orientation: "video", keep_original_sound: sj.snd === 1, prompt,
+    ...(front ? { elements: [{ frontal_image_url: front, reference_image_urls: refs.slice(0, 3) }] } : {}),
+  }, what).catch((e: unknown) => {
+    // Kling checks the picture for a full upper body: say it plainly
+    if (/upper body|body detected|recognition failed/i.test(e instanceof Error ? e.message : "")) throw new Error(BODY_ERR);
+    throw e;
+  });
 }
 
 async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck> {
@@ -291,25 +304,44 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
   try { sj = JSON.parse(job.slice(SWAP.length)) as SwapJob; } catch { return { state: "failed", error: "Trabajo inválido." }; }
   const r = await falPoll(sj.j, t.name);
   if (r.state !== "done") return r;
+
   if (sj.s === 1) {
     const frame = imgs(r.out) ?? img(r.out);
     if (!frame) return { state: "failed", error: `${t.name}: no se pudo poner al personaje en la escena.` };
     return {
       state: "running",
       advance: async () => {
-        const video = await fetchableUrl(sj.v, ws);
-        const j = await falSubmit(MOTION, { image_url: frame, video_url: video, character_orientation: "video", keep_original_sound: sj.snd === 1, ...(sj.p ? { prompt: sj.p } : {}) }, t.name)
-          .catch((e: unknown) => {
-            // Kling checks the picture for a full upper body: say it plainly
-            if (/upper body|body detected|recognition failed/i.test(e instanceof Error ? e.message : "")) throw new Error("No se vio el cuerpo completo del personaje de la cintura para arriba en la escena. Prueba con un video donde la persona aparezca de frente y entera desde la cintura en algún momento. Te devolvimos los créditos.");
-            throw e;
-          });
+        const rev = await reviewFrame(await fetchableUrl(sj.of, ws), frame, await fetchableUrl(sj.sh, ws));
+        if (rev.severe) {
+          await learnSwap(rev.issues);
+          if ((sj.r1 ?? 0) >= 1) throw new Error(BAD_SCENE);
+          // once more, free, telling it what went wrong
+          const prompt = framePrompt({ extra: sj.p, main: sj.main, withFace: Boolean(sj.fk), fix: rev.issues, rules: await swapRules() });
+          const j = await falSubmit("fal-ai/nano-banana-pro/edit", nanoBody(await fetchableUrl(sj.of, ws), await fetchableUrl(sj.sh, ws), sj.fk ? await fetchableUrl(sj.fk.front, ws) : undefined, prompt), t.name);
+          return SWAP + JSON.stringify({ ...sj, j, r1: (sj.r1 ?? 0) + 1, q1: rev.issues } satisfies SwapJob);
+        }
+        const j = await submitMotion(sj, frame, ws, t.name);
         return SWAP + JSON.stringify({ ...sj, s: 2, j, frame } satisfies SwapJob);
       },
     };
   }
+
   const url = vid(r.out);
   if (!url) return { state: "failed", error: `${t.name}: no devolvió video.` };
+  if (!sj.qa) {
+    return {
+      state: "running",
+      advance: async () => {
+        const rev = await reviewVideo(url, await fetchableUrl(sj.sh, ws));
+        if (rev.severe) await learnSwap(rev.issues);
+        if (rev.severe && (sj.r2 ?? 0) < 1 && sj.frame) {
+          const j = await submitMotion(sj, sj.frame, ws, t.name, rev.issues);
+          return SWAP + JSON.stringify({ ...sj, j, r2: (sj.r2 ?? 0) + 1, q2: rev.issues } satisfies SwapJob);
+        }
+        return SWAP + JSON.stringify({ ...sj, qa: rev.severe ? "aviso" : "ok", ...(rev.issues.length ? { q2: rev.issues } : {}) } satisfies SwapJob);
+      },
+    };
+  }
   return {
     state: "done", mime: "video/mp4", ext: "mp4",
     fetch: async () => {
@@ -318,4 +350,14 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
       return res.arrayBuffer();
     },
   };
+}
+
+/** What a «Mi personaje en un video» job is doing now, for the customer (null for other jobs). */
+export function swapStep(job: string): string | null {
+  if (!job.startsWith(SWAP)) return null;
+  try {
+    const sj = JSON.parse(job.slice(SWAP.length)) as SwapJob;
+    if (sj.s === 1) return sj.r1 ? "Rehaciendo la escena (gratis): la revisión encontró un detalle…" : "Paso 1 de 3: poniendo a tu personaje en la escena…";
+    return sj.r2 ? "Rehaciendo el video (gratis): la revisión encontró un detalle…" : "Paso 2 de 3: copiando los movimientos del video…";
+  } catch { return null; }
 }

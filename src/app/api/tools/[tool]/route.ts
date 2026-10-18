@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
 import { probe } from "@/lib/montage";
-import { checkTool, startTool, toolConfigured, type ToolInput } from "@/lib/providers/tools";
+import { checkTool, startTool, swapStep, toolConfigured, type ToolInput } from "@/lib/providers/tools";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
 import { explainFailure, serviceOf } from "@/lib/balances";
@@ -11,6 +11,8 @@ import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { publicError } from "@/lib/public-error";
 import { isOwner } from "@/lib/auth";
 import { sbRpc } from "@/lib/supabase";
+import { createHash } from "node:crypto";
+import { analyzeVideo, faceKitFor } from "@/lib/influencer/swap";
 
 export const maxDuration = 300; // long videos are cut into parts on start and joined when done
 
@@ -77,7 +79,15 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     // recreated videos can come out silent (e.g. a character with no voice, for music or a later voice-over)
     if (t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video") input.sound = b.sound !== false;
     if (t.id === "editar-video" || t.id === "personaje-en-video") input.videoSecs = d;
-    if (t.id === "personaje-en-video") input.videoRef = b.video;
+    if (t.id === "personaje-en-video") {
+      // checked before charging: a video that can't work never costs anything
+      const a = await analyzeVideo(b.video, ws).catch(() => null);
+      if (a?.level === "rojo") return a.checks.find((c) => c.level === "rojo")?.text ?? "Este video no sirve para esto.";
+      input.videoRef = b.video;
+      input.imageRef = input.image;
+      if (a) input.analysis = a;
+      if (a?.usable) seconds = Math.min(seconds, a.usable); // billed for the part that's used
+    }
   }
   if (need.audio) {
     if (!mine(b.audio)) return "Sube un audio o genera la voz.";
@@ -140,6 +150,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
       audio: await open(read.input.audio),
       images: read.input.images ? await Promise.all(read.input.images.map((u) => fetchableUrl(u, ws))) : undefined,
     };
+    // a saved character's face, cut out of its sheet once, locks its identity in the video
+    if (t.id === "personaje-en-video" && read.input.imageRef) input.face = await faceKitFor(db, read.input.imageRef, ws).catch(() => null);
     const job = await startTool(t, input, ws);
     await db.update("clips", id, { provider_job: job });
     return NextResponse.json({ id, usd });
@@ -180,7 +192,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
     const st = await checkTool(t, String(row.provider_job), s.user.workspace);
     // a job in steps (Mi personaje en un video): start the next step once, even with two tabs checking
     if ((st.state === "running" || st.state === "queued") && st.advance) {
-      if (await sbRpc<boolean>("hit_rate", { p_key: `tool-step:${id}:${String(row.provider_job).length}`, p_window: 3600, p_max: 1 }).catch(() => false)) {
+      const stepKey = createHash("sha256").update(String(row.provider_job)).digest("hex").slice(0, 40);
+      if (await sbRpc<boolean>("hit_rate", { p_key: `tool-step:${id}:${stepKey}`, p_window: 3600, p_max: 1 }).catch(() => false)) {
         try {
           await db.update("clips", id, { provider_job: await st.advance() });
         } catch (err) {
@@ -189,7 +202,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
           return NextResponse.json({ state: "failed", error });
         }
       }
-      return NextResponse.json({ state: "running" });
+      return NextResponse.json({ state: "running", paso: "Revisando la calidad (si algo sale mal, se rehace gratis)…" });
     }
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));
@@ -198,7 +211,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
       if (flipped) await refundJob(s.user.workspace, id);
       return NextResponse.json({ state: "failed", error });
     }
-    if (st.state !== "done") return NextResponse.json(st);
+    if (st.state !== "done") return NextResponse.json({ ...st, paso: swapStep(String(row.provider_job)) ?? undefined });
 
     const url = "url" in st ? st.url : await saveMedia(s.user.workspace, `tools/${t.id}`, await st.fetch(), st.mime, `${id}.${st.ext}`);
     await db.update("clips", id, { status: "done", url });

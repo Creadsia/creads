@@ -414,8 +414,8 @@ export async function cutParts(dir: string, file: string, plan: { a: number; len
   return out;
 }
 
-/** Width and height of a video's picture (0×0 if unknown). */
-async function sizeOf(file: string): Promise<[number, number]> {
+/** Width and height of a video's or picture's frame (0×0 if unknown). */
+export async function sizeOf(file: string): Promise<[number, number]> {
   const log = await run(ffmpeg(), ["-hide_banner", "-i", file], { maxBuffer: 8 * 1024 * 1024, timeout: 30_000 })
     .then((r) => r.stderr + r.stdout)
     .catch((e: { stderr?: string }) => e.stderr ?? "");
@@ -448,4 +448,24 @@ export async function joinParts(dir: string, files: string[], withSound: boolean
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out);
   await ff(args, 240_000);
   return readFile(out);
+}
+
+/** Times (s) where the video cuts to another shot (a hard scene change). */
+export async function sceneCuts(file: string, threshold = 0.35): Promise<number[]> {
+  const log = await run(ffmpeg(), ["-hide_banner", "-i", file, "-an", "-vf", `scale=160:-2,select='gt(scene,${threshold})',showinfo`, "-f", "null", "-"], { maxBuffer: 16 * 1024 * 1024, timeout: 90_000 })
+    .then((r) => r.stderr + r.stdout)
+    .catch((e: { stderr?: string }) => e.stderr ?? "");
+  return [...log.matchAll(/pts_time:([\d.]+)/g)].map((m) => Number(m[1])).filter((t) => t > 0.2);
+}
+
+/** Cuts a box (fractions 0–1 of the picture) out of an image, a little wider than asked. */
+export async function cropImage(file: string, box: { x: number; y: number; w: number; h: number }, out: string, pad = 0.06) {
+  const [W, H] = await sizeOf(file);
+  if (!W || !H) throw new Error("No se pudo leer la imagen.");
+  const x0 = Math.max(0, box.x - pad * box.w), y0 = Math.max(0, box.y - pad * box.h);
+  const x1 = Math.min(1, box.x + box.w * (1 + pad)), y1 = Math.min(1, box.y + box.h * (1 + pad));
+  const w = Math.floor((x1 - x0) * W / 2) * 2, h = Math.floor((y1 - y0) * H / 2) * 2;
+  if (w < 96 || h < 96) throw new Error("El recorte quedó muy chico.");
+  await ff(["-y", "-v", "error", "-i", file, "-vf", `crop=${w}:${h}:${Math.round(x0 * W)}:${Math.round(y0 * H)}`, "-q:v", "2", out]);
+  return [w, h] as const;
 }
