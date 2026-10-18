@@ -85,6 +85,13 @@ export async function probarMeta(): Promise<{ item: string; ok: boolean; detalle
       try { const p = await graph<{ name?: string }>(c.pageId, { params: { fields: "name" }, token: c.adsToken }); out.push({ item: "Página de Facebook", ok: true, detalle: p.name ?? "Conectada." }); }
       catch (e) { out.push({ item: "Página de Facebook", ok: false, detalle: `${msg(e)} Revisa que el usuario del sistema tenga la página asignada.` }); }
     } else out.push({ item: "Página de Facebook", ok: false, detalle: "Falta el ID." });
+    if (!c.igUserId && c.pageId) {
+      // no Instagram ID yet: say which account the page is linked to, so it can be pasted
+      const linked = await graph<{ instagram_business_account?: { id?: string; username?: string } }>(c.pageId, { params: { fields: "instagram_business_account{id,username}" }, token: c.adsToken }).then((p) => p.instagram_business_account).catch(() => undefined);
+      out.push(linked?.id
+        ? { item: "Instagram", ok: false, detalle: `Tu página está unida a ${linked.username ? `@${linked.username}` : "una cuenta de Instagram"} (ID ${linked.id}). Pega ese número en «ID de Instagram» y guarda.` }
+        : { item: "Instagram", ok: false, detalle: "La página de Facebook no tiene una cuenta de Instagram profesional unida (o el token no tiene permiso para verla). Únela en la configuración de la página → Cuentas vinculadas → Instagram." });
+    }
     if (c.igUserId) {
       try { const i = await graph<{ username?: string }>(c.igUserId, { params: { fields: "username" }, token: c.adsToken }); out.push({ item: "Instagram", ok: true, detalle: i.username ? `@${i.username}` : "Conectado." }); }
       catch (e) {
