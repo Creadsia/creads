@@ -64,3 +64,14 @@ DECISIONES Y ESTADO (octubre 2026)
 - Creads NO está lanzado al público todavía. Falta lo principal: LLC + Stripe, ambiente de pruebas, Vercel Pro y Supabase Pro, verificación en dos pasos y topes de gasto en proveedores, abogado (términos, privacidad, caras y voces), asesor tributario LLC + Chile, cuota de Veo, conectar Meta (Conversiones y cuenta publicitaria), registrar la marca en INAPI, beta cerrada con 5–10 clientes y luego el «Día 1».
 - Campañas para vender Creads (estimación): con US$1.000 en Meta Chile, unos 20–60 suscriptores; los primeros US$300–500 son para aprender. Lo que más baja el costo: un primer paso gratis y anuncios hechos con la propia Creads.
 - Alertas: el Guardián y los avisos urgentes del CEO General llegan a Gastón por Telegram (bot propio) y correo.`;
+
+/** Creads' look, for everyone who makes or plans content (taken from the site's own design). */
+export const MARCA = `IDENTIDAD VISUAL DE CREADS IA (úsala en todo contenido, guion, pedido de video o publicación)
+- Estilo: tecnológico, limpio y premium; mucho negro con detalles de neón. Se ve como una herramienta de IA de punta, no como una agencia barata. Nada de colores pastel, clip-art ni plantillas genéricas.
+- Fondo: negro puro #000000 (modo oscuro, el principal) o gris muy claro #F4F5F7 con blanco #FFFFFF (modo claro). Texto blanco #F3F4F6 sobre negro o negro #0A0B0D sobre claro.
+- Acento: el degradado de la marca, magenta #FF2BD6 → violeta #8A5CFF → cian #19E3FF (de izquierda a derecha), para palabras clave, bordes, brillos y botones. Cian #5CE9FF para links o detalles sobre negro.
+- Tipografía: títulos en Unbounded (ancha, geométrica, en negrita); textos en Geist (limpia). Pocas palabras en pantalla, grandes y legibles en el celular.
+- Logo: «creads» en minúsculas con la etiqueta «IA» en el degradado.
+- Tono: cercano y directo, en español de Chile neutro (tú), con energía; muestra resultados reales (el antes y después, el video terminado), no promesas vacías.
+- En Instagram: portadas de Reels con un título corto en Unbounded sobre negro y un toque del degradado, para que el feed se vea parejo; el video hecho con Creads es el protagonista.
+- Pilares de contenido sugeridos: (1) «Mira lo que hice con Creads» (resultados: UGC, avatares, voces, historias animadas); (2) antes y después / de guion a video en 60 segundos; (3) tutoriales cortos paso a paso; (4) comparaciones de modelos (Veo, Kling, Seedance) y novedades de IA; (5) tendencias del momento hechas con Creads; (6) detrás de escena y comunidad (preguntas, encuestas, «¿qué video hacemos?»).`;

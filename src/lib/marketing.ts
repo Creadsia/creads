@@ -3,6 +3,7 @@ import { MetaError, budgetUnits, graph, metaAds, metaToken, unitsToUsd } from ".
 import { observedDollar, usdClpRate } from "./usd-clp";
 import { FORMATS } from "./formats";
 import { TO_CREAR_KEY } from "./guiones";
+import { claude } from "./providers/claude";
 
 // The owner's marketing studio: paid campaigns in Meta and organic content on the brand's Instagram
 // accounts, run by the office agents (Director de Marketing, Creativos, Trafficker, Community manager).
@@ -317,6 +318,34 @@ export async function publishFacebook(cuenta: Cuenta, adId: string, caption: str
 }
 
 /** Last posts of each account (for the agents): likes, comments and how many auto-replies went out. */
+/**
+ * How the brand's Instagram looks: its profile and the last 9 posts' covers, described by Claude's vision
+ * (cheap model) once a day, so the Community manager plans content that fits the feed.
+ */
+export async function feedLook(): Promise<string> {
+  const s = await loadMarketing();
+  const c = s.cuentas[0];
+  if (!c || !(await metaToken())) return "Todavía no hay una cuenta de Instagram de la marca conectada.";
+  const file = `marketing/feed-${c.igUserId}-${new Date().toISOString().slice(0, 10)}.json`;
+  const hit = await readPrivateJSON<{ text: string }>(file).catch(() => null);
+  if (hit?.text) return hit.text;
+  const prof = await graph<{ username?: string; biography?: string; followers_count?: number; follows_count?: number; media_count?: number }>(c.igUserId, { params: { fields: "username,biography,followers_count,follows_count,media_count" } }).catch(() => null);
+  const media = await graph<{ data: { media_type?: string; media_url?: string; thumbnail_url?: string; caption?: string }[] }>(`${c.igUserId}/media`, { params: { fields: "media_type,media_url,thumbnail_url,caption", limit: 9 } }).catch(() => ({ data: [] }));
+  const imgs = media.data.map((m) => (m.media_type === "VIDEO" ? m.thumbnail_url : m.media_url)).filter((u): u is string => Boolean(u && /^https:\/\//.test(u))).slice(0, 9);
+  const head = prof ? `@${prof.username ?? c.nombre}: ${prof.followers_count ?? 0} seguidores, sigue a ${prof.follows_count ?? 0}, ${prof.media_count ?? 0} publicaciones. Bio: «${(prof.biography ?? "").replace(/\s+/g, " ").slice(0, 200)}».` : `${c.nombre}: no se pudo leer el perfil.`;
+  let look = imgs.length ? "" : "El feed está vacío: hay que partir de cero con una línea visual clara.";
+  if (imgs.length && claude.configured()) {
+    look = await claude.complete({
+      fast: true, maxTokens: 700, images: imgs,
+      system: "Eres directora de arte de redes sociales. Describes en español, breve y concreto.",
+      prompt: `Estas son las portadas de las últimas ${imgs.length} publicaciones de Instagram de una marca (la más nueva primero). Describe en 6 a 8 líneas: colores que dominan, tipografías y textos en portada, tipo de contenido, si el feed se ve parejo o desordenado, y 3 mejoras concretas para que se vea más premium y consistente.`,
+    }).catch(() => "No se pudo mirar el feed esta vez.");
+  }
+  const text = `${head}\nCómo se ve el feed hoy:\n${look}`;
+  await writePrivateJSON(file, { text }).catch(() => {});
+  return text;
+}
+
 export async function organicSummary() {
   const s = await loadMarketing();
   const out: string[] = [];

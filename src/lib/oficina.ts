@@ -9,13 +9,13 @@ import { CLAUDE_OFFICE_MODEL, CLAUDE_OFFICE_MODEL_CEO, claudeOfficeConfigured, c
 import { parseJSON } from "./providers/claude";
 import { dayCL } from "./stats";
 import { DEFAULT_MEMORY } from "./oficina-memoria";
-import { CONTEXTO } from "./oficina-contexto";
+import { CONTEXTO, MARCA } from "./oficina-contexto";
 import { overview } from "./balances";
 import { rentabilidadReport } from "./rentabilidad-data";
 import { launchChecks, launchDone } from "./lanzamiento-checks";
 import { AUTO, MANUAL } from "./lanzamiento";
 import { FORMATS } from "./formats";
-import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
+import { type CampanaSpec, addPedido, once, cleanCampaign, feedLook, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import { type AreaId, AREAS, areaOfAgent } from "./areas";
 import { guardianSummary } from "./guardian";
 import { sendWhatsApp, whatsappMode } from "./whatsapp";
@@ -39,7 +39,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian" | "espia" | "conexiones";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian" | "espia" | "conexiones" | "feed";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -54,6 +54,7 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   meta: { name: "Campañas en Meta", text: "Campañas pagadas: gasto, CTR, frecuencia, leads y costo por lead (7 días)", internal: true },
   organico: { name: "Instagram orgánico", text: "Publicaciones de las cuentas de la marca y respuestas automáticas", internal: true },
   material: { name: "Anuncios terminados", text: "Videos de Creads listos para usar y pedidos de anuncios", internal: true },
+  feed: { name: "Cómo se ve el Instagram", text: "El perfil de la cuenta de la marca y una descripción de cómo se ve su feed (colores, portadas, orden), una vez al día", internal: true },
   conexiones: { name: "Conexiones con Meta", text: "Qué está conectado (píxel, API de conversiones, cuenta publicitaria, página, Instagram) y qué falta", internal: true },
   espia: { name: "Espiar anuncios", text: "Anuncios activos en Meta de la competencia y del rubro, los que llevan más días corriendo (con el Espiar anuncios de Creads)", internal: true },
   guardian: { name: "Guardián (salud de la plataforma)", text: "Controles cada pocos minutos, problemas abiertos y lo que se hizo", internal: true },
@@ -180,7 +181,7 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el trafficker del estudio de marketing. Manejas las campañas pagadas en Meta: propones campañas nuevas con los anuncios terminados de Creads (se suben en pausa), y cada día revisas las que corren para escalar las ganadoras, cortar las que pierden plata y renovar anuncios cansados (frecuencia alta, CTR bajando). Reglas: una campaña nueva necesita al menos 3 días y unas 1.000 impresiones antes de juzgarla; sube el presupuesto de a 20–30%; nunca pases el tope diario; explica cada movimiento con números.",
   },
   organico: {
-    name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["organico", "material", "espia"],
+    name: "Community manager", area: "Instagram y Facebook de la marca: planifica, crea contenido y publica todos los días", search: true, sharePct: 6, sources: ["feed", "organico", "material", "espia"],
     mission: "Eres el community manager de Creads IA en Instagram y Facebook. Tu meta: ganar seguidores reales y que la gente pregunte «¿dónde lo hacen?». Trabajas así: (1) PLAN: cada semana armas el calendario de contenido (qué se publica cada día, en qué cuenta, con qué formato e idea), mirando qué funciona en tendencias de Instagram, TikTok y X y lo que ya rindió en nuestras cuentas; lo pones en tu informe como lista día por día. (2) BANCO DE CONTENIDO: los videos terminados de Creads son el banco; si quedan menos de 7 sin publicar, pides videos nuevos (pedidos de anuncio con su guion y formato) pensados para orgánico y también reutilizables en campañas pagadas. (3) PUBLICAR: propones UNA publicación por día (video del banco que no se haya publicado, cuenta, texto cercano con llamado a seguir la cuenta y hashtags justos), lista para aprobar. Todo vende Creads IA. Siempre transparente: las cuentas dicen que el contenido es de Creads; nunca te haces pasar por un cliente o una persona. Cuando te pidan algo en el chat, lo dejas listo para aprobar, sin rodeos.",
   },
 };
@@ -423,7 +424,7 @@ ${row("Instagram", v.igUserId)}
 - Respuestas automáticas a comentarios (webhook): ${v.appSecret.value && v.webhookToken.value ? "configuradas" : "FALTA (clave secreta de la app y clave del webhook, en la misma pantalla)"}`;
 }
 
-const READERS: Record<Source, () => Promise<string>> = { conexiones: srcConexiones, espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+const READERS: Record<Source, () => Promise<string>> = { feed: feedLook, conexiones: srcConexiones, espia: srcEspia, guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
 
 const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {
@@ -594,7 +595,7 @@ async function work(st: OfficeState, a: Agent, memory: string, deadline: number)
   const r = await ask(a, {
     model, engine, deadline, maxTokens: a.search && !internalOf(a) ? 8000 : 6000,
     system: `${a.mission}\n\n${STYLE}`,
-    prompt: (research) => `${COMPANY}\n${isCeo || isGeneral ? CONTEXTO : BRIEFING}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
+    prompt: (research) => `${COMPANY}\n${isCeo || isGeneral ? CONTEXTO : BRIEFING}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory)}<datos>\n${task ? `Tema sugerido por tu jefe para este turno (una sugerencia, no una orden): ${task}\n\n` : ""}${data.slice(0, 30_000)}\n</datos>${isGeneral ? generalInput(st) : isCeo ? ceoInput(st, a.id) : ""}${rights.length && !isGeneral ? `\n<datos>\nACCIONES YA PENDIENTES: ${pend.join(" | ") || "ninguna"}\n</datos>` : ""}${research}\n\n${isGeneral ? formatGeneral : isCeo ? formatCeo(workerIds) : FORMAT_WORKER}${isGeneral ? "" : actionsFormat(rights)}`,
   });
   if (r.error) return fail(r.error, r.usd);
   let j: { estado?: string; resumen?: string; informe?: string; propuestas?: unknown[]; prioridades?: unknown[]; temas?: Record<string, unknown>; acciones?: unknown[] };
@@ -810,7 +811,7 @@ export async function chat(id: string, text: string, who = "Gastón (el dueño)"
     const r = await ask(a, {
       model: modelFor(engine, true), engine, deadline: Date.now() + 200_000, maxTokens: 5000, history, question: mine.text,
       system: `${a.mission}\n\n${STYLE}\n\n${CHAT_STYLE}\n\n${chatActions(rights)}`,
-      prompt: (research) => `${COMPANY}\n${CONTEXTO}\nHoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
+      prompt: (research) => `${COMPANY}\n${CONTEXTO}\n${areaOfAgent(a.id, a.equipo) === "marketing" ? `${MARCA}\n` : ""}Hoy es ${dayCL()} (hora de Chile).\n${memoryBlock(memory.text)}<datos>\n${data.slice(0, 25_000)}${last && !last.error ? `\n\nTu último informe (${last.at.slice(0, 10)}): ${untag(`${last.resumen}\n${last.informe}`)}` : ""}\n</datos>${a.id === "general" ? generalInput(st) : a.id === "ceo" ? ceoInput(st) : ""}${research}\n\nTE ESCRIBE: ${who}.\nMENSAJE:\n${mine.text}`,
     });
     if (r.error) return { role: "agent", text: `No pude responder: ${r.error}`, at: new Date().toISOString(), usd: r.usd, error: true };
     // a move proposed in the chat really goes to «Por aprobar» (never just said)
