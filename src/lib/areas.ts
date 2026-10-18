@@ -8,7 +8,7 @@ export type PanelTab =
   | "estadisticas" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "modelos"
   | "marketing"
   | "clientes" | "registros"
-  | "errores" | "saldos" | "estado" | "cuentas";
+  | "guardian" | "errores" | "saldos" | "estado" | "cuentas";
 
 export interface Area {
   id: AreaId;
@@ -22,7 +22,7 @@ export interface Area {
 }
 
 export const AREAS: Area[] = [
-  { id: "direccion", name: "Dirección", what: "Tu CEO General: el resumen del día, lo que espera tu aprobación y todo el equipo.", tabs: [["oficina", "CEO General y agentes"], ["equipo", "Personas y accesos"]], agents: ["general"] },
+  { id: "direccion", name: "Dirección", what: "Tu CEO General: el resumen del día, lo que espera tu aprobación y todo el equipo.", tabs: [["oficina", "CEO General y agentes"], ["equipo", "Personas y accesos"]], agents: ["general", "guardian"] },
   { id: "lanzamiento", name: "Lanzamiento", what: "Todo lo que falta para abrir Creads al público, en orden.", tabs: [["lanzamiento", "Lista de lanzamiento"]], agents: [] },
   {
     id: "numeros", name: "Ventas y finanzas", what: "Cuánto vendes, cuánto cuesta y cuánto queda.",
@@ -33,7 +33,7 @@ export const AREAS: Area[] = [
   { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["clientes", "Clientes y accesos"], ["registros", "Registros"]], agents: ["soporte"] },
   {
     id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores, seguridad y novedades de IA.",
-    tabs: [["errores", "Errores y alarmas"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],
+    tabs: [["guardian", "Guardián (salud)"], ["errores", "Errores y alarmas"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],
     agents: ["ceo", "produccion", "seguridad", "novedades"],
   },
 ];

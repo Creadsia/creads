@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AREAS, type AreaId } from "@/lib/areas";
+import type { Incident } from "@/lib/guardian";
+import { IncidentRow } from "./guardian";
 import type { Action, Agent, AgentConfig, ChatMsg, Encargo, OfficeState, Proposal, Report, Source } from "@/lib/oficina";
 
 // Panel → Oficina: the owner's Grok agents. Each one reads its area once a day (8:00), writes a report and
@@ -220,7 +222,7 @@ function actionText(a: Action) {
   return { title: `Publicar en Instagram (${a.cuenta})`, body: `Video de Creads: ${a.adId.slice(0, 8)}…\nTexto:\n${a.texto}\n\nPor qué: ${a.motivo || "—"}` };
 }
 
-const AGENT_NAMES: Record<string, string> = { general: "el CEO General", ceo: "el Director de Plataforma", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
+const AGENT_NAMES: Record<string, string> = { general: "el CEO General", guardian: "el Guardián", ceo: "el Director de Plataforma", marketing: "el Director de Marketing", creativos: "Creativos", trafico: "el Trafficker", organico: "Contenido orgánico" };
 
 function Approvals({ list, onDecide, busy }: { list: Proposal[]; onDecide: (id: string, ok: boolean) => void; busy: string | null }) {
   const pending = list.filter((p) => p.estado === "pendiente");
@@ -293,8 +295,13 @@ export function AreaTeam({ area }: { area: AreaId }) {
   const [open, setOpen] = useState<string | null>(null);
   const [talk, setTalk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [inc, setInc] = useState<Incident[]>([]);
   const load = useCallback(() => { api<View>("/api/admin/oficina", "GET").then(setV).catch((e) => setErr(e instanceof Error ? e.message : "")); }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // what the Guardián found in this area
+    api<{ incidents: Incident[] }>("/api/admin/guardian", "GET").then((g) => setInc(g.incidents.filter((i) => i.abierto && i.area === area))).catch(() => {});
+  }, [load, area]);
   if (err) return null; // the area's pages still work without the office
   if (!v) return <div className="h-14 animate-pulse rounded-2xl bg-surface-2" aria-hidden="true" />;
   const order = AREAS.find((x) => x.id === area)?.agents ?? [];
@@ -307,6 +314,12 @@ export function AreaTeam({ area }: { area: AreaId }) {
   };
   return (
     <section className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3" aria-label="Encargados del área">
+      {inc.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <b className="text-xs text-muted">El Guardián vio en esta área:</b>
+          <ul className="flex flex-col gap-2">{inc.slice(0, 3).map((i) => <IncidentRow key={i.key} i={i} />)}</ul>
+        </div>
+      )}
       <ul className="flex flex-col divide-y divide-line">
         {team.map((a, i) => {
           const r = v.state.last[a.id];

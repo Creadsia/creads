@@ -15,6 +15,8 @@ export const AUTO: Record<string, { title: string; how: string }> = {
   stats: { title: "Contador de visitas (Estadísticas)", how: "Supabase → SQL Editor → New query → pega todo supabase/stats.sql → Run. Desde ese momento la pestaña Estadísticas cuenta visitas, dispositivos, ubicación y canal (anónimo, sin datos personales)." },
   "meta-ads": { title: "Meta conectado al estudio de marketing", how: "Para que los agentes suban campañas (en pausa), lean métricas y publiquen en Instagram. Pídele a Claude la guía: app de Meta, usuario del sistema, token y los números de cuenta publicitaria y página en Vercel." },
   ai: { title: "Modelos de IA", how: "Claves de Anthropic, Google, fal.ai y ElevenLabs en Vercel." },
+  guardian: { title: "Guardián: revisión cada 5 minutos", how: "Vercel: GUARDIAN_TOKEN con 24 caracteres o más inventados → Redeploy. Después, en UptimeRobot, un monitor de tipo «Keyword» con la dirección que aparece en Plataforma → Guardián, palabra «OK», cada 5 minutos." },
+  whatsapp: { title: "Alertas por WhatsApp", how: "La forma rápida: CallMeBot (gratis). Agrega su número a tus contactos, mándale el mensaje de activación, te responde con tu clave; en Vercel pon CALLMEBOT_PHONE (con +56) y CALLMEBOT_KEY. La oficial: WhatsApp Cloud API de Meta (pídele a Claude el paso a paso)." },
 };
 /** `urgent`: blocks the launch (shown in red). `who`: "tu" = the owner, "claude" = pending work of the AI developer. */
 export const MANUAL: { id: string; title: string; how: string; urgent?: boolean; who?: "tu" | "claude" }[] = [
