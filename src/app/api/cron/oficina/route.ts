@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { agentsOf, loadState, runAll } from "@/lib/oficina";
+import { runGuardian } from "@/lib/guardian";
 import { officeEmail } from "@/lib/emails";
 import { sendEmail } from "@/lib/providers/email";
 import { logError } from "@/lib/errlog";
@@ -22,6 +23,7 @@ function authorized(req: Request) {
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   try {
+    await runGuardian().catch((e) => console.error("guardian", e instanceof Error ? e.message : e)); // a check before the office reads it
     const { brief, by, ran } = await runAll();
     const rows = brief ? await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []) : [];
     const to = rows[0]?.email;

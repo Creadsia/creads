@@ -1,3 +1,4 @@
+import { whatsappMode } from "@/lib/whatsapp";
 import { readPrivateJSON, sbRest, sbRpc, writePrivateJSON } from "@/lib/supabase";
 import { providerStatus } from "@/lib/providers";
 import { observedDollar, usdClpRate } from "@/lib/usd-clp";
@@ -72,6 +73,11 @@ export async function launchChecks(): Promise<Check[]> {
     })(),
     { id: "ai", state: p.claude && any(p.video) && any(p.image) && any(p.voice) ? "ok" : "falta", detail: [!p.claude && "Claude", !any(p.video) && "video", !any(p.image) && "imagen", !any(p.voice) && "voz"].filter(Boolean).join(", ") ? `Falta conectar: ${[!p.claude && "Claude", !any(p.video) && "video", !any(p.image) && "imagen", !any(p.voice) && "voz"].filter(Boolean).join(", ")}.` : "Claude, video, imagen y voz conectados." },
   ];
+  // the Guardián (checks every few minutes) and WhatsApp alerts: recommended, they don't block the launch
+  checks.push((env("GUARDIAN_TOKEN").length >= 24
+    ? { id: "guardian", state: "ok", detail: "El Guardián tiene su clave. Falta solo que el monitor externo lo llame cada 5 minutos (Plataforma → Guardián)." }
+    : { id: "guardian", state: "revisar", detail: "Falta GUARDIAN_TOKEN en Vercel para que el Guardián revise cada pocos minutos." }) as Check);
+  checks.push((whatsappMode() ? { id: "whatsapp", state: "ok", detail: "Las alertas críticas también te llegan por WhatsApp." } : { id: "whatsapp", state: "revisar", detail: "Alertas por WhatsApp sin conectar (opcional, recomendado)." }) as Check);
   return checks;
 }
 

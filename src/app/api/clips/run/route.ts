@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
+import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
     if (!ad) return giveBack(NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 }));
     const provider = findVideo(String(clip.model));
     if (!provider?.configured()) return giveBack(NextResponse.json({ error: "Ese modelo no está disponible ahora. Elige otro." }, { status: 503 }));
+    if (await isPaused(provider.id)) return giveBack(NextResponse.json({ error: PAUSED_TEXT }, { status: 503 }));
 
     const st = (ad.settings ?? {}) as Settings;
     const ws = s.user.workspace;

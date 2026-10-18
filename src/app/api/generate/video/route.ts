@@ -4,6 +4,7 @@ import { tooMany } from "@/lib/rate";
 import { createHash } from "node:crypto";
 import { fullSession } from "@/lib/access";
 import { findVideo } from "@/lib/providers";
+import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/lib/media";
 import { explainFailure, serviceOfModel } from "@/lib/balances";
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
   const provider = findVideo(String(body?.model ?? ""));
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
+  if (await isPaused(provider.id)) return NextResponse.json({ error: PAUSED_TEXT }, { status: 503 });
 
   // charge for (and ask) the length the model really makes
   const seconds = billedSeconds(asked, provider.durations, provider.id.startsWith("veo"));

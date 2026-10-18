@@ -15,6 +15,7 @@ import { AUTO, MANUAL } from "./lanzamiento";
 import { FORMATS } from "./formats";
 import { type CampanaSpec, addPedido, once, cleanCampaign, commitMarketing, createPausedCampaign, loadMarketing, materialSummary, organicSummary, paidSummary, publishFacebook, publishReel, setCampaignBudget, setCampaignStatus } from "./marketing";
 import { type AreaId, AREAS, areaOfAgent } from "./areas";
+import { guardianSummary } from "./guardian";
 import pkg from "../../package.json";
 
 // The owner's agent office (Panel → Oficina): Grok agents, one per area, that read Creads' own data once a
@@ -32,7 +33,7 @@ import pkg from "../../package.json";
 // - an agent that searches the web never sees internal data in the same call: it researches first
 //   (public context only), then analyses with search off. So a web page can't make it leak data.
 
-export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material";
+export type Source = "negocio" | "visitas" | "produccion" | "seguridad" | "modelos" | "soporte" | "finanzas" | "rentabilidad" | "lanzamiento" | "disputas" | "meta" | "organico" | "material" | "guardian";
 export const SOURCES: Record<Source, { name: string; text: string; internal: boolean }> = {
   negocio: { name: "Ventas y cuentas", text: "Ventas y cuentas nuevas de las últimas 24 h y 7 días", internal: true },
   visitas: { name: "Visitas y canales", text: "Visitas por canal, dispositivo y página (7 días)", internal: true },
@@ -47,6 +48,7 @@ export const SOURCES: Record<Source, { name: string; text: string; internal: boo
   meta: { name: "Campañas en Meta", text: "Campañas pagadas: gasto, CTR, frecuencia, leads y costo por lead (7 días)", internal: true },
   organico: { name: "Instagram orgánico", text: "Publicaciones de las cuentas de la marca y respuestas automáticas", internal: true },
   material: { name: "Anuncios terminados", text: "Videos de Creads listos para usar y pedidos de anuncios", internal: true },
+  guardian: { name: "Guardián (salud de la plataforma)", text: "Controles cada pocos minutos, problemas abiertos y lo que se hizo", internal: true },
 };
 
 export type Estado = "ok" | "atencion" | "urgente";
@@ -99,23 +101,27 @@ export const MAX_CUSTOM = 12;
 const BUILTIN: Record<string, AgentConfig> = {
   general: {
     name: "CEO General", area: "Mano derecha de Gastón: ve todas las áreas y prioriza", search: false, sharePct: 12,
-    sources: ["negocio", "visitas", "finanzas", "rentabilidad", "lanzamiento", "disputas"],
+    sources: ["negocio", "visitas", "finanzas", "rentabilidad", "lanzamiento", "disputas", "guardian"],
     mission: "Eres el CEO General de Gastón, su mano derecha. Ves todos sus negocios desde arriba: hoy Creads IA (la plataforma) y, cuando se conecte, su negocio de marketing de afiliados. Diriges el Panel por áreas: Plataforma (Director de Plataforma y su equipo), Marketing (Director de Marketing y su estudio), Ventas y finanzas (Finanzas y ventas) y Clientes (Atención al cliente). Lees todos sus informes, los números reales (ventas, gasto en IA, saldos, rentabilidad, contracargos, lista de lanzamiento) y decides las 3 cosas más importantes que Gastón debe hacer HOY. Tu resumen es el único resumen oficial del día. Puedes proponer movimientos concretos (un encargo para Claude, el desarrollador; una línea para la Memoria; prender o apagar un agente), que solo se hacen si Gastón los aprueba. Prioridad actual: terminar la lista de lanzamiento de Creads. No inventes datos: si falta uno, dilo y pídelo.",
   },
+  guardian: {
+    name: "Guardián de Creads", area: "Ojos en toda la plataforma: que nada falle", search: false, sharePct: 6, sources: ["guardian", "produccion", "seguridad", "soporte"],
+    mission: "Eres el Guardián de Creads: tu trabajo es que creadsia.com no falle nunca, desde la página de inicio hasta el estudio y el Panel, porque la primera impresión del cliente es lo que más cuidamos. Un sistema automático revisa cada pocos minutos la web, la base de datos, los proveedores de IA, las generaciones, los errores y los pagos; ya actúa solo donde es seguro (pausa un modelo que falla mucho, devuelve créditos de generaciones trabadas) y avisa por correo y WhatsApp lo crítico. Tú lees esos controles y problemas, explicas en simple qué pasó y a quién afecta, dices qué área debe actuar, propones mejoras para que no vuelva a pasar (umbrales, procesos) y, si algo hay que programar, propones un encargo claro para Claude. Si todo está bien, dilo en una línea.",
+  },
   ceo: {
-    name: "Director de Plataforma", area: "Que Creads funcione: producción, seguridad y novedades", search: false, sharePct: 6, sources: ["produccion", "finanzas"],
+    name: "Director de Plataforma", area: "Que Creads funcione: producción, seguridad y novedades", search: false, sharePct: 6, sources: ["produccion", "finanzas", "guardian"],
     mission: "Eres el Director de Plataforma de Creads: diriges a Producción, Ciberseguridad y Novedades IA, y le reportas al CEO General. Tu meta es que la plataforma funcione sin errores, con los mejores modelos al mejor costo. Lees los informes de tu equipo y los números de Creads, resumes qué está pasando en la plataforma y sugieres a cada agente qué mirar con más detalle en su próximo turno. No inventes datos: si un agente no informó o falló, dilo.",
   },
   produccion: {
-    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 9, sources: ["produccion"],
+    name: "Producción de anuncios", area: "Videos, modelos y calidad", search: false, sharePct: 8, sources: ["produccion"],
     mission: "Eres el jefe de producción de anuncios. Vigilas que los videos de los clientes salgan bien: qué modelo está fallando más, por qué (según los mensajes de error), cuánta plata se pierde en fallas, anuncios trabados y las reglas aprendidas que esperan aprobación. Propones cambios concretos (ej.: «recomendar Veo en vez de Seedance para caras reales», «revisar el error X»).",
   },
   seguridad: {
-    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 8, sources: ["seguridad"],
+    name: "Ciberseguridad", area: "Ataques, abusos y avisos de seguridad", search: true, sharePct: 7, sources: ["seguridad"],
     mission: "Eres el encargado de ciberseguridad. Buscas señales de ataque o abuso (muchos intentos de entrar, cuentas nuevas en masa, errores raros) y fallas de seguridad conocidas y recientes en las versiones que usa Creads (Next.js y React). Explicas el riesgo en simple y qué hacer. No alarmes sin motivo: si todo está normal, dilo en una línea.",
   },
   novedades: {
-    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 15, sources: ["modelos"],
+    name: "Novedades IA y competencia", area: "Modelos nuevos y qué hace la competencia", search: true, sharePct: 12, sources: ["modelos"],
     mission: "Eres el analista de novedades. Buscas en la web y en X lo nuevo de los ÚLTIMOS 7 DÍAS: modelos de video, imagen y voz recién lanzados o con mejores precios (y si se pueden usar por API, por ejemplo en fal.ai o Google), y qué lanzó o cambió la competencia (funciones, precios, promociones, cómo se están vendiendo). Por cada novedad di si Creads debería sumarla o responder, y por qué. Solo cosas nuevas y comprobadas, con su fuente; nada de rumores viejos.",
   },
   finanzas: {
@@ -123,7 +129,7 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el encargado de Finanzas y ventas de Creads y le reportas directo al CEO General. Miras las estadísticas (visitas, embudo, ventas por canal), la rentabilidad (costo por anuncio, fallas que cuestan plata, margen por plan), el gasto en IA y los saldos de los proveedores, y los contracargos. Explicas en simple qué cambió, dónde se gana y dónde se pierde plata, y propones ajustes concretos de precios, descuentos, topes de gasto o modelos más baratos, con números. No inventes cifras: si un dato no está, dilo.",
   },
   soporte: {
-    name: "Atención al cliente", area: "Dudas, reclamos, cancelaciones y clientes", search: false, sharePct: 8, sources: ["soporte", "negocio"],
+    name: "Atención al cliente", area: "Dudas, reclamos, cancelaciones y clientes", search: false, sharePct: 8, sources: ["soporte", "negocio", "guardian"],
     mission: "Eres el jefe de servicio al cliente. Agrupas las dudas y reclamos que se repiten, explicas qué los causa (falta de ayuda, algo confuso en la plataforma, una falla) y propones arreglos: un artículo nuevo para el Centro de ayuda, un cambio de texto en la plataforma o algo para que el equipo revise. Si hay cancelaciones, resume los motivos. Para las preguntas sin resolver, deja una respuesta sugerida corta que el dueño podría enviar.",
   },
   marketing: {
@@ -131,7 +137,7 @@ const BUILTIN: Record<string, AgentConfig> = {
     mission: "Eres el Director de Marketing de Creads: diriges el estudio (Creativos, Trafficker y Contenido orgánico) y le reportas al CEO General. Tu meta es conseguir clientes que paguen al menor costo, con tráfico pagado en Meta y tráfico orgánico en las cuentas de Instagram de la marca. Lees los informes de tu equipo y los números, decides la estrategia de la semana (qué ángulos y formatos probar, cuánto invertir, qué escalar y qué cortar) y le das a cada uno un tema para su próximo turno. Cuidas el compliance: nada engañoso, las cuentas orgánicas dicen que son de la marca y no se promete lo que Creads no hace.",
   },
   creativos: {
-    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 8, sources: ["material", "meta"],
+    name: "Creativos", area: "Pide los anuncios a Creads: ángulos, guiones y formatos", search: true, sharePct: 7, sources: ["material", "meta"],
     mission: "Eres el jefe de creativos del estudio de marketing. Decides qué anuncios nuevos hacer para vender Creads (y pruebas para orgánico): miras qué está funcionando en las campañas, buscas en la web y en X ángulos y formatos que estén funcionando en anuncios de herramientas de IA y de video, y propones pedidos de anuncios con su guion listo para que Creads los genere. Varía ángulos (ahorro de tiempo, calidad, precio, antes y después, testimonio honesto de uso) y formatos (UGC, podcast, entrevista…). Nada de promesas falsas ni testimonios inventados.",
   },
   trafico: {
@@ -189,6 +195,7 @@ const directReports = (st: OfficeState) => workersOf(st).filter((w) => !DIRECTOR
 /** Which moves each agent may propose (the owner still approves each one). */
 const RIGHTS: Record<string, Action["tipo"][]> = {
   general: ["encargo", "memoria", "agente"],
+  guardian: ["encargo"],
   marketing: ["anuncio", "campana", "campana_estado", "presupuesto", "publicacion"],
   creativos: ["anuncio"],
   trafico: ["campana", "campana_estado", "presupuesto"],
@@ -340,7 +347,7 @@ async function srcDisputas() {
   return rows.length ? `${rows.length} pagos devueltos o con contracargo en 30 días (créditos descontados: ${rows.reduce((a, r) => a - r.delta, 0)}).` : "Sin devoluciones ni contracargos en 30 días.";
 }
 
-const READERS: Record<Source, () => Promise<string>> = { meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
+const READERS: Record<Source, () => Promise<string>> = { guardian: () => guardianSummary(), meta: paidSummary, organico: organicSummary, material: materialSummary, negocio: srcNegocio, visitas: srcVisitas, produccion: srcProduccion, seguridad: srcSeguridad, modelos: srcModelos, soporte: srcSoporte, finanzas: srcFinanzas, rentabilidad: srcRentabilidad, lanzamiento: srcLanzamiento, disputas: srcDisputas };
 
 const within = <T,>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 async function gather(sources: Source[]) {

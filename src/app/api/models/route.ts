@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { checkAccess } from "@/lib/access";
 import { imageProviders, videoProviders } from "@/lib/providers";
 import { falPricing } from "@/lib/providers/fal";
+import { pausedModels } from "@/lib/model-pause";
 
 // The studio's model list: which models are connected and what they cost (fal prices are live when available).
 export async function GET(req: Request) {
   const denied = await checkAccess(req);
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
-  const live = await falPricing();
+  const [live, paused] = await Promise.all([falPricing(), pausedModels()]);
   return NextResponse.json({
     video: videoProviders.map((p) => {
       const l = live[p.id];
@@ -17,7 +18,8 @@ export async function GET(req: Request) {
       return {
         id: p.id,
         label: p.label,
-        configured: p.configured(),
+        configured: p.configured() && !paused[p.id], // a model the Guardián paused shows as unavailable
+        paused: Boolean(paused[p.id]),
         usdPerSecond: perSecond ?? p.usdPerSecond,
         live: perSecond != null,
         aspects: p.aspects ?? ["9:16", "4:5", "1:1", "16:9"],
