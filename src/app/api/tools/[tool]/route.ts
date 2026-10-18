@@ -73,6 +73,8 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     if (!d) return "No pude medir el largo del video. Prueba con un MP4.";
     if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
+    // recreated videos can come out silent (e.g. a character with no voice, for music or a later voice-over)
+    if (t.id === "editar-video" || t.id === "copiar-movimiento") input.sound = b.sound !== false;
   }
   if (need.audio) {
     if (!mine(b.audio)) return "Sube un audio o genera la voz.";

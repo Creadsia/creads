@@ -16,6 +16,8 @@ export interface ToolInput {
   target?: string;
   seconds?: number; // music / sound effects: chosen length
   instrumental?: boolean;
+  /** editar-video / copiar-movimiento: keep the original video's sound (default true). */
+  sound?: boolean;
 }
 
 export type ToolCheck =
@@ -59,7 +61,7 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
   },
   "editar-video": {
     endpoint: "fal-ai/kling-video/o1/video-to-video/edit",
-    build: (i) => ({ prompt: videoEditPrompt(i.prompt ?? "", i.images?.length ?? 0), video_url: i.video, keep_audio: true, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}) }),
+    build: (i) => ({ prompt: videoEditPrompt(i.prompt ?? "", i.images?.length ?? 0), video_url: i.video, keep_audio: i.sound !== false, ...(i.images?.length ? { image_urls: i.images.slice(0, 4) } : {}) }),
     pick: vid,
   },
   "crear-personaje": {
@@ -71,7 +73,7 @@ const FAL: Partial<Record<ToolId, FalTool>> = {
   "copiar-movimiento": {
     endpoint: "fal-ai/kling-video/v3/standard/motion-control",
     // "video": the character follows the reference video's motion and framing (up to 30 s)
-    build: (i) => ({ image_url: i.image, video_url: i.video, character_orientation: "video", keep_original_sound: true, ...(i.prompt ? { prompt: i.prompt } : {}) }),
+    build: (i) => ({ image_url: i.image, video_url: i.video, character_orientation: "video", keep_original_sound: i.sound !== false, ...(i.prompt ? { prompt: i.prompt } : {}) }),
     pick: vid,
   },
   "avatar-habla": {

@@ -141,7 +141,7 @@ function Guardar({ sheet, traits }: { sheet: string; traits: Traits }) {
     } catch (err) { setMsg({ ok: false, text: err instanceof Error ? err.message : "No se pudo guardar." }); }
     setBusy(false);
   }
-  if (msg?.ok) return <p className="text-sm text-good">{msg.text} <Link href="/app/influencer" className="font-semibold underline">Ver mis personajes</Link></p>;
+  if (msg?.ok) return <Siguiente nombre={name.trim()} sheet={sheet} text={msg.text} />;
   return (
     <form onSubmit={save} className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/40 bg-accent/5 p-3">
       <label htmlFor="pj-name" className="text-sm font-semibold">¿Te gusta? Guárdalo:</label>
@@ -149,5 +149,25 @@ function Guardar({ sheet, traits }: { sheet: string; traits: Traits }) {
       <button type="submit" disabled={busy || name.trim().length < 2} className={btnCls}>{busy ? "Guardando…" : "Guardar personaje"}</button>
       {msg && <span className="text-sm text-bad">{msg.text}</span>}
     </form>
+  );
+}
+
+/** After saving: put the character into a video right away (Recrear), with or without the original sound. */
+export function Siguiente({ nombre, sheet, text }: { nombre: string; sheet: string; text?: string }) {
+  const [mudo, setMudo] = useState(true);
+  const q = new URLSearchParams({ personaje: sheet, nombre, ...(mudo ? { audio: "0" } : {}) });
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-accent/40 bg-accent/5 p-3">
+      {text && <p className="text-sm text-good">{text}</p>}
+      <p className="text-sm"><b>Ahora ponlo en un video.</b> <span className="text-muted">Elige un video de la galería o sube el tuyo, y {nombre} reemplaza a la persona que aparece, con sus mismos movimientos.</span></p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={mudo} onChange={(e) => setMudo(e.target.checked)} />
+        <span>Sin audio ({nombre} no habla: le pones música o voz después)</span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/app/recrear?${q}`} className={btnCls}>Recrear un video con {nombre}</Link>
+        <Link href="/app/influencer" className={ghostCls}>Ver mis personajes</Link>
+      </div>
+    </div>
   );
 }

@@ -67,3 +67,12 @@ test("the character's personality is kept (and trimmed) for the marketing team",
   assert.match(bibleText(t.bible), /Tierno \/ refinado.*inaceptable/);
   assert.equal(cleanTraits({ tier: "normal", picks: {}, bible: { arquetipo: "inventado" } }).bible, undefined);
 });
+
+const req = toolRequest;
+test("recreated videos can come out without the original sound", () => {
+  const base = { image: "i", images: ["i"], video: "v", prompt: "p" };
+  assert.equal(req("copiar-movimiento", base)!.body.keep_original_sound, true);
+  assert.equal(req("copiar-movimiento", { ...base, sound: false })!.body.keep_original_sound, false);
+  assert.equal(req("editar-video", base)!.body.keep_audio, true);
+  assert.equal(req("editar-video", { ...base, sound: false })!.body.keep_audio, false);
+});

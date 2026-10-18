@@ -30,20 +30,39 @@ function useLength(url?: string) {
   return secs;
 }
 
-export default function Recrear({ video, mode, prompt }: { video?: string; mode?: Mode; prompt?: string }) {
+type Personaje = { sheet: string; nombre?: string };
+
+/** The instruction that swaps the person in the video for the saved character (its sheet is photo 1). */
+const swapPrompt = (nombre?: string) =>
+  `Cambia a la persona del video por ${nombre ? `${nombre}, ` : ""}el personaje de la foto 1: misma cara, cuerpo, ropa y colores de su ficha. Mantén igual sus movimientos, gestos, el lugar y la cámara.`;
+
+/** Keeps the chosen character (and the sound choice) while moving between the gallery and the tool. */
+function carry(p?: Personaje, sound?: boolean) {
+  const q = new URLSearchParams();
+  if (p) { q.set("personaje", p.sheet); if (p.nombre) q.set("nombre", p.nombre); }
+  if (sound === false) q.set("audio", "0");
+  return q;
+}
+
+export default function Recrear({ video, mode, prompt, personaje, sound }: { video?: string; mode?: Mode; prompt?: string; personaje?: Personaje; sound?: boolean }) {
   const router = useRouter();
+  const back = () => { const q = carry(personaje, sound).toString(); router.push(`/app/recrear${q ? `?${q}` : ""}`); };
   const secs = useLength(video);
   const tooLongToEdit = secs > 10.5;
-  const [picked, setPicked] = useState<Mode | null>(mode ?? null);
+  const [picked, setPicked] = useState<Mode | null>(mode ?? (personaje && video ? "editar-video" : null));
   // a long video can only be recreated by copying its motion
   const current: Mode | null = picked === "editar-video" && tooLongToEdit ? "copiar-movimiento" : picked ?? (video ? (tooLongToEdit ? "copiar-movimiento" : "editar-video") : null);
 
-  if (!current) return <Gallery onOwn={(m) => setPicked(m)} />;
+  if (!current) return <Gallery onOwn={(m) => setPicked(m)} personaje={personaje} sound={sound} />;
+
+  // the character goes in as photo 1 (Cambiar personaje) or as the photo (Copiar movimiento)
+  const startPrompt = personaje && current === "editar-video" ? swapPrompt(personaje.nombre) : current === (mode ?? current) ? prompt : undefined;
 
   return (
     <div className="flex flex-col gap-5">
+      {personaje && <Banner personaje={personaje} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" onClick={() => { setPicked(null); router.push("/app/recrear"); }} className="text-sm text-muted hover:text-ink">← Elegir otro video</button>
+        <button type="button" onClick={() => { setPicked(null); back(); }} className="text-sm text-muted hover:text-ink">← Elegir otro video</button>
         {secs > 0 && <span className="text-xs text-muted">Tu video base dura {Math.round(secs)} s</span>}
       </div>
       <div role="radiogroup" aria-label="Cómo quieres recrearlo" className="grid gap-3 sm:grid-cols-2">
@@ -63,9 +82,9 @@ export default function Recrear({ video, mode, prompt }: { video?: string; mode?
           );
         })}
       </div>
-      <ToolRun key={current} toolId={current} initial={{ video, prompt: current === (mode ?? current) ? prompt : undefined }} />
+      <ToolRun key={current} toolId={current} initial={{ video, prompt: startPrompt, image: personaje?.sheet, sound }} />
       <p className="text-xs text-muted">
-        ¿Tu video es más largo? Recréalo por partes de hasta {current === "editar-video" ? 10 : 30} s y júntalas en «Crear anuncio». <button type="button" onClick={() => { setPicked(null); router.push("/app/recrear"); }} className="underline">Ver ejemplos</button>
+        ¿Tu video es más largo? Recréalo por partes de hasta {current === "editar-video" ? 10 : 30} s y júntalas en «Crear anuncio». <button type="button" onClick={() => { setPicked(null); back(); }} className="underline">Ver ejemplos</button>
       </p>
     </div>
   );
@@ -73,7 +92,17 @@ export default function Recrear({ video, mode, prompt }: { video?: string; mode?
 
 // ---------- the gallery ----------
 
-function Gallery({ onOwn }: { onOwn: (m: Mode) => void }) {
+function Banner({ personaje }: { personaje: Personaje }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent/5 p-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={personaje.sheet} alt="" className="h-12 w-20 rounded-lg object-cover" />
+      <p className="text-sm"><b>Recreando con {personaje.nombre || "tu personaje"}.</b> <span className="text-muted">Elige un video (de la galería o el tuyo) y {personaje.nombre || "tu personaje"} toma el lugar de la persona que aparece.</span></p>
+    </div>
+  );
+}
+
+function Gallery({ onOwn, personaje, sound }: { onOwn: (m: Mode) => void; personaje?: Personaje; sound?: boolean }) {
   const router = useRouter();
   const [rows, setRows] = useState<Example[] | null>(null);
   const [canEdit, setCanEdit] = useState(false);
@@ -93,7 +122,11 @@ function Gallery({ onOwn }: { onOwn: (m: Mode) => void }) {
       const res = await fetch("/api/inspiracion/usar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: e.id }) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo preparar el video.");
-      const q = new URLSearchParams({ video: d.video, modo: d.mode, ...(d.prompt ? { prompt: d.prompt } : {}) });
+      // with a character, every example opens as the swap (the example's own instruction is for its own use)
+      const q = carry(personaje, sound);
+      q.set("video", d.video);
+      if (personaje) { if (e.secs > 10.5) q.set("modo", "copiar-movimiento"); }
+      else { q.set("modo", d.mode); if (d.prompt) q.set("prompt", d.prompt); }
       router.push(`/app/recrear?${q}`);
     } catch (x) {
       setErr(x instanceof Error ? x.message : "No se pudo preparar el video.");
@@ -109,6 +142,7 @@ function Gallery({ onOwn }: { onOwn: (m: Mode) => void }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {personaje && <Banner personaje={personaje} />}
       <section className="grid gap-3 sm:grid-cols-2" aria-label="Recrear tu propio video" data-tour="recrear-modos">
         {MODES.map((m) => (
           <button key={m.id} type="button" onClick={() => onOwn(m.id)} className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4 text-left transition-colors hover:border-muted/60">

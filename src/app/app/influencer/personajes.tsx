@@ -52,7 +52,7 @@ export default function Personajes() {
               )}
               <h2 className="font-semibold">{p.name}</h2>
               <div className="flex flex-wrap gap-2">
-                {p.sheet && <Link href={`/app/herramientas/copiar-movimiento?image=${encodeURIComponent(p.sheet)}`} className={btnCls}>Usar en video</Link>}
+                {p.sheet && <Link href={`/app/recrear?${new URLSearchParams({ personaje: p.sheet, nombre: p.name, audio: "0" })}`} className={btnCls}>Recrear un video</Link>}
                 {p.traits && <Link href={`/app/influencer/nuevo?desde=${p.id}`} className={ghostCls}>Duplicar y cambiar</Link>}
                 <button type="button" onClick={() => borrar(p)} className="text-xs text-muted hover:text-bad">Borrar</button>
               </div>
@@ -63,9 +63,9 @@ export default function Personajes() {
       <section className={cardCls}>
         <h2 className="font-semibold">Cómo darle vida</h2>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
-          <li>Toca «Usar en video» en tu personaje.</li>
-          <li>Sube el video que quieres copiar (un baile, un gesto, una escena de 3 a 30 segundos).</li>
-          <li>Opcional: escribe el lugar o la acción («en una cocina», «bailando en la calle»). Ves el precio antes de generar.</li>
+          <li>Toca «Recrear un video» en tu personaje.</li>
+          <li>Elige un video de la galería o sube el tuyo (hasta 10 segundos para cambiar a la persona; hasta 30 copiando sus movimientos).</li>
+          <li>Elige si quieres el audio original o el video sin audio. Ves el precio antes de generar.</li>
         </ol>
       </section>
     </div>

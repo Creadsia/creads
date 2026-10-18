@@ -257,7 +257,7 @@ function Characters({ onPick, selected }: { onPick: (u: string) => void; selecte
 }
 
 export default function ToolRun({ toolId, initial, promptValue, resultExtra, imagesLabel }: {
-  toolId: ToolId; initial: { image?: string; video?: string; prompt?: string };
+  toolId: ToolId; initial: { image?: string; video?: string; prompt?: string; sound?: boolean };
   /** When the page builds the instruction (Crear personaje), it stays in sync and editable here. */
   promptValue?: string;
   /** An extra action under a finished result (e.g. «Guardar personaje»). */
@@ -275,6 +275,8 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   const [target, setTarget] = useState<string>("es");
   const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
   const [instrumental, setInstrumental] = useState(true);
+  const [sound, setSound] = useState(initial.sound ?? true);
+  const recreates = t.id === "editar-video" || t.id === "copiar-movimiento";
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -337,7 +339,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
       const res = await fetch(`/api/tools/${t.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent, length, instrumental }),
+        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent, length, instrumental, ...(recreates ? { sound } : {}) }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo iniciar.");
@@ -360,6 +362,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
       <section className={cardCls} aria-label="Lo que necesitas">
         {n.image && t.id === "copiar-movimiento" && <Group label="Tus personajes" hint="Toca uno para usarlo como la foto: sale con la misma cara de su ficha."><Characters selected={image} onPick={setImage} /></Group>}
         {n.image && <Group label="Foto"><ImageInput value={image} onChange={setImage} library={imgs} /></Group>}
+        {n.images && t.id === "editar-video" && <Group label="Tus personajes" hint="Toca uno para ponerlo en lugar de la persona del video (queda como foto 1)."><Characters selected={images[0] ?? ""} onPick={(u) => setImages((l) => [u, ...l.filter((x) => x !== u)].slice(0, n.images || 4))} /></Group>}
         {n.images && (
           <Group label={imagesLabel ?? (n.imagesOptional ? `Fotos de referencia (opcional, hasta ${n.images})` : `Fotos (hasta ${n.images})`)} hint={t.id === "crear-personaje" ? "La primera puede ser una cara de guía (no se copia exacta: mandan los rasgos que elegiste); las otras, imágenes de estilo." : n.imagesOptional ? "Una cara nueva, un producto o un lugar. Nómbralas en tu instrucción como «foto 1», «foto 2»." : "La primera es la principal."}>
             <div className="flex flex-col gap-3">
@@ -408,6 +411,18 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
             <input type="checkbox" checked={instrumental} onChange={(e) => setInstrumental(e.target.checked)} />
             <span>Solo instrumental (sin voz cantada)</span>
           </label>
+        )}
+        {recreates && (
+          <div role="radiogroup" aria-label="Audio del resultado" className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-muted">Audio</span>
+            <div className="flex flex-wrap gap-2">
+              {([[true, "Con el audio del video original"], [false, "Sin audio"]] as const).map(([v, l]) => (
+                <button key={l} type="button" role="radio" aria-checked={sound === v} onClick={() => setSound(v)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium ${sound === v ? "border-accent bg-accent/15 text-ink" : "border-line text-muted hover:border-muted hover:text-ink"}`}>{l}</button>
+              ))}
+            </div>
+            {!sound && <span className="text-xs text-muted">El video sale mudo: ideal para ponerle música o una voz después en «Crear anuncio».</span>}
+          </div>
         )}
         {(t.consent || (t.id === "crear-personaje" && images.length > 0)) && (
           <label className="flex items-start gap-2 text-sm">
