@@ -9,6 +9,7 @@ import RecreateDemos, { type RecreateMedia } from "./recreate-demos";
 import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
+import CopyUrl from "./copy-url";
 import { LAUNCH_PCT, PLANS, usd as usdLabel } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
@@ -836,6 +837,40 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* Claude, ChatGPT and the API */}
+        <section id="conectar" aria-labelledby="connect" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-10">
+            <SectionHead id="connect" title={t.connect.title} lead={t.connect.lead} />
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_1fr]">
+              <div className="flex min-w-0 flex-col gap-5 rounded-2xl border border-line bg-surface p-6 sm:p-8">
+                <div className="flex min-w-0 flex-col gap-2">
+                  <span className="text-sm font-semibold text-muted">MCP</span>
+                  <CopyUrl url={t.connect.url} copy={t.connect.copy} copied={t.connect.copied} />
+                </div>
+                <dl className="flex flex-col gap-4">
+                  {t.connect.items.map((x) => (
+                    <div key={x.name} className="flex flex-col gap-1">
+                      <dt className="font-display text-lg font-bold [font-stretch:100%]">{x.name}</dt>
+                      <dd className="text-[15px] leading-relaxed text-muted">{x.how}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <a href="/app/api" className="self-start text-[15px] font-semibold underline decoration-line underline-offset-4 hover:decoration-ink">{t.connect.cta}</a>
+              </div>
+              <div className="flex min-w-0 flex-col justify-end gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]">
+                <div className="flex h-full flex-col justify-end gap-3 rounded-[15px] bg-bg/92 p-6 sm:p-8">
+                  <span className="text-sm text-muted">{t.connect.exampleLabel}</span>
+                  <p className="font-display text-2xl leading-snug font-semibold [font-stretch:100%] sm:text-3xl">{t.connect.example}</p>
+                  <div className="mt-2 flex flex-col gap-2 text-sm text-muted">
+                    <span className="flex items-center gap-2"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />creads_crear_anuncio</span>
+                    <span className="flex items-center gap-2"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />creads_estado_anuncio → video</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>

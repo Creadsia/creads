@@ -16,6 +16,7 @@ export default function ApiPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mcpCopied, setMcpCopied] = useState(false);
   const site = typeof window === "undefined" ? "https://www.creadsia.com" : window.location.origin;
 
   const load = useCallback(() => {
@@ -57,7 +58,21 @@ export default function ApiPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHead title="API para sistemas" lead="Conecta otro sistema a Creads (tu propia herramienta o la de una agencia) para pedir anuncios, imágenes y videos por código. Usa los créditos de esta cuenta y pasa por la misma revisión de calidad que el estudio." />
+      <PageHead title="API y conector" lead="Usa Creads desde Claude o ChatGPT, o conecta otro sistema (tu propia herramienta o la de una agencia) para pedir anuncios, imágenes y videos por código. Usa los créditos de esta cuenta y pasa por la misma revisión de calidad que el estudio." />
+
+      <section className={cardCls} aria-labelledby="h-mcp">
+        <h2 id="h-mcp" className="font-semibold">Conectar Creads a Claude o ChatGPT</h2>
+        <p className="text-sm text-muted">Esta es la dirección del conector (MCP). Al conectarla, la app te manda a Creads para que entres y autorices; no tienes que copiar ninguna clave.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="min-w-0 flex-1 break-all rounded-lg border border-line bg-surface-2 px-3 py-2 font-mono text-sm">{site}/api/mcp</code>
+          <button type="button" onClick={() => navigator.clipboard.writeText(`${site}/api/mcp`).then(() => setMcpCopied(true)).catch(() => {})} className={btnCls}>{mcpCopied ? "Copiada" : "Copiar"}</button>
+        </div>
+        <ul className="flex flex-col gap-2 text-sm text-muted">
+          <li><b className="text-ink">Claude:</b> Configuración → Conectores → Agregar conector personalizado → pega la dirección → Conectar → entra con tu cuenta de Creads y aprieta Autorizar.</li>
+          <li><b className="text-ink">ChatGPT:</b> Configuración → Aplicaciones y conectores → Crear (con el modo desarrollador activo) → pega la dirección → autoriza tu cuenta de Creads.</li>
+          <li>Después pide en el chat: «Hazme un anuncio UGC de 20 segundos para…» o «Crea una imagen 4:5 de…». Cada conexión aparece abajo en «Tus claves» como «Claude (conector)» o «ChatGPT (conector)»; bórrala para desconectarla.</li>
+        </ul>
+      </section>
       {err && <p role="alert" className="text-sm text-bad">{err}</p>}
 
       {fresh && (
