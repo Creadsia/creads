@@ -30,7 +30,7 @@ export default function Terminos() {
       <ul>
         <li>Los precios se muestran en dólares de EE. UU. (US$) e incluyen los impuestos que correspondan. Los pagos se procesan con Mercado Pago, que cobra el equivalente en pesos chilenos al tipo de cambio del día; antes de pagar ves el monto exacto en pesos.</li>
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
-        <li>La oferta de lanzamiento (primer mes del plan Starter mensual a US$59) aplica una vez por cuenta. Desde el segundo mes se cobra el precio normal del plan.</li>
+        <li>La oferta de lanzamiento (primer mes del plan Starter mensual a US$15) aplica una vez por cuenta. Desde el segundo mes se cobra el precio normal del plan.</li>
         <li>Los planes anuales y las recargas se pagan una sola vez.</li>
         <li><b>Derecho a retracto:</b> conforme al artículo 3 bis de la Ley 19.496, te informamos antes de pagar que en la compra de planes y recargas no aplica el derecho a retracto, porque el servicio es digital y se entrega de inmediato: los créditos quedan disponibles apenas se confirma el pago. Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago.</li>
         <li>Si tienes un problema con un cobro, escríbenos a hola@creadsia.com antes de reclamar en Mercado Pago, y lo resolvemos. Si un pago se devuelve o se desconoce, descontamos los créditos que ese pago entregó. Esto no limita los derechos que te da la Ley 19.496 sobre protección de los derechos de los consumidores.</li>

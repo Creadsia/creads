@@ -152,9 +152,9 @@ export const DEFAULT_FINANZAS: Finanzas = {
     ivaPct: 19,
     pctChile: 100,
     planes: [
-      { id: "starter", nombre: "Starter", mensual: 79, anual: 66, creditos: 1000 },
-      { id: "plus", nombre: "Plus", mensual: 219, anual: 182, creditos: 3000 },
-      { id: "studio", nombre: "Studio", mensual: 449, anual: 374, creditos: 8000 },
+      { id: "starter", nombre: "Starter", mensual: 25, anual: 21, creditos: 300 },
+      { id: "plus", nombre: "Plus", mensual: 55, anual: 47, creditos: 1000 },
+      { id: "studio", nombre: "Ultra", mensual: 129, anual: 109, creditos: 3000 },
     ],
     afiliado: { tipo: "recurrente", pct: 30, meses: 12, cpa: 50, vida: 8 },
     proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30, pctPromo: 100 },
@@ -229,7 +229,7 @@ export function proyectar(f: Finanzas) {
 }
 
 /** Plan prices before the October 2026 increase: a saved book that still has them gets today's plans. */
-const OLD_PRICES: Record<string, number> = { starter: 119, plus: 129, studio: 249 };
+const OLD_PRICES: Record<string, number> = { starter: 79, plus: 219, studio: 449 };
 export function withCurrentPlans(f: Finanzas): Finanzas {
   const old = f.config?.planes?.some((p) => OLD_PRICES[p.id] === p.mensual);
   return old ? { ...f, config: { ...f.config, planes: DEFAULT_FINANZAS.config.planes } } : f;

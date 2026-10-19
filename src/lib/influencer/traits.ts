@@ -192,11 +192,11 @@ export function sheetPrompt(t0: Traits): string {
   ].filter(Boolean).join("\n");
 }
 
-/** Saved characters per plan (Starter 1, Plus 3, Studio unlimited; the owner's team has no limit). */
+/** Saved characters per plan (Starter 1, Plus 3, Ultra unlimited; the owner's team has no limit). */
 export function characterLimit(plan: string | null, unlimited = false): number {
   if (unlimited) return Infinity;
   const p = (plan ?? "").toLowerCase(); // stored as the plan's name («Studio», «Plus»…) or its id
-  if (p.includes("studio")) return Infinity;
+  if (p.includes("studio") || p.includes("ultra")) return Infinity;
   if (p.includes("plus")) return 3;
   return 1;
 }

@@ -11,7 +11,7 @@ import PayBadges from "../pay-badges";
 // New accounts always get the launch offer on Starter (first purchase), so the price shown here is the price charged.
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-const ADS = (credits: number) => Math.max(1, Math.floor(credits / 300));
+const ADS = (credits: number) => Math.max(1, Math.round(credits / 144)); // a finished 30 s ad with Veo Lite ≈ 144 credits
 const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
 function Check({ className = "text-good" }: { className?: string }) {

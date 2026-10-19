@@ -4,9 +4,9 @@ import { fullSession } from "@/lib/access";
 import { probe } from "@/lib/montage";
 import { checkTool, startTool, swapStep, toolConfigured, type ToolInput } from "@/lib/providers/tools";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
-import { DUB_LANGS, findTool, type ToolDef } from "@/lib/tools";
+import { DUB_LANGS, GENJUTSU_PLAN_MSG, findTool, genjutsuAllowed, type ToolDef } from "@/lib/tools";
 import { explainFailure, serviceOf } from "@/lib/balances";
-import { chargedSince, refundJob } from "@/lib/credits";
+import { chargedSince, creditStatus, refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
 import { publicError } from "@/lib/public-error";
 import { isOwner } from "@/lib/auth";
@@ -115,6 +115,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   const t = findTool((await ctx.params).tool);
   if (!t) return bad("Herramienta desconocida.", 404);
   if (!toolConfigured(t)) return bad(`${t.name}: falta la clave del proveedor en Vercel.`, 503);
+  if (t.id === "personaje-genjutsu") {
+    const cs = await creditStatus(s.user.workspace).catch(() => null);
+    if (cs && !genjutsuAllowed(cs.plan, cs.unlimited)) return bad(GENJUTSU_PLAN_MSG, 403);
+  }
 
   const b = (await req.json().catch(() => null)) ?? {};
   if (t.consent && b.consent !== true) return bad("Confirma que tienes permiso de la persona que aparece o habla.");

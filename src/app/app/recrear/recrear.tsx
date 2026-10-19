@@ -14,7 +14,7 @@ type Mode = "editar-video" | "copiar-movimiento" | "personaje-en-video" | "perso
 interface Example { id: string; title: string; tag: string; prompt: string; mode: Mode; secs: number; play: string }
 
 const ALL_MODES: { id: Mode; title: string; text: string; model: string; max: number }[] = [
-  { id: "personaje-genjutsu", title: "Mi personaje · Máxima calidad", text: "Tu personaje reemplaza a la persona del video y todo lo demás queda igual: lugar, cámara, otras personas y sonido. Aguanta manos ocupadas y momentos tapados.", model: "Genjutsu", max: 30 },
+  { id: "personaje-genjutsu", title: "Mi personaje · Máxima calidad", text: "Tu personaje reemplaza a la persona del video y todo lo demás queda igual: lugar, cámara, otras personas y sonido. Aguanta manos ocupadas y momentos tapados. Desde el plan Plus.", model: "Genjutsu", max: 30 },
   { id: "personaje-en-video", title: "Mi personaje · Estándar", text: "Tu personaje toma el lugar de la persona principal y repite sus mismos movimientos. Más barato; necesita que se le vea bien de la cintura para arriba.", model: "Nano Banana + Kling 3.0", max: 30 },
   { id: "editar-video", title: "Cambiar personaje u objetos", text: "Mismo video, mismo movimiento y audio: cambia la persona, el producto, la ropa o el lugar con tus fotos.", model: "Kling O1", max: 30 },
   { id: "copiar-movimiento", title: "Copiar movimiento", text: "Tu personaje (una foto) hace exactamente los mismos gestos, poses y movimientos de cámara.", model: "Kling 3.0", max: 30 },

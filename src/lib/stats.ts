@@ -56,7 +56,7 @@ export const previousOf = (r: Range): Range => { const n = daysBetween(r.from, r
 const inR = (d: string | null | undefined, r: Range) => Boolean(d) && d! >= r.from && d! <= r.to;
 const dayOf = (iso: string | null | undefined) => (iso ? dayCL(new Date(iso)) : "");
 const money = (n: unknown) => (Number.isFinite(Number(n)) ? Number(n) : 0);
-const ITEM_NAME: Record<string, string> = { starter: "Plan Starter", plus: "Plan Plus", studio: "Plan Studio", "pack-500": "Recarga 500", "pack-2000": "Recarga 2.000", "pack-5000": "Recarga 5.000" };
+const ITEM_NAME: Record<string, string> = { starter: "Plan Starter", plus: "Plan Plus", studio: "Plan Ultra", "pack-500": "Recarga 500", "pack-1000": "Recarga 1.000", "pack-3000": "Recarga 3.000", "pack-2000": "Recarga 2.000", "pack-5000": "Recarga 5.000" };
 export const itemName = (o: OrderRow) => ITEM_NAME[o.item] ?? o.quote?.label ?? o.item;
 
 export interface Period {

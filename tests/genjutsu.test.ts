@@ -87,15 +87,9 @@ test("Comfy errors come back in plain words", async () => {
 });
 
 import { creditsFor } from "../src/lib/credit-math";
-test("Máxima calidad is priced near cost: the cheapest credit still leaves a small profit", () => {
-  for (const [s, q] of [[5, "720p"], [15, "720p"], [30, "720p"], [15, "480p"]] as const) {
-    const credits = creditsFor(t.bill!(s, q));
-    const paidByCheapest = credits * (209 / 5000);
-    const cost = t.estimate(s, q);
-    assert.ok(paidByCheapest > cost, `${s}s: pays ${paidByCheapest} for cost ${cost}`);
-    assert.ok(paidByCheapest < cost * 1.45, `${s}s: near cost`);
-    assert.ok(paidByCheapest * (1 / 1.19 - 0.04) >= cost * 1.14, `${s}s: about 15% real profit after VAT and the Mercado Pago fee`);
-  }
+test("Máxima calidad is billed like every other model (no special price): credits = cost / US$0.0193", () => {
+  assert.equal(t.bill, undefined);
+  assert.equal(creditsFor(t.estimate(10, "480p")), 236, "10 s at 480p");
 });
 
 import { reviewVideo } from "../src/lib/influencer/swap";

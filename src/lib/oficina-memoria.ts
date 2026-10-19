@@ -25,8 +25,8 @@ LO QUE HACE LA PLATAFORMA HOY
 - Panel interno del dueño: Lanzamiento, Estadísticas (estilo Shopify), Oficina de agentes, errores y alarmas, saldos de proveedores, clientes, planes, finanzas.
 
 PRECIOS (siempre en US$)
-- Planes mensuales: Starter US$79, Plus US$219, Studio US$449. Oferta de lanzamiento (19 oct 2026): solo Starter a US$59 el primer mes (luego US$79); Plus y Studio a precio normal.
-- Anual (por mes): Starter US$99, Plus US$182, Studio US$374.
+- Planes mensuales: Starter US$25, Plus US$55, Ultra US$129. Oferta de lanzamiento (19 oct 2026): solo Starter a US$15 el primer mes (luego US$25); Plus y Studio a precio normal.
+- Anual (por mes): Starter US$21, Plus US$47, Ultra US$109. Recargas: 500 US$29, 1.000 US$55, 3.000 US$139. Genjutsu solo desde Plus, cobrado como cualquier modelo.
 - Recargas de créditos: US$25, US$89 y US$209.
 - Los créditos vencen al terminar el período pagado; las recargas se compran sobre un plan activo y vencen con él.
 

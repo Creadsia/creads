@@ -4,7 +4,7 @@ import { es } from "@/content/es";
 // (to show prices) and the server (to compute the amount of an order), so both always agree.
 
 export type Period = "mensual" | "anual";
-export type ItemId = "starter" | "plus" | "studio" | "pack-500" | "pack-2000" | "pack-5000";
+export type ItemId = "starter" | "plus" | "studio" | "pack-500" | "pack-1000" | "pack-3000";
 
 export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,
@@ -18,15 +18,15 @@ export const PLANS = es.pricing.plans.map((p) => ({
 
 // Same packs and prices as the website (content/*.ts → pricing.topups).
 export const PACKS = [
-  { id: "pack-500" as ItemId, credits: 500, usd: 25, note: "Para terminar el mes" },
-  { id: "pack-2000" as ItemId, credits: 2000, usd: 89, note: "El más pedido" },
-  { id: "pack-5000" as ItemId, credits: 5000, usd: 209, note: "Para agencias" },
+  { id: "pack-500" as ItemId, credits: 500, usd: 29, note: "Para terminar el mes" },
+  { id: "pack-1000" as ItemId, credits: 1000, usd: 55, note: "El más pedido" },
+  { id: "pack-3000" as ItemId, credits: 3000, usd: 139, note: "Para los meses fuertes" },
 ];
 
-/** Launch offer (owner, 19 Oct 2026): the first month of the monthly Starter plan costs US$59 (then US$79). */
-export const LAUNCH_PRICE = 59;
-/** The same offer as a % (for badges): 25%. */
-export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 79) * 100);
+/** Launch offer (owner, 19 Oct 2026): the first month of the monthly Starter plan costs US$15 (then US$25). */
+export const LAUNCH_PRICE = 15;
+/** The same offer as a % (for badges): 40%. */
+export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 25) * 100);
 export const LAUNCH_ITEMS: ItemId[] = ["starter"];
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
@@ -61,7 +61,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   };
 }
 
-/** Prices as shown everywhere: US$ (e.g. US$59, US$29,50). */
+/** Prices as shown everywhere: US$ (e.g. US$15, US$29,50). */
 export const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 /** Price in Chilean pesos (Mercado Pago charges in CLP): rounded to a ...990 price. */

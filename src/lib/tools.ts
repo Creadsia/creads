@@ -1,4 +1,3 @@
-import { DEFAULT_USD_PER_CREDIT } from "./credit-math";
 // The "Crear" tools: one-step jobs on a photo, video or audio (remove a background, upscale, edit,
 // make a photo talk, lip-sync, dub). This file is safe for the browser: names, inputs, limits and
 // price estimates. The calls to fal.ai / ElevenLabs live in src/lib/providers/tools.ts (server only).
@@ -189,7 +188,7 @@ export const TOOLS: ToolDef[] = [
     id: "personaje-genjutsu",
     name: "Mi personaje en un video · Máxima calidad",
     short: "Tu personaje reemplaza a la persona del video, con el mismo fondo, cámara y sonido. Lo mejor que hay.",
-    lead: "Elige tu personaje y sube un video (de 4 a 30 segundos). Tu personaje toma el lugar de la persona principal y todo lo demás queda igual: el lugar, la cámara, el ritmo, las otras personas y el sonido. Funciona aunque la persona aparezca tapada por momentos o tenga cosas en las manos.",
+    lead: "Elige tu personaje y sube un video (de 4 a 30 segundos). Tu personaje toma el lugar de la persona principal y todo lo demás queda igual: el lugar, la cámara, el ritmo, las otras personas y el sonido. Funciona aunque la persona aparezca tapada por momentos o tenga cosas en las manos. Disponible desde el plan Plus.",
     output: "video",
     model: "Genjutsu",
     inputs: {
@@ -202,9 +201,8 @@ export const TOOLS: ToolDef[] = [
     qualities: [{ id: "480p", label: "Normal (480p)", hint: "" }],
     // per second of video (cost from Comfy; 720p can be overridden with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
     estimate: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s))).toFixed(2),
-    // near cost on purpose (owner, 19 Oct): 15% real profit for the customer who pays least per credit
-    bill: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s)) * genjutsuMargin() * DEFAULT_USD_PER_CREDIT / CHEAPEST_USD_PER_CREDIT).toFixed(3),
-    priceNote: "Precio especial, casi a costo",
+    // billed like every other model (owner, 19 Oct): margin on every plan even if all credits go to it
+    priceNote: "480p · según el largo del video",
     consent: true,
   },
   {
@@ -278,6 +276,10 @@ export const DUB_LANGS = [
 
 /** What Genjutsu costs Creads per second of video (US$). Comfy Router price list (19 Oct 2026, US$1 = 211
  *  Comfy credits): 720p 205.478 credits/s ≈ US$0.974, 480p 95.950 credits/s ≈ US$0.455. */
+/** Plans that include «Máxima calidad» (Genjutsu): not Starter (owner, 19 Oct 2026, like Higgsfield). */
+export const genjutsuAllowed = (plan: string | null, unlimited = false) => unlimited || !/starter/i.test(plan ?? "");
+export const GENJUTSU_PLAN_MSG = "«Máxima calidad» está disponible desde el plan Plus. Cambia de plan en «Planes y créditos» o usa «Mi personaje en un video», que sí está en tu plan.";
+
 export function genjutsuRate(q: Quality = "720p") {
   // the same number on the page and the server (inlined at build)
   const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_USD_PER_SEC);
@@ -285,14 +287,3 @@ export function genjutsuRate(q: Quality = "720p") {
   return q === "480p" ? hd * (95.950 / 205.478) : hd;
 }
 
-/** What a credit costs the customer who pays least for it (the 5,000 pack: US$209). */
-const CHEAPEST_USD_PER_CREDIT = 209 / 5000;
-/**
- * Máxima calidad's margin (owner, 19 Oct 2026: 15% real profit). 15% net for the customer who pays least per
- * credit, after Chile's 19% VAT and ~4% Mercado Pago fee (net = price × (1/1.19 − 0.04) ≈ 0.80):
- * 1.15 / 0.80 ≈ 1.44 over cost. Override with NEXT_PUBLIC_GENJUTSU_MARGIN.
- */
-export function genjutsuMargin() {
-  const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_MARGIN);
-  return Number.isFinite(v) && v >= 1 && v < 3 ? v : 1.44;
-}

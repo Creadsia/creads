@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Starter US$79/mes (1.000 créditos), Plus US$219/mes (3.000 créditos) y Studio US$449/mes (8.000 créditos). Oferta de lanzamiento: Starter a US$59 el primer mes (luego US$79/mes). Pagando anual tienes 2 meses gratis: US$99, US$182 y US$374 al mes.",
+    a: "Starter US$25/mes (300 créditos), Plus US$55/mes (1.000 créditos) y Ultra US$129/mes (3.000 créditos). «Máxima calidad» (Genjutsu) está desde Plus. Oferta de lanzamiento: Starter a US$15 el primer mes (luego US$25/mes). Pagando anual tienes 2 meses gratis: US$99, US$182 y US$374 al mes.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },
@@ -242,7 +242,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "equipo", cat: "cuenta",
     q: "¿Puede trabajar más gente en mi cuenta?",
-    a: "Sí: el plan Studio incluye 3 usuarios trabajando en la misma cuenta, con los mismos avatares, voces y créditos. Para sumar a alguien, escríbenos a hola@creadsia.com con su correo y lo agregamos.",
+    a: "Sí: el plan Ultra incluye 3 usuarios trabajando en la misma cuenta, con los mismos avatares, voces y créditos. Para sumar a alguien, escríbenos a hola@creadsia.com con su correo y lo agregamos.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "equipo usuarios agencia compartir cuenta",
   },
