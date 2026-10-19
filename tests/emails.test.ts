@@ -43,7 +43,7 @@ test("activation tips carry an opt-out and adapt to the customer", async () => {
   assert.ok(unsubOk("ana@x.cl", t) && !unsubOk("otra@x.cl", t));
   const none = activationEmail("a@x.cl", "Ana", { step: 3, hasPlan: false, ads: 0, unsub: link });
   assert.match(none.subject, /Te ayudo/);
-  assert.ok(none.html.includes("No quiero recibir más consejos") && none.html.includes("US$49 el primer mes"));
+  assert.ok(none.html.includes("No quiero recibir más consejos") && none.html.includes("US$59 el primer mes"));
   assert.match(activationEmail("a@x.cl", null, { step: 3, hasPlan: true, ads: 2, unsub: link }).subject, /3 formas/);
-  assert.ok(!activationEmail("a@x.cl", null, { step: 1, hasPlan: true, ads: 0, unsub: link }).html.includes("US$49"));
+  assert.ok(!activationEmail("a@x.cl", null, { step: 1, hasPlan: true, ads: 0, unsub: link }).html.includes("US$59"));
 });

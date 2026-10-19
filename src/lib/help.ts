@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Starter US$119/mes (1.000 créditos), Plus US$219/mes (3.000 créditos) y Studio US$449/mes (8.000 créditos). Oferta de lanzamiento: Starter a US$49 el primer mes (luego US$119/mes). Pagando anual tienes 2 meses gratis: US$99, US$182 y US$374 al mes.",
+    a: "Starter US$79/mes (1.000 créditos), Plus US$219/mes (3.000 créditos) y Studio US$449/mes (8.000 créditos). Oferta de lanzamiento: Starter a US$59 el primer mes (luego US$79/mes). Pagando anual tienes 2 meses gratis: US$99, US$182 y US$374 al mes.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },

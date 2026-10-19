@@ -77,7 +77,7 @@ export async function needsCredits(user: User): Promise<string | null> {
   } catch {
     return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas un plan activo. Elige uno en «Planes y créditos» (Starter a US$49 el primer mes).";
+  return "Para usar esto necesitas un plan activo. Elige uno en «Planes y créditos» (Starter a US$59 el primer mes).";
 }
 
 /**
@@ -103,7 +103,7 @@ export async function chargeJob(user: User, usd: number, note: string, ref: stri
     });
     const r = rows[0];
     if (!r?.ok) {
-      throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes y créditos» (Starter a US$49 el primer mes)." : "Suma créditos en «Planes y créditos»."}`);
+      throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes y créditos» (Starter a US$59 el primer mes)." : "Suma créditos en «Planes y créditos»."}`);
     }
     return { credits, ref, free: false };
   } catch (err) {
