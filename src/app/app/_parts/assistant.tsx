@@ -88,6 +88,19 @@ export default function Assistant() {
   }
   sendRef.current = send;
 
+  async function persona() {
+    if (busyRef.current) return;
+    busyRef.current = true; setBusy(true);
+    const mine = convo.current;
+    try {
+      const res = await fetch("/api/asistente/persona", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ page: path, messages: msgs.filter((m) => !m.error).map(({ role, content }) => ({ role, content })) }) });
+      const d = await res.json().catch(() => ({}));
+      if (mine === convo.current) setMsgs((m) => [...m, { role: "assistant", content: d.mensaje || d.error || "Listo, te vamos a escribir por correo.", error: !res.ok && res.status !== 429 }]);
+    } catch {
+      if (mine === convo.current) setMsgs((m) => [...m, { role: "assistant", content: "No pude enviarlo. Escríbenos a hola@creadsia.com y te respondemos.", error: true }]);
+    } finally { busyRef.current = false; setBusy(false); }
+  }
+
   return (
     <>
       {!open && (
@@ -149,7 +162,7 @@ export default function Assistant() {
             <button type="submit" disabled={busy || !text.trim()} aria-label="Enviar" className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl bg-accent text-accent-ink disabled:opacity-40"><Icon d={SEND} className="h-[18px] w-[18px]" /></button>
           </form>
           <p className="px-4 pb-3 text-center text-[11px] text-muted">
-            Respuestas con IA; revisa lo importante. <Link href="/app/ayuda" className="underline" onClick={() => { if (window.innerWidth < 640) setOpen(false); }}>Centro de ayuda</Link>
+            <button type="button" onClick={persona} disabled={busy} className="font-semibold text-ink underline disabled:opacity-50">Hablar con una persona</button> · Respuestas con IA; revisa lo importante. <Link href="/app/ayuda" className="underline" onClick={() => { if (window.innerWidth < 640) setOpen(false); }}>Centro de ayuda</Link>
           </p>
         </section>
       )}

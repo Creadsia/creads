@@ -86,3 +86,11 @@ ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUDE_FAST_MODEL, CLAUDE_OFFICE_MODEL, CLAUDE_
 - OAuth 2.1 (`src/lib/oauth.ts`): discovery at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server` (+ openid-configuration), dynamic registration `/api/oauth/register` (stateless signed client ids, https or localhost redirects), consent `/app/conectar` → `/api/oauth/authorize` (browser session only; JSON redirect because CSP form-action is 'self'), `/api/oauth/token` (PKCE S256, one-time codes in private storage). The access token is an API key named "<App> (conector)" (max 3 per app), visible and revocable in «API y conector». Optional env OAUTH_SECRET (else derived from the service key).
 - Home page section «Creads dentro de Claude, ChatGPT y tus sistemas» (#conectar), API page renamed «API y conector» with the connector guide, privacy policy paragraph on connected apps.
 - Pending: test with real Claude and ChatGPT on staging; then directory submissions (Claude: claude.ai/directory/manage; ChatGPT: verified developer, no selling credits inside ChatGPT, present Creads as its own product).
+
+## Customer care and retention, 19 Oct 2026 (owner: "quality + LatAm + care; win by volume and retention")
+- Strategy in `CONTEXTO` (agents read it) and project doc `claude/competencia-y-estrategia.md` (Higgsfield/Arcads research: what customers complain about and what we do the other way).
+- `lib/cuidado.ts` `careSweep` (on the Guardián ping, every ~5 min): failed + refunded jobs of customer accounts (not main) → one grouped `careEmail` per account at most every 6 h (human tone, retry link, WhatsApp if NEXT_PUBLIC_WHATSAPP) and a case in private storage `cuidado/casos.json`.
+- Panel → Clientes → «Clientes a contactar» (`admin/contactar.tsx`, `/api/admin/contactar`): failures and «hablar con una persona» requests, with email button and mark-as-contacted.
+- Help chat: «Hablar con una persona» (`/api/asistente/persona`, rate `human` 5/day): case + Telegram + owner email; assistant prompt tells upset users to use it.
+- Daily reminders cron: `winbackEmail` 3 and 14 days after the plan ended (respects opt-out).
+- Home: section «Hecho en Latinoamérica para que te quedes…» (`care` in content, after the Difference section). No refund promises in marketing copy (owner rule).

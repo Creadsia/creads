@@ -260,6 +260,18 @@ export const en = {
       ["Learns from your corrections", "No", "Every fix becomes a rule"],
     ],
   },
+  care: {
+    title: "Made in Latin America to keep you, not to sell you credits",
+    lead: "Creads was born in Chile. We'd rather every video work for you than have you spend more: that's why we check everything before delivering it and stay on it when something doesn't come out right.",
+    items: [
+      ["We write first", "If something fails, you don't have to complain: we tell you right away and someone from the team helps you get it right."],
+      ["Real Spanish (and English)", "Scripts, voices and captions in Latin American Spanish, with a true Chilean mode, and in English when you need it."],
+      ["People, not just a bot", "A help chat around the clock and, when you ask, someone from the team answers by email."],
+      ["Clear prices", "In US dollars, with the credit cost shown before you generate. No fine print, cancel anytime."],
+      ["Your files are yours", "Private and kept apart per account, with optional two-step verification to sign in."],
+      ["Gets better with you", "Every mistake we find becomes a rule so it doesn't happen again, for you and for everyone."],
+    ],
+  },
   models: {
     title: "Every top AI model, in one place",
     lead: "Video, images, voice and the brain that directs them. Creads chooses the right one for each scene, and you can switch whenever you want.",

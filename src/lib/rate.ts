@@ -24,6 +24,7 @@ const BUCKETS = {
   clientErr: [10 * 60, 20], // browser error reports per connection in 10 min
   visit: [10 * 60, 30], // anonymous visit counts per connection in 10 min
   apiKeys: [60 * 60, 20], // API keys made per person per hour
+  human: [24 * 60 * 60, 5], // «hablar con una persona» requests per person per day
   oauth: [60 * 60, 60], // connector sign-ups and token exchanges per connection per hour
   spy: [10 * 60, 30], // ad-library searches and transcripts per person in 10 min (each is a paid call)
   spyDay: [24 * 60 * 60, 200], // ... and per day
@@ -62,6 +63,7 @@ export function clientIp(req: Request) {
 
 const MSG: Record<Bucket, string> = {
   apiKeys: "Hiciste muchas claves en poco rato. Intenta en una hora.",
+  human: "Ya nos llegó tu mensaje: te respondemos por correo lo antes posible.",
   oauth: "Demasiados intentos de conexión. Intenta en una hora.",
   loginEmail: "Demasiados intentos. Espera 15 minutos y vuelve a probar.",
   loginAccount: "Demasiados intentos para esta cuenta. Espera 15 minutos y vuelve a probar.",

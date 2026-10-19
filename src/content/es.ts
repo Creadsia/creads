@@ -261,6 +261,18 @@ export const es: Content = {
       ["Aprende de tus correcciones", "No", "Cada corrección se vuelve una regla"],
     ],
   },
+  care: {
+    title: "Hecho en Latinoamérica para que te quedes, no para venderte créditos",
+    lead: "Creads nació en Chile. Preferimos que cada video te sirva a que gastes más: por eso revisamos todo antes de entregarlo y estamos encima cuando algo no sale.",
+    items: [
+      ["Te escribimos primero", "Si algo falla, no tienes que reclamar: te avisamos al tiro y una persona del equipo te ayuda a que salga bien."],
+      ["Español de verdad", "Guiones, voces y subtítulos en español latino, con modo chileno de verdad, y en inglés cuando lo necesites."],
+      ["Personas, no solo un bot", "Chat de ayuda a toda hora y, cuando lo pides, alguien del equipo te responde por correo."],
+      ["Precios claros", "En dólares y con el costo en créditos antes de generar. Sin letra chica y cancelas cuando quieras."],
+      ["Tus archivos son tuyos", "Privados y separados por cuenta, con la opción de verificación en dos pasos para entrar."],
+      ["Mejora contigo", "Cada error que encontramos se vuelve una regla para que no se repita, para ti y para todos."],
+    ],
+  },
   models: {
     title: "Todos los mejores modelos de IA, en un solo lugar",
     lead: "Video, imagen, voz y el cerebro que los dirige. Creads elige el indicado para cada escena, y tú puedes cambiarlo cuando quieras.",

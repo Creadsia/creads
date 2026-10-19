@@ -923,6 +923,21 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
+        {/* Why Creads: care, Latin America, people */}
+        <section aria-labelledby="care" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-10">
+            <SectionHead id="care" title={t.care.title} lead={t.care.lead} />
+            <ul className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+              {t.care.items.map(([name, does]) => (
+                <li key={name} className="flex min-w-0 flex-col gap-2 bg-surface p-6">
+                  <b className="font-display text-xl font-bold [font-stretch:100%]">{name}</b>
+                  <p className="text-[15px] leading-relaxed text-muted">{does}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* Credits */}
         <section aria-labelledby="credits" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2">

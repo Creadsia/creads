@@ -123,6 +123,33 @@ export function planEndingEmail(to: string, name: string | null, o: { plan: stri
   };
 }
 
+/**
+ * After the plan ended (3 and 14 days later): what they made is still there, and an honest question about
+ * what was missing (their answer comes straight to the owner). Marketing-ish, so it respects opt-outs.
+ */
+export function winbackEmail(to: string, name: string | null, o: { daysAgo: 3 | 14; plan: string | null; ads: number; unsub: string }): Email {
+  const plan = o.plan ? `tu plan ${o.plan}` : "tu plan";
+  const made = o.ads > 0 ? `Tus ${o.ads.toLocaleString("es-CL")} anuncio${o.ads === 1 ? "" : "s"}, avatares y voces siguen guardados en tu cuenta.` : "Tus avatares, voces y guiones siguen guardados en tu cuenta.";
+  const v = o.daysAgo === 3
+    ? {
+        subject: "Tu estudio sigue aquí",
+        title: "Tu estudio sigue aquí",
+        paragraphs: [esc(hello(name)), `Hace unos días venció ${esc(plan)}. ${esc(made)}`, "Cuando quieras volver a crear, renuevas y sigues justo donde quedaste. Si algo no te funcionó como esperabas, <b>respóndenos este correo</b>: lo leemos nosotros, no un robot."],
+        cta: { label: "Volver a crear", href: `${SITE}/app/planes` },
+      }
+    : {
+        subject: "¿Qué te faltó en Creads?",
+        title: "¿Qué te faltó?",
+        paragraphs: [esc(hello(name)), "Queremos que Creads sea la herramienta que no dejas nunca, y para eso necesitamos saber qué no funcionó contigo.", "<b>Respóndenos con una línea</b>: ¿fue el precio, la calidad de algún video, que faltaba algo, o simplemente no lo necesitaste este mes? Lo leemos todo y mejoramos con eso.", esc(made)],
+        cta: { label: "Ver los planes", href: `${SITE}/app/planes` },
+      };
+  return {
+    to, tag: `volver-${o.daysAgo}`, subject: v.subject, unsub: o.unsub,
+    html: layout({ preview: v.title, title: v.title, paragraphs: v.paragraphs, cta: v.cta, unsub: o.unsub }),
+    text: plain([...v.paragraphs.map(unhtml), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
+  };
+}
+
 export interface DailyReport {
   day: string; // YYYY-MM-DD (yesterday)
   salesCount: number;
@@ -231,6 +258,29 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
     to, tag: `activacion-${o.step}`, subject: v.subject, unsub: o.unsub,
     html: layout({ preview: v.title, title: v.title, paragraphs: v.paragraphs, cta: v.cta, unsub: o.unsub }),
     text: plain([...v.paragraphs.map(unhtml), "", `${v.cta.label}: ${v.cta.href}`, "", `No quiero recibir más consejos: ${o.unsub}`]),
+  };
+}
+
+/**
+ * «Algo no salió bien»: a customer's generation failed (its credits are already back). Sent once, grouped,
+ * with a human tone and a real way to talk to someone. Service email: it goes even to people who opted out
+ * of tips, because it's about something they paid for.
+ */
+export function careEmail(to: string, name: string | null, o: { items: { what: string; href: string }[]; whatsapp?: string }): Email {
+  const n = o.items.length;
+  const list = o.items.slice(0, 5).map((x) => `• ${esc(x.what)}`).join("<br>");
+  const main = o.items[0];
+  const wa = o.whatsapp ? `https://wa.me/${o.whatsapp}?text=${encodeURIComponent("Hola, tuve un problema con una generación en Creads")}` : "";
+  const title = n === 1 ? "Algo no salió como esperábamos" : `${n} generaciones no salieron como esperábamos`;
+  const paragraphs = [
+    esc(hello(name)),
+    n === 1 ? `Tu ${esc(main.what)} no se pudo terminar. Los créditos ya volvieron a tu cuenta.` : `Estas generaciones no se pudieron terminar y sus créditos ya volvieron a tu cuenta:<br>${list}`,
+    "Ya lo estamos revisando para que no se repita. Si quieres, lo vemos contigo: <b>responde este correo</b>" + (wa ? " o escríbenos por WhatsApp" : "") + " y te ayudamos a que salga bien.",
+  ];
+  return {
+    to, tag: "cuidado-falla", subject: title,
+    html: layout({ preview: n === 1 ? `Tu ${main.what} no se pudo terminar. Los créditos ya volvieron.` : "Los créditos ya volvieron a tu cuenta.", title, paragraphs, cta: { label: "Volver a intentarlo", href: `${SITE}${main.href}` }, after: wa ? [`<a href="${esc(wa)}" style="color:#7c3aed;font-weight:700">Escribirnos por WhatsApp</a>`] : [] }),
+    text: plain([...paragraphs.map(unhtml), "", `Volver a intentarlo: ${SITE}${main.href}`, wa && `WhatsApp: ${wa}`]),
   };
 }
 
