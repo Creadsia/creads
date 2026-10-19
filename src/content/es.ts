@@ -41,6 +41,8 @@ export const es: Content = {
     { label: "Historias IA", href: "#tools", badge: "NUEVO" },
     { label: "Influencer IA", href: "#tools", badge: "" },
     { label: "Afiliados", href: "#afiliados", badge: "" },
+    { label: "API", href: "#conectar", badge: "NUEVO" },
+    { label: "MCP", href: "#conectar", badge: "NUEVO" },
     { label: "Precios", href: "#pricing", badge: "-50%" },
   ],
   featured: {

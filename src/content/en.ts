@@ -40,6 +40,8 @@ export const en = {
     { label: "AI Stories", href: "#tools", badge: "NEW" },
     { label: "AI Influencer", href: "#tools", badge: "" },
     { label: "Affiliates", href: "#afiliados", badge: "" },
+    { label: "API", href: "#conectar", badge: "NEW" },
+    { label: "MCP", href: "#conectar", badge: "NEW" },
     { label: "Pricing", href: "#pricing", badge: "-50%" },
   ],
   featured: {
