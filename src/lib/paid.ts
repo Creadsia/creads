@@ -7,14 +7,16 @@ import { DEFAULT_FINANZAS, type Finanzas } from "./finance";
 // One door for every paid job: charge the customer's credits, then make sure Creads can pay the
 // provider today (daily limit, provider balance). If anything says no, the credits go back.
 
-export async function payFor(user: User, usd: number, note: string, svc: Service, opts: { ref?: string; freeRedoOf?: string; chars?: number } = {}) {
+/** `usd` sets the credits charged; `opts.cost` is what the provider really costs (limits and balances), when different. */
+export async function payFor(user: User, usd: number, note: string, svc: Service, opts: { ref?: string; freeRedoOf?: string; chars?: number; cost?: number } = {}) {
   // a job with no real price (NaN, 0, negative) is never started: it would run for free
   if (!Number.isFinite(usd) || usd <= 0) throw new CreditError("No pudimos calcular el precio de este trabajo. Revisa los datos e intenta de nuevo.", 400);
-  if (user.workspace !== "main" && !opts.freeRedoOf) await ensureNewAccountLimit(user.workspace, usd);
+  const cost = opts.cost && opts.cost > 0 ? opts.cost : usd;
+  if (user.workspace !== "main" && !opts.freeRedoOf) await ensureNewAccountLimit(user.workspace, cost);
   const charge = await chargeJob(user, usd, note, opts.ref, { freeRedoOf: opts.freeRedoOf });
   try {
-    if (user.workspace !== "main") await ensureDailyCap(usd); // the owner sees the alert but is never blocked
-    await ensureFunds(svc, usd, opts.chars ?? 0);
+    if (user.workspace !== "main") await ensureDailyCap(cost); // the owner sees the alert but is never blocked
+    await ensureFunds(svc, cost, opts.chars ?? 0);
   } catch (err) {
     await refundJob(user.workspace, charge.ref, "Devuelto: el servicio no estaba disponible");
     throw err;

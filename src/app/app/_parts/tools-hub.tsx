@@ -45,7 +45,7 @@ export default function ToolsHub() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [missing, setMissing] = useState(false);
   const { info, price } = useCredits();
-  const priceOf = (t: (typeof TOOLS)[number]) => (info?.unlimited ? t.priceNote : `desde ${price(t.estimate(0))}`);
+  const priceOf = (t: (typeof TOOLS)[number]) => (info?.unlimited ? t.priceNote : `desde ${price((t.bill ?? t.estimate)(0))}`);
   useEffect(() => {
     let alive = true;
     fetch("/api/tools").then((r) => r.json()).then((d) => {

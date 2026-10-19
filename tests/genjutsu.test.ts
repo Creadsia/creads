@@ -88,3 +88,14 @@ test("Comfy errors come back in plain words", async () => {
     : new Response(JSON.stringify({ signedURL: "/object/sign/x?token=t" }), { status: 200 }))) as typeof fetch;
   await assert.rejects(() => startTool(t, { video: "https://v.test/v.mp4", videoRef: "/api/media/ws/w01/up/v.mp4", image: "https://s.test/s.png", imageRef: "/api/media/ws/w01/x/s.png" }, "w01"), /saldo en Comfy/);
 });
+
+import { creditsFor } from "../src/lib/credit-math";
+test("Máxima calidad is priced near cost: the cheapest credit still leaves a small profit", () => {
+  for (const s of [5, 15, 30]) {
+    const credits = creditsFor(t.bill!(s));
+    const paidByCheapest = credits * (209 / 5000);
+    const cost = t.estimate(s);
+    assert.ok(paidByCheapest > cost, `${s}s: pays ${paidByCheapest} for cost ${cost}`);
+    assert.ok(paidByCheapest < cost * 1.45, `${s}s: near cost`);
+  }
+});

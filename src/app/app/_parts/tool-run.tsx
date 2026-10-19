@@ -359,7 +359,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
 
   const n = t.inputs;
   const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : checks && typeof check === "object" && check?.usable ? Math.min(check.usable, video?.secs ?? check.usable) : video?.secs ?? 0;
-  const usd = t.estimate(seconds);
+  const usd = (t.bill ?? t.estimate)(seconds);
   const { price: money, covers, info } = useCredits();
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :

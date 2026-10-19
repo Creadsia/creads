@@ -139,7 +139,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   }
   const id = String(row.id);
   try {
-    await payFor(s.user, usd, t.name, svc, { ref: id });
+    await payFor(s.user, t.bill ? t.bill(read.seconds) : usd, t.name, svc, { ref: id, cost: usd });
   } catch (err) {
     await db.remove("clips", id).catch(() => null);
     return bad(await failMessage(err, s.user, svc), failStatus(err));

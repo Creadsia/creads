@@ -1,3 +1,4 @@
+import { DEFAULT_USD_PER_CREDIT } from "./credit-math";
 // The "Crear" tools: one-step jobs on a photo, video or audio (remove a background, upscale, edit,
 // make a photo talk, lip-sync, dub). This file is safe for the browser: names, inputs, limits and
 // price estimates. The calls to fal.ai / ElevenLabs live in src/lib/providers/tools.ts (server only).
@@ -42,6 +43,8 @@ export interface ToolDef {
   };
   /** US$ estimate. `seconds` is the length of the video or audio the customer gave. */
   estimate: (seconds: number) => number;
+  /** When the price isn't the usual margin over the cost: the US$ the credits are counted from. */
+  bill?: (seconds: number) => number;
   priceNote: string;
   /** True when the provider doesn't publish an exact price (we show "aprox."). */
   approx?: boolean;
@@ -193,7 +196,9 @@ export const TOOLS: ToolDef[] = [
     },
     // per second of video at 720p (cost from Comfy; override with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
     estimate: (s) => +(genjutsuRate() * Math.max(4, Math.ceil(s))).toFixed(2),
-    priceNote: "≈ US$0,35 por segundo de video",
+    // near cost on purpose (owner, 18 Oct): the customer who pays least per credit pays cost + 35%
+    bill: (s) => +(genjutsuRate() * Math.max(4, Math.ceil(s)) * genjutsuMargin() * DEFAULT_USD_PER_CREDIT / CHEAPEST_USD_PER_CREDIT).toFixed(3),
+    priceNote: "Precio especial, casi a costo",
     consent: true,
   },
   {
@@ -270,4 +275,12 @@ export function genjutsuRate() {
   // the same number on the page and the server (inlined at build)
   const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_USD_PER_SEC);
   return Number.isFinite(v) && v > 0.05 && v < 3 ? v : 0.35;
+}
+
+/** What a credit costs the customer who pays least for it (the 5,000 pack: US$209). */
+const CHEAPEST_USD_PER_CREDIT = 209 / 5000;
+/** Máxima calidad's margin over cost for that customer (1.35 = cost + 35%). */
+export function genjutsuMargin() {
+  const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_MARGIN);
+  return Number.isFinite(v) && v >= 1 && v < 3 ? v : 1.35;
 }
