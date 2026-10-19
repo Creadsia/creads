@@ -52,10 +52,11 @@ export const TOOLS: Tool[] = [
       formato: { type: "string", enum: API_FORMATS, default: "ugc" },
       idioma: { type: "string", enum: ["es-CL", "en"], default: "es-CL", description: "Spoken language: Chilean Spanish or English." },
       titulo: { type: "string", maxLength: 80, description: "Short name to find it later." },
+      avatar: { type: "string", description: "Optional: id of one of the account's avatars (from creads_avatares), so the same person appears in every cut." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
-      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}) });
+      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}) });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
   },
@@ -71,6 +72,17 @@ export const TOOLS: Tool[] = [
       const x = d.anuncio;
       const text = x.estado === "listo" ? `Listo: ${x.video_url}` : x.estado === "error" ? `No se pudo terminar: ${x.error ?? "error"}` : `En proceso: ${x.paso ?? x.estado}. Vuelve a consultar en 30 a 60 segundos.`;
       return { text, data: x };
+    },
+  },
+  {
+    name: "creads_avatares", title: "Ver mis avatares",
+    description: "Lists the account's avatars (saved presenters: name, look, language). Use an id as «avatar» in creads_crear_anuncio so the same person appears in the whole ad.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { title: "Ver mis avatares", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (_a, call) => {
+      const d = await call<{ avatares: { id: string; nombre: string; descripcion: string | null }[] }>("/api/v1/avatares");
+      if (!d.avatares.length) return { text: "La cuenta todavía no tiene avatares. Se crean en Creads → Avatares (o se elige uno de los Avatares de Creads).", data: { avatares: [] } };
+      return { text: d.avatares.slice(0, 30).map((x) => `• ${x.nombre} (${x.id})${x.descripcion ? `: ${x.descripcion.slice(0, 80)}` : ""}`).join("\n"), data: { avatares: d.avatares } };
     },
   },
   {

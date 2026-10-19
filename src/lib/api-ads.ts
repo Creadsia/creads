@@ -20,7 +20,7 @@ const DONE = new Set(["listo", "error"]);
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr).map((f) => f.id);
 
-export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean } | string {
+export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string } | string {
   const guion = typeof b.guion === "string" ? b.guion.trim() : "";
   if (guion.length < 20) return "Manda el guion en «guion» (al menos 20 caracteres).";
   if (guion.length > 4000) return "El guion es muy largo (máximo 4.000 caracteres).";
@@ -34,7 +34,12 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
     modelo = p.id;
   }
   const titulo = (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);
-  return { guion, formato, idioma, modelo, titulo, sello: b.sello === true };
+  let avatarId: string | undefined;
+  if (b.avatar !== undefined && b.avatar !== null && b.avatar !== "") {
+    if (typeof b.avatar !== "string" || !/^[0-9a-f-]{36}$/i.test(b.avatar)) return "El avatar no es válido: usa el id de uno de tus avatares (GET /api/v1/avatares).";
+    avatarId = b.avatar;
+  }
+  return { guion, formato, idioma, modelo, titulo, sello: b.sello === true, ...(avatarId ? { avatarId } : {}) };
 }
 
 export async function createAd(ws: string, userId: string, o: Exclude<ReturnType<typeof readOrder>, string>): Promise<ApiAd> {
@@ -82,7 +87,7 @@ export async function advanceAd(job: ApiAd, studio: Studio): Promise<ApiAd> {
 
 /** What the caller sees (absolute link to the video; it opens with the same API key). */
 export const publicAd = (j: ApiAd) => ({
-  id: j.id, estado: j.estado, paso: j.paso ?? null, titulo: j.titulo, formato: j.formato, idioma: j.idioma, modelo: j.modelo ?? null,
+  id: j.id, estado: j.estado, paso: j.paso ?? null, titulo: j.titulo, formato: j.formato, idioma: j.idioma, modelo: j.modelo ?? null, avatar: j.avatarId ?? null,
   video_url: j.videoUrl ? (j.videoUrl.startsWith("http") ? j.videoUrl : `${SITE}${j.videoUrl}`) : null,
   error: j.error ?? null, creado: j.createdAt, actualizado: j.updatedAt,
 });

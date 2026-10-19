@@ -10,13 +10,15 @@ export type AdEstado = "cola" | "escenas" | "generando" | "revisando" | "armando
 export interface AdJob {
   estado: AdEstado; paso?: string; updatedAt: string;
   titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; modelo?: string;
+  /** An avatar of the account: the same person (face) in every cut. */
+  avatarId?: string;
   cortes?: { tipo: string; texto: string }[]; adId?: string; clipIds?: string[]; reintentos?: Record<string, number>; revisado?: boolean;
   videoUrl?: string; error?: string;
 }
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
-const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string) =>
-  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo). Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
+const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string, avatar = false) =>
+  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${avatar ? " The person from the first reference image (same face, hair and look)." : ""} Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
 
 /** Runs one step and returns what changed (never throws: an error stops the job with a plain message). */
 export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise<string>, sello: boolean): Promise<Partial<AdJob>> {
@@ -28,12 +30,12 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
     }
     if (j.estado === "escenas") {
       const cortes = j.cortes ?? [];
-      const sc = await studio<{ scenes: { prompt: string; dir?: { setting?: string; framing?: string } }[] }>("/api/scenes", { format: j.formato, lang: j.idioma, aspect: "9:16", cuts: cortes, script: cortes.map((c) => c.texto).join(" ") });
+      const sc = await studio<{ scenes: { prompt: string; dir?: { setting?: string; framing?: string } }[] }>("/api/scenes", { format: j.formato, lang: j.idioma, aspect: "9:16", cuts: cortes, script: cortes.map((c) => c.texto).join(" "), ...(j.avatarId ? { avatarId: j.avatarId } : {}) });
       if (sc.scenes?.length !== cortes.length) throw new Error("No se pudieron dirigir las escenas.");
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
-        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo,
-        clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma) })),
+        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}),
+        clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });
       const ids = ad.clips.map((c) => c.id);
       for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map((id) => studio("/api/clips/run", { id }).catch(() => null)));

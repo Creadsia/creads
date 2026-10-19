@@ -57,3 +57,9 @@ test("each poll moves the ad one step, and two polls at once can't both run a st
   const v = publicAd({ ...moved, estado: "listo", videoUrl: "/api/media/ws/w01/x.mp4" });
   assert.match(String(v.video_url), /^https?:\/\/.+\/api\/media\/ws\/w01\/x\.mp4$/);
 });
+
+test("an order can name an avatar of the account (same face in every cut)", () => {
+  const ok = readOrder({ guion: "Mi perro tiene nueve años y la urgencia me costó caro.", avatar: "11111111-1111-1111-1111-111111111111" });
+  assert.equal((ok as { avatarId: string }).avatarId, "11111111-1111-1111-1111-111111111111");
+  assert.match(String(readOrder({ guion: "Mi perro tiene nueve años y la urgencia me costó caro.", avatar: "../otro" })), /avatar no es válido/);
+});
