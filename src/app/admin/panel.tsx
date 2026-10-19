@@ -998,7 +998,7 @@ function Facturacion({ c, planes, reload }: { c: Cliente; planes: Plan[]; reload
   );
 }
 
-interface Pedido { id: string; ws: string; wsName: string; email: string; method: string; status: string; created: string; quote: { label: string; total: number; credits: number } }
+interface Pedido { id: string; ws: string; wsName: string; email: string; method: string; status: string; created: string; quote: { label: string; total: number; credits: number }; payments?: string[]; mp?: { kind: string; clp: number; cancelled?: boolean } | null }
 const METHOD_LABEL: Record<string, string> = { tarjeta: "Tarjeta", mercadopago: "Mercado Pago", transferencia: "Transferencia" };
 
 /** Orders customers placed from "Planes y créditos" (paid by hand until online payment is connected). */
@@ -1016,6 +1016,18 @@ function Pedidos({ reload }: { reload: () => void }) {
     if (!r.ok) return setErr(d.error || "No se pudo.");
     load(); reload();
   }
+  const [refunding, setRefunding] = useState("");
+  async function refund(o: Pedido) {
+    const clp = o.mp?.clp ? ` (≈ $${o.mp.clp.toLocaleString("es-CL")} CLP)` : "";
+    if (!window.confirm(`¿Devolver el último pago de ${o.wsName} por ${o.quote.label}${clp}?\n\nMercado Pago le devuelve el dinero a su tarjeta, se le quitan ${o.quote.credits.toLocaleString("es-CL")} créditos${o.mp?.kind === "subscription" ? " y se cancela la renovación automática" : ""}. No se puede deshacer.`)) return;
+    setErr(""); setRefunding(o.id);
+    const r = await fetch("/api/admin/pedidos/reembolso", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: o.id }) });
+    const d = await r.json().catch(() => ({}));
+    setRefunding("");
+    if (!r.ok) return setErr(d.error || "No se pudo devolver.");
+    window.alert(`Listo: se devolvieron ${d.currency === "CLP" ? `$${Number(d.amount).toLocaleString("es-CL")} CLP` : `US$${d.amount}`} a ${o.wsName} y se le quitaron ${Number(d.credits).toLocaleString("es-CL")} créditos.`);
+    load(); reload();
+  }
   const open = (list ?? []).filter((o) => o.status === "pendiente");
   const shown = all ? list ?? [] : open;
   if (list && list.length === 0) return null;
@@ -1025,7 +1037,7 @@ function Pedidos({ reload }: { reload: () => void }) {
         <h3 className="font-display text-lg font-bold">Pedidos de pago {open.length > 0 && <Pill t="warn">{open.length} por cobrar</Pill>}</h3>
         <button type="button" onClick={() => setAll(!all)} className="text-sm text-muted hover:text-ink">{all ? "Ver solo pendientes" : "Ver todos"}</button>
       </div>
-      <p className="text-sm text-muted">Lo que tus clientes pidieron en «Planes y créditos». Con Mercado Pago conectado se pagan y activan solos; si alguno queda pendiente, puedes marcarlo como pagado a mano: los créditos y el ingreso se anotan solos.</p>
+      <p className="text-sm text-muted">Lo que tus clientes pidieron en «Planes y créditos». Con Mercado Pago conectado se pagan y activan solos; si alguno queda pendiente, puedes marcarlo como pagado a mano: los créditos y el ingreso se anotan solos. En «Ver todos», los pagados con Mercado Pago tienen el botón «Reembolsar» (solo tú).</p>
       {!list ? <p className="text-muted">Cargando…</p> : shown.length === 0 ? <p className="text-sm text-muted">No hay pedidos pendientes.</p> : (
         <ul className="flex flex-col divide-y divide-line rounded-lg border border-line">
           {shown.map((o) => (
@@ -1039,7 +1051,14 @@ function Pedidos({ reload }: { reload: () => void }) {
                   <button type="button" onClick={() => set(o, "pagado")} className={btn}>Marcar pagado</button>
                   <button type="button" onClick={() => set(o, "cancelado")} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink">Cancelar</button>
                 </span>
-              ) : <Pill t={o.status === "pagado" ? "good" : ""}>{o.status === "pagado" ? "Pagado" : "Cancelado"}</Pill>}
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Pill t={o.status === "pagado" ? "good" : ""}>{o.status === "pagado" ? "Pagado" : "Cancelado"}</Pill>
+                  {o.status === "pagado" && (o.payments ?? []).some((p) => p.startsWith("mp:")) && (
+                    <button type="button" onClick={() => refund(o)} disabled={refunding === o.id} className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:border-bad hover:text-bad disabled:opacity-50">{refunding === o.id ? "Devolviendo…" : "Reembolsar"}</button>
+                  )}
+                </span>
+              )}
             </li>
           ))}
         </ul>

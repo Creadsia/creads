@@ -91,6 +91,10 @@ export async function subscriptionPaymentIds(preapprovalId: string, orderId: str
   return [...ids];
 }
 
+/** Gives a payment's money back to the customer (full refund). Idempotent per payment. */
+export const refundPayment = (paymentId: string) =>
+  mp<{ id: number; amount?: number; status?: string }>(`/v1/payments/${encodeURIComponent(paymentId)}/refunds`, { method: "POST", headers: { "x-idempotency-key": `refund-${paymentId}` }, body: "{}" });
+
 export const setSubscriptionAmount = (id: string, clp: number) =>
   mp(`/preapproval/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: clp, currency_id: "CLP" } }) });
 
