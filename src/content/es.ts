@@ -210,6 +210,21 @@ export const es: Content = {
     specs: [["Revisión", "4/4 OK"], ["Subtítulos", "Montserrat 24"], ["Nicho", "Cimientos"]],
     checks: ["Misma cara y ropa en cada escena", "Dice tu guion palabra por palabra", "Subtítulos incluidos"],
   },
+  connect: {
+    title: "Creads dentro de Claude, ChatGPT y tus sistemas",
+    lead: "Pide imágenes y anuncios en video desde el chat que ya usas, o conecta tu propia herramienta por API. Mismos créditos, misma revisión de calidad.",
+    url: "https://www.creadsia.com/api/mcp",
+    copy: "Copiar",
+    copied: "Copiado",
+    items: [
+      { name: "Claude", how: "Configuración → Conectores → Agregar conector personalizado → pega la dirección y entra con tu cuenta de Creads." },
+      { name: "ChatGPT", how: "Configuración → Aplicaciones y conectores → Crear → pega la dirección y autoriza tu cuenta de Creads." },
+      { name: "API para sistemas", how: "Tu plataforma o la de tu agencia pide anuncios por código con una clave de tu cuenta. Ideal para hacer cientos de piezas." },
+    ],
+    example: "«Hazme un anuncio UGC de 20 segundos para mi crema de manos, en español de Chile»",
+    exampleLabel: "Así se pide desde el chat",
+    cta: "Ver la guía de API y conector",
+  },
   studios: {
     title: "Un estudio para cada tipo de contenido",
     lead: "Cada estudio sabe cómo se graba su formato: cuántas escenas lleva, cómo se mueve la cámara y quién habla.",

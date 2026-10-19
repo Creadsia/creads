@@ -105,6 +105,13 @@ export async function getUserIn(workspace: string, id: string): Promise<User | n
 }
 
 /** Every account of every workspace (Creadsia's owner panel only). */
+/** One account by id (for the connector's token step). */
+export async function getUserById(id: string): Promise<User | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const rows = (await rest(`users?id=eq.${encodeURIComponent(id)}&select=${PUBLIC}&limit=1`)) as User[];
+  return rows[0] ?? null;
+}
+
 export async function listAllUsers(): Promise<User[]> {
   return (await rest(`users?select=${PUBLIC}&order=created_at.asc`)) as User[];
 }

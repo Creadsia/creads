@@ -47,6 +47,8 @@ export default function Privacidad() {
       <h2>5. Cuánto tiempo los guardamos</h2>
       <p>Mientras tengas tu cuenta. Si la cierras, borramos tu contenido y tus datos en un plazo razonable, salvo lo que debamos guardar por obligaciones legales o tributarias (por ejemplo, registros de pagos).</p>
 
+      <p><b>Apps conectadas.</b> Si conectas Creads a una aplicación de IA (por ejemplo Claude o ChatGPT) o a otro sistema con una clave de API, esa aplicación recibe lo que le pides a Creads desde ella: enlaces a las imágenes y videos, el avance de tus anuncios y tu saldo de créditos. Lo que escribes en esa aplicación lo trata ella según su propia política de privacidad. Creads guarda solo la clave de la conexión (cifrada) y el registro de lo que se generó con tu cuenta; no recibe tus conversaciones. Puedes cortar la conexión cuando quieras en «API y conector».</p>
+
       <h2>6. Seguridad</h2>
       <p>Tus archivos se guardan en almacenamiento privado, separado por cuenta, y se entregan con enlaces temporales. Las claves se guardan cifradas, puedes activar la verificación en dos pasos y limitamos los intentos de ingreso. Ningún sistema es infalible: si detectamos un incidente que te afecte, te avisaremos.</p>
 

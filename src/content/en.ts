@@ -209,6 +209,21 @@ export const en = {
     specs: [["Review", "4/4 OK"], ["Subtitles", "Montserrat 24"], ["Niche", "Foundation"]],
     checks: ["Same face and outfit in every scene", "Says your script word for word", "Subtitles burned in"],
   },
+  connect: {
+    title: "Creads inside Claude, ChatGPT and your own systems",
+    lead: "Ask for images and video ads from the chat you already use, or connect your own tool through the API. Same credits, same quality checks.",
+    url: "https://www.creadsia.com/api/mcp",
+    copy: "Copy",
+    copied: "Copied",
+    items: [
+      { name: "Claude", how: "Settings → Connectors → Add custom connector → paste the address and sign in with your Creads account." },
+      { name: "ChatGPT", how: "Settings → Apps & Connectors → Create → paste the address and authorize your Creads account." },
+      { name: "API for systems", how: "Your platform, or your agency's, orders ads by code with a key of your account. Built for hundreds of pieces." },
+    ],
+    example: "“Make me a 20-second UGC ad for my hand cream, in English”",
+    exampleLabel: "What you type in the chat",
+    cta: "See the API and connector guide",
+  },
   studios: {
     title: "A studio for every kind of content",
     lead: "Each studio knows how its format is shot: how many scenes it needs, how the camera moves and who speaks.",
