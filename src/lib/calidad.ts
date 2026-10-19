@@ -23,15 +23,22 @@ export interface Quality {
 
 const SWAP = "swap:";
 const note = (job: string | null): SwapNote | null => {
-  if (!job?.startsWith(SWAP)) return null;
-  try { return JSON.parse(job.slice(SWAP.length)) as SwapNote; } catch { return null; }
+  try {
+    if (job?.startsWith(SWAP)) return JSON.parse(job.slice(SWAP.length)) as SwapNote;
+    if (job?.startsWith("gj:")) {
+      // Máxima calidad: one step (the video), its redo and review notes
+      const g = JSON.parse(job.slice(3)) as { r?: number; q?: string[]; qa?: string };
+      return { r2: g.r, q2: g.q, qa: g.qa };
+    }
+  } catch { /* an old or broken job */ }
+  return null;
 };
 
 /** The same failure written with different numbers or ids counts once. */
 export const errorKey = (e: string) => e.replace(/https?:\/\/\S+/g, "").replace(/\d+([.,]\d+)?/g, "#").replace(/\s+/g, " ").trim().slice(0, 140);
 
 export function summarize(rows: ClipRow[], days: number): Omit<Quality, "reglasPendientes"> {
-  const sw = rows.filter((r) => r.kind === "tool:personaje-en-video");
+  const sw = rows.filter((r) => r.kind === "tool:personaje-en-video" || r.kind === "tool:personaje-genjutsu");
   const probs = new Map<string, number>();
   let limpios = 0, r1 = 0, r2 = 0, aviso = 0;
   for (const r of sw) {

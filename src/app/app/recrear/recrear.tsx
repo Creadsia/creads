@@ -10,14 +10,19 @@ import { btnCls, cardCls, Field, ghostCls, inputCls, uploadFile } from "../_part
 // (Copiar movimiento). Picking an example copies it into the customer's folder for free; the price
 // shows before anything is generated, as in every tool.
 
-type Mode = "editar-video" | "copiar-movimiento" | "personaje-en-video";
+type Mode = "editar-video" | "copiar-movimiento" | "personaje-en-video" | "personaje-genjutsu";
 interface Example { id: string; title: string; tag: string; prompt: string; mode: Mode; secs: number; play: string }
 
-const MODES: { id: Mode; title: string; text: string; model: string; max: number }[] = [
-  { id: "personaje-en-video", title: "Mi personaje en el video", text: "Tu personaje toma el lugar de la persona principal y repite sus mismos movimientos, de una sola vez. Lo más estable para personajes.", model: "Nano Banana + Kling 3.0", max: 30 },
+const ALL_MODES: { id: Mode; title: string; text: string; model: string; max: number }[] = [
+  { id: "personaje-genjutsu", title: "Mi personaje · Máxima calidad", text: "Tu personaje reemplaza a la persona del video y todo lo demás queda igual: lugar, cámara, otras personas y sonido. Aguanta manos ocupadas y momentos tapados.", model: "Genjutsu", max: 30 },
+  { id: "personaje-en-video", title: "Mi personaje · Estándar", text: "Tu personaje toma el lugar de la persona principal y repite sus mismos movimientos. Más barato; necesita que se le vea bien de la cintura para arriba.", model: "Nano Banana + Kling 3.0", max: 30 },
   { id: "editar-video", title: "Cambiar personaje u objetos", text: "Mismo video, mismo movimiento y audio: cambia la persona, el producto, la ropa o el lugar con tus fotos.", model: "Kling O1", max: 30 },
   { id: "copiar-movimiento", title: "Copiar movimiento", text: "Tu personaje (una foto) hace exactamente los mismos gestos, poses y movimientos de cámara.", model: "Kling 3.0", max: 30 },
 ];
+
+/** The modes on offer (Máxima calidad only when its service is connected). */
+let MODES = ALL_MODES.filter((m) => m.id !== "personaje-genjutsu");
+const charMode = (): Mode => (MODES.some((m) => m.id === "personaje-genjutsu") ? "personaje-genjutsu" : "personaje-en-video");
 
 function useLength(url?: string) {
   const [secs, setSecs] = useState(0);
@@ -45,12 +50,13 @@ function carry(p?: Personaje, sound?: boolean) {
   return q;
 }
 
-export default function Recrear({ video, mode, prompt, personaje, sound }: { video?: string; mode?: Mode; prompt?: string; personaje?: Personaje; sound?: boolean }) {
+export default function Recrear({ video, mode, prompt, personaje, sound, maxima }: { video?: string; mode?: Mode; prompt?: string; personaje?: Personaje; sound?: boolean; maxima?: boolean }) {
+  MODES = maxima ? ALL_MODES : ALL_MODES.filter((m) => m.id !== "personaje-genjutsu");
   const router = useRouter();
   const back = () => { const q = carry(personaje, sound).toString(); router.push(`/app/recrear${q ? `?${q}` : ""}`); };
   const secs = useLength(video);
   const tooLongToEdit = secs > 30.5;
-  const [picked, setPicked] = useState<Mode | null>(mode ?? (personaje && video ? "personaje-en-video" : null));
+  const [picked, setPicked] = useState<Mode | null>(mode ?? (personaje && video ? charMode() : null));
   // a long video can only be recreated by copying its motion
   const current: Mode | null = picked === "editar-video" && tooLongToEdit ? "copiar-movimiento" : picked ?? (video ? (tooLongToEdit ? "copiar-movimiento" : "editar-video") : null);
 
@@ -66,7 +72,7 @@ export default function Recrear({ video, mode, prompt, personaje, sound }: { vid
         <button type="button" onClick={() => { setPicked(null); back(); }} className="text-sm text-muted hover:text-ink">← Elegir otro video</button>
         {secs > 0 && <span className="text-xs text-muted">Tu video base dura {Math.round(secs)} s</span>}
       </div>
-      <div role="radiogroup" aria-label="Cómo quieres recrearlo" className="grid gap-3 sm:grid-cols-3">
+      <div role="radiogroup" aria-label="Cómo quieres recrearlo" className="grid gap-3 sm:grid-cols-2">
         {MODES.map((m) => {
           const off = m.id === "editar-video" && tooLongToEdit;
           const on = current === m.id;
@@ -126,7 +132,7 @@ function Gallery({ onOwn, personaje, sound }: { onOwn: (m: Mode) => void; person
       // with a character, every example opens as the swap (the example's own instruction is for its own use)
       const q = carry(personaje, sound);
       q.set("video", d.video);
-      if (personaje) q.set("modo", "personaje-en-video");
+      if (personaje) q.set("modo", charMode());
       else { q.set("modo", d.mode); if (d.prompt) q.set("prompt", d.prompt); }
       router.push(`/app/recrear?${q}`);
     } catch (x) {
@@ -144,7 +150,7 @@ function Gallery({ onOwn, personaje, sound }: { onOwn: (m: Mode) => void; person
   return (
     <div className="flex flex-col gap-6">
       {personaje && <Banner personaje={personaje} />}
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Recrear tu propio video" data-tour="recrear-modos">
+      <section className="grid gap-3 sm:grid-cols-2" aria-label="Recrear tu propio video" data-tour="recrear-modos">
         {MODES.map((m) => (
           <button key={m.id} type="button" onClick={() => onOwn(m.id)} className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4 text-left transition-colors hover:border-muted/60">
             <span className="flex items-center justify-between gap-2"><b>{m.title}</b><span className="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-muted">{m.model}</span></span>

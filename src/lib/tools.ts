@@ -10,6 +10,7 @@ export type ToolId =
   | "editar-video"
   | "copiar-movimiento"
   | "personaje-en-video"
+  | "personaje-genjutsu"
   | "crear-personaje"
   | "avatar-habla"
   | "sincronizar-labios"
@@ -178,6 +179,24 @@ export const TOOLS: ToolDef[] = [
     consent: true,
   },
   {
+    id: "personaje-genjutsu",
+    name: "Mi personaje en un video · Máxima calidad",
+    short: "Tu personaje reemplaza a la persona del video, con el mismo fondo, cámara y sonido. Lo mejor que hay.",
+    lead: "Elige tu personaje y sube un video (de 4 a 30 segundos). Tu personaje toma el lugar de la persona principal y todo lo demás queda igual: el lugar, la cámara, el ritmo, las otras personas y el sonido. Funciona aunque la persona aparezca tapada por momentos o tenga cosas en las manos.",
+    output: "video",
+    model: "Genjutsu",
+    inputs: {
+      image: true,
+      video: { min: 4, max: 30 },
+      prompt: "optional",
+      promptHint: "Opcional: algo que cuidar, por ejemplo «mantén los billetes en sus manos». No hace falta escribir nada.",
+    },
+    // per second of video at 720p (cost from Comfy; override with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
+    estimate: (s) => +(genjutsuRate() * Math.max(4, Math.ceil(s))).toFixed(2),
+    priceNote: "≈ US$0,35 por segundo de video",
+    consent: true,
+  },
+  {
     id: "avatar-habla",
     name: "Avatar que habla",
     short: "Una foto + una voz = una persona hablando a cámara.",
@@ -245,3 +264,10 @@ export const DUB_LANGS = [
   { id: "en", label: "Inglés" },
   { id: "pt", label: "Portugués" },
 ] as const;
+
+/** What Genjutsu costs Creads per second of video (US$), 720p. */
+export function genjutsuRate() {
+  // the same number on the page and the server (inlined at build)
+  const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_USD_PER_SEC);
+  return Number.isFinite(v) && v > 0.05 && v < 3 ? v : 0.35;
+}

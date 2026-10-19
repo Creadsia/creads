@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { FullOnly } from "../_parts/full-only";
 import { PageHead } from "../_parts/ui";
 import Recrear from "./recrear";
+import { comfyConfigured } from "@/lib/providers/comfy";
 
 export const metadata: Metadata = { title: "Recrear video" };
 
@@ -13,7 +14,9 @@ const media = (v: string | string[] | undefined) => (typeof v === "string" && v.
 export default async function RecrearPage({ searchParams }: Props) {
   const q = await searchParams;
   const video = media(q.video);
-  const mode = q.modo === "copiar-movimiento" || q.modo === "editar-video" || q.modo === "personaje-en-video" ? q.modo : undefined;
+  const mode = q.modo === "copiar-movimiento" || q.modo === "editar-video" || q.modo === "personaje-en-video" || q.modo === "personaje-genjutsu" ? q.modo : undefined;
+  // «Máxima calidad» shows only when its service is connected
+  const maxima = comfyConfigured();
   const prompt = typeof q.prompt === "string" ? q.prompt.slice(0, 600) : undefined;
   // «Recrear con mi personaje» (from Influencer IA): the character's sheet, its name, and whether the result is silent
   const personaje = media(q.personaje);
@@ -22,7 +25,7 @@ export default async function RecrearPage({ searchParams }: Props) {
   return (
     <>
       <PageHead title="Recrear video" lead="Toma un video que funciona y hazlo tuyo: cambia la persona, el producto o el lugar, o haz que tu personaje copie sus mismos movimientos." />
-      <FullOnly><Recrear key={`${video ?? ""}|${mode ?? ""}|${personaje ?? ""}`} video={video} mode={mode} prompt={prompt} personaje={personaje ? { sheet: personaje, nombre } : undefined} sound={sound} /></FullOnly>
+      <FullOnly><Recrear key={`${video ?? ""}|${mode ?? ""}|${personaje ?? ""}`} video={video} mode={mode} prompt={prompt} personaje={personaje ? { sheet: personaje, nombre } : undefined} sound={sound} maxima={maxima} /></FullOnly>
     </>
   );
 }

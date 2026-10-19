@@ -178,7 +178,8 @@ export async function faceKitFor(db: Db, image: string, ws: string): Promise<Fac
 
 /** Active learned rules for character videos (approved by the owner in Aprendizajes). */
 export async function swapRules(): Promise<string[]> {
-  const rows = (await sharedRules.list("active=eq.true&order=hits.desc&limit=60").catch(() => [])) as { rule_en: string; formats: string[] | null }[];
+  const got = await sharedRules.list("active=eq.true&order=hits.desc&limit=60").catch(() => []);
+  const rows = (Array.isArray(got) ? got : []) as { rule_en: string; formats: string[] | null }[];
   return rows.filter((r) => (r.formats ?? []).includes("personaje")).slice(0, 8).map((r) => r.rule_en);
 }
 
@@ -260,3 +261,15 @@ JSON: {"severe": boolean, "issues": ["each problem in plain English, short"]}`,
 
 /** Problems become rules for every future character video (waiting for the owner's approval). */
 export const learnSwap = (issues: string[]) => (issues.length ? learnFrom(issues, "personaje (un personaje reemplaza a la persona de un video y copia sus movimientos)", false, ["personaje"]).catch(() => 0) : Promise.resolve(0));
+
+/** Genjutsu: what to recast (reference image 1 = the whole character, image 2 = its face, when there's a kit). */
+export function genjutsuPrompt(o: { extra?: string; main?: string; withFace?: boolean; fix?: string[]; rules?: string[] }) {
+  return [
+    `Recast the main person of the video${o.main ? ` (${o.main})` : ""} as the character in the reference images${o.withFace ? " (image 1 shows the whole character, image 2 is a close-up of the same character's face)" : ""}: the same face, hair, glasses, facial hair, body and clothes.`,
+    "The references show ONE single character: there is only one of him in the video.",
+    "Keep everything else exactly as in the source video: camera, motion, timing, background, light, the other people and every object (held objects stay the same objects).",
+    ...(o.rules ?? []),
+    o.fix?.length ? `Avoid: ${o.fix.join("; ")}.` : "",
+    o.extra ?? "",
+  ].filter(Boolean).join(" ").slice(0, 2000);
+}

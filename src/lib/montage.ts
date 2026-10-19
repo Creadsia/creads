@@ -469,3 +469,10 @@ export async function cropImage(file: string, box: { x: number; y: number; w: nu
   await ff(["-y", "-v", "error", "-i", file, "-vf", `crop=${w}:${h}:${Math.round(x0 * W)}:${Math.round(y0 * H)}`, "-q:v", "2", out]);
   return [w, h] as const;
 }
+
+/** The same video without its sound track (picture copied as is). */
+export async function stripAudio(dir: string, file: string) {
+  const out = path.join(dir, "mudo.mp4");
+  await ff(["-y", "-v", "error", "-i", file, "-map", "0:v:0", "-c:v", "copy", "-an", "-movflags", "+faststart", out], 120_000);
+  return readFile(out);
+}

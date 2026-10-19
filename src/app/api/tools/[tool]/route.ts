@@ -77,8 +77,13 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
     if ((d < need.video.min - 0.3 || d > need.video.max + 0.5)) return `El video debe durar entre ${need.video.min} y ${need.video.max} segundos (este dura ${secs(d)}).`;
     seconds = d;
     // recreated videos can come out silent (e.g. a character with no voice, for music or a later voice-over)
-    if (t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video") input.sound = b.sound !== false;
+    if (t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video" || t.id === "personaje-genjutsu") input.sound = b.sound !== false;
     if (t.id === "editar-video" || t.id === "personaje-en-video") input.videoSecs = d;
+    if (t.id === "personaje-genjutsu") {
+      // the whole video is used (it handles hidden moments and objects); only who the main person is helps
+      input.videoRef = b.video;
+      input.imageRef = input.image;
+    }
     if (t.id === "personaje-en-video") {
       // checked before charging: a video that can't work never costs anything
       const a = await analyzeVideo(b.video, ws).catch(() => null);
@@ -151,7 +156,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
       images: read.input.images ? await Promise.all(read.input.images.map((u) => fetchableUrl(u, ws))) : undefined,
     };
     // a saved character's face, cut out of its sheet once, locks its identity in the video
-    if (t.id === "personaje-en-video" && read.input.imageRef) input.face = await faceKitFor(db, read.input.imageRef, ws).catch(() => null);
+    if ((t.id === "personaje-en-video" || t.id === "personaje-genjutsu") && read.input.imageRef) input.face = await faceKitFor(db, read.input.imageRef, ws).catch(() => null);
     const job = await startTool(t, input, ws);
     await db.update("clips", id, { provider_job: job });
     return NextResponse.json({ id, usd });

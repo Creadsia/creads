@@ -298,7 +298,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
   const [instrumental, setInstrumental] = useState(true);
   const [sound, setSound] = useState(initial.sound ?? true);
-  const recreates = t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video";
+  const recreates = t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video" || t.id === "personaje-genjutsu";
   // «Mi personaje en un video»: the free check of the video (traffic light) before paying
   const checks = t.id === "personaje-en-video";
   const [check, setCheck] = useState<VideoCheck | "busy" | "error" | null>(null);
@@ -398,8 +398,8 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section className={cardCls} aria-label="Lo que necesitas">
-        {n.image && (t.id === "copiar-movimiento" || t.id === "personaje-en-video") && <Group label="Tus personajes" hint={t.id === "personaje-en-video" ? "Toca uno: toma el lugar de la persona principal del video." : "Toca uno para usarlo como la foto: sale con la misma cara de su ficha."}><Characters selected={image} onPick={setImage} /></Group>}
-        {n.image && <Group label={t.id === "personaje-en-video" ? "Personaje (su ficha o una foto)" : "Foto"}><ImageInput value={image} onChange={setImage} library={imgs} /></Group>}
+        {n.image && (t.id === "copiar-movimiento" || t.id === "personaje-en-video" || t.id === "personaje-genjutsu") && <Group label="Tus personajes" hint={t.id !== "copiar-movimiento" ? "Toca uno: toma el lugar de la persona principal del video." : "Toca uno para usarlo como la foto: sale con la misma cara de su ficha."}><Characters selected={image} onPick={setImage} /></Group>}
+        {n.image && <Group label={t.id === "personaje-en-video" || t.id === "personaje-genjutsu" ? "Personaje (su ficha o una foto)" : "Foto"}><ImageInput value={image} onChange={setImage} library={imgs} /></Group>}
         {n.images && t.id === "editar-video" && <Group label="Tus personajes" hint="Toca uno para ponerlo en lugar de la persona del video (queda como foto 1)."><Characters selected={images[0] ?? ""} onPick={(u) => setImages((l) => [u, ...l.filter((x) => x !== u)].slice(0, n.images || 4))} /></Group>}
         {n.images && (
           <Group label={imagesLabel ?? (n.imagesOptional ? `Fotos de referencia (opcional, hasta ${n.images})` : `Fotos (hasta ${n.images})`)} hint={t.id === "crear-personaje" ? "La primera puede ser una cara de guía (no se copia exacta: mandan los rasgos que elegiste); las otras, imágenes de estilo." : n.imagesOptional ? "Una cara nueva, un producto o un lugar. Nómbralas en tu instrucción como «foto 1», «foto 2»." : "La primera es la principal."}>

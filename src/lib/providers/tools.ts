@@ -1,8 +1,9 @@
 import type { ToolDef, ToolId } from "../tools";
 import { readFile, rm } from "node:fs/promises";
 import { fetchableUrl, saveMedia } from "../media";
-import { cutParts, download, joinParts, partsPlan, probe, still, workdir } from "../montage";
-import { type Analysis, type FaceKit, framePrompt, learnSwap, motionPrompt, reviewFrame, reviewVideo, swapRules } from "../influencer/swap";
+import { cutParts, download, joinParts, partsPlan, probe, still, stripAudio, workdir } from "../montage";
+import { comfyConfigured, comfyPoll, comfySubmit, comfyVideo, GENJUTSU } from "./comfy";
+import { type Analysis, type FaceKit, framePrompt, genjutsuPrompt, learnSwap, motionPrompt, reviewFrame, reviewVideo, swapRules } from "../influencer/swap";
 import { compose, dubFile, dubStart, dubStatus, soundEffect } from "./elevenlabs";
 import { falPoll, falSubmit } from "./fal";
 
@@ -116,7 +117,7 @@ export const toolRequest = (id: ToolId, i: ToolInput) => {
 };
 
 const ELEVEN: ToolId[] = ["doblaje", "musica", "efectos"];
-export const toolConfigured = (t: ToolDef) => Boolean(ELEVEN.includes(t.id) ? process.env.ELEVENLABS_API_KEY : process.env.FAL_KEY);
+export const toolConfigured = (t: ToolDef) => (t.id === "personaje-genjutsu" ? comfyConfigured() : Boolean(ELEVEN.includes(t.id) ? process.env.ELEVENLABS_API_KEY : process.env.FAL_KEY));
 
 /** Starts the tool. The job id says who runs it: a fal result link, or "el:<dub id>:<lang>". */
 /** `ws`: the customer workspace (results that come back at once are saved in its private folder). */
@@ -133,6 +134,7 @@ export async function startTool(t: ToolDef, input: ToolInput, ws: string): Promi
     return `el:${id}:${lang}`;
   }
   if (t.id === "personaje-en-video") return startSwap(input, ws, t.name);
+  if (t.id === "personaje-genjutsu") return startGenjutsu(input, ws, t.name);
   const f = FAL[t.id];
   if (!f) throw new Error("Herramienta desconocida.");
   if (t.id === "editar-video" && (input.videoSecs ?? 0) > EDIT_MAX) return startInParts(f, input, ws, t.name);
@@ -149,6 +151,7 @@ export async function checkTool(t: ToolDef, job: string, ws = ""): Promise<ToolC
   if (job.startsWith("url:")) return { state: "done", url: job.slice(4) };
   if (job.startsWith(PARTS)) return checkParts(t, job);
   if (job.startsWith(SWAP)) return checkSwap(t, job, ws);
+  if (job.startsWith(GJ)) return checkGenjutsu(t, job, ws);
   if (job.startsWith("el:")) {
     const [, id, lang] = job.split(":");
     const st = await dubStatus(id);
@@ -354,10 +357,87 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
 
 /** What a «Mi personaje en un video» job is doing now, for the customer (null for other jobs). */
 export function swapStep(job: string): string | null {
+  if (job.startsWith(GJ)) {
+    try { return (JSON.parse(job.slice(GJ.length)) as GjJob).r ? "Rehaciendo el video (gratis): la revisión encontró un detalle…" : "Tu personaje está entrando al video (tarda unos minutos)…"; } catch { return null; }
+  }
   if (!job.startsWith(SWAP)) return null;
   try {
     const sj = JSON.parse(job.slice(SWAP.length)) as SwapJob;
     if (sj.s === 1) return sj.r1 ? "Rehaciendo la escena (gratis): la revisión encontró un detalle…" : "Paso 1 de 3: poniendo a tu personaje en la escena…";
     return sj.r2 ? "Rehaciendo el video (gratis): la revisión encontró un detalle…" : "Paso 2 de 3: copiando los movimientos del video…";
   } catch { return null; }
+}
+
+// ---------------------------------------------------------------- máxima calidad: Genjutsu (personaje-genjutsu)
+// Higgsfield's Genjutsu through Comfy Router: recasts the main person of the whole video (same camera, timing,
+// background, other people and sound), with the character's clean references (its front body and face cut
+// out of the sheet, never the 4-view sheet itself, which could become 4 people). Then the same review as the
+// standard way: a severe problem is redone once, free. Job id: "gj:<json>".
+
+const GJ = "gj:";
+interface GjJob {
+  id: string; snd: 0 | 1;
+  /** the video, the character's sheet and the reference pictures (customer's media links) */
+  v: string; sh: string; imgs: string[];
+  p?: string; main?: string; r?: number; q?: string[]; qa?: "ok" | "aviso";
+}
+
+async function submitGenjutsu(j: Omit<GjJob, "id">, ws: string, what: string, fix?: string[]) {
+  const image_urls = await Promise.all(j.imgs.map((r) => fetchableUrl(r, ws)));
+  return comfySubmit(GENJUTSU, {
+    image_urls, video_url: await fetchableUrl(j.v, ws), resolution: "720p",
+    prompt: genjutsuPrompt({ extra: j.p, main: j.main, withFace: j.imgs.length > 1, fix, rules: await swapRules() }),
+  }, what);
+}
+
+async function startGenjutsu(input: ToolInput, ws: string, what: string): Promise<string> {
+  if (!input.videoRef || !input.imageRef) throw new Error("Falta el video o el personaje.");
+  const fk = input.face;
+  // the whole character first, then its face; a plain photo (not a saved character) goes as it is
+  const imgs = fk ? [...(fk.refs.length ? [fk.refs[0]] : []), fk.front] : [input.imageRef];
+  const base: Omit<GjJob, "id"> = { snd: input.sound === false ? 0 : 1, v: input.videoRef, sh: input.imageRef, imgs, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}), ...(input.analysis?.main ? { main: input.analysis.main.slice(0, 160) } : {}) };
+  const id = await submitGenjutsu(base, ws, what);
+  return GJ + JSON.stringify({ ...base, id } satisfies GjJob);
+}
+
+async function checkGenjutsu(t: ToolDef, job: string, ws: string): Promise<ToolCheck> {
+  let j: GjJob;
+  try { j = JSON.parse(job.slice(GJ.length)) as GjJob; } catch { return { state: "failed", error: "Trabajo inválido." }; }
+  const r = await comfyPoll(GENJUTSU, j.id, t.name);
+  if (r.state !== "done") return r;
+  const url = comfyVideo(r.out);
+  if (!url) return { state: "failed", error: `${t.name}: no devolvió video.` };
+  if (!j.qa) {
+    return {
+      state: "running",
+      advance: async () => {
+        const rev = await reviewVideo(url, await fetchableUrl(j.sh, ws));
+        if (rev.severe) await learnSwap(rev.issues);
+        if (rev.severe && !j.r) {
+          const id = await submitGenjutsu(j, ws, t.name, rev.issues);
+          return GJ + JSON.stringify({ ...j, id, r: 1, q: rev.issues } satisfies GjJob);
+        }
+        return GJ + JSON.stringify({ ...j, qa: rev.severe ? "aviso" : "ok", ...(rev.issues.length ? { q: rev.issues } : {}) } satisfies GjJob);
+      },
+    };
+  }
+  return {
+    state: "done", mime: "video/mp4", ext: "mp4",
+    fetch: async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`No se pudo descargar el resultado (${res.status}).`);
+      const bytes = await res.arrayBuffer();
+      if (j.snd === 1) return bytes;
+      // silent: the same picture without its sound
+      const dir = await workdir(`gj-${Date.now().toString(36)}`);
+      try {
+        const { writeFile } = await import("node:fs/promises");
+        await writeFile(`${dir}/in.mp4`, Buffer.from(bytes));
+        const out = await stripAudio(dir, `${dir}/in.mp4`);
+        return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
+      } finally {
+        await rm(dir, { recursive: true, force: true }).catch(() => null);
+      }
+    },
+  };
 }
