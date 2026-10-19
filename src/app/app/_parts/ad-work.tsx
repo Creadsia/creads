@@ -17,6 +17,9 @@ interface Ad { id: string; title: string | null; format: string | null; aspect: 
 interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
+// One-tap corrections for a cut: the most common fixes, so nobody has to think of the words.
+const QUICK_FIXES = ["Otra toma", "Más natural", "Que mire a la cámara", "Misma persona que en los otros cortes", "Mejor luz", "Sin texto en pantalla", "Que hable más lento", "Que no se corte la frase"];
+
 
 export default function AdWork({ adId }: { adId: string }) {
   const [ad, setAd] = useState<Ad | null>(null);
@@ -40,6 +43,8 @@ export default function AdWork({ adId }: { adId: string }) {
   const [retryModel, setRetryModel] = useState("veo-3.1-fast");
   useEffect(() => { fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {}); }, []);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // when the cuts being redone finish, the ad is (re)assembled by itself: no extra clicks
+  const [autoBuild, setAutoBuild] = useState(false);
 
   const loadAd = useCallback(async () => {
     const r = await fetch(`/api/data/ads/${adId}`);
@@ -95,6 +100,7 @@ export default function AdWork({ adId }: { adId: string }) {
 
   async function redo(id: string, problem: string, free = false) {
     const before = clips.find((c) => c.id === id);
+    if (!free && ad?.final_url) setAutoBuild(true);
     if (problem.trim()) {
       setClips((cs) => cs.map((c) => (c.id === id ? { ...c, status: "starting", error: null } : c)));
       const res = await fetch("/api/clips/fix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, problem }) }).catch(() => null);
@@ -112,7 +118,7 @@ export default function AdWork({ adId }: { adId: string }) {
     const res = await fetch("/api/review", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId }) }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
-    if (!res || !res.ok) return setErr(d.error || "No se pudo revisar. Revisa tu conexión e intenta de nuevo.");
+    if (!res || !res.ok) { setAutoBuild(false); return setErr(d.error || "No se pudo revisar. Revisa tu conexión e intenta de nuevo."); }
     setReview(d.results);
     if (d.learned) setNote(`Creads aprendió ${d.learned} regla${d.learned === 1 ? "" : "s"} nueva${d.learned === 1 ? "" : "s"} de este video.`);
     // Free automatic redo of severe problems: the server says which clips still have one
@@ -128,7 +134,14 @@ export default function AdWork({ adId }: { adId: string }) {
     }
   }
 
+  /** «Revisar y armar»: review; if the free redos run, the ad is assembled when they finish, else right away. */
+  async function reviewAndBuild() {
+    setAutoBuild(true);
+    await doReview();
+  }
+
   async function doBuild() {
+    setAutoBuild(false);
     setPhase("build"); setErr("");
     const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
@@ -137,6 +150,18 @@ export default function AdWork({ adId }: { adId: string }) {
     if (!res || !res.ok) return setErr(d.error || "No se pudo armar el anuncio. Revisa tu conexión e intenta de nuevo.");
     setAd(d.ad);
   }
+
+  // all cuts ready and nothing running: assemble now if it was asked for
+  const ready = clips.length > 0 && clips.every((c) => c.status === "done");
+  const running = clips.some((c) => ["generating", "starting", "syncing"].includes(c.status));
+  useEffect(() => {
+    if (autoBuild && ready && !running && !phase) {
+      setNote((n) => `${n ? `${n} ` : ""}Armando el anuncio con los cortes nuevos…`);
+      doBuild();
+    }
+    // doBuild changes on every render; the trigger is the state above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoBuild, ready, running, phase]);
 
   if (!ad) return <div className={cardCls}><p className="text-muted">{err || "Cargando…"}</p></div>;
   const f = formatById(ad.format ?? "ugc");
@@ -241,9 +266,22 @@ export default function AdWork({ adId }: { adId: string }) {
                     <div className="mt-auto flex flex-col gap-1">
                       <input aria-label={`Qué corregir en el corte ${c.idx + 1}`} value={notes[c.id] ?? ""} onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
+                      {c.status === "done" && (
+                        <div className="flex flex-wrap gap-1" role="group" aria-label={`Correcciones rápidas del corte ${c.idx + 1}`}>
+                          {QUICK_FIXES.map((q) => {
+                            const cur = notes[c.id] ?? "";
+                            const on = cur.split(". ").includes(q);
+                            return (
+                              <button key={q} type="button" aria-pressed={on}
+                                onClick={() => setNotes({ ...notes, [c.id]: on ? cur.split(". ").filter((x) => x !== q).join(". ") : cur.trim() ? `${cur.trim().replace(/\.$/, "")}. ${q}` : q })}
+                                className={`rounded-full border px-2 py-0.5 text-[11px] ${on ? "border-accent bg-accent/15 text-ink" : "border-line text-muted hover:text-ink"}`}>{q}</button>
+                            );
+                          })}
+                        </div>
+                      )}
                       {ask === c.id ? (
                         <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2 text-xs">
-                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los créditos vuelven solos.</span>
+                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los créditos vuelven solos.{ad.final_url ? " Cuando esté listo, rearmamos tu anuncio solos." : ""}</span>
                           <div className="flex gap-2">
                             {/* a model that refused the face would refuse again: retry with the one chosen above */}
                             <button type="button" onClick={() => { setAsk(null); if (refused(c)) run(c.id, retryModel); else redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>
@@ -271,8 +309,8 @@ export default function AdWork({ adId }: { adId: string }) {
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-3">
-              <button type="button" onClick={doReview} disabled={!!phase} className={ghostCls}>
-                {phase === "review" ? "Revisando cada corte… (≈ 1 min)" : phase === "redo" ? "Rehaciendo cortes…" : review ? "Revisar de nuevo" : "1 · Revisar los cortes"}
+              <button type="button" onClick={doReview} disabled={!!phase || running} className={ghostCls}>
+                {phase === "review" ? "Revisando cada corte… (≈ 1 min)" : phase === "redo" ? "Rehaciendo cortes…" : review ? "Revisar de nuevo" : "Solo revisar"}
               </button>
               {review && (
                 <span className="text-sm text-muted">
@@ -291,10 +329,19 @@ export default function AdWork({ adId }: { adId: string }) {
                   sample={clips[0]?.text || "Así se ven tus subtítulos"} video={clips.find((c) => c.url)?.url} />
               )}
               <div className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={doBuild} disabled={!!phase} className={btnCls}>
-                  {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : ad.final_url ? "Volver a armar" : "2 · Armar anuncio"}
-                </button>
-                {!review && <span className="text-xs text-muted">Puedes armarlo sin revisar, pero la revisión encuentra errores y los arregla gratis.</span>}
+                {!review && !ad.final_url ? (
+                  <>
+                    <button type="button" onClick={reviewAndBuild} disabled={!!phase || running || autoBuild} className={btnCls}>
+                      {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : phase || autoBuild ? "Revisando y armando…" : "Revisar y armar el anuncio"}
+                    </button>
+                    <button type="button" onClick={doBuild} disabled={!!phase || running} className="text-sm text-muted underline">Armar sin revisar</button>
+                    <span className="basis-full text-xs text-muted">La revisión encuentra errores graves y los rehace gratis antes de armar. Todo en un paso.</span>
+                  </>
+                ) : (
+                  <button type="button" onClick={doBuild} disabled={!!phase || running} className={btnCls}>
+                    {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : ad.final_url ? "Volver a armar" : "Armar anuncio"}
+                  </button>
+                )}
               </div>
             </div>
           </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CreadsAvatars from "../_parts/creads-avatars";
 import { DeleteButton, Empty, Field, NextStep, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
 
 interface Avatar extends Row {
@@ -65,6 +66,15 @@ export default function Avatares() {
         {!form && <button type="button" data-tour="avatar-nuevo" onClick={() => open()} className={btnCls}>+ Nuevo avatar</button>}
       </PageHead>
       {t.missing && <SetupNotice />}
+      {!form && (
+        <section className={cardCls} aria-labelledby="h-avatares-creads">
+          <div className="flex flex-col gap-1">
+            <h2 id="h-avatares-creads" className="font-display text-lg font-bold">Avatares de Creads</h2>
+            <p className="text-sm text-muted">¿No quieres crear uno? Elige uno listo: son personas creadas con IA (no existen), puedes usarlas en todos tus anuncios. Al tocarlo queda en tus avatares.</p>
+          </div>
+          <CreadsAvatars taken={(t.rows ?? []).map((a) => a.name)} onPick={() => t.reload()} />
+        </section>
+      )}
       {voices.length > 0 && own.length === 0 && (
         <p className="rounded-xl bg-surface-2 px-4 py-3 text-sm">¿Quieres que el avatar hable con <b>tu voz</b>? Créala primero en <a href="/app/voces" className="font-semibold text-accent-text underline">Voces</a> (paso 1). Si no, puedes elegir una voz de la biblioteca al crear el avatar.</p>
       )}

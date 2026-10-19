@@ -42,6 +42,8 @@ export async function GET(req: Request) {
     if (!st.skipped) wakeAreaAgents(st);
     // customers whose generations failed get an email first (and the owner a case to follow up)
     after(async () => { const { careSweep } = await import("@/lib/cuidado"); await careSweep().catch((e) => console.error("cuidado", e instanceof Error ? e.message : e)); });
+    // the ready-made «Avatares de Creads» get their pictures (a few per round, only while some are missing)
+    after(async () => { if (await once("avatares-creads", 15 * 60)) { const { ensurePresetImages } = await import("@/lib/avatares-creads"); await ensurePresetImages().catch(() => 0); } });
     // the automatic video producer moves forward (its own request, its own time)
     after(async () => { const { kickProduction } = await import("@/lib/autoprod"); await kickProduction(); });
     // the office's extra rounds of the day (Oficina → «Ritmo de trabajo»), riding on this 5-minute ping

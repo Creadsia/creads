@@ -1,5 +1,6 @@
 "use client";
 
+import CreadsAvatars from "../_parts/creads-avatars";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type FormatId, formatById, refusesFrame } from "@/lib/formats";
@@ -159,9 +160,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               ) : (
                 <div className="flex flex-col gap-2">
                   <input value={avatarText} onChange={(e) => setAvatarText(e.target.value)} placeholder="Ej: woman in her 40s, brown hair, gray sweater" className={inputCls} aria-label="Cómo es la persona" />
-                  <p className="text-xs text-muted">Sin avatar guardado la cara cambia entre cortes. <Link href="/app/avatares" className="underline">Crea un avatar</Link> para que sea siempre la misma persona.</p>
+                  <p className="text-xs text-muted">Sin avatar guardado la cara cambia entre cortes. <Link href="/app/avatares" className="underline">Crea un avatar</Link> o elige uno de Creads aquí abajo para que sea siempre la misma persona.</p>
                 </div>
               )}
+              <details className="group" open={!avatars.rows?.length}>
+                <summary className="cursor-pointer text-sm font-semibold text-accent-text">Avatares de Creads (listos para usar)</summary>
+                <div className="pt-2">
+                  <CreadsAvatars compact taken={(avatars.rows ?? []).map((a) => a.name)} onPick={async (id) => { await avatars.reload(); setAvatarId(id); }} />
+                </div>
+              </details>
             </div>
           )}
 
