@@ -84,6 +84,7 @@ async function readInput(t: ToolDef, b: Record<string, unknown>, ws: string): Pr
       input.videoRef = b.video;
       input.imageRef = input.image;
     }
+    if (t.qualities) input.quality = t.qualities.find((q) => q.id === b.quality)?.id ?? t.qualities[0].id;
     if (t.id === "personaje-en-video") {
       // checked before charging: a video that can't work never costs anything
       const a = await analyzeVideo(b.video, ws).catch(() => null);
@@ -119,7 +120,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   if (t.consent && b.consent !== true) return bad("Confirma que tienes permiso de la persona que aparece o habla.");
   const read = await readInput(t, b, s.user.workspace);
   if (typeof read === "string") return bad(read);
-  const usd = t.estimate(read.seconds);
+  const usd = t.estimate(read.seconds, read.input.quality);
   const svc = serviceOf(`tool:${t.id}`, null);
 
   // Record first, then start: if the provider takes the job, it is never lost (and never paid twice).
@@ -128,7 +129,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
     row = await db.insert("clips", {
       kind: `tool:${t.id}`,
       prompt: read.input.prompt ?? read.input.target ?? null,
-      model: t.model,
+      model: read.input.quality ? `${t.model} ${read.input.quality}` : t.model,
       status: "running",
       image_url: read.input.image ?? read.input.images?.[0] ?? read.input.video ?? null,
       text: read.seconds ? secs(read.seconds) : null,
@@ -139,7 +140,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ tool: string }
   }
   const id = String(row.id);
   try {
-    await payFor(s.user, t.bill ? t.bill(read.seconds) : usd, t.name, svc, { ref: id, cost: usd });
+    await payFor(s.user, t.bill ? t.bill(read.seconds, read.input.quality) : usd, t.name, svc, { ref: id, cost: usd });
   } catch (err) {
     await db.remove("clips", id).catch(() => null);
     return bad(await failMessage(err, s.user, svc), failStatus(err));

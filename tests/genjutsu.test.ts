@@ -17,8 +17,10 @@ const t = findTool("personaje-genjutsu")!;
 const BASE = "https://api.comfy.org/v2/models/higgsfield/higgsfield-genjutsu-motion-transfer-v1.0";
 
 test("Máxima calidad: priced per second, needs the Comfy key", () => {
-  assert.equal(t.estimate(15), 5.25);
-  assert.equal(t.estimate(2), 1.4, "at least 4 s");
+  // Comfy's real price: US$1 = 211 credits; 720p 205.478 credits/s, 480p 95.95 credits/s
+  assert.equal(t.estimate(15), 14.61);
+  assert.equal(t.estimate(2), 3.9, "at least 4 s");
+  assert.equal(t.estimate(15, "480p"), 6.82);
   assert.equal(toolConfigured(t), true);
 });
 
@@ -91,10 +93,10 @@ test("Comfy errors come back in plain words", async () => {
 
 import { creditsFor } from "../src/lib/credit-math";
 test("Máxima calidad is priced near cost: the cheapest credit still leaves a small profit", () => {
-  for (const s of [5, 15, 30]) {
-    const credits = creditsFor(t.bill!(s));
+  for (const [s, q] of [[5, "720p"], [15, "720p"], [30, "720p"], [15, "480p"]] as const) {
+    const credits = creditsFor(t.bill!(s, q));
     const paidByCheapest = credits * (209 / 5000);
-    const cost = t.estimate(s);
+    const cost = t.estimate(s, q);
     assert.ok(paidByCheapest > cost, `${s}s: pays ${paidByCheapest} for cost ${cost}`);
     assert.ok(paidByCheapest < cost * 1.45, `${s}s: near cost`);
   }

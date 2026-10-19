@@ -1,4 +1,4 @@
-import type { ToolDef, ToolId } from "../tools";
+import type { Quality, ToolDef, ToolId } from "../tools";
 import { readFile, rm } from "node:fs/promises";
 import { fetchableUrl, saveMedia } from "../media";
 import { cutParts, download, joinParts, partsPlan, probe, still, stripAudio, workdir } from "../montage";
@@ -30,6 +30,8 @@ export interface ToolInput {
   imageRef?: string;
   analysis?: Analysis;
   face?: FaceKit | null;
+  /** personaje-genjutsu: the picked quality (720p by default). */
+  quality?: Quality;
 }
 
 export type ToolCheck =
@@ -380,12 +382,14 @@ interface GjJob {
   /** the video, the character's sheet and the reference pictures (customer's media links) */
   v: string; sh: string; imgs: string[];
   p?: string; main?: string; r?: number; q?: string[]; qa?: "ok" | "aviso";
+  /** resolution (absent = 720p): the free redo keeps it */
+  res?: "480p";
 }
 
 async function submitGenjutsu(j: Omit<GjJob, "id">, ws: string, what: string, fix?: string[]) {
   const image_urls = await Promise.all(j.imgs.map((r) => fetchableUrl(r, ws)));
   return comfySubmit(GENJUTSU, {
-    image_urls, video_url: await fetchableUrl(j.v, ws), resolution: "720p",
+    image_urls, video_url: await fetchableUrl(j.v, ws), resolution: j.res ?? "720p",
     prompt: genjutsuPrompt({ extra: j.p, main: j.main, withFace: j.imgs.length > 1, fix, rules: await swapRules() }),
   }, what);
 }
@@ -395,7 +399,7 @@ async function startGenjutsu(input: ToolInput, ws: string, what: string): Promis
   const fk = input.face;
   // the whole character first, then its face; a plain photo (not a saved character) goes as it is
   const imgs = fk ? [...(fk.refs.length ? [fk.refs[0]] : []), fk.front] : [input.imageRef];
-  const base: Omit<GjJob, "id"> = { snd: input.sound === false ? 0 : 1, v: input.videoRef, sh: input.imageRef, imgs, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}), ...(input.analysis?.main ? { main: input.analysis.main.slice(0, 160) } : {}) };
+  const base: Omit<GjJob, "id"> = { snd: input.sound === false ? 0 : 1, v: input.videoRef, sh: input.imageRef, imgs, ...(input.prompt ? { p: input.prompt.slice(0, 600) } : {}), ...(input.analysis?.main ? { main: input.analysis.main.slice(0, 160) } : {}), ...(input.quality === "480p" ? { res: "480p" as const } : {}) };
   const id = await submitGenjutsu(base, ws, what);
   return GJ + JSON.stringify({ ...base, id } satisfies GjJob);
 }

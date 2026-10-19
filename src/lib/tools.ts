@@ -19,6 +19,8 @@ export type ToolId =
   | "musica"
   | "efectos";
 
+export type Quality = "720p" | "480p";
+
 export interface ToolDef {
   id: ToolId;
   name: string;
@@ -41,10 +43,12 @@ export interface ToolDef {
     length?: number[]; // the customer picks how long the result is (seconds)
     instrumental?: boolean; // music: offer "sin voz"
   };
+  /** Quality levels the customer can pick (the first one is the default); the price depends on it. */
+  qualities?: { id: Quality; label: string; hint: string }[];
   /** US$ estimate. `seconds` is the length of the video or audio the customer gave. */
-  estimate: (seconds: number) => number;
+  estimate: (seconds: number, quality?: Quality) => number;
   /** When the price isn't the usual margin over the cost: the US$ the credits are counted from. */
-  bill?: (seconds: number) => number;
+  bill?: (seconds: number, quality?: Quality) => number;
   priceNote: string;
   /** True when the provider doesn't publish an exact price (we show "aprox."). */
   approx?: boolean;
@@ -194,10 +198,14 @@ export const TOOLS: ToolDef[] = [
       prompt: "optional",
       promptHint: "Opcional: algo que cuidar, por ejemplo «mantén los billetes en sus manos». No hace falta escribir nada.",
     },
-    // per second of video at 720p (cost from Comfy; override with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
-    estimate: (s) => +(genjutsuRate() * Math.max(4, Math.ceil(s))).toFixed(2),
+    qualities: [
+      { id: "720p", label: "Alta (720p)", hint: "La más nítida. Para anuncios." },
+      { id: "480p", label: "Normal (480p)", hint: "Menos de la mitad del precio. Para probar o para redes." },
+    ],
+    // per second of video (cost from Comfy; 720p can be overridden with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
+    estimate: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s))).toFixed(2),
     // near cost on purpose (owner, 18 Oct): the customer who pays least per credit pays cost + 35%
-    bill: (s) => +(genjutsuRate() * Math.max(4, Math.ceil(s)) * genjutsuMargin() * DEFAULT_USD_PER_CREDIT / CHEAPEST_USD_PER_CREDIT).toFixed(3),
+    bill: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s)) * genjutsuMargin() * DEFAULT_USD_PER_CREDIT / CHEAPEST_USD_PER_CREDIT).toFixed(3),
     priceNote: "Precio especial, casi a costo",
     consent: true,
   },
@@ -270,11 +278,13 @@ export const DUB_LANGS = [
   { id: "pt", label: "Portugués" },
 ] as const;
 
-/** What Genjutsu costs Creads per second of video (US$), 720p. */
-export function genjutsuRate() {
+/** What Genjutsu costs Creads per second of video (US$). Comfy Router price list (19 Oct 2026, US$1 = 211
+ *  Comfy credits): 720p 205.478 credits/s ≈ US$0.974, 480p 95.950 credits/s ≈ US$0.455. */
+export function genjutsuRate(q: Quality = "720p") {
   // the same number on the page and the server (inlined at build)
   const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_USD_PER_SEC);
-  return Number.isFinite(v) && v > 0.05 && v < 3 ? v : 0.35;
+  const hd = Number.isFinite(v) && v > 0.05 && v < 3 ? v : 205.478 / 211;
+  return q === "480p" ? hd * (95.950 / 205.478) : hd;
 }
 
 /** What a credit costs the customer who pays least for it (the 5,000 pack: US$209). */

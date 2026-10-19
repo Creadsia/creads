@@ -298,6 +298,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
   const [length, setLength] = useState<number>(findTool(toolId)?.inputs.length?.[1] ?? 0);
   const [instrumental, setInstrumental] = useState(true);
   const [sound, setSound] = useState(initial.sound ?? true);
+  const [quality, setQuality] = useState(t.qualities?.[0].id);
   const recreates = t.id === "editar-video" || t.id === "copiar-movimiento" || t.id === "personaje-en-video" || t.id === "personaje-genjutsu";
   // «Mi personaje en un video»: the free check of the video (traffic light) before paying
   const checks = t.id === "personaje-en-video";
@@ -359,7 +360,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
 
   const n = t.inputs;
   const seconds = n.length ? length : t.id === "avatar-habla" ? audio?.secs ?? 0 : checks && typeof check === "object" && check?.usable ? Math.min(check.usable, video?.secs ?? check.usable) : video?.secs ?? 0;
-  const usd = (t.bill ?? t.estimate)(seconds);
+  const usd = (t.bill ?? t.estimate)(seconds, quality);
   const { price: money, covers, info } = useCredits();
   const missing =
     (n.image && !image) ? "Sube o elige una foto." :
@@ -377,7 +378,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
       const res = await fetch(`/api/tools/${t.id}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent, length, instrumental, ...(recreates ? { sound } : {}) }),
+        body: JSON.stringify({ image, images, video: video?.url, audio: audio?.url, seconds, prompt, target, consent, length, instrumental, ...(recreates ? { sound } : {}), ...(quality ? { quality } : {}) }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo iniciar.");
@@ -450,6 +451,18 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
             <input type="checkbox" checked={instrumental} onChange={(e) => setInstrumental(e.target.checked)} />
             <span>Solo instrumental (sin voz cantada)</span>
           </label>
+        )}
+        {t.qualities && (
+          <div role="radiogroup" aria-label="Calidad del video" className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-muted">Calidad</span>
+            <div className="flex flex-wrap gap-2">
+              {t.qualities.map((q) => (
+                <button key={q.id} type="button" role="radio" aria-checked={quality === q.id} onClick={() => setQuality(q.id)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium ${quality === q.id ? "border-accent bg-accent/15 text-ink" : "border-line text-muted hover:border-muted hover:text-ink"}`}>{q.label}</button>
+              ))}
+            </div>
+            <span className="text-xs text-muted">{t.qualities.find((q) => q.id === quality)?.hint}</span>
+          </div>
         )}
         {recreates && (
           <div role="radiogroup" aria-label="Audio del resultado" className="flex flex-col gap-1.5">
