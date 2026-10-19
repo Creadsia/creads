@@ -57,6 +57,15 @@ export default function ModelLab({ code }: { code: string }) {
   const poll = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => void (poll.current && clearTimeout(poll.current)), []);
+  // «Crear algo similar» from the site's /ia pages: settings come in the link (nothing runs by itself)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const p = q.get("p"), m = q.get("m"), a = q.get("a"), s = Number(q.get("s"));
+    if (p) setPrompt(p.slice(0, 3000));
+    if (m) { setModel(m); setImgModel((cur) => (IMAGE_FALLBACK.some((x) => x.id === m) ? m : cur)); }
+    if (a === "9:16" || a === "16:9" || a === "1:1" || a === "4:5") setAspect(a);
+    if (s > 0) setSeconds(s);
+  }, []);
   useEffect(() => {
     if (!code) return;
     fetch("/api/models", { headers: { "x-creads-code": code } })

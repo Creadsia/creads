@@ -141,7 +141,7 @@ const MENU_MEDIA: Record<string, Ex[]> = {
 };
 
 /** Small mock screens for the steps that are about the studio, not about a clip. */
-function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
+export function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
     <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
       {[0, 1].map((i) => (
@@ -159,7 +159,7 @@ function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
     </div>
   );
 }
-function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
+export function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
     <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
       {m.parts.map(([k, v]) => (
@@ -171,7 +171,7 @@ function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
     </div>
   );
 }
-function ScriptMock({ m }: { m: Content["flow"]["mock"] }) {
+export function ScriptMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
     <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
       <span className="w-fit rounded-md bg-accent/15 px-1.5 py-0.5 font-semibold text-accent-text">{m.nuevos}</span>
@@ -183,7 +183,7 @@ function ScriptMock({ m }: { m: Content["flow"]["mock"] }) {
 }
 
 /** «De espiar a lanzar»: the five steps of an affiliate's ad, each with what Creads shows at that step. */
-function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
+export function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
   const art = (k: string) => {
     if (k === "espiar") return <SpyMock m={t.mock} />;
     if (k === "desarmar") return <BreakdownMock m={t.mock} />;
@@ -231,7 +231,7 @@ function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
 }
 
 /** The panel under the header for a menu item: what it does, a few examples, and a link to see more. */
-function MenuPanel({ k, t, href, mock }: { k: string; t: Content["menuEx"]; href: string; mock: Content["flow"]["mock"] }) {
+export function MenuPanel({ k, t, href, mock }: { k: string; t: Content["menuEx"]; href: string; mock: Content["flow"]["mock"] }) {
   const e = (t as unknown as Record<string, { title: string; text: string; items: string[] }>)[k];
   if (!e) return null;
   const media = MENU_MEDIA[k];
@@ -698,6 +698,90 @@ function CtaStrip({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate: 
   );
 }
 
+
+/** The site header (home and the /ia pages): logo, menu with example panels, language, login and CTA. */
+export function SiteHeader({ t, onHome = true, current }: { t: Content; onHome?: boolean; current?: string }) {
+  const home = t.lang === "es" ? "/" : "/en";
+  const other = t.lang === "es" ? "/en" : "/";
+  const pricing = onHome ? "#pricing" : `${home === "/" ? "" : home}/#pricing`;
+  return (
+  <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
+    <div className={`relative mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
+      <Logo href={home} />
+      <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] min-[1480px]:flex">
+        {t.menu.map((m) => (
+          <div key={m.label} className="group">
+            <a href={m.href} aria-current={m.href === current ? "page" : undefined} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted aria-[current=page]:bg-surface aria-[current=page]:text-ink transition-colors hover:bg-surface hover:text-ink group-focus-within:bg-surface group-focus-within:text-ink">
+              {m.label}
+              {m.badge && (
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                    m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
+                  }`}
+                >
+                  {m.badge}
+                </span>
+              )}
+            </a>
+            {"ex" in m && m.ex && (
+              <div className="invisible absolute inset-x-0 top-full z-40 px-4 pt-0 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                <MenuPanel k={m.ex} t={t.menuEx} href={m.href} mock={t.flow.mock} />
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Language switch: both options visible, the current one filled. */}
+        <nav aria-label="Language" className="flex items-center rounded-full border border-line bg-surface p-0.5 text-xs font-bold">
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="mx-1.5 hidden h-4 w-4 text-muted sm:block" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
+          </svg>
+          {(["en", "es"] as const).map((l) =>
+            l === t.lang ? (
+              <span key={l} aria-current="true" className="rounded-full bg-ink px-2.5 py-1.5 text-bg">
+                {l.toUpperCase()}
+              </span>
+            ) : (
+              <a
+                key={l}
+                href={other}
+                hrefLang={l}
+                lang={l}
+                title={t.nav.switchLabel}
+                className="rounded-full px-2.5 py-1.5 text-muted transition-colors hover:text-ink"
+              >
+                {l.toUpperCase()}
+              </a>
+            ),
+          )}
+        </nav>
+        <span className="hidden min-[420px]:contents"><ThemeToggle lang={t.lang} /></span>
+        <a href="/app" className="hidden whitespace-nowrap px-2 text-sm font-semibold text-muted hover:text-ink sm:block">{t.nav.login}</a>
+        <a href={pricing} className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 sm:px-4">
+          {t.nav.cta}
+        </a>
+      </div>
+    </div>
+    {/* phone: the same menu as a scrollable row */}
+    <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm min-[1480px]:hidden ${gutter}`}>
+      <span className="shrink-0 min-[420px]:hidden"><ThemeToggle lang={t.lang} /></span>
+      {t.menu.map((m) => (
+        <a key={m.label} href={m.href} aria-current={m.href === current ? "page" : undefined} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted aria-[current=page]:border-ink aria-[current=page]:text-ink">
+          {m.label}
+          {m.badge && (
+            <span className={`rounded px-1 py-0.5 text-[9px] font-bold leading-none ${m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"}`}>
+              {m.badge}
+            </span>
+          )}
+        </a>
+      ))}
+    </nav>
+  </header>
+  );
+}
+
 export default function Landing({ t, rate = 950, renews = true }: { t: Content; rate?: number; renews?: boolean }) {
   const home = t.lang === "es" ? "/" : "/en";
   const other = t.lang === "es" ? "/en" : "/";
@@ -710,81 +794,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
       {/* Offer bar: offers, news and models sliding sideways */}
       <Ticker t={t.bar} />
 
-      {/* Header */}
-      <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
-        <div className={`relative mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
-          <Logo href={home} />
-          <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] min-[1480px]:flex">
-            {t.menu.map((m) => (
-              <div key={m.label} className="group">
-                <a href={m.href} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted transition-colors hover:bg-surface hover:text-ink group-focus-within:bg-surface group-focus-within:text-ink">
-                  {m.label}
-                  {m.badge && (
-                    <span
-                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                        m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
-                      }`}
-                    >
-                      {m.badge}
-                    </span>
-                  )}
-                </a>
-                {"ex" in m && m.ex && (
-                  <div className="invisible absolute inset-x-0 top-full z-40 px-4 pt-0 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                    <MenuPanel k={m.ex} t={t.menuEx} href={m.href} mock={t.flow.mock} />
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Language switch: both options visible, the current one filled. */}
-            <nav aria-label="Language" className="flex items-center rounded-full border border-line bg-surface p-0.5 text-xs font-bold">
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="mx-1.5 hidden h-4 w-4 text-muted sm:block" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
-              </svg>
-              {(["en", "es"] as const).map((l) =>
-                l === t.lang ? (
-                  <span key={l} aria-current="true" className="rounded-full bg-ink px-2.5 py-1.5 text-bg">
-                    {l.toUpperCase()}
-                  </span>
-                ) : (
-                  <a
-                    key={l}
-                    href={other}
-                    hrefLang={l}
-                    lang={l}
-                    title={t.nav.switchLabel}
-                    className="rounded-full px-2.5 py-1.5 text-muted transition-colors hover:text-ink"
-                  >
-                    {l.toUpperCase()}
-                  </a>
-                ),
-              )}
-            </nav>
-            <span className="hidden min-[420px]:contents"><ThemeToggle lang={t.lang} /></span>
-            <a href="/app" className="hidden whitespace-nowrap px-2 text-sm font-semibold text-muted hover:text-ink sm:block">{t.nav.login}</a>
-            <a href="#pricing" className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90 sm:px-4">
-              {t.nav.cta}
-            </a>
-          </div>
-        </div>
-        {/* phone: the same menu as a scrollable row */}
-        <nav aria-label="Main" className={`flex gap-1 overflow-x-auto pb-2.5 text-sm min-[1480px]:hidden ${gutter}`}>
-          <span className="shrink-0 min-[420px]:hidden"><ThemeToggle lang={t.lang} /></span>
-          {t.menu.map((m) => (
-            <a key={m.label} href={m.href} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted">
-              {m.label}
-              {m.badge && (
-                <span className={`rounded px-1 py-0.5 text-[9px] font-bold leading-none ${m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"}`}>
-                  {m.badge}
-                </span>
-              )}
-            </a>
-          ))}
-        </nav>
-      </header>
+      <SiteHeader t={t} />
 
       <main className="flex flex-col gap-20 pb-20 sm:gap-24">
         {/* Hero: a dark stage. Pitch + composer on the left, a moving wall of AI clips tagged with their model on the right. */}
