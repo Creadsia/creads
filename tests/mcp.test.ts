@@ -78,4 +78,7 @@ test("MCP: initialize, tools with titles and read/write annotations, and a tool 
   const er = e!.result as { content: { text: string }[]; isError: boolean };
   assert.equal(er.isError, true);
   assert.doesNotMatch(er.content[0].text, /plan|compra/i, "no upgrade pitch inside the chat");
+  const out: Call = async () => { throw new Error("El proveedor de imágenes se quedó sin saldo. Carga saldo y vuelve a intentar."); };
+  const e2 = await handle({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "creads_saldo", arguments: {} } }, out, "");
+  assert.match((e2!.result as { content: { text: string }[] }).content[0].text, /sin saldo/, "other problems keep their real message");
 });

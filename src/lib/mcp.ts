@@ -92,8 +92,9 @@ const fail = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", 
 /** Errors as plain words for the chat (no prices, no upgrade pitches: buying happens on creadsia.com). */
 function friendly(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e);
-  if (/crédit|credit|saldo|402/i.test(m)) return "La cuenta de Creads no tiene créditos suficientes para esto.";
-  if (/sesión|401/i.test(m)) return "La conexión con Creads venció. Vuelve a conectar Creads.";
+  // the studio's messages are already safe for customers; only a «buy/recharge a plan» pitch is replaced
+  if (/crédit|credit/i.test(m) && /recarg|compr|plan|mejora/i.test(m)) return "La cuenta de Creads no tiene créditos suficientes para esto.";
+  if (/sesión terminó|401/i.test(m)) return "La conexión con Creads venció. Vuelve a conectar Creads.";
   return m.slice(0, 300);
 }
 
