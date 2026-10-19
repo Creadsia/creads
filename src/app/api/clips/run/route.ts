@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { findVideo } from "@/lib/providers";
+import { findImage, findVideo } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
@@ -88,7 +88,10 @@ export async function POST(req: Request) {
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
     const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
-    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? nanoBananaPro.usdPerImage : 0) + (ownVoice ? lipsyncUsd(videoSecs, shotPlan!.dialogue!.line) : 0);
+    // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
+    const nb2 = findImage("nano-banana-2");
+    const frameModel = nb2?.configured() ? nb2 : nanoBananaPro;
+    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? frameModel.usdPerImage : 0) + (ownVoice ? lipsyncUsd(videoSecs, shotPlan!.dialogue!.line) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
     await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
@@ -99,13 +102,14 @@ export async function POST(req: Request) {
     if (TAKES_REFS.has(provider.id) && (face || prod)) {
       refs = [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])];
     } else if ((face || prod) && !image) {
-      // Models that animate a still: first draw the opening frame with Nano Banana Pro from the photos.
+      // Models that animate a still: first draw the opening frame from the photos (Nano Banana 2; Pro if it fails).
       const framePrompt = st.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
-      const ff = await nanoBananaPro.generate({
+      const frameReq = {
         prompt: framePrompt,
         aspect,
         refs: [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])],
-      });
+      };
+      const ff = await frameModel.generate(frameReq).catch((e) => (frameModel === nanoBananaPro ? Promise.reject(e) : nanoBananaPro.generate(frameReq)));
       image = await saveMedia(ws, "frames", ff.bytes, ff.mime);
     }
     if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];

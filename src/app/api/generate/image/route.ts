@@ -32,7 +32,8 @@ export async function POST(req: Request) {
     : [];
   if (prompt.length < 10) return NextResponse.json({ error: "Describe la imagen con un poco más de detalle." }, { status: 400 });
 
-  const provider = findImage(body?.model || "nano-banana-pro");
+  // default: Nano Banana 2 (about half the cost of Pro, same family); Pro stays one click away
+  const provider = findImage(body?.model || "nano-banana-2") ?? findImage("nano-banana-pro");
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 

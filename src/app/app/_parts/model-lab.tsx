@@ -27,7 +27,7 @@ const FALLBACK: VideoModel[] = [
 ].map((m) => ({ ...m, configured: true, live: false, aspects: ["9:16", "16:9"], seconds: [4, 6, 8] }));
 
 interface ImageModel { id: string; label: string; configured: boolean; usd: number }
-const IMAGE_FALLBACK: ImageModel[] = [{ id: "nano-banana-pro", label: "Nano Banana Pro", configured: true, usd: 0.134 }];
+const IMAGE_FALLBACK: ImageModel[] = [{ id: "nano-banana-2", label: "Nano Banana 2", configured: true, usd: 0.08 }, { id: "nano-banana-pro", label: "Nano Banana Pro", configured: true, usd: 0.134 }];
 
 type VideoState =
   | { s: "idle" }
@@ -48,7 +48,7 @@ export default function ModelLab({ code }: { code: string }) {
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
-  const [imgModel, setImgModel] = useState("nano-banana-pro");
+  const [imgModel, setImgModel] = useState("nano-banana-2");
   const [model, setModel] = useState("veo-3.1-lite");
   const [seconds, setSeconds] = useState(4);
   const [frame, setFrame] = useState(""); // starting image for the video (generated, uploaded or from the library)
