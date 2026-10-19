@@ -452,7 +452,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
             <span>Solo instrumental (sin voz cantada)</span>
           </label>
         )}
-        {t.qualities && (
+        {t.qualities && t.qualities.length > 1 && (
           <div role="radiogroup" aria-label="Calidad del video" className="flex flex-col gap-1.5">
             <span className="text-sm font-semibold text-muted">Calidad</span>
             <div className="flex flex-wrap gap-2">

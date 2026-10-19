@@ -198,10 +198,8 @@ export const TOOLS: ToolDef[] = [
       prompt: "optional",
       promptHint: "Opcional: algo que cuidar, por ejemplo «mantén los billetes en sus manos». No hace falta escribir nada.",
     },
-    qualities: [
-      { id: "720p", label: "Alta (720p)", hint: "La más nítida. Para anuncios." },
-      { id: "480p", label: "Normal (480p)", hint: "Menos de la mitad del precio. Para probar o para redes." },
-    ],
+    // only 480p for now (owner, 19 Oct): less than half the cost of 720p; add 720p back here to offer it
+    qualities: [{ id: "480p", label: "Normal (480p)", hint: "" }],
     // per second of video (cost from Comfy; 720p can be overridden with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
     estimate: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s))).toFixed(2),
     // near cost on purpose (owner, 18 Oct): the customer who pays least per credit pays cost + 35%

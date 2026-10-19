@@ -51,7 +51,7 @@ test("recasts with the clean references (body + face), reviews, redoes once free
   }) as typeof fetch;
 
   const face = { front: "/api/media/ws/w01/personajes/face.jpg", refs: ["/api/media/ws/w01/personajes/body.jpg"] };
-  let job = await startTool(t, { video: "https://v.test/v.mp4", videoRef: "/api/media/ws/w01/up/v.mp4", image: "https://s.test/s.png", imageRef: "/api/media/ws/w01/tools/crear-personaje/s.png", sound: false, face }, "w01");
+  let job = await startTool(t, { video: "https://v.test/v.mp4", videoRef: "/api/media/ws/w01/up/v.mp4", image: "https://s.test/s.png", imageRef: "/api/media/ws/w01/tools/crear-personaje/s.png", sound: false, face, quality: "480p" }, "w01");
   assert.equal(sent[0].key, "test-comfy-key-123");
   assert.ok(sent[0].idem && sent[0].idem.length > 10, "idempotency key sent");
   const b = sent[0].body as { image_urls: string[]; video_url: string; resolution: string; prompt: string };
@@ -59,7 +59,7 @@ test("recasts with the clean references (body + face), reviews, redoes once free
   assert.match(b.image_urls[0], /body\.jpg/, "whole character first");
   assert.match(b.image_urls[1], /face\.jpg/);
   assert.doesNotMatch(b.image_urls.join(" "), /crear-personaje/, "never the 4-view sheet");
-  assert.equal(b.resolution, "720p");
+  assert.equal(b.resolution, "480p");
   assert.match(b.prompt, /ONE single character/);
   assert.match(swapStep(job) ?? "", /entrando al video/);
 
@@ -70,6 +70,7 @@ test("recasts with the clean references (body + face), reviews, redoes once free
   job = await (st as { advance: () => Promise<string> }).advance();
   assert.equal(sent.length, 2);
   assert.match(String(sent[1].body.prompt), /two copies/);
+  assert.equal(sent[1].body.resolution, "480p", "the free redo keeps the quality");
   assert.equal(JSON.parse(job.slice(3)).r, 1);
   // the redo is clean → delivered without sound
   claudeSays = ['{"severe": false, "issues": []}'];
