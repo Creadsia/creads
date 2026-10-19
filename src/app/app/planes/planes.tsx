@@ -54,7 +54,14 @@ export default function Planes() {
     load();
     // back from Mercado Pago: check the payment right away
     const sp = new URLSearchParams(window.location.search);
-    const pedido = sp.get("pedido");
+    // Mercado Pago appends «?preapproval_id=…» to a back_url that already has a query, so it can land inside «pedido»
+    let pedido = sp.get("pedido");
+    let preapproval = sp.get("preapproval_id");
+    if (pedido?.includes("?")) {
+      const [id, extra] = pedido.split("?");
+      pedido = id;
+      preapproval = preapproval ?? new URLSearchParams(extra).get("preapproval_id");
+    }
     // arriving from the website's checkout: the order was saved but online payment didn't open
     const got = sp.get("recibido");
     if (got) setReceived(got);
@@ -70,7 +77,7 @@ export default function Planes() {
     }
     if (sp.get("pago") === "volver" && pedido) {
       setBack({ state: "revisando", id: pedido });
-      fetch("/api/pagos/confirmar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pedido, payment_id: sp.get("payment_id") ?? sp.get("collection_id"), preapproval_id: sp.get("preapproval_id") }) })
+      fetch("/api/pagos/confirmar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pedido, payment_id: sp.get("payment_id") ?? sp.get("collection_id"), preapproval_id: preapproval }) })
         .then((r) => r.json()).then((d) => { setBack({ state: d.state ?? "procesando", id: pedido }); load(); refreshCredits(); })
         .catch(() => setBack({ state: "procesando", id: pedido }));
       window.history.replaceState(null, "", "/app/planes");
