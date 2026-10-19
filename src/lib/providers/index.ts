@@ -1,6 +1,7 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
 import { elevenlabs } from "./elevenlabs";
+import { direct } from "./byteplus";
 import { falImageProviders, falVideoProviders } from "./fal";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 
@@ -13,7 +14,7 @@ export const videoProviders: VideoProvider[] = [
   veoLite,
   veoFast,
   veoStd,
-  ...falVideoProviders,
+  ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
 ];
 
 export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders];
