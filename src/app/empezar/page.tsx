@@ -9,7 +9,7 @@ import { oneTimeOnly } from "@/lib/mercadopago";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
-  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Primer mes con 50% de descuento.",
+  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Starter con 75% de descuento el primer mes.",
   robots: { index: false, follow: true },
 };
 export const dynamic = "force-dynamic";

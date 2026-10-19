@@ -19,7 +19,7 @@ const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); }
 
 export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: string; rate?: number }) {
   const es = lang === "es";
-  const plus = PLANS.find((p) => p.id === "plus")!;
+  const plus = PLANS.find((p) => p.id === "starter")!; // the plan with the launch offer
   const first = plus.monthly * (1 - LAUNCH_PCT / 100);
   const price = es ? usd(first) : `US$${first.toFixed(2).replace(/\.00$/, "")}`;
 

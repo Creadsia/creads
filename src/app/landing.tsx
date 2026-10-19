@@ -544,7 +544,7 @@ function AppPreview({ t }: { t: Content["preview"] }) {
 
 /** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
 function fromPrice(lang: string, rate: number) {
-  const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100);
+  const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100); // Starter, the plan with the launch offer
   void rate;
   return lang === "es" ? usdLabel(usd) : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
 }

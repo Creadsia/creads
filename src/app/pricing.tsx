@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { LAUNCH_PCT, usd } from "@/lib/catalog";
+import { LAUNCH_PCT, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 
@@ -61,7 +61,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
           const ads = Math.max(1, Math.floor(credits / 300));
-          const monthNow = yearly ? (p.yearly * 12) / 12 : p.price * (1 - LAUNCH_PCT / 100);
+          const promo = !yearly && hasLaunch(p.id);
+          const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? p.price * (1 - LAUNCH_PCT / 100) : p.price;
           const perAd = Math.round((monthNow / ads) * 100) / 100;
           return (
             <article key={p.id}
@@ -83,16 +84,18 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
 
                 {/* price */}
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <s className="text-muted">{money(p.price)}{t.perMonth}</s>
-                    <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? t.yearlyBadge : `−${LAUNCH_PCT}% ${t.firstMonth}`}</span>
-                  </div>
+                  {(yearly || promo) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <s className="text-muted">{money(p.price)}{t.perMonth}</s>
+                      <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? t.yearlyBadge : `−${LAUNCH_PCT}% ${t.firstMonth}`}</span>
+                    </div>
+                  )}
                   <p className="flex flex-wrap items-baseline gap-x-1.5">
                     <span className={`font-display text-[3rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
-                    <span className="text-muted">{yearly ? t.perMonth : ` ${t.firstMonth}`}</span>
+                    <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
                   </p>
                   <p className="text-sm text-muted">
-                    {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : `${t.then} ${money(p.price)}${t.perMonth}`} · {t.cancel}
+                    {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : promo ? `${t.then} ${money(p.price)}${t.perMonth}` : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
 

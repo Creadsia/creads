@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
+import { type ItemId, LAUNCH_PCT, PACKS, hasLaunch, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import PayBadges from "../pay-badges";
 
 // One page from "I want this plan" to Mercado Pago: pick the plan, create the account, pay.
-// New accounts always get the launch offer (first purchase), so the price shown here is the price charged.
+// New accounts always get the launch offer on Starter (first purchase), so the price shown here is the price charged.
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const ADS = (credits: number) => Math.max(1, Math.floor(credits / 300));
@@ -108,7 +108,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left ${period === p ? "border-accent-text bg-surface" : "border-line text-muted"}`}>
                   <b className="text-sm text-ink">{p === "mensual" ? "Mensual" : "Anual"}</b>
-                  <span className="text-xs">{p === "mensual" ? `−${LAUNCH_PCT}% el primer mes` : "2 meses gratis"}</span>
+                  <span className="text-xs">{p === "mensual" ? `Starter −${LAUNCH_PCT}% el primer mes` : "2 meses gratis"}</span>
                 </button>
               ))}
             </div>
@@ -171,7 +171,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
               {renews ? (
-                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio del plan"}{plan && hasLaunch(plan.id) ? " (con la oferta de lanzamiento)" : ""} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
               ) : (
                 <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}

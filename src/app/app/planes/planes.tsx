@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { type ItemId, LAUNCH_PCT, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { newEventId, track } from "@/lib/track";
@@ -228,14 +228,14 @@ export default function Planes() {
                   className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${period === p ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{p === "mensual" ? "Mensual" : "Anual"}</button>
               ))}
             </div>
-            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "2 meses gratis" : pay?.firstPurchase ? `−${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
+            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "2 meses gratis" : pay?.firstPurchase ? `Starter −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">
             {PLANS.map((p) => {
               const featured = p.id === "plus";
               const mine = currentPlan === p.name;
               const perMonth = period === "anual" ? p.yearlyPerMonth : p.monthly;
-              const first = period === "mensual" && pay?.firstPurchase ? p.monthly * (1 - LAUNCH_PCT / 100) : null;
+              const first = period === "mensual" && pay?.firstPurchase && hasLaunch(p.id) ? p.monthly * (1 - LAUNCH_PCT / 100) : null;
               return (
                 <article key={p.id} className={`relative flex flex-col gap-4 rounded-2xl p-5 ${featured ? "border-2 border-transparent bg-surface [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box]" : "border border-line bg-surface"} ${item === p.id ? "ring-2 ring-accent-text/60" : ""}`}>
                   <div className="flex items-center justify-between gap-2">

@@ -23,8 +23,10 @@ export const PACKS = [
   { id: "pack-5000" as ItemId, credits: 5000, usd: 209, note: "Para agencias" },
 ];
 
-/** Launch offer: 50% off the first month of a monthly plan. */
-export const LAUNCH_PCT = 50;
+/** Launch offer (owner, 19 Oct 2026): 75% off the first month of the monthly Starter plan only. */
+export const LAUNCH_PCT = 75;
+export const LAUNCH_ITEMS: ItemId[] = ["starter"];
+export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
 export interface Quote {
   item: ItemId;
@@ -49,7 +51,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   }
   const p = plan!;
   const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;
-  const launch = period === "mensual" && opts.firstPurchase ? r((subtotal * LAUNCH_PCT) / 100) : 0;
+  const launch = period === "mensual" && opts.firstPurchase && hasLaunch(item) ? r((subtotal * LAUNCH_PCT) / 100) : 0;
   const discount = r(((subtotal - launch) * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
   return {
     item, label: `Plan ${p.name} · ${period === "anual" ? "anual" : "mensual"}`, credits: p.credits * (period === "anual" ? 12 : 1),
