@@ -42,6 +42,7 @@ const D = {
   sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
   phone: "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm3 17h2",
   out: "M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10",
+  code: "M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12",
   coin: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v8M9.5 10.5c0-1 1.1-1.5 2.5-1.5s2.5.6 2.5 1.5-1 1.3-2.5 1.5-2.5.6-2.5 1.5 1.1 1.5 2.5 1.5 2.5-.5 2.5-1.5",
 };
 
@@ -144,6 +145,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y créditos</Link>
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
+          <Link href="/app/api" role="menuitem" onClick={close} className={item}><Svg d={D.code} />API para sistemas</Link>
           <Link href="/app/ayuda" role="menuitem" onClick={close} className={item}><Svg d={D.help} />Centro de ayuda</Link>
           {WHATSAPP && <a href={whatsappLink("Hola, necesito ayuda con Creads IA")} target="_blank" rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.phone} />Ayuda por WhatsApp</a>}
           {(app.mode === "prompt" || app.mode === "ios") && (

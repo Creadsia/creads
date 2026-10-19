@@ -5,7 +5,7 @@ import { open, seal } from "./meta-conexiones";
 import { DEFAULT_AUTOPROD, type AutoProd, type Pedido, type ProdJob, commitMarketing, loadMarketing, once } from "./marketing";
 import { videoProviders } from "./providers";
 import { pausedModels } from "./model-pause";
-import { DEFAULT_STYLE } from "./caption-style";
+import { type AdJob, runStep } from "./ad-runner";
 import { SITE } from "./emails";
 
 // The automatic producer: an approved ad request (from Creativos or the Community manager) becomes a finished
@@ -57,7 +57,7 @@ async function studio<T>(path: string, body?: unknown, timeoutMs = STEP_TIMEOUT,
 }
 
 /** The model for automatic videos: the one chosen in Marketing, else the cheapest that talks and is available. */
-async function pickModel(cfg: AutoProd): Promise<string> {
+export async function pickModel(cfg: Pick<AutoProd, "modelo">): Promise<string> {
   const paused = await pausedModels().catch(() => ({} as Record<string, unknown>));
   const ok = videoProviders.filter((p) => p.configured() && !p.silent && !p.needsImage && !paused[p.id]);
   const chosen = ok.find((p) => p.id === cfg.modelo);
@@ -66,9 +66,6 @@ async function pickModel(cfg: AutoProd): Promise<string> {
   if (!best) throw new Error("No hay ningún modelo de video con voz disponible ahora.");
   return best.id;
 }
-
-const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string) =>
-  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo). Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
 
 const save = (id: string, patch: Partial<ProdJob>) => commitMarketing((m) => {
   const j = (m.produccion ?? []).find((x) => x.id === id);
@@ -96,61 +93,9 @@ export async function enqueue(p: Pedido): Promise<boolean> {
 
 /** One step for one job. Errors stop that job with a plain message (the others keep going). */
 async function step(j: ProdJob, cfg: AutoProd): Promise<void> {
-  try {
-    if (j.estado === "cola") {
-      const d = await studio<{ titulo?: string; cortes: { tipo: string; texto: string }[] }>("/api/cuts", { script: j.guion, format: j.formato, lang: j.idioma, maxSec: 8 });
-      if (!d.cortes?.length) throw new Error("El guion no se pudo dividir en cortes.");
-      await save(j.id, { estado: "escenas", paso: `${d.cortes.length} cortes listos`, cortes: d.cortes.map((c) => ({ tipo: c.tipo, texto: c.texto })), titulo: d.titulo || j.titulo });
-      return;
-    }
-    if (j.estado === "escenas") {
-      const cortes = j.cortes ?? [];
-      const sc = await studio<{ scenes: { prompt: string; dir?: { setting?: string; framing?: string } }[] }>("/api/scenes", { format: j.formato, lang: j.idioma, aspect: "9:16", cuts: cortes, script: cortes.map((c) => c.texto).join(" ") });
-      if (sc.scenes?.length !== cortes.length) throw new Error("No se pudieron dirigir las escenas.");
-      const modelo = await pickModel(cfg);
-      const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
-        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo,
-        clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma) })),
-      });
-      const ids = ad.clips.map((c) => c.id);
-      for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map((id) => studio("/api/clips/run", { id }).catch(() => null)));
-      await save(j.id, { estado: "generando", paso: `Generando ${ids.length} cortes con ${videoProviders.find((p) => p.id === modelo)?.label ?? modelo}`, modelo, adId: ad.ad.id, clipIds: ids });
-      return;
-    }
-    if (j.estado === "generando") {
-      const ids = j.clipIds ?? [];
-      const st = await Promise.all(ids.map((id) => studio<{ clip?: { status: string } }>(`/api/clips/status?id=${id}`).then((d) => d.clip?.status ?? "unknown").catch(() => "unknown")));
-      const failed = ids.filter((_, i) => st[i] === "failed");
-      const reintentos = { ...(j.reintentos ?? {}) };
-      for (const id of failed) {
-        if ((reintentos[id] ?? 0) >= 1) throw new Error("Un corte falló dos veces. Revísalo en el estudio (Biblioteca) o pide el video de nuevo.");
-        reintentos[id] = (reintentos[id] ?? 0) + 1;
-        await studio("/api/clips/run", { id }).catch(() => null);
-      }
-      const done = st.filter((x) => x === "done").length;
-      if (done === ids.length) { await save(j.id, { estado: j.revisado ? "armando" : "revisando", paso: "Cortes listos", reintentos }); return; }
-      if (Date.now() - Date.parse(j.updatedAt) > 3 * 3600_000 && !failed.length) throw new Error("La generación lleva más de 3 horas sin terminar.");
-      const paso = `${done} de ${ids.length} cortes listos`;
-      if (failed.length || paso !== j.paso) await save(j.id, { paso, reintentos }); // progress resets the 3-hour clock
-      return;
-    }
-    if (j.estado === "revisando") {
-      const r = await studio<{ results: { clipId: string; severe?: boolean; freeRedo?: boolean; issues: string[] }[] }>("/api/review", { adId: j.adId }, 290_000);
-      const todo = (r.results ?? []).filter((x) => x.severe && x.freeRedo);
-      for (const x of todo) {
-        await studio("/api/clips/fix", { id: x.clipId, problem: x.issues.join(". ") }).catch(() => null);
-        await studio("/api/clips/run", { id: x.clipId, free: true }).catch(() => null);
-      }
-      await save(j.id, todo.length ? { estado: "generando", revisado: true, paso: `Rehaciendo ${todo.length} corte(s) que la revisión encontró con errores` } : { estado: "armando", revisado: true, paso: "Revisión de calidad aprobada" });
-      return;
-    }
-    if (j.estado === "armando") {
-      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello: cfg.sello } }, 290_000);
-      await save(j.id, { estado: "listo", paso: "Video terminado: ya está en el banco de contenido", videoUrl: d.url });
-    }
-  } catch (e) {
-    await save(j.id, { estado: "error", error: (e instanceof Error ? e.message : "No se pudo seguir.").slice(0, 300) });
-  }
+  const patch = await runStep(j as unknown as AdJob, studio, () => pickModel(cfg), cfg.sello);
+  if (patch.estado === "listo") patch.paso = "Video terminado: ya está en el banco de contenido";
+  if (Object.keys(patch).length) await save(j.id, patch as Partial<ProdJob>); // no progress: the 3-hour clock keeps running
 }
 
 /** Moves the production line forward (called every 5 minutes, and right after an approval). */

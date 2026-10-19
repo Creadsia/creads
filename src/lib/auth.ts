@@ -246,8 +246,47 @@ export function tokenFromCookieHeader(header: string | null): string {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
-/** For API routes: the user behind the request's session cookie. */
-export const userFromRequest = (req: Request) => userFromToken(tokenFromCookieHeader(req.headers.get("cookie")));
+/** An API key sent as `Authorization: Bearer creads_sk_…` (empty when there is none). */
+export function apiKeyFromRequest(req: Request): string {
+  const m = (req.headers.get("authorization") ?? "").match(/^Bearer\s+(creads_sk_[A-Za-z0-9_-]{30,80})$/);
+  return m ? m[1] : "";
+}
+
+/** For API routes: the user behind the request's session cookie, or behind its API key. */
+export const userFromRequest = (req: Request) => userFromToken(apiKeyFromRequest(req) || tokenFromCookieHeader(req.headers.get("cookie")));
+
+// ---------- API keys ----------
+// An API key is a long-lived session of the account that made it (stored hashed, like every session), so a
+// system using it gets exactly what that person gets in the studio: same credits, limits and checks. It is
+// shown once. Changing the password or pausing the account ends every key, as it ends every session.
+const API_PREFIX = "API · ";
+const API_DAYS = 365;
+export interface ApiKey { id: string; name: string; created_at: string; expires_at: string }
+
+export async function createApiKey(userId: string, name: string): Promise<{ key: string; info: ApiKey }> {
+  const key = `creads_sk_${randomBytes(32).toString("base64url")}`;
+  const label = name.replace(/[\r\n]/g, " ").trim().slice(0, 60) || "Clave";
+  const expires = new Date(Date.now() + API_DAYS * 86400_000).toISOString();
+  const rows = (await rest("sessions?select=id,user_agent,created_at,expires_at", { method: "POST", body: JSON.stringify({ id: sha(key), user_id: userId, expires_at: expires, user_agent: API_PREFIX + label }) })) as { id: string; user_agent: string; created_at: string; expires_at: string }[];
+  const r = rows[0];
+  return { key, info: { id: r.id.slice(0, 16), name: label, created_at: r.created_at, expires_at: r.expires_at } };
+}
+
+export async function listApiKeys(userId: string): Promise<ApiKey[]> {
+  const rows = (await rest(`sessions?user_id=eq.${encodeURIComponent(userId)}&user_agent=like.${encodeURIComponent(API_PREFIX + "*")}&select=id,user_agent,created_at,expires_at&order=created_at.desc&limit=50`)) as { id: string; user_agent: string; created_at: string; expires_at: string }[];
+  return rows.map((r) => ({ id: r.id.slice(0, 16), name: r.user_agent.slice(API_PREFIX.length), created_at: r.created_at, expires_at: r.expires_at }));
+}
+
+/** Ends one key (by the short id shown in the studio). Only the account's own keys. */
+export async function revokeApiKey(userId: string, shortId: string): Promise<boolean> {
+  if (!/^[0-9a-f]{16}$/.test(shortId)) return false;
+  const rows = (await rest(`sessions?user_id=eq.${encodeURIComponent(userId)}&id=like.${shortId}*&user_agent=like.${encodeURIComponent(API_PREFIX + "*")}&select=id`)) as { id: string }[];
+  for (const r of rows) {
+    sessionCache.delete(r.id);
+    await rest(`sessions?id=eq.${r.id}`, { method: "DELETE", headers: { prefer: "return=minimal" } });
+  }
+  return rows.length > 0;
+}
 
 export const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/", maxAge: SESSION_DAYS * 86400 };
 
