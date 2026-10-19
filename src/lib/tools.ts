@@ -202,7 +202,7 @@ export const TOOLS: ToolDef[] = [
     qualities: [{ id: "480p", label: "Normal (480p)", hint: "" }],
     // per second of video (cost from Comfy; 720p can be overridden with NEXT_PUBLIC_GENJUTSU_USD_PER_SEC)
     estimate: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s))).toFixed(2),
-    // near cost on purpose (owner, 18 Oct): the customer who pays least per credit pays cost + 35%
+    // near cost on purpose (owner, 19 Oct): 15% real profit for the customer who pays least per credit
     bill: (s, q) => +(genjutsuRate(q) * Math.max(4, Math.ceil(s)) * genjutsuMargin() * DEFAULT_USD_PER_CREDIT / CHEAPEST_USD_PER_CREDIT).toFixed(3),
     priceNote: "Precio especial, casi a costo",
     consent: true,
@@ -287,8 +287,12 @@ export function genjutsuRate(q: Quality = "720p") {
 
 /** What a credit costs the customer who pays least for it (the 5,000 pack: US$209). */
 const CHEAPEST_USD_PER_CREDIT = 209 / 5000;
-/** Máxima calidad's margin over cost for that customer (1.35 = cost + 35%). */
+/**
+ * Máxima calidad's margin (owner, 19 Oct 2026: 15% real profit). 15% net for the customer who pays least per
+ * credit, after Chile's 19% VAT and ~4% Mercado Pago fee (net = price × (1/1.19 − 0.04) ≈ 0.80):
+ * 1.15 / 0.80 ≈ 1.44 over cost. Override with NEXT_PUBLIC_GENJUTSU_MARGIN.
+ */
 export function genjutsuMargin() {
   const v = Number(process.env.NEXT_PUBLIC_GENJUTSU_MARGIN);
-  return Number.isFinite(v) && v >= 1 && v < 3 ? v : 1.35;
+  return Number.isFinite(v) && v >= 1 && v < 3 ? v : 1.44;
 }

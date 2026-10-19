@@ -94,6 +94,7 @@ test("Máxima calidad is priced near cost: the cheapest credit still leaves a sm
     const cost = t.estimate(s, q);
     assert.ok(paidByCheapest > cost, `${s}s: pays ${paidByCheapest} for cost ${cost}`);
     assert.ok(paidByCheapest < cost * 1.45, `${s}s: near cost`);
+    assert.ok(paidByCheapest * (1 / 1.19 - 0.04) >= cost * 1.14, `${s}s: about 15% real profit after VAT and the Mercado Pago fee`);
   }
 });
 

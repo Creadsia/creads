@@ -10,7 +10,7 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import CopyUrl from "./copy-url";
-import { LAUNCH_PCT, PLANS, usd as usdLabel } from "@/lib/catalog";
+import { LAUNCH_PRICE, PLANS, usd as usdLabel } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -544,7 +544,8 @@ function AppPreview({ t }: { t: Content["preview"] }) {
 
 /** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
 function fromPrice(lang: string, rate: number) {
-  const usd = PLANS[0].monthly * (1 - LAUNCH_PCT / 100); // Starter, the plan with the launch offer
+  const usd = LAUNCH_PRICE; // Starter's first month, the launch offer
+  void PLANS;
   void rate;
   return lang === "es" ? usdLabel(usd) : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
 }

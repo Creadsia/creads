@@ -23,8 +23,10 @@ export const PACKS = [
   { id: "pack-5000" as ItemId, credits: 5000, usd: 209, note: "Para agencias" },
 ];
 
-/** Launch offer (owner, 19 Oct 2026): 75% off the first month of the monthly Starter plan only. */
-export const LAUNCH_PCT = 75;
+/** Launch offer (owner, 19 Oct 2026): the first month of the monthly Starter plan costs US$49 (then US$119). */
+export const LAUNCH_PRICE = 49;
+/** The same offer as a % (for badges): 59%. */
+export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 119) * 100);
 export const LAUNCH_ITEMS: ItemId[] = ["starter"];
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
@@ -51,7 +53,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   }
   const p = plan!;
   const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;
-  const launch = period === "mensual" && opts.firstPurchase && hasLaunch(item) ? r((subtotal * LAUNCH_PCT) / 100) : 0;
+  const launch = period === "mensual" && opts.firstPurchase && hasLaunch(item) ? r(Math.max(0, subtotal - LAUNCH_PRICE)) : 0;
   const discount = r(((subtotal - launch) * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
   return {
     item, label: `Plan ${p.name} · ${period === "anual" ? "anual" : "mensual"}`, credits: p.credits * (period === "anual" ? 12 : 1),

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { LAUNCH_PCT, hasLaunch, usd } from "@/lib/catalog";
+import { LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 
@@ -62,7 +62,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
           const credits = Number(String(p.credits).replace(/\D/g, ""));
           const ads = Math.max(1, Math.floor(credits / 300));
           const promo = !yearly && hasLaunch(p.id);
-          const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? p.price * (1 - LAUNCH_PCT / 100) : p.price;
+          const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
           const perAd = Math.round((monthNow / ads) * 100) / 100;
           return (
             <article key={p.id}
