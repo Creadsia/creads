@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";
 import { claude, parseJSON } from "../providers/claude";
-import { cropImage, download, probe, sceneCuts, still, workdir } from "../montage";
+import { cropImage, download, probe, sceneCuts, sideBySide, still, workdir } from "../montage";
 import { fetchableUrl, ownsMedia, saveMedia } from "../media";
 import { readPrivateJSON, writePrivateJSON } from "../supabase";
 import { sharedRules, type Db } from "../db";
@@ -232,8 +232,13 @@ JSON: {"severe": boolean, "issues": ["each problem in plain English, short"]}`,
   } catch { return NO_REVIEW; }
 }
 
-/** The final video: six moments against the character. */
-export async function reviewVideo(videoUrl: string, sheet: string): Promise<Review> {
+
+/**
+ * The final video against the original, side by side at ten moments (original left, result right), plus the
+ * character's sheet. Comparing with the original catches what a look at the result alone misses: an extra
+ * shoe, a second cup, money that multiplies (objects the person handles must stay the same in number).
+ */
+export async function reviewVideo(videoUrl: string, sheet: string, originalUrl?: string): Promise<Review> {
   if (!claude.configured()) return NO_REVIEW;
   const dir = await workdir(`qa-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`);
   try {
@@ -241,17 +246,34 @@ export async function reviewVideo(videoUrl: string, sheet: string): Promise<Revi
     await download(videoUrl, f);
     const dur = (await probe(f)).dur;
     if (!dur) return NO_REVIEW;
-    const frames = await Promise.all([0.05, 0.22, 0.4, 0.58, 0.76, 0.94].map(async (p, i) => { const o = `${dir}/q${i}.jpg`; await still(f, p * dur, o, 480); return `data:image/jpeg;base64,${(await readFile(o)).toString("base64")}`; }));
+    let orig: string | null = null;
+    if (originalUrl) {
+      try { await download(originalUrl, `${dir}/orig.mp4`); orig = `${dir}/orig.mp4`; } catch { orig = null; }
+    }
+    const odur = orig ? (await probe(orig)).dur : 0;
+    const at = [0.03, 0.13, 0.23, 0.33, 0.43, 0.53, 0.63, 0.73, 0.83, 0.95];
+    const frames = await Promise.all(at.map(async (p, i) => {
+      const o = `${dir}/q${i}.jpg`;
+      if (orig && odur) {
+        await still(orig, Math.min(p * odur, odur - 0.05), `${dir}/a${i}.jpg`, 360);
+        await still(f, p * dur, `${dir}/b${i}.jpg`, 360);
+        await sideBySide(`${dir}/a${i}.jpg`, `${dir}/b${i}.jpg`, o);
+      } else {
+        await still(f, p * dur, o, 480);
+      }
+      return `data:image/jpeg;base64,${(await readFile(o)).toString("base64")}`;
+    }));
     const r = parseJSON<{ severe?: boolean; issues?: string[] }>(await claude.complete({
-      json: true, maxTokens: 1200, images: [...frames, sheet],
-      prompt: `Quality check of an AI video. The first 6 images are moments of the video, in order. The last image is the reference sheet of the character (ONE character in several views) who should be the main person of the video.
-Severe problems (any one makes it severe):
+      json: true, maxTokens: 1500, images: [...frames, sheet],
+      prompt: `Quality check of an AI video where the main person of an original video was replaced by a character. ${orig ? "The first 10 images each show the SAME moment side by side: the ORIGINAL video on the left, the AI RESULT on the right," : "The first 10 images are moments of the AI result,"} in order. The last image is the reference sheet of the character (ONE character in several views).
+Severe problems in the RESULT (any one makes it severe):
 - the character appears twice or more at the same time, or a second copy appears;
 - the main person's face clearly changes into a different person, or stops looking like the character;
-- held objects duplicate, melt, fall or pop in and out; extra limbs, broken arms or hands, melted face;
+- ${orig ? "objects the person holds, uses, puts on or drops (shoes, cups, bags, phones, money, clothes) are MORE or FEWER than in the original at the same moment: count them on both sides. Shoes: once they are on his feet there must be no extra shoe left on the ground, and a person wears exactly one pair;" : "held objects duplicate, melt, fall or pop in and out; more than one pair of shoes;"}
+- extra limbs or feet, broken arms or hands, melted face, objects melting into the body;
 - the character disappears or the video freezes.
-Ignore small changes of light, background people and slight blur.
-JSON: {"severe": boolean, "issues": ["each problem in plain English, short"]}`,
+Ignore small changes of light, background people, slight blur, and the character's own clothes being different from the original person's (that is wanted).
+JSON: {"severe": boolean, "issues": ["each problem in plain English, short, with the moment number"]}`,
     }));
     return { severe: Boolean(r.severe), issues: (r.issues ?? []).filter((x) => typeof x === "string").slice(0, 6) };
   } catch { return NO_REVIEW; } finally {
@@ -267,7 +289,8 @@ export function genjutsuPrompt(o: { extra?: string; main?: string; withFace?: bo
   return [
     `Recast the main person of the video${o.main ? ` (${o.main})` : ""} as the character in the reference images${o.withFace ? " (image 1 shows the whole character, image 2 is a close-up of the same character's face)" : ""}: the same face, hair, glasses, facial hair, body and clothes.`,
     "The references show ONE single character: there is only one of him in the video.",
-    "Keep everything else exactly as in the source video: camera, motion, timing, background, light, the other people and every object (held objects stay the same objects).",
+    "Keep everything else exactly as in the source video: camera, motion, timing, background, light, the other people and every object.",
+    "Objects the person holds, uses, puts on or drops (shoes, cups, bags, phones, money) stay the same in number as in the source video: never duplicate them. If he puts on shoes, those are the shoes on his feet and nothing is left behind; he wears exactly one pair.",
     ...(o.rules ?? []),
     o.fix?.length ? `Avoid: ${o.fix.join("; ")}.` : "",
     o.extra ?? "",

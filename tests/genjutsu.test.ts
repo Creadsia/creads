@@ -99,3 +99,25 @@ test("Máxima calidad is priced near cost: the cheapest credit still leaves a sm
     assert.ok(paidByCheapest < cost * 1.45, `${s}s: near cost`);
   }
 });
+
+import { reviewVideo } from "../src/lib/influencer/swap";
+test("the final review compares the result with the original, side by side, counting objects", { timeout: 120_000 }, async () => {
+  const dir = await workdir("test-qa");
+  execFileSync(ffmpegPath as unknown as string, ["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=480x848:rate=24", "-t", "8", "-c:v", "libx264", "-preset", "ultrafast", `${dir}/v.mp4`]);
+  let asked: { images: number; prompt: string } | null = null;
+  globalThis.fetch = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith("https://api.anthropic.com")) {
+      const content = JSON.parse(String(init?.body)).messages[0].content as { type: string; text?: string }[];
+      asked = { images: content.filter((c) => c.type === "image").length, prompt: content.find((c) => c.type === "text")?.text ?? "" };
+      return new Response(JSON.stringify({ content: [{ type: "text", text: '{"severe": true, "issues": ["moment 5: three shoes, the original has two"]}' }], stop_reason: "end_turn" }));
+    }
+    return new Response(readFileSync(`${dir}/v.mp4`));
+  }) as typeof fetch;
+  const r = await reviewVideo("https://cdn.test/result.mp4", "https://s.test/sheet.png", "https://cdn.test/original.mp4");
+  assert.equal(asked!.images, 11, "10 side-by-side moments + the sheet");
+  assert.match(asked!.prompt, /ORIGINAL video on the left/);
+  assert.match(asked!.prompt, /exactly one pair/);
+  assert.equal(r.severe, true);
+  assert.match(r.issues[0], /three shoes/);
+});

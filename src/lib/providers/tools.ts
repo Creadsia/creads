@@ -335,7 +335,7 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
     return {
       state: "running",
       advance: async () => {
-        const rev = await reviewVideo(url, await fetchableUrl(sj.sh, ws));
+        const rev = await reviewVideo(url, await fetchableUrl(sj.sh, ws), await fetchableUrl(sj.v, ws));
         if (rev.severe) await learnSwap(rev.issues);
         if (rev.severe && (sj.r2 ?? 0) < 1 && sj.frame) {
           const j = await submitMotion(sj, sj.frame, ws, t.name, rev.issues);
@@ -411,7 +411,7 @@ async function checkGenjutsu(t: ToolDef, job: string, ws: string): Promise<ToolC
     return {
       state: "running",
       advance: async () => {
-        const rev = await reviewVideo(url, await fetchableUrl(j.sh, ws));
+        const rev = await reviewVideo(url, await fetchableUrl(j.sh, ws), await fetchableUrl(j.v, ws));
         if (rev.severe) await learnSwap(rev.issues);
         if (rev.severe && !j.r) {
           const id = await submitGenjutsu(j, ws, t.name, rev.issues);

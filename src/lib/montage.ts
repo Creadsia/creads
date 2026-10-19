@@ -476,3 +476,8 @@ export async function stripAudio(dir: string, file: string) {
   await ff(["-y", "-v", "error", "-i", file, "-map", "0:v:0", "-c:v", "copy", "-an", "-movflags", "+faststart", out], 120_000);
   return readFile(out);
 }
+
+/** Two pictures next to each other (same height), for comparing the original and the result. */
+export async function sideBySide(a: string, b: string, out: string) {
+  await ff(["-y", "-v", "error", "-i", a, "-i", b, "-filter_complex", "[0:v]scale=-2:360[l];[1:v]scale=-2:360[r];[l][r]hstack=inputs=2", "-q:v", "3", out]);
+}
