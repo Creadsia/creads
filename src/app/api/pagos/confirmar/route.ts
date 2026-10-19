@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { getOrder } from "@/lib/billing";
 import { getPayment, getPreapproval } from "@/lib/mercadopago";
-import { settleOrder } from "@/lib/settle";
+import { reconcileSubscription, settleOrder } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     const pre = String(b?.preapproval_id ?? "");
     if (pre && order.mp?.kind === "subscription" && pre === order.mp.id) {
       const sub = await getPreapproval(pre);
+      if (sub.status === "authorized" && (await reconcileSubscription(order.id).catch(() => 0)) > 0) return NextResponse.json({ state: "pagado" });
       // the first charge of a subscription arrives a few seconds/minutes later, by notification
       return NextResponse.json({ state: sub.status === "authorized" ? "procesando" : sub.status === "cancelled" ? "cancelado" : "pendiente" });
     }

@@ -4,7 +4,7 @@ import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
 import { receiptEmail } from "./emails";
 import { beforeNewPeriod } from "./expiry";
-import { getPreapproval, setSubscriptionAmount } from "./mercadopago";
+import { getPayment, getPreapproval, setSubscriptionAmount, subscriptionPaymentIds } from "./mercadopago";
 
 // Applies a payment confirmed by Mercado Pago (or by the owner) to its order. The money part
 // (credits, plan date, order paid) happens in one database transaction and only once per payment, so
@@ -76,4 +76,23 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
     await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
   }
   return { ok: true };
+}
+
+/**
+ * Safety net for subscriptions: asks Mercado Pago for the approved charges of this order's subscription and
+ * applies any that the notifications missed. Each charge is applied by its own payment id, so a late
+ * notification for the same charge does nothing. Returns how many were applied now.
+ */
+export async function reconcileSubscription(orderId: string): Promise<number> {
+  const o = await getOrder(orderId);
+  if (!o?.mp || o.mp.kind !== "subscription") return 0;
+  let n = 0;
+  for (const id of await subscriptionPaymentIds(o.mp.id, o.id)) {
+    if ((o.payments ?? []).includes(`mp:${id}`)) continue;
+    const p = await getPayment(id).catch(() => null);
+    if (!p || p.status !== "approved") continue;
+    const r = await settleOrder(o.id, { id: String(p.id), amount: p.transaction_amount, currency: p.currency_id }).catch((e) => { console.error("reconcile", o.id, id, e instanceof Error ? e.message : e); return null; });
+    if (r?.ok && !r.already) n++;
+  }
+  return n;
 }

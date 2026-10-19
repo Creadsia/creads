@@ -37,7 +37,10 @@ export async function POST(req: Request) {
       let orderId = p.external_reference ?? "";
       const pre = typeof p.metadata?.preapproval_id === "string" ? p.metadata.preapproval_id : "";
       if (!orderId && pre) orderId = (await getPreapproval(pre)).external_reference ?? "";
-      if (!orderId) return NextResponse.json({ ok: true, ignored: "sin pedido" });
+      if (!orderId) {
+        console.warn("mercadopago: pago sin pedido", p.id, JSON.stringify({ metadata: p.metadata ?? null, ext: p.external_reference ?? null }).slice(0, 300));
+        return NextResponse.json({ ok: true, ignored: "sin pedido" });
+      }
       return NextResponse.json(await settleOrder(orderId, { id: String(p.id), amount: p.transaction_amount, currency: p.currency_id }));
     }
     if (type === "subscription_authorized_payment") {

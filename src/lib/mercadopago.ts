@@ -77,6 +77,20 @@ export const getPreapproval = (id: string) => mp<MpPreapproval>(`/preapproval/${
 export interface MpAuthorizedPayment { id: number | string; preapproval_id: string; status: string; transaction_amount?: number; payment?: { id: number | string; status: string } }
 export const getAuthorizedPayment = (id: string) => mp<MpAuthorizedPayment>(`/authorized_payments/${encodeURIComponent(id)}`);
 
+/** Approved charges of a subscription, by asking Mercado Pago (two ways, in case one isn't available). */
+export async function subscriptionPaymentIds(preapprovalId: string, orderId: string): Promise<string[]> {
+  const ids = new Set<string>();
+  try {
+    const r = await mp<{ results?: { payment?: { id?: number | string; status?: string } }[] }>(`/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}`);
+    for (const x of r.results ?? []) if (x.payment?.id && x.payment.status === "approved") ids.add(String(x.payment.id));
+  } catch (e) { console.warn("authorized_payments search", preapprovalId, e instanceof Error ? e.message : e); }
+  try {
+    const r = await mp<{ results?: { id: number; status: string }[] }>(`/v1/payments/search?external_reference=${encodeURIComponent(orderId)}&sort=date_created&criteria=desc&limit=20`);
+    for (const x of r.results ?? []) if (x.status === "approved") ids.add(String(x.id));
+  } catch (e) { console.warn("payments search", orderId, e instanceof Error ? e.message : e); }
+  return [...ids];
+}
+
 export const setSubscriptionAmount = (id: string, clp: number) =>
   mp(`/preapproval/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify({ auto_recurring: { transaction_amount: clp, currency_id: "CLP" } }) });
 

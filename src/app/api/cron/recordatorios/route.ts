@@ -9,6 +9,7 @@ import { runExpiry } from "@/lib/expiry";
 import { observedDollar } from "@/lib/usd-clp";
 import { emailConfigured, sendEmail } from "@/lib/providers/email";
 import { watchFailures } from "@/lib/genstats";
+import { reconcileSubscription } from "@/lib/settle";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -87,6 +88,12 @@ export async function GET(req: Request) {
   if (!emailConfigured()) return NextResponse.json({ ok: true, expiry, skipped: "sin RESEND_API_KEY" });
   const tips = await activation().catch((e) => { console.error("activation", e instanceof Error ? e.message : e); return 0; });
   const volver = await winback().catch((e) => { console.error("winback", e instanceof Error ? e.message : e); return 0; });
+  // subscription charges whose Mercado Pago notice never arrived (last 40 days): looked up and applied once
+  const since = new Date(Date.now() - 40 * 86_400_000).toISOString();
+  const subs40 = await sbRest<{ id: string }[]>(`orders?mp->>kind=eq.subscription&status=in.(pendiente,pagado)&created_at=gte.${encodeURIComponent(since)}&select=id&limit=500`).catch(() => []);
+  let cuadrados = 0;
+  for (const o of subs40) cuadrados += await reconcileSubscription(o.id).catch(() => 0);
+  if (cuadrados) console.warn("pagos cuadrados por la revisión diaria", cuadrados);
   const soon = day(3);
   const today = day(0);
   const ws = await sbRest<Ws[]>(`workspaces?paid_until=in.(${soon},${today})&id=neq.main&select=id,plan,paid_until`);

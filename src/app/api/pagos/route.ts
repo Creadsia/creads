@@ -5,6 +5,7 @@ import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote 
 import { usdClpRate } from "@/lib/usd-clp";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { createPreference, createSubscription, mpReady, oneTimeOnly } from "@/lib/mercadopago";
+import { reconcileSubscription } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export async function GET(req: Request) {
   const rate = await usdClp();
   if (ws === "main") return NextResponse.json({ online: mpReady(), renews: !oneTimeOnly(), owner: true, firstPurchase: true, discount: 0, usdClp: rate, orders: [], subscription: null });
   try {
+    // a subscription charge whose notification was missed is picked up here (looked up at Mercado Pago, applied once)
+    if (mpReady()) {
+      const recent = (await ordersOf(ws).catch(() => [])).filter((o) => o.mp?.kind === "subscription" && !o.mp.cancelled && o.status !== "cancelado" && Date.now() - Date.parse(o.created) < 40 * 86_400_000).slice(0, 3);
+      for (const o of recent) await reconcileSubscription(o.id).catch(() => 0);
+    }
     const [w, paid, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), ordersOf(ws)]);
     const sub = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
     return NextResponse.json({
