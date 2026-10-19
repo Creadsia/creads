@@ -127,6 +127,140 @@ function WallTile({ c }: { c: WallClip }) {
   );
 }
 
+// Examples shown in the menu panels (each key = a menu item with «ex»). Videos load only when the panel opens.
+type Ex = { src: string; still?: string; label: string };
+const S = (k: SceneKey, label: string): Ex => ({ src: "", still: SCENES[k].src, label });
+const V = (src: string, label: string, still?: string): Ex => ({ src, still, label });
+const MENU_MEDIA: Record<string, Ex[]> = {
+  anuncios: [V(VIDEOS.coach!, "UGC a cámara", SCENES.coach.src), V(VIDEOS.podcast!, "Podcast", SCENES.podcast.src), S("realtor", "Testimonio")],
+  video: [V(hf("70b577fc-0650-41cc-a267-6131307a18c0", "mp4"), "Veo 3.1", hf("1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "jpg")), V(hf("d4597de4-41e3-4d88-b199-a252d7d47bb3", "mp4"), "Kling 3.0", hf("c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "jpg")), V(hf("59617700-cf90-497f-8a75-4ed74416c22f", "mp4"), "Seedance 2.5", hf("94ba857c-b593-487c-8d18-819c0141addb", "jpg"))],
+  imagen: [S("serum", "Producto"), S("chef", "Lifestyle"), S("sneaker", "Feed 4:5")],
+  audio: [V(VIDEOS.podcast!, "Podcast IA", SCENES.podcast.src), V(RECREATE.voices.llama, "Doblaje"), V(RECREATE.voices.cat, "Voz")],
+  recrear: [V(RECREATE.demos.persona.after, "Otra persona"), V(RECREATE.demos.producto.after, "Otro producto"), V(RECREATE.demos.capibara.after, "Copia el movimiento")],
+  influencer: [V(VIDEOS.valpo!, "Tu personaje", SCENES.valpo.src), S("ugc", "Su ficha"), S("car", "Sus videos")],
+};
+
+/** Small mock screens for the steps that are about the studio, not about a clip. */
+function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
+  return (
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+      {[0, 1].map((i) => (
+        <div key={i} className="flex gap-2 rounded-lg border border-line bg-surface-2 p-2">
+          <span className="relative h-14 w-9 shrink-0 overflow-hidden rounded-md bg-ink/10">
+            <Image src={i ? SCENES.realtor.src : SCENES.coach.src} alt="" fill sizes="40px" className="object-cover" />
+          </span>
+          <span className="flex min-w-0 flex-col gap-1">
+            <b className="truncate text-[12px]">{i ? "Seguros · 3 anuncios" : "Suplementos · 5 anuncios"}</b>
+            <span className="w-fit rounded bg-good/15 px-1.5 py-0.5 font-semibold text-good">{m.activo}</span>
+            <span className="text-muted">{m.versiones}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
+  return (
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+      {m.parts.map(([k, v]) => (
+        <div key={k} className="flex flex-col gap-0.5 rounded-lg border border-line bg-surface-2 px-2 py-1.5">
+          <b className="text-accent-text">{k}</b>
+          <span>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+function ScriptMock({ m }: { m: Content["flow"]["mock"] }) {
+  return (
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+      <span className="w-fit rounded-md bg-accent/15 px-1.5 py-0.5 font-semibold text-accent-text">{m.nuevos}</span>
+      <ul className="flex flex-col gap-1.5">
+        {m.hooks.map((h, i) => <li key={h} className="flex gap-1.5 rounded-lg border border-line bg-surface-2 px-2 py-1.5"><b className="font-mono text-muted">{i + 1}</b><span>{h}</span></li>)}
+      </ul>
+    </div>
+  );
+}
+
+/** «De espiar a lanzar»: the five steps of an affiliate's ad, each with what Creads shows at that step. */
+function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
+  const art = (k: string) => {
+    if (k === "espiar") return <SpyMock m={t.mock} />;
+    if (k === "desarmar") return <BreakdownMock m={t.mock} />;
+    if (k === "hooks") return <ScriptMock m={t.mock} />;
+    if (k === "crear") return (
+      <figure className="relative h-full overflow-hidden rounded-xl bg-surface-2">
+        <LoopVideo src={VIDEOS.coach!} poster={poster(SCENES.coach.src)} className="absolute inset-0 h-full w-full object-cover" />
+        <figcaption className="absolute inset-x-2 bottom-2 rounded-lg bg-black/65 px-2 py-1 text-center text-[11px] font-semibold text-white">✓ {t.mock.revisado}</figcaption>
+      </figure>
+    );
+    return (
+      <div className="flex h-full items-end justify-center gap-2 rounded-xl border border-line bg-surface p-3">
+        <span className="relative aspect-[9/16] h-[85%] overflow-hidden rounded-lg"><Image src={SCENES.valpo.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">9:16</b></span>
+        <span className="relative aspect-[4/5] h-[62%] overflow-hidden rounded-lg"><Image src={SCENES.serum.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">4:5</b></span>
+      </div>
+    );
+  };
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex max-w-3xl flex-col gap-3">
+          <h2 id="flujo-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.title}</h2>
+          <p className="text-lg text-muted">{t.lead}</p>
+        </div>
+        <span className="chroma font-display text-2xl font-semibold sm:text-3xl">{t.total}</span>
+      </div>
+      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {t.steps.map((st, i) => (
+          <li key={st.k} className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-3">
+            <div className="h-48">{art(st.k)}</div>
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="flex items-center gap-2"><b className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs text-bg">{i + 1}</b><b className="text-[17px]">{st.title}</b></span>
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-surface-2 px-2 py-0.5 font-mono text-xs text-muted">{st.time}</span>
+            </div>
+            <p className="px-1 pb-1 text-sm text-muted">{st.text}</p>
+          </li>
+        ))}
+      </ol>
+      <div className="flex flex-wrap items-center gap-4">
+        <a href={ctaHref} className="rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">{t.cta}</a>
+        <span className="text-sm text-muted">{t.note}</span>
+      </div>
+    </div>
+  );
+}
+
+/** The panel under the header for a menu item: what it does, a few examples, and a link to see more. */
+function MenuPanel({ k, t, href, mock }: { k: string; t: Content["menuEx"]; href: string; mock: Content["flow"]["mock"] }) {
+  const e = (t as unknown as Record<string, { title: string; text: string; items: string[] }>)[k];
+  if (!e) return null;
+  const media = MENU_MEDIA[k];
+  return (
+    <div className="mx-auto grid max-w-7xl gap-6 rounded-b-3xl border border-t-0 border-line bg-bg p-6 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)] md:grid-cols-[minmax(0,320px)_1fr]">
+      <div className="flex flex-col gap-3">
+        <b className="text-xl">{e.title}</b>
+        <p className="text-sm text-muted">{e.text}</p>
+        <a href={href} className="mt-auto w-fit rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg">{t.see}</a>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {k === "espiar" || k === "guiones" ? (
+          <div className="col-span-3 grid h-56 grid-cols-2 gap-3">
+            {k === "espiar" ? <SpyMock m={mock} /> : <BreakdownMock m={mock} />}
+            {k === "espiar" ? <BreakdownMock m={mock} /> : <ScriptMock m={mock} />}
+          </div>
+        ) : media ? media.map((m) => (
+          <figure key={m.label} className="relative h-56 overflow-hidden rounded-xl bg-surface-2">
+            {m.src ? <LoopVideo src={m.src} poster={m.still ? poster(m.still) : undefined} className="absolute inset-0 h-full w-full object-cover" /> : <Image src={m.still!} alt="" fill sizes="200px" className="object-cover" />}
+            <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">{m.label}</figcaption>
+          </figure>
+        )) : e.items.map((x) => (
+          <div key={x} className="flex h-56 items-end rounded-xl border border-line bg-surface p-3 text-sm font-semibold">{x}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Three columns of clips drifting up and down; each column is drawn twice so the loop has no seam. */
 function ClipWall({ label }: { label: string }) {
   return (
@@ -578,22 +712,29 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
 
       {/* Header */}
       <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
-        <div className={`mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
+        <div className={`relative mx-auto flex max-w-7xl items-center justify-between gap-4 py-3 ${gutter}`}>
           <Logo href={home} />
           <nav aria-label="Main" className="hidden items-center gap-0.5 text-[15px] min-[1480px]:flex">
             {t.menu.map((m) => (
-              <a key={m.label} href={m.href} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted transition-colors hover:bg-surface hover:text-ink">
-                {m.label}
-                {m.badge && (
-                  <span
-                    className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                      m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
-                    }`}
-                  >
-                    {m.badge}
-                  </span>
+              <div key={m.label} className="group">
+                <a href={m.href} className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap text-muted transition-colors hover:bg-surface hover:text-ink group-focus-within:bg-surface group-focus-within:text-ink">
+                  {m.label}
+                  {m.badge && (
+                    <span
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                        m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
+                      }`}
+                    >
+                      {m.badge}
+                    </span>
+                  )}
+                </a>
+                {"ex" in m && m.ex && (
+                  <div className="invisible absolute inset-x-0 top-full z-40 px-4 pt-0 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                    <MenuPanel k={m.ex} t={t.menuEx} href={m.href} mock={t.flow.mock} />
+                  </div>
                 )}
-              </a>
+              </div>
             ))}
           </nav>
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -656,6 +797,9 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                 ))}
               </h1>
               <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
+              <ul aria-label={t.lang === "es" ? "Para quién" : "Who it's for"} className="flex flex-wrap gap-2">
+                {t.hero.who.map((w) => <li key={w} className="rounded-full border border-line bg-surface px-3 py-1 text-sm font-semibold">{w}</li>)}
+              </ul>
               <Composer t={t.composer} />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <a href="#pricing" className="flex shrink-0 flex-col items-center whitespace-nowrap rounded-xl bg-[image:var(--grad)] px-6 py-3.5 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">
@@ -684,8 +828,15 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
+        {/* From spying to launching: the whole job of an affiliate's ad */}
+        <section id="flujo" aria-labelledby="flujo-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto max-w-7xl">
+            <Flow t={t.flow} ctaHref="#pricing" />
+          </div>
+        </section>
+
         {/* Featured studios */}
-        <section aria-labelledby="featured" className={`-mt-12 ${gutter}`}>
+        <section aria-labelledby="featured" className={gutter}>
           <div className="mx-auto flex max-w-7xl flex-col gap-8">
             <SectionHead id="featured" title={t.featured.title} />
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
