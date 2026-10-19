@@ -1,4 +1,5 @@
 import type { Quality, ToolDef, ToolId } from "../tools";
+import { FREE_REDOS } from "../credit-math";
 import { readFile, rm } from "node:fs/promises";
 import { fetchableUrl, saveMedia } from "../media";
 import { cutParts, download, joinParts, partsPlan, probe, still, stripAudio, workdir } from "../montage";
@@ -339,7 +340,7 @@ async function checkSwap(t: ToolDef, job: string, ws: string): Promise<ToolCheck
       advance: async () => {
         const rev = await reviewVideo(url, await fetchableUrl(sj.sh, ws), await fetchableUrl(sj.v, ws));
         if (rev.severe) await learnSwap(rev.issues);
-        if (rev.severe && (sj.r2 ?? 0) < 1 && sj.frame) {
+        if (FREE_REDOS && rev.severe && (sj.r2 ?? 0) < 1 && sj.frame) {
           const j = await submitMotion(sj, sj.frame, ws, t.name, rev.issues);
           return SWAP + JSON.stringify({ ...sj, j, r2: (sj.r2 ?? 0) + 1, q2: rev.issues } satisfies SwapJob);
         }
@@ -417,7 +418,7 @@ async function checkGenjutsu(t: ToolDef, job: string, ws: string): Promise<ToolC
       advance: async () => {
         const rev = await reviewVideo(url, await fetchableUrl(j.sh, ws), await fetchableUrl(j.v, ws));
         if (rev.severe) await learnSwap(rev.issues);
-        if (rev.severe && !j.r) {
+        if (FREE_REDOS && rev.severe && !j.r) {
           const id = await submitGenjutsu(j, ws, t.name, rev.issues);
           return GJ + JSON.stringify({ ...j, id, r: 1, q: rev.issues } satisfies GjJob);
         }

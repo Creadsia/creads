@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { freeRedoAvailable, grantFreeRedo } from "@/lib/credits";
+import { FREE_REDOS } from "@/lib/credit-math";
 import { tooMany } from "@/lib/rate";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
@@ -97,7 +98,7 @@ Responde SOLO JSON: {"cortes":[{"corte":número,"problema":"en español, corto",
     // severe errors earn a free automatic redo (granted here, server-side: max 1 per clip, 2 per ad)
     const freeRedo: Record<string, boolean> = {};
     for (const r of results) {
-      if (!r.severe) continue;
+      if (!r.severe || !FREE_REDOS) continue;
       await grantFreeRedo(s.user.workspace, adId, r.clipId);
       freeRedo[r.clipId] = await freeRedoAvailable(s.user.workspace, adId, r.clipId);
     }

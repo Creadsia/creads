@@ -131,10 +131,17 @@ export default function AdWork({ adId }: { adId: string }) {
       setReview(null);
       setPhase("");
       loadAd();
+      return;
+    }
+    // severe problems with no free redo: stop before assembling, so the customer decides (redo a cut or build anyway)
+    const severe = (d.results as ReviewRow[]).filter((r) => r.severe).length;
+    if (severe) {
+      setAutoBuild(false);
+      setNote((n) => `${n ? `${n} ` : ""}La revisión encontró errores graves en ${severe} corte${severe === 1 ? "" : "s"} (marcado${severe === 1 ? "" : "s"} abajo). Rehazlo${severe === 1 ? "" : "s"} con una nota de qué cambiar, o arma el anuncio igual.`);
     }
   }
 
-  /** «Revisar y armar»: review; if the free redos run, the ad is assembled when they finish, else right away. */
+  /** «Revisar y armar»: review; clean → assembled right away; severe problems → stops and shows them. */
   async function reviewAndBuild() {
     setAutoBuild(true);
     await doReview();
@@ -335,7 +342,7 @@ export default function AdWork({ adId }: { adId: string }) {
                       {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : phase || autoBuild ? "Revisando y armando…" : "Revisar y armar el anuncio"}
                     </button>
                     <button type="button" onClick={doBuild} disabled={!!phase || running} className="text-sm text-muted underline">Armar sin revisar</button>
-                    <span className="basis-full text-xs text-muted">La revisión encuentra errores graves y los rehace gratis antes de armar. Todo en un paso.</span>
+                    <span className="basis-full text-xs text-muted">La revisión marca los cortes con errores graves antes de armar; si no hay, se arma solo. Todo en un paso.</span>
                   </>
                 ) : (
                   <button type="button" onClick={doBuild} disabled={!!phase || running} className={btnCls}>

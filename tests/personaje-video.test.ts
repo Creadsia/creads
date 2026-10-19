@@ -54,7 +54,7 @@ let claudeSays: string[] = [];
 const submitted: { url: string; body: Record<string, unknown> }[] = [];
 let dir = "";
 
-test("a 12 s video: starts where the person is seen, face locked, reviews, one free redo each", { timeout: 180_000 }, async () => {
+test("a 12 s video: starts where the person is seen, face locked, reviews, scene retried once, no free video redo", { timeout: 180_000 }, async () => {
   dir = await workdir("test-swap");
   const src = `${dir}/in.mp4`;
   execFileSync(ffmpegPath as unknown as string, ["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=720x1280:rate=24", "-f", "lavfi", "-i", "sine", "-t", "12", "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", "-shortest", src]);
@@ -109,16 +109,13 @@ test("a 12 s video: starts where the person is seen, face locked, reviews, one f
   assert.equal(mot.keep_original_sound, false);
   assert.match(mot.prompt, /@Element1/);
 
-  // final review: severe once → redone free; then fine → delivered
+  // final review: severe → no free video redo (off since 19 Oct): delivered with a warning
   claudeSays = ['{"severe": true, "issues": ["the coffee cup duplicates"]}', '{"nuevas": [], "repetidas": []}'];
   st = await checkTool(t, job, "w01");
+  const before = submitted.length;
   job = await (st as { advance: () => Promise<string> }).advance();
-  assert.equal(JSON.parse(job.slice(5)).r2, 1);
-  assert.match((submitted[3].body as { prompt: string }).prompt, /coffee cup duplicates/);
-  claudeSays = ['{"severe": false, "issues": []}'];
-  st = await checkTool(t, job, "w01");
-  job = await (st as { advance: () => Promise<string> }).advance();
-  assert.equal(JSON.parse(job.slice(5)).qa, "ok");
+  assert.equal(submitted.length, before, "nothing re-sent");
+  assert.equal(JSON.parse(job.slice(5)).qa, "aviso");
   st = await checkTool(t, job, "w01");
   assert.equal(st.state, "done");
 
@@ -126,8 +123,8 @@ test("a 12 s video: starts where the person is seen, face locked, reviews, one f
   const q = summarize([{ status: "done", kind: "tool:personaje-en-video", model: null, error: null, provider_job: job, created_at: "" }, { status: "failed", kind: "tool:personaje-en-video", model: null, error: "No se vio el cuerpo 12", provider_job: null, created_at: "" }], 30);
   assert.equal(q.personaje.listos, 1);
   assert.equal(q.personaje.limpios, 0);
-  assert.equal(q.personaje.rehechosEscena, 1);
-  assert.equal(q.personaje.rehechosVideo, 1);
+  assert.equal(q.personaje.rehechosEscena, 1, "the cheap scene check still retries once (it saves an expensive bad video)");
+  assert.equal(q.personaje.rehechosVideo, 0);
   assert.equal(q.motivos[0].veces, 1);
 });
 

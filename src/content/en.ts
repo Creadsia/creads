@@ -27,7 +27,7 @@ export const en = {
       { tag: "NEW", text: "Seedance 2.5, Kling 3.0 and Veo 3.1 in one studio" },
       { tag: "NEW", text: "Pro subtitles: 6 fonts, exact sizes, spelled like your script" },
       { tag: "NEW", text: "Dubbing EN ⇄ ES with your own voice" },
-      { tag: "QA", text: "Every ad reviewed automatically, serious errors redone for free" },
+      { tag: "QA", text: "Every ad reviewed automatically before it is built" },
       { tag: "", text: "Nano Banana Pro · Seedream 5 · FLUX 3 · Hailuo 2.3 · Wan 3.0 · Grok Video · ElevenLabs" },
       { tag: "", text: "Affiliates: a monthly commission for every customer you bring" },
     ],
@@ -121,7 +121,7 @@ export const en = {
       ["Animated stories", "Write an idea and get a 30–60 second short film: fixed characters (even with your face and voice), dialogue, music and film cuts."],
       ["Voices from your recordings", "Create a voice from WhatsApp audios, voice notes or videos, or record yourself right there."],
       ["Pro subtitles", "5 styles, 6 fonts, sizes in numbers and every word spelled exactly like your script."],
-      ["Automatic review", "Each cut is checked against your script and for the same face. Serious errors are redone for free."],
+      ["Automatic review", "Each cut is checked against your script and for the same face. If something is off, it tells you which cut to redo."],
       ["Library by niche", "Every finished ad is saved and sorted by niche, ready to download for Meta."],
       ["Copy-ready prompts", "Get the prompt of every scene to use anywhere, or generate the videos right here."],
     ],
@@ -130,7 +130,7 @@ export const en = {
     ["20+", "AI models in one place"],
     ["2", "languages: English and Spanish"],
     ["3", "finished versions per script"],
-    ["0", "credits charged for automatic redos"],
+    ["100%", "of cuts reviewed before building"],
   ],
   hero: {
     promo: "Launch offer: 75% off your first month of Starter",
@@ -246,7 +246,7 @@ export const en = {
     steps: [
       ["Write", "Your idea becomes a script and scenes of up to 8 seconds."],
       ["Generate", "Each scene comes from the model that handles it best."],
-      ["Review", "Creads watches, listens and compares against your script, and redoes only what went wrong."],
+      ["Review", "Creads watches, listens and compares against your script, and flags what went wrong."],
       ["Edit", "It joins the scenes, trims silences and adds subtitles. Ready to post."],
     ],
     caption: "Comparison between a typical AI generator and Creads",
@@ -304,7 +304,7 @@ export const en = {
   },
   credits: {
     title: "Simple credits. No surprises.",
-    lead: "Every plan comes with monthly credits. You see the cost before you generate, and Creads doesn't charge you when its own review redoes a scene.",
+    lead: "Every plan comes with monthly credits. You see the cost before you generate, and if a model fails, the credits come back on their own.",
     examples: [
       ["30-second UGC ad", "Veo 3.1 Fast, 720p", "≈ 300 credits"],
       ["10 product photos", "Nano Banana Pro, 4:5", "80 credits"],
@@ -312,7 +312,7 @@ export const en = {
       ["Script, scenes and quality review", "Creads IA", "Included"],
     ],
     rules: [
-      "Scenes that Creads redoes on its own don't cost you credits.",
+      "If a model fails and delivers nothing, the credits come back on their own.",
       "Credits last for the period you paid (a month, or a year on the annual plan): whatever you don't use expires at the end.",
       "Need more? Top up anytime without changing plans.",
     ],
@@ -347,7 +347,7 @@ export const en = {
       ["Credits instantly", "Your balance loads the moment the payment is approved."],
       ["Cancel in one click", "From your account. No calls, no emails."],
       ["Secure payment", "You pay on Mercado Pago. Creads never sees your card."],
-      ["Quality included", "Every ad is checked automatically; severe errors are redone at no cost."],
+      ["Quality included", "Every ad is checked automatically and flags which cut to redo."],
     ],
     compare: {
       title: "Compare plans",
@@ -367,7 +367,7 @@ export const en = {
           title: "Studio",
           rows: [
             ["Every AI model and studio", "yes", "yes", "yes"],
-            ["Automatic QA and free redos", "yes", "yes", "yes"],
+            ["Automatic quality review", "yes", "yes", "yes"],
             ["AI script generator", "yes", "yes", "yes"],
             ["HD and commercial use", "yes", "yes", "yes"],
             ["Avatars with your face", "1", "3", "Unlimited"],
@@ -433,7 +433,7 @@ export const en = {
     promos: [
       ["Launch offer", "75% off your first month of Starter."],
       ["Pay yearly", "Get 2 months free on every plan."],
-      ["Free redos", "When the automatic review finds a severe error, the scene is redone at no cost."],
+      ["Quality review", "Every cut is checked before building and flags the ones worth redoing."],
     ],
   },
   audiences: {

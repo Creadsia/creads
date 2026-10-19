@@ -208,7 +208,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
           return NextResponse.json({ state: "failed", error });
         }
       }
-      return NextResponse.json({ state: "running", paso: "Revisando la calidad (si algo sale mal, se rehace gratis)…" });
+      return NextResponse.json({ state: "running", paso: "Revisando la calidad del resultado…" });
     }
     if (st.state === "failed") {
       const error = await explainFailure(new Error(st.error), isOwner(s.user), serviceOf(`tool:${t.id}`, null));

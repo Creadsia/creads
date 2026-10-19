@@ -150,7 +150,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <li key={f} className="flex gap-2"><Check />{f}</li>
               ))}
               <li className="flex gap-2"><Check />Revisión de calidad automática en cada anuncio</li>
-              <li className="flex gap-2"><Check />Errores graves rehechos sin costo</li>
+              <li className="flex gap-2"><Check />Si un modelo falla, tus créditos vuelven solos</li>
             </ul>
           </div>
 

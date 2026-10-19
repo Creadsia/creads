@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { isAdmin } from "@/lib/admin";
+import { currentUser, isAdmin } from "@/lib/admin";
+import { isTheOwner } from "@/lib/auth";
 import { DEFAULT_FINANZAS, type Finanzas, withCurrentPlans } from "@/lib/finance";
 import { readPrivateJSON, writePrivateJSON } from "@/lib/supabase";
 
@@ -44,5 +45,28 @@ export async function PUT(req: Request) {
     return NextResponse.json({ ok: true, actualizado });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar." }, { status: 502 });
+  }
+}
+
+/**
+ * «Empezar de cero» (owner only, 19 Oct 2026): the whole book is archived as it is (finanzas/archivo-<time>.json,
+ * nothing is lost) and its movements start empty, keeping only today's real customer payments (they are money
+ * that came in). Fixed costs, model prices, accounts and settings stay.
+ */
+export async function POST(req: Request) {
+  const u = await currentUser().catch(() => null);
+  if (!isTheOwner(u)) return NextResponse.json({ error: "Solo el dueño puede reiniciar las finanzas." }, { status: 401 });
+  const b = await req.json().catch(() => null);
+  if (b?.accion !== "reiniciar") return NextResponse.json({ error: "Acción desconocida." }, { status: 400 });
+  try {
+    const book = withCurrentPlans((await readPrivateJSON<Finanzas>(FILE)) ?? DEFAULT_FINANZAS);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    await writePrivateJSON(`finanzas/archivo-${stamp}.json`, book);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+    const keep = book.movimientos.filter((m) => m.tipo === "ingreso" && m.fecha >= today && /· CR-[0-9A-F]+/.test(m.detalle ?? ""));
+    await writePrivateJSON(FILE, { ...book, movimientos: keep, actualizado: new Date().toISOString() });
+    return NextResponse.json({ ok: true, archivo: `finanzas/archivo-${stamp}.json`, conservados: keep.length, archivados: book.movimientos.length - keep.length });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo." }, { status: 502 });
   }
 }

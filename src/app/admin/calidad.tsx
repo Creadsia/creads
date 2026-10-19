@@ -34,7 +34,7 @@ export default function Calidad() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-xl font-bold">Mi personaje en un video</h2>
-            <p className="text-sm text-muted">Cada video se revisa dos veces (la escena y el video final). Si la revisión encuentra un error grave, se rehace una vez gratis antes de entregarlo.</p>
+            <p className="text-sm text-muted">Cada video se revisa dos veces (la escena y el video final). Si la revisión encuentra un error grave, se avisa (los rehechos gratis están apagados desde el 19 oct).</p>
           </div>
           <select value={dias} onChange={(e) => setDias(Number(e.target.value))} aria-label="Periodo" className="rounded-lg border border-line bg-surface px-2 py-1.5 text-sm">
             <option value={7}>Últimos 7 días</option><option value={30}>Últimos 30 días</option><option value={90}>Últimos 90 días</option>

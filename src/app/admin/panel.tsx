@@ -506,6 +506,27 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
   );
 }
 
+// ---------- Empezar de cero ----------
+function ResetBook() {
+  const [busy, setBusy] = useState(false);
+  async function go() {
+    if (!window.confirm("¿Empezar las finanzas de cero?\n\nTodos los movimientos de hasta hoy (gastos, recargas e ingresos de prueba) se guardan en un archivo aparte y la lista queda vacía. Solo se mantienen los pagos reales de clientes de hoy. Los costos fijos, precios y ajustes no cambian.")) return;
+    setBusy(true);
+    const r = await fetch("/api/admin/finanzas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accion: "reiniciar" }) });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return window.alert(d.error || "No se pudo.");
+    window.alert(`Listo: ${d.archivados} movimientos archivados, ${d.conservados} pago(s) de hoy conservado(s). Ahora anota cada recarga que hagas.`);
+    window.location.reload();
+  }
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm">
+      <span className="text-muted">¿Partir de cero para el lanzamiento? Archiva todo lo anterior (no se borra) y deja la lista vacía.</span>
+      <button type="button" onClick={go} disabled={busy} className="rounded-lg border border-line px-3 py-1.5 font-semibold hover:border-ink disabled:opacity-50">{busy ? "Archivando…" : "Empezar de cero"}</button>
+    </div>
+  );
+}
+
 // ---------- Movimientos ----------
 function Movimientos({ d, change }: { d: Finanzas; change: Change }) {
   const c = d.config;
@@ -530,8 +551,9 @@ function Movimientos({ d, change }: { d: Finanzas; change: Change }) {
     <section className={card}>
       <div>
         <h2 className="font-display text-xl font-bold">Movimientos</h2>
-        <p className="text-sm text-muted">Todo lo que entra y sale: pagos, recargas de saldo e ingresos. Toca un monto amarillo para completarlo.</p>
+        <p className="text-sm text-muted">Todo lo que entra y sale: pagos, recargas de saldo e ingresos. Toca un monto amarillo para completarlo. Anota aquí cada recarga de proveedor (tipo «Recarga de saldo»): así el Panel calcula cuánto queda.</p>
       </div>
+      <ResetBook />
       <form onSubmit={add} className="flex flex-wrap items-end gap-3">
         <Field label="Fecha"><input id="m-fecha" type="date" required value={f.fecha} onChange={(e) => setF({ ...f, fecha: e.target.value })} className={input} /></Field>
         <Field label="Tipo">

@@ -1,6 +1,13 @@
 // How many credits a job costs. Shared by the server (charging) and the studio (showing prices),
 // so customers always see exactly what they'll be charged.
 
+/**
+ * Free automatic redos of finished cuts/videos when the quality review finds a severe error. Off (owner, 19 Oct
+ * 2026): they cost a second generation. The review still runs, shows what's wrong and the customer redoes a cut
+ * with one click (paid). Technical failures still give the credits back (the provider doesn't charge them).
+ */
+export const FREE_REDOS = false;
+
 /** US$ of model cost covered by one credit (Panel interno → Planes: "Costo por crédito"). */
 export const DEFAULT_USD_PER_CREDIT = 0.0193;
 

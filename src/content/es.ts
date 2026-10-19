@@ -28,7 +28,7 @@ export const es: Content = {
       { tag: "NUEVO", text: "Seedance 2.5, Kling 3.0 y Veo 3.1 en un solo estudio" },
       { tag: "NUEVO", text: "Subtítulos pro: 6 letras, tamaños exactos y ortografía del guion" },
       { tag: "NUEVO", text: "Doblaje EN ⇄ ES con tu propia voz" },
-      { tag: "QA", text: "Cada anuncio se revisa solo y los errores graves se rehacen gratis" },
+      { tag: "QA", text: "Cada anuncio se revisa solo antes de armarlo" },
       { tag: "", text: "Nano Banana Pro · Seedream 5 · FLUX 3 · Hailuo 2.3 · Wan 3.0 · Grok Video · ElevenLabs" },
       { tag: "", text: "Afiliados: comisión mensual por cada cliente que traigas" },
     ],
@@ -122,7 +122,7 @@ export const es: Content = {
       ["Historias animadas", "Escribe una idea y recibe una mini película de 30 a 60 segundos: personajes fijos (incluso con tu cara y tu voz), diálogos, música y cortes de cine."],
       ["Voces desde tus audios", "Crea una voz con audios de WhatsApp, notas de voz o videos, o grabándote aquí mismo."],
       ["Subtítulos pro", "5 estilos, 6 letras, tamaños en números y cada palabra escrita igual que en tu guion."],
-      ["Revisión automática", "Cada corte se compara con tu guion y se revisa que sea la misma cara. Los errores graves se rehacen gratis."],
+      ["Revisión automática", "Cada corte se compara con tu guion y se revisa que sea la misma cara. Si algo sale mal, te dice qué corte rehacer."],
       ["Biblioteca por nicho", "Cada anuncio terminado queda guardado y ordenado por nicho, listo para bajar y subir a Meta."],
       ["Prompts para copiar", "Copia el prompt de cada escena para usarlo donde quieras, o genera los videos aquí mismo."],
     ],
@@ -131,7 +131,7 @@ export const es: Content = {
     ["20+", "modelos de IA en un solo lugar"],
     ["2", "idiomas: inglés y español"],
     ["3", "versiones terminadas por guion"],
-    ["0", "créditos cobrados por rehechos automáticos"],
+    ["100%", "de los cortes revisados antes de armar"],
   ],
   hero: {
     promo: "Oferta de lanzamiento: Starter con 75% de descuento el primer mes",
@@ -247,7 +247,7 @@ export const es: Content = {
     steps: [
       ["Escribe", "Tu idea se convierte en guion y escenas de hasta 8 segundos."],
       ["Genera", "Cada escena sale del modelo que mejor la resuelve."],
-      ["Revisa", "Creads mira, escucha y compara contra tu guion, y rehace solo lo que salió mal."],
+      ["Revisa", "Creads mira, escucha y compara contra tu guion, y te marca lo que salió mal."],
       ["Arma", "Une las escenas, recorta silencios y pone subtítulos. Listo para publicar."],
     ],
     caption: "Comparación entre un generador de IA típico y Creads",
@@ -305,7 +305,7 @@ export const es: Content = {
   },
   credits: {
     title: "Créditos simples. Sin sorpresas.",
-    lead: "Cada plan trae créditos mensuales. Ves el costo antes de generar, y Creads no te cobra cuando su propia revisión rehace una escena.",
+    lead: "Cada plan trae créditos mensuales. Ves el costo antes de generar, y si un modelo falla, los créditos vuelven solos.",
     examples: [
       ["Anuncio UGC de 30 segundos", "Veo 3.1 Fast, 720p", "≈ 300 créditos"],
       ["10 fotos de producto", "Nano Banana Pro, 4:5", "80 créditos"],
@@ -313,7 +313,7 @@ export const es: Content = {
       ["Guion, escenas y revisión de calidad", "Creads IA", "Incluido"],
     ],
     rules: [
-      "Las escenas que Creads rehace por su cuenta no te cuestan créditos.",
+      "Si un modelo falla y no entrega nada, los créditos vuelven solos.",
       "Los créditos duran el período que pagaste (un mes, o un año en el plan anual): los que no uses vencen al terminar.",
       "¿Necesitas más? Recarga cuando quieras sin cambiar de plan.",
     ],
@@ -348,7 +348,7 @@ export const es: Content = {
       ["Créditos al instante", "Tu saldo se carga apenas se aprueba el pago."],
       ["Cancelas con un clic", "Desde tu cuenta, sin llamar ni escribir a nadie."],
       ["Pago protegido", "Pagas en Mercado Pago. Creads nunca ve tu tarjeta."],
-      ["Calidad incluida", "Cada anuncio se revisa solo y los errores graves se rehacen sin costo."],
+      ["Calidad incluida", "Cada anuncio se revisa solo y te marca qué corte rehacer."],
     ],
     compare: {
       title: "Compara los planes",
@@ -368,7 +368,7 @@ export const es: Content = {
           title: "Estudio",
           rows: [
             ["Todos los modelos de IA y estudios", "yes", "yes", "yes"],
-            ["Revisión de calidad y rehechos gratis", "yes", "yes", "yes"],
+            ["Revisión de calidad automática", "yes", "yes", "yes"],
             ["Generador de guiones con IA", "yes", "yes", "yes"],
             ["HD y uso comercial", "yes", "yes", "yes"],
             ["Avatares con tu cara", "1", "3", "Ilimitados"],
@@ -434,7 +434,7 @@ export const es: Content = {
     promos: [
       ["Oferta de lanzamiento", "Starter con 75% de descuento el primer mes."],
       ["Paga anual", "2 meses gratis en todos los planes."],
-      ["Rehechos gratis", "Cuando la revisión automática encuentra un error grave, la escena se rehace sin costo."],
+      ["Revisión de calidad", "Cada corte se revisa antes de armar y te marca los que conviene rehacer."],
     ],
   },
   audiences: {

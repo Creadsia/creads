@@ -123,8 +123,8 @@ export const HELP: HelpArticle[] = [
   {
     id: "calidad", cat: "crear",
     q: "¿Qué es la revisión de calidad automática?",
-    a: "Cuando termina cada escena, Creads la revisa sola (que diga el texto correcto, sin errores visibles). Si encuentra un error grave, la rehace sin costo: hasta 1 vez por escena y 2 por anuncio. Los detalles menores te los marca para que decidas.",
-    tags: "qa revision error rehacer gratis calidad",
+    a: "Cuando termina cada escena, Creads la revisa sola (que diga el texto correcto, sin errores visibles). Si encuentra un error, te marca qué corte es y qué falló, para que lo rehagas con una nota de qué cambiar (cuesta los créditos de ese corte). Si un modelo falla y no entrega nada, los créditos vuelven solos.",
+    tags: "qa revision error rehacer calidad",
   },
   {
     id: "tiempo", cat: "crear",

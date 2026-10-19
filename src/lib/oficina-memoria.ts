@@ -10,7 +10,7 @@ QUÉ ES CREADS
 
 LOS 4 PILARES
 1. La mayor cantidad de modelos en un solo estudio simple: Veo (Google), Kling, Seedance, Nano Banana, ElevenLabs y los que vayan saliendo.
-2. Menos errores: cada generación fallida es plata que pierde el cliente. Se revisa antes de gastar, hay control de calidad después y se rehace gratis cuando la revisión encuentra un error grave. El sistema aprende: las fallas se guardan como reglas que mejoran los próximos videos de todos.
+2. Menos errores: cada generación fallida es plata que pierde el cliente. Se revisa antes de gastar, hay control de calidad después y se marca qué corte rehacer (los rehechos gratis están apagados desde el 19 oct 2026, decisión de Gastón: cuestan una segunda generación). Si un modelo falla, los créditos vuelven solos. El sistema aprende: las fallas se guardan como reglas que mejoran los próximos videos de todos.
 3. Fácil: en español y en inglés, flujos simples que reemplazan un día de trabajo. Más fácil que Higgsfield.
 4. Precio/calidad es la marca. Acceso por API y MCP para agencias y usuarios avanzados.
 

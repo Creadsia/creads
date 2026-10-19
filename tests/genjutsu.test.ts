@@ -64,18 +64,12 @@ test("recasts with the clean references (body + face), reviews, redoes once free
   assert.match(swapStep(job) ?? "", /entrando al video/);
 
   assert.equal((await checkTool(t, job, "w01")).state, "running");
-  // done → review finds a double → redone free
+  // done → review finds a double → no free redo (off since 19 Oct): delivered with a warning, nothing re-sent
   claudeSays = ['{"severe": true, "issues": ["two copies of the character"]}', '{"nuevas": [], "repetidas": []}'];
   let st = await checkTool(t, job, "w01");
   job = await (st as { advance: () => Promise<string> }).advance();
-  assert.equal(sent.length, 2);
-  assert.match(String(sent[1].body.prompt), /two copies/);
-  assert.equal(sent[1].body.resolution, "480p", "the free redo keeps the quality");
-  assert.equal(JSON.parse(job.slice(3)).r, 1);
-  // the redo is clean → delivered without sound
-  claudeSays = ['{"severe": false, "issues": []}'];
-  st = await checkTool(t, job, "w01");
-  job = await (st as { advance: () => Promise<string> }).advance();
+  assert.equal(sent.length, 1);
+  assert.equal(JSON.parse(job.slice(3)).qa, "aviso");
   st = await checkTool(t, job, "w01");
   assert.equal(st.state, "done");
   const bytes = await (st as { fetch: () => Promise<ArrayBuffer> }).fetch();
