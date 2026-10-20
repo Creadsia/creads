@@ -16,7 +16,7 @@ export default function Privacidad() {
         <li><b>Contenido que subes o creas:</b> guiones, fotos de personas y productos, audios y voces, videos e imágenes generados.</li>
         <li><b>Uso de la plataforma:</b> trabajos realizados, créditos usados, registros técnicos de seguridad (por ejemplo, dirección IP e intentos de ingreso).</li>
         <li><b>Consultas al Asistente Creads:</b> tus mensajes se procesan con IA para responderte (junto con el estado de tu plan, créditos y últimos trabajos). Guardamos el tema y un resumen corto de cada pregunta para mejorar el Centro de ayuda.</li>
-        <li><b>Medición publicitaria:</b> solo si aceptas las cookies de medición, usamos el píxel y la API de conversiones de Meta para saber qué anuncios nos traen visitas y compras. Tu correo se envía cifrado (hash) y nunca en texto.</li>
+        <li><b>Medición publicitaria:</b> solo si aceptas las cookies de medición, usamos el píxel y la API de conversiones de Meta para saber qué anuncios nos traen visitas y compras. Tu correo se envía cifrado (hash) y nunca en texto. También usamos PostHog, solo con esa misma aceptación, para ver cómo se usa el sitio (páginas, clics y grabaciones de la pantalla en las que todo lo que escribes queda tapado) y así arreglar lo que confunde o falla.</li>
       </ul>
 
       <h2>2. Para qué los usamos</h2>
@@ -40,7 +40,7 @@ export default function Privacidad() {
         <li><b>Modelos de IA:</b> Google (Veo, Gemini), fal.ai (Kling, Seedance y otros), ElevenLabs (voces) y Anthropic (Claude), que procesan tu contenido para generarlo. Para revisar internamente cómo funciona el servicio usamos además xAI (Grok), solo con resúmenes de los que quitamos correos, teléfonos y otros datos que te identifiquen.</li>
         <li><b>Pagos:</b> Mercado Pago.</li>
         <li><b>Correos:</b> Resend, que envía los correos de la cuenta (bienvenida, comprobantes de pago, cambio de clave y avisos de tu plan).</li>
-        <li><b>Medición:</b> Meta, solo si aceptas las cookies de medición.</li>
+        <li><b>Medición:</b> Meta y PostHog (Estados Unidos), solo si aceptas las cookies de medición.</li>
       </ul>
       <p>Algunos de estos proveedores procesan datos fuera de Chile. Elegimos proveedores con medidas de seguridad adecuadas. No vendemos tus datos.</p>
 
@@ -56,7 +56,7 @@ export default function Privacidad() {
       <p>Puedes pedir acceso, rectificación, supresión, oposición y portabilidad de tus datos, y retirar tu consentimiento a la medición publicitaria cuando quieras (borrando las cookies o escribiéndonos). Escríbenos a <b>hola@creadsia.com</b> desde el correo de tu cuenta y te respondemos en los plazos que fija la ley.</p>
 
       <h2>8. Cookies</h2>
-      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta solo se activan si las aceptas en el aviso de cookies.</p>
+      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta y PostHog solo se activan si las aceptas en el aviso de cookies.</p>
       <p>Además contamos las visitas de forma anónima y agregada (cuántas visitas hubo cada día, desde qué tipo de dispositivo, ciudad y canal), sin guardar tu IP ni nada que te identifique. Si aceptas las cookies, una cookie propia recuerda además solo el canal por el que llegaste (por ejemplo, «instagram») durante 90 días, para saber qué canales nos traen clientes.</p>
 
       <h2>9. Cambios</h2>
