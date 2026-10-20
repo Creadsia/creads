@@ -171,6 +171,7 @@ export const es: Content = {
     from: "Desde",
     firstMonth: "el primer mes",
     see: "Mira cómo funciona",
+    alsoChat: "También lo pides desde Claude o ChatGPT",
     trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Créditos al instante"],
   },
   nudge: {
@@ -253,6 +254,9 @@ export const es: Content = {
       { name: "API para sistemas", how: "Tu plataforma o la de tu agencia pide anuncios por código con una clave de tu cuenta. Ideal para hacer cientos de piezas." },
     ],
     example: "«Hazme un anuncio UGC de 20 segundos para mi crema de manos, en español de Chile»",
+    working: "Creads está haciendo tu anuncio…",
+    reply: "Listo: tu anuncio de 20 s",
+    replyPoints: ["Guion y 4 cortes", "Voz en español de Chile", "Subtítulos y revisión de calidad"],
     exampleLabel: "Así se pide desde el chat",
     cta: "Ver la guía de API y conector",
   },

@@ -170,6 +170,7 @@ export const en = {
     from: "From",
     firstMonth: "your first month",
     see: "See how it works",
+    alsoChat: "You can also order it from Claude or ChatGPT",
     trust: ["Pay with Mercado Pago", "Cancel anytime", "Credits instantly"],
   },
   nudge: {
@@ -252,6 +253,9 @@ export const en = {
       { name: "API for systems", how: "Your platform, or your agency's, orders ads by code with a key of your account. Built for hundreds of pieces." },
     ],
     example: "“Make me a 20-second UGC ad for my hand cream, in English”",
+    working: "Creads is making your ad…",
+    reply: "Done: your 20-second ad",
+    replyPoints: ["Script and 4 cuts", "Voice in Chilean Spanish", "Subtitles and quality review"],
     exampleLabel: "What you type in the chat",
     cta: "See the API and connector guide",
   },
