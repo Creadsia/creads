@@ -36,7 +36,7 @@ const FAQ: [string, string][] = [
   ["¿Necesito saber editar o grabar?", "No. Todo se hace en Creads: el guion, la voz, la persona, los cortes y los subtítulos."],
   ["¿El profesor es una persona real?", "No. Es un personaje creado con IA en Creads, igual que todo el curso. Lo decimos desde el primer minuto porque es justamente lo que vas a aprender a hacer."],
   ["¿Me garantizan ventas?", "No. Te enseñamos el proceso completo y te mostramos campañas reales con sus números reales. Los resultados dependen de tu producto, tu oferta y tu presupuesto."],
-  ["¿Qué pasa después del primer mes de Creads?", "Si te sirve, sigues con el plan Starter a US$25 al mes. Si no, lo cancelas y el curso sigue siendo tuyo."],
+  ["¿Qué pasa después del primer mes de Creads?", "Si te sirve, sigues con el plan Starter a US$30 al mes. Si no, lo cancelas y el curso sigue siendo tuyo."],
   ["¿Sirve para mi negocio?", "Está pensado para e-commerce, emprendedores y quienes crean anuncios para otros. Si vendes algo por internet y pagas anuncios en Meta o TikTok, es para ti."],
 ];
 
@@ -103,7 +103,7 @@ export default async function CursoPage() {
           <div className="flex flex-col gap-3">
             <h2 className="text-[1.9rem] leading-tight font-extrabold sm:text-4xl">El curso + tu primer mes de Creads</h2>
             <ul className="flex flex-col gap-2 text-[15px]">
-              {["Las 8 lecciones, sin fecha de vencimiento", "Plantilla de guion, 50 hooks y checklists", "Tu primer mes de Creads Starter: 300 créditos para practicar", "Después, Starter a US$25 al mes solo si quieres seguir"].map((x) => (
+              {["Las 8 lecciones, sin fecha de vencimiento", "Plantilla de guion, 50 hooks y checklists", "Tu primer mes de Creads Starter: 300 créditos para practicar", "Después, Starter a US$30 al mes solo si quieres seguir"].map((x) => (
                 <li key={x} className="flex gap-2.5"><svg viewBox="0 0 24 24" className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>{x}</li>
               ))}
             </ul>

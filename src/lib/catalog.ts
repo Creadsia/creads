@@ -23,10 +23,10 @@ export const PACKS = [
   { id: "pack-3000" as ItemId, credits: 3000, usd: 139, note: "Para los meses fuertes" },
 ];
 
-/** Launch offer (owner, 19 Oct 2026): the first month of the monthly Starter plan costs US$15 (then US$25). */
-export const LAUNCH_PRICE = 15;
-/** The same offer as a % (for badges): 40%. */
-export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 25) * 100);
+/** Launch offer (owner, 20 Oct 2026): the first month of the monthly Starter plan costs US$19.99 (then US$30). */
+export const LAUNCH_PRICE = 19.99;
+/** The same offer as a % (for badges): 33%. */
+export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 30) * 100);
 export const LAUNCH_ITEMS: ItemId[] = ["starter"];
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
