@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImageInput, type Img } from "./tool-run";
+import { IMAGE_STYLES, type ImageStyle } from "@/lib/image-batch";
 import { useTable, Working } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
@@ -45,6 +46,11 @@ export default function ModelLab({ code }: { code: string }) {
   // optional reference photos for the image: a face and/or a product (uploaded or from the library)
   const [refFace, setRefFace] = useState("");
   const [refProduct, setRefProduct] = useState("");
+  // several images at once (back from the prototype): Creads writes a different idea for each one
+  const [count, setCount] = useState(1);
+  const [style, setStyle] = useState<ImageStyle>("libre");
+  type Shot = { prompt: string; url?: string; err?: string; nota?: string; state: "waiting" | "running" | "done" | "error" };
+  const [batch, setBatch] = useState<Shot[]>([]);
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
@@ -97,6 +103,46 @@ export default function ModelLab({ code }: { code: string }) {
       refreshCredits();
     } catch (e) {
       setImgErr(e instanceof Error ? e.message : "No se pudo generar la imagen.");
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
+  /** N images: Creads writes N different prompts, then each image is generated (and charged) on its own,
+   *  three at a time, and checked; a failed one gives its credits back. */
+  async function makeBatch() {
+    setImgBusy(true);
+    setImgErr("");
+    setBatch([]);
+    try {
+      const res = await fetch("/api/imagenes", { method: "POST", headers, body: JSON.stringify({ accion: "ideas", idea: prompt, estilo: style, n: count, aspect }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "No se pudieron preparar las ideas.");
+      const prompts: string[] = data.prompts;
+      setBatch(prompts.map((p) => ({ prompt: p, state: "waiting" })));
+      const refs = [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])];
+      const set = (i: number, patch: Partial<Shot>) => setBatch((b) => b.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+      let next = 0;
+      const worker = async () => {
+        while (next < prompts.length) {
+          const i = next++;
+          set(i, { state: "running" });
+          try {
+            const r = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt: prompts[i], aspect, model: im.id, refs }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.error || "No se pudo generar.");
+            set(i, { state: "done", url: d.url });
+            refreshCredits();
+            fetch("/api/imagenes", { method: "POST", headers, body: JSON.stringify({ accion: "revisar", url: d.url, prompt: prompts[i] }) })
+              .then((x) => x.json()).then((q) => { if (q?.ok === false && q.nota) set(i, { nota: q.nota }); }).catch(() => {});
+          } catch (e) {
+            set(i, { state: "error", err: e instanceof Error ? e.message : "No se pudo generar." });
+          }
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+    } catch (e) {
+      setImgErr(e instanceof Error ? e.message : "No se pudieron generar las imágenes.");
     } finally {
       setImgBusy(false);
     }
@@ -196,18 +242,50 @@ export default function ModelLab({ code }: { code: string }) {
               <div className="flex flex-col gap-1"><span className="text-xs font-semibold text-muted">Producto u objeto</span><ImageInput value={refProduct} onChange={setRefProduct} library={library.rows ?? []} /></div>
             </div>
           </details>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold text-muted">Cantidad</span>
+            {[1, 2, 4, 8, 12].map((n) => (
+              <button key={n} type="button" onClick={() => setCount(n)} aria-pressed={count === n}
+                className={`rounded-full border px-3 py-1 ${count === n ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>{n}</button>
+            ))}
+          </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold text-muted">Estilo</span>
+            <select value={style} onChange={(e) => setStyle(e.target.value as ImageStyle)} className={pill}>
+              {IMAGE_STYLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+            </select>
+          </label>
+          {(count > 1 || style !== "libre") && <p className="text-xs text-muted">Creads escribe una idea distinta para cada imagen (otro gancho, otra escena, otra persona), para que pruebes cuál funciona mejor. Cada imagen se revisa al salir.</p>}
           <button
             type="button"
-            onClick={makeImage}
-            disabled={!ready || imgBusy || !covers(im.usd)}
+            onClick={count > 1 || style !== "libre" ? makeBatch : makeImage}
+            disabled={!ready || imgBusy || !covers(im.usd * count)}
             className="rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50"
           >
-            {imgBusy ? <Working label="Generando…" /> : `Generar imagen · ${price(im.usd)}`}
+            {imgBusy ? <Working label="Generando…" /> : count > 1 ? `Generar ${count} imágenes · ${price(im.usd * count)}` : `Generar imagen · ${price(im.usd)}`}
           </button>
           {imgErr && <p className="text-sm text-bad">{imgErr}</p>}
-          {image && (
+          {image && !batch.length && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="Imagen generada" className="max-h-[420px] w-full rounded-lg object-contain" />
+          )}
+          {batch.length > 0 && (
+            <ul className="grid grid-cols-2 gap-2">
+              {batch.map((b, i) => (
+                <li key={i} className="flex flex-col gap-1">
+                  <div className={`relative ${aspect === "9:16" ? "aspect-[9/16]" : aspect === "4:5" ? "aspect-[4/5]" : aspect === "16:9" ? "aspect-video" : "aspect-square"} overflow-hidden rounded-lg border ${frame && frame === b.url ? "border-accent-text" : "border-line"} bg-surface-2`}>
+                    {b.url
+                      ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={b.url} alt={`Imagen ${i + 1}`} className="absolute inset-0 h-full w-full object-cover" />
+                      )
+                      : <span className="absolute inset-0 grid place-items-center p-2 text-center text-xs text-muted">{b.state === "error" ? b.err : b.state === "running" ? "Generando…" : "En cola"}</span>}
+                  </div>
+                  {b.nota && <span className="text-xs text-warn">⚠ {b.nota}</span>}
+                  {b.url && <button type="button" onClick={() => setFrame(b.url!)} className="text-left text-xs font-semibold text-accent-text">{frame === b.url ? "✓ Imagen de partida del video" : "Usar para el video"}</button>}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
