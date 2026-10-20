@@ -6,9 +6,7 @@ import { readPrivateJSON, writePrivateJSON } from "./supabase";
 // that a provider retires is noticed before customers find a broken button.
 
 const GOOGLE_MODELS: [string, string][] = [
-  ["veo-3.1-lite-generate-preview", "Veo 3.1 Lite"],
-  ["veo-3.1-fast-generate-preview", "Veo 3.1 Fast"],
-  ["veo-3.1-generate-preview", "Veo 3.1"],
+  ["gemini-omni-1.1-flash", "Gemini Omni Flash"],
   ["gemini-3-pro-image-preview", "Nano Banana Pro"],
 ];
 

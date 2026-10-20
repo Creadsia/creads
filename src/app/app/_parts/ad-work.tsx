@@ -197,7 +197,7 @@ export default function AdWork({ adId }: { adId: string }) {
     const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
     const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     const veo = m.id.startsWith("veo");
-    const takesRefs = (m.id === "veo-3.1" || m.id === "veo-3.1-fast") && hasRefs;
+    const takesRefs = m.id === "veo-3.1" && hasRefs;
     const secs = veo ? (takesRefs ? 8 : asked <= 4 ? 4 : asked <= 6 ? 6 : 8) : billedSeconds(asked, m.durations ?? undefined);
     const frame = !takesRefs && hasRefs && !c.image_url ? 0.134 : 0; // Nano Banana Pro opening frame
     return m.usdPerSecond * secs + frame;

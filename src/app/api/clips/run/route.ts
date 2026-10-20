@@ -16,7 +16,8 @@ import { refusesFrame } from "@/lib/formats";
 export const maxDuration = 120;
 
 // Veo 3.1 and Veo 3.1 Fast take the face and product photos directly as references.
-const TAKES_REFS = new Set(["veo-3.1", "veo-3.1-fast"]);
+// Veo 3.1 (standard) takes the face and product photos directly; the rest start from a drawn opening frame.
+const TAKES_REFS = new Set(["veo-3.1"]);
 
 interface Settings {
   lang?: string;

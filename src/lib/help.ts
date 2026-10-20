@@ -58,7 +58,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "que-es-credito", cat: "creditos",
     q: "¿Qué es un crédito y cuánto cuesta cada cosa?",
-    a: "Es lo que gastas al generar. Siempre ves el costo en créditos antes de apretar el botón. Como referencia: un anuncio UGC de 30 s con Veo 3.1 Fast son unos 300 créditos, una foto de producto 8, un borrador de 8 s con Veo 3.1 Lite unos 40. Escribir guiones, escenas y la revisión de calidad no gastan créditos.",
+    a: "Es lo que gastas al generar. Siempre ves el costo en créditos antes de apretar el botón. Como referencia: un anuncio UGC de 30 s con Veo 3.1 Fast son unos 300 créditos, una foto de producto 8, un borrador de 8 s con Wan 3.0 unos 40. Escribir guiones, escenas y la revisión de calidad no gastan créditos.",
     link: { label: "Ver mis créditos", href: "/app/planes" },
     tags: "precio costo cuanto sale cobran gasto",
   },
@@ -116,7 +116,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "modelo", cat: "crear",
     q: "¿Qué modelo de video elijo?",
-    a: "Veo 3.1 Fast (Recomendado): el mejor equilibrio entre calidad y precio. Veo 3.1 Lite (Más económico): ideal para probar hooks rápido. Veo 3.1 (Máxima calidad): para el anuncio final. También tienes Kling, Seedance y más en «Video e imagen IA».",
+    a: "Veo 3.1 Fast (Recomendado): el mejor equilibrio entre calidad y precio. Wan 3.0 (Más económico): ideal para probar hooks rápido. Veo 3.1 (Máxima calidad): para el anuncio final. También tienes Kling, Seedance y más en «Video e imagen IA».",
     link: { label: "Crear anuncio", href: "/app/crear" },
     tags: "veo kling seedance modelo calidad barato",
   },

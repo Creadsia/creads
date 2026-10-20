@@ -13,8 +13,8 @@ import { readPrivateJSON, selectRows, writePrivateJSON } from "./supabase";
 export type Service = "fal" | "google" | "eleven" | "claude";
 
 export const SERVICE_INFO: Record<Service, { name: string; what: string; recharge: string }> = {
-  fal: { name: "fal.ai", what: "Kling, Seedance, Hailuo, Wan, Grok, imágenes y herramientas", recharge: "https://fal.ai/dashboard/billing" },
-  google: { name: "Google (Gemini)", what: "Veo y Nano Banana Pro", recharge: "https://console.cloud.google.com/billing" },
+  fal: { name: "fal.ai", what: "Kling, Seedance, Hailuo, Wan, Grok, imágenes, herramientas y Veo de emergencia", recharge: "https://fal.ai/dashboard/billing" },
+  google: { name: "Google (Gemini)", what: "Veo, Gemini Omni y Nano Banana Pro", recharge: "https://console.cloud.google.com/billing" },
   eleven: { name: "ElevenLabs", what: "Voces, clonación, doblaje, música y efectos", recharge: "https://elevenlabs.io/app/subscription" },
   claude: { name: "Claude (Anthropic)", what: "Escribe los prompts y revisa los anuncios", recharge: "https://console.anthropic.com/settings/billing" },
 };
@@ -26,7 +26,7 @@ export function serviceOf(kind: string | null | undefined, model: string | null 
   const k = kind ?? "";
   const m = (model ?? "").toLowerCase();
   if (k.startsWith("tool:")) return ELEVEN_TOOLS.has(k.slice(5)) ? "eleven" : "fal";
-  if (m.startsWith("veo") || m.startsWith("nano-banana-pro") || m === "nano banana pro") return "google";
+  if (m.startsWith("veo") || m.startsWith("gemini-omni") || m.startsWith("nano-banana-pro") || m === "nano banana pro") return "google";
   return "fal";
 }
 

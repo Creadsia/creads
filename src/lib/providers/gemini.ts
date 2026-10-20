@@ -1,6 +1,6 @@
 import type { ImageProvider, Job, JobStatus, MediaRef, VideoProvider } from "./types";
 
-// Google Gemini API: Veo 3.1 (video) and Nano Banana Pro (images). Server-only.
+// Google Gemini API: Veo 3.1 previews (video, used by veo.ts until 2026-10-22) and Nano Banana Pro (images). Server-only.
 // Docs: ai.google.dev/gemini-api/docs/veo and /image-generation (checked 2026-10-15).
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -20,7 +20,7 @@ async function fail(res: Response, what: string): Promise<never> {
 }
 
 /** Downloads a reference image (https only, ≤ 10 MB) and returns it as base64 for the API. */
-async function inline(ref: MediaRef) {
+export async function inline(ref: MediaRef) {
   if (!/^https:\/\//.test(ref.url)) throw new Error("La imagen de referencia debe ser un enlace https.");
   const res = await fetch(ref.url);
   if (!res.ok) throw new Error(`No se pudo leer la imagen de referencia (${res.status}).`);
@@ -78,7 +78,7 @@ export const nanoBananaPro: ImageProvider = {
 
 const OPERATION = /^models\/veo-[\w.-]+\/operations\/[\w-]+$/;
 
-function veo(id: string, model: string, label: string, usdPerSecond: number): VideoProvider {
+export function veo(id: string, model: string, label: string, usdPerSecond: number): VideoProvider {
   return {
     id,
     label,
@@ -152,8 +152,3 @@ function veo(id: string, model: string, label: string, usdPerSecond: number): Vi
     },
   };
 }
-
-// Prices per second at 720p, Gemini API (checked 2026-10-15).
-export const veoLite = veo("veo-3.1-lite", "veo-3.1-lite-generate-preview", "Veo 3.1 Lite", 0.05);
-export const veoFast = veo("veo-3.1-fast", "veo-3.1-fast-generate-preview", "Veo 3.1 Fast", 0.1);
-export const veoStd = veo("veo-3.1", "veo-3.1-generate-preview", "Veo 3.1", 0.4);

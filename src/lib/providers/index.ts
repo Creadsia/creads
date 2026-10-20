@@ -3,7 +3,9 @@ import { claude } from "./claude";
 import { elevenlabs } from "./elevenlabs";
 import { direct } from "./byteplus";
 import { falImageProviders, falVideoProviders } from "./fal";
-import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
+import { nanoBananaPro } from "./gemini";
+import { omniFlash } from "./omni";
+import { veoProviders } from "./veo";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
 // `configured()` reports whether the provider's key is present.
@@ -11,9 +13,8 @@ const has = (name: string) => Boolean(process.env[name]);
 
 
 export const videoProviders: VideoProvider[] = [
-  veoLite,
-  veoFast,
-  veoStd,
+  ...veoProviders, // Veo 3.1: Google (Vertex, then the Gemini preview) first, fal.ai only as the emergency exit
+  omniFlash, // Gemini Omni Flash, Google's new video model
   ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
 ];
 

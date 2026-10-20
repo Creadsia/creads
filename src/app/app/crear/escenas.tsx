@@ -11,7 +11,7 @@ import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "
 // Our pick for each kind of customer: the best quality for the credits is the default and goes first.
 const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
   "veo-3.1-fast": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio para anuncios hablados." },
-  "veo-3.1-lite": { pill: "Más económico", rank: 1, note: "Ideal para probar ideas y hacer muchas versiones." },
+  "wan-3.0": { pill: "Más económico", rank: 1, note: "Ideal para probar ideas y hacer muchas versiones." },
   "veo-3.1": { pill: "Máxima calidad", rank: 2, note: "Para el anuncio final que vas a escalar." },
 };
 import type { Cut } from "./crear";
@@ -62,7 +62,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const avatar = avatars.rows?.find((a) => a.id === avatarId);
   const product = products.rows?.find((p) => p.id === productId);
   const m = models.find((x) => x.id === model);
-  const takesRefs = model === "veo-3.1" || model === "veo-3.1-fast";
+  const takesRefs = model === "veo-3.1";
   const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
   const videoSecs = cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
   // Seedance refuses a real person's face as the starting image

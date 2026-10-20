@@ -316,7 +316,6 @@ export const en = {
     items: [
       { name: "Veo 3.1 Fast", maker: "Google", group: "video", use: "Photoreal video with dialogue and sound in the same take.", cost: "10", unit: "s" },
       { name: "Veo 3.1", maker: "Google", group: "video", use: "Top quality for hero shots and premium spots.", cost: "30", unit: "s" },
-      { name: "Veo 3.1 Lite", maker: "Google", group: "video", use: "Fast, low-cost drafts to test hooks before the final cut.", cost: "5", unit: "s" },
       { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Consistent characters, multi-reference scenes and native audio.", cost: "16", unit: "s" },
       { name: "Kling 3.0", maker: "Kuaishou", group: "video", use: "Motion and action with believable physics.", cost: "10", unit: "s" },
       { name: "Wan 3.0", maker: "Alibaba", group: "video", use: "Stylized, creative video for bold social content.", cost: "7", unit: "s" },
@@ -336,7 +335,7 @@ export const en = {
     examples: [
       ["30-second UGC ad", "Veo 3.1 Fast, 720p", "≈ 300 credits"],
       ["10 product photos", "Nano Banana Pro, 4:5", "80 credits"],
-      ["Quick hook draft", "Veo 3.1 Lite, 8 seconds", "40 credits"],
+      ["Quick hook draft", "Wan 3.0, 8 seconds", "≈ 40 credits"],
       ["Script, scenes and quality review", "Creads IA", "Included"],
     ],
     rules: [

@@ -97,9 +97,9 @@ export const DEFAULT_FINANZAS: Finanzas = {
     { id: "higgsfield", servicio: "Higgsfield Ultra", para: "Solo el prototipo antiguo", montoUsd: null, frecuencia: "mensual", estado: "cancelar", nota: "Cancelar cuando Creads genere todo por su cuenta" },
   ],
   modelos: [
-    { id: "veo-lite", nombre: "Veo 3.1 Lite", proveedor: "Google (Gemini)", tipo: "video", unidad: "s", usd: 0.05, creditos: 5, nota: "720p con audio" },
-    { id: "veo-fast", nombre: "Veo 3.1 Fast", proveedor: "Google (Gemini)", tipo: "video", unidad: "s", usd: 0.1, creditos: 10, nota: "720p con audio" },
-    { id: "veo", nombre: "Veo 3.1", proveedor: "Google (Gemini)", tipo: "video", unidad: "s", usd: 0.4, creditos: 30 },
+    { id: "omni-flash", nombre: "Gemini Omni Flash", proveedor: "Google (Gemini)", tipo: "video", unidad: "s", usd: 0.1, creditos: 10, nota: "720p con audio, modelo nuevo de Google" },
+    { id: "veo-fast", nombre: "Veo 3.1 Fast", proveedor: "Google (Vertex)", tipo: "video", unidad: "s", usd: 0.15, creditos: 10, nota: "720p con audio; fal.ai solo de emergencia" },
+    { id: "veo", nombre: "Veo 3.1", proveedor: "Google (Vertex)", tipo: "video", unidad: "s", usd: 0.4, creditos: 30, nota: "720p con audio; fal.ai solo de emergencia" },
     { id: "kling", nombre: "Kling 3.0", proveedor: "fal.ai", tipo: "video", unidad: "s", usd: 0.14, creditos: 10, nota: "Confirmar si el audio cobra aparte" },
     { id: "kling-pro", nombre: "Kling 3.0 Pro", proveedor: "fal.ai", tipo: "video", unidad: "s", usd: 0.14, creditos: 10, nota: "Confirmar si el audio cobra aparte" },
     { id: "seedance-fast", nombre: "Seedance 2.0 Fast", proveedor: "fal.ai", tipo: "video", unidad: "s", usd: 0.2419, creditos: 15, nota: "Créditos sugeridos, aún no en la web" },

@@ -317,7 +317,6 @@ export const es: Content = {
     items: [
       { name: "Veo 3.1 Fast", maker: "Google", group: "video", use: "Video fotorrealista con diálogo y sonido en la misma toma.", cost: "10", unit: "s" },
       { name: "Veo 3.1", maker: "Google", group: "video", use: "Máxima calidad para tomas principales y spots premium.", cost: "30", unit: "s" },
-      { name: "Veo 3.1 Lite", maker: "Google", group: "video", use: "Borradores rápidos y baratos para probar ganchos antes del final.", cost: "5", unit: "s" },
       { name: "Seedance 2.0", maker: "ByteDance", group: "video", use: "Personajes consistentes, escenas con varias referencias y audio nativo.", cost: "16", unit: "s" },
       { name: "Kling 3.0", maker: "Kuaishou", group: "video", use: "Movimiento y acción con física creíble.", cost: "10", unit: "s" },
       { name: "Wan 3.0", maker: "Alibaba", group: "video", use: "Video estilizado y creativo para contenido llamativo.", cost: "7", unit: "s" },
@@ -337,7 +336,7 @@ export const es: Content = {
     examples: [
       ["Anuncio UGC de 30 segundos", "Veo 3.1 Fast, 720p", "≈ 300 créditos"],
       ["10 fotos de producto", "Nano Banana Pro, 4:5", "80 créditos"],
-      ["Borrador rápido de un gancho", "Veo 3.1 Lite, 8 segundos", "40 créditos"],
+      ["Borrador rápido de un gancho", "Wan 3.0, 8 segundos", "≈ 40 créditos"],
       ["Guion, escenas y revisión de calidad", "Creads IA", "Incluido"],
     ],
     rules: [
