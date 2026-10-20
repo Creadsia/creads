@@ -12,7 +12,6 @@ import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import CopyUrl from "./copy-url";
 import { Facts, Formats, ModelReel, Versus, type FormatMedia, type ReelClip } from "./home-showcase";
-import Spotlight, { type SpotMedia } from "./spotlight";
 import { Gallery } from "./gallery";
 import { EXAMPLES } from "@/lib/examples";
 import Outcome, { type NicheMedia } from "./outcome";
@@ -142,22 +141,6 @@ const NICHES: Record<string, NicheMedia> = {
   restaurante: { still: SCENES.chef.src },
   autos: { still: SCENES.car.src },
   turismo: { still: SCENES.valpo.src, video: VIDEOS.valpo },
-};
-
-// Cinema banner: the featured models.
-const SPOT: Record<string, SpotMedia> = {
-  "seedance-2.5": {
-    href: REEL["seedance-2.5"].href,
-    clips: [{ video: RECREATE.voices.cat }, { video: hf("59617700-cf90-497f-8a75-4ed74416c22f", "mp4"), still: hf("94ba857c-b593-487c-8d18-819c0141addb", "jpg") }, { video: RECREATE.voices.viking }],
-  },
-  "veo-3.1-fast": {
-    href: REEL["veo-3.1-fast"].href,
-    clips: [{ video: hf("70b577fc-0650-41cc-a267-6131307a18c0", "mp4"), still: hf("1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "jpg") }, { video: hf("a1310874-fe73-4989-9e6f-7de4d4d96426", "mp4"), still: hf("b9c4463c-3d31-414a-a898-2158c8df5112", "jpg") }],
-  },
-  "kling-3.0": {
-    href: REEL["kling-3.0"].href,
-    clips: [{ video: hf("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "mp4"), still: hf("0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "jpg") }, { video: hf("d4597de4-41e3-4d88-b199-a252d7d47bb3", "mp4"), still: hf("c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "jpg") }, { video: RECREATE.demos.caballero.after }],
-  },
 };
 
 // «Formatos listos»: one picture per format.
@@ -823,15 +806,8 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        {/* Cinema banner: featured models */}
-        <section aria-label={t.spotlight.label} className={`-mt-6 ${gutter}`}>
-          <div className="mx-auto max-w-7xl">
-            <Spotlight t={t.spotlight} media={SPOT} />
-          </div>
-        </section>
-
         {/* What goes in, what comes out: the finished ad */}
-        <section id="resultado" aria-labelledby="outcome-title" className={`scroll-mt-24 ${gutter}`}>
+        <section id="resultado" aria-labelledby="outcome-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
             <Outcome t={t.outcome} media={NICHES} ctaHref="#pricing" />
           </div>
