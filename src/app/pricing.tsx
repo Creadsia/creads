@@ -35,14 +35,14 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
   }, []);
 
   return (
-    <div ref={box} className="flex flex-col gap-8">
+    <div ref={box} className="flex flex-col gap-5">
       {/* the offer, impossible to miss */}
-      <div className="stage relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-line bg-black p-5 text-white sm:flex-row sm:items-center sm:gap-8 sm:p-7">
+      <div className="stage relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-line bg-black p-5 text-white sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-4">
         <span aria-hidden="true" className="pointer-events-none absolute -top-24 -left-10 h-64 w-64 rounded-full opacity-50 blur-[80px]" style={{ background: "var(--grad)" }} />
-        <span className="chroma relative font-display text-6xl leading-none font-semibold sm:text-7xl">−{LAUNCH_PCT}%</span>
+        <span className="chroma relative font-display text-5xl leading-none font-semibold sm:text-[3.4rem]">−{LAUNCH_PCT}%</span>
         <span className="relative flex min-w-0 flex-1 flex-col gap-1">
           <span className="w-fit rounded-md bg-rec px-2 py-0.5 text-xs font-bold">{t.offerTag}</span>
-          <b className="text-xl leading-snug sm:text-2xl">{t.offer}</b>
+          <b className="text-lg leading-snug sm:text-xl">{t.offer}</b>
           <span className="text-sm text-white/70">{t.offerNote}</span>
         </span>
         <div role="radiogroup" aria-label={es ? "Forma de pago" : "Billing"} className="relative inline-flex w-fit shrink-0 rounded-xl border border-white/20 bg-white/5 p-1">
@@ -67,7 +67,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
-                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] lg:order-none lg:-mt-5"
+                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] lg:order-none"
                 : "border border-line bg-surface"}`}>
               {featured && (
                 <div className="flex items-center justify-center gap-2 bg-[image:var(--grad)] px-4 py-2 text-sm font-bold text-white">
@@ -76,10 +76,10 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
                 </div>
               )}
 
-              <div className="flex flex-col gap-5 p-6 sm:p-7">
+              <div className="flex flex-col gap-4 p-5">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-2xl font-extrabold">{p.name}</h3>
-                  <p className="text-[15px] text-muted">{p.for}</p>
+                  <h3 className="text-xl font-extrabold">{p.name}</h3>
+                  <p className="text-sm text-muted">{p.for}</p>
                 </div>
 
                 {/* price */}
@@ -91,7 +91,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
                     </div>
                   )}
                   <p className="flex flex-wrap items-baseline gap-x-1.5">
-                    <span className={`font-display text-[3rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
+                    <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
                     <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
                   </p>
                   <p className="text-sm text-muted">
@@ -101,12 +101,12 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
 
                 {/* what the money turns into */}
                 <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
-                  <div className="flex flex-col gap-0.5 p-3.5">
-                    <b className="font-display text-2xl font-semibold tabular-nums">{p.credits}</b>
+                  <div className="flex flex-col gap-0.5 p-3">
+                    <b className="font-display text-xl font-semibold tabular-nums">{p.credits}</b>
                     <span className="text-xs text-muted">{t.credits}</span>
                   </div>
-                  <div className="flex flex-col gap-0.5 border-l border-line p-3.5">
-                    <b className="font-display text-2xl font-semibold tabular-nums">≈ {ads}</b>
+                  <div className="flex flex-col gap-0.5 border-l border-line p-3">
+                    <b className="font-display text-xl font-semibold tabular-nums">≈ {ads}</b>
                     <span className="text-xs text-muted">{t.adsMonth}</span>
                   </div>
                   <div className="col-span-2 border-t border-line px-3.5 py-2 text-sm">
@@ -116,7 +116,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
 
                 <div className="flex flex-col gap-2">
                   <a href={startHref(p.id, yearly)}
-                    className={`rounded-xl px-5 py-4 text-center text-[17px] font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
+                    className={`rounded-xl px-5 py-3 text-center text-base font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
                     {t.cta} {p.name}
                   </a>
                   <p className="text-center text-xs text-muted">{t.cardNote}</p>
@@ -124,12 +124,16 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
               </div>
 
               {/* everything it includes */}
-              <div className="flex flex-col gap-5 border-t border-line px-6 py-6 sm:px-7">
-                <b className="text-sm">{t.includes}</b>
+              <details className="group border-t border-line">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 text-sm font-semibold hover:bg-surface-2/60">
+                  {t.includes}
+                  <span aria-hidden="true" className="text-lg leading-none text-muted transition-transform group-open:rotate-45">+</span>
+                </summary>
+              <div className="flex flex-col gap-4 px-5 pb-5">
                 {t.compare.groups.map((g) => (
                   <div key={g.title} className="flex flex-col gap-2.5">
                     <span className="text-xs font-semibold text-muted">{g.title}</span>
-                    <ul className="flex flex-col gap-2.5 text-[15px]">
+                    <ul className="flex flex-col gap-2 text-sm">
                       {g.rows.map(([row, ...vals]) => {
                         const v = vals[t.plans.indexOf(p)];
                         const off = v === "no";
@@ -148,10 +152,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
                     </ul>
                   </div>
                 ))}
-                <a href={startHref(p.id, yearly)} className={`mt-1 text-center text-sm font-semibold ${featured ? "text-accent-text" : "text-ink"} hover:underline`}>
-                  {t.cta} {p.name} →
-                </a>
               </div>
+              </details>
             </article>
           );
         })}

@@ -886,7 +886,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
 
         {/* Pricing */}
         <section id="pricing" aria-labelledby="pricing-title" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-10">
+          <div className="mx-auto flex max-w-7xl flex-col gap-6">
             <SectionHead id="pricing-title" title={t.pricing.title} lead={t.pricing.lead} />
             <Pricing t={t.pricing} lang={t.lang} rate={rate} renews={renews} />
           </div>
