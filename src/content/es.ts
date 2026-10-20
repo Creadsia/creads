@@ -163,7 +163,7 @@ export const es: Content = {
   hero: {
     promo: "Oferta de lanzamiento: Starter a US$15 el primer mes",
     title: "Tu anuncio con IA. Listo para lanzar.",
-    lead: "Espía lo que ya vende y Creads hace el resto: guion, hasta 8 cortes con Veo, Kling o Seedance, voz, subtítulos y revisión de calidad. Recibes el video editado, en el formato que quieras, en unos 15 minutos.",
+    lead: "Espía los anuncios que ya venden en tu rubro. Creads escribe el guion, crea hasta 8 escenas con Veo, Kling o Seedance, les pone voz y subtítulos, y revisa cada una. En unos 15 minutos tienes tu video editado, en el formato que necesites.",
     who: ["Afiliados", "Media buyers", "Agencias", "Marcas y e-commerce"],
     poweredBy: "Con la tecnología de",
     wall: "Todos los clips de esta página están hechos con IA. La etiqueta dice el modelo.",

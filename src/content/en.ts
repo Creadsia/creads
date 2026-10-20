@@ -162,7 +162,7 @@ export const en = {
   hero: {
     promo: "Launch offer: Starter at US$15 your first month",
     title: "Your AI ad. Ready to launch.",
-    lead: "Spy on what already sells and Creads does the rest: script, up to 8 cuts with Veo, Kling or Seedance, voice, subtitles and quality review. You get the edited video, in the format you want, in about 15 minutes.",
+    lead: "Spy on the ads that already sell in your niche. Creads writes the script, creates up to 8 scenes with Veo, Kling or Seedance, adds voice and subtitles, and checks every one. In about 15 minutes you have your edited video, in the format you need.",
     who: ["Affiliates", "Media buyers", "Agencies", "Brands & e-commerce"],
     poweredBy: "Powered by",
     wall: "Every clip on this page was made with AI. The tag shows the model.",
