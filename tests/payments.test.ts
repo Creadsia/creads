@@ -15,10 +15,10 @@ test("peso prices end in 990 and follow the dollar rate", () => {
 
 test("quotes: launch offer only on the first monthly payment, customer discount on top", () => {
   const first = quote("starter", "mensual", { firstPurchase: true })!;
-  assert.equal(first.total, 15, "Starter: US$15 the first month (then US$25)");
+  assert.equal(first.total, 19.99, "Starter: US$19.99 the first month (then US$30)");
   assert.equal(quote("plus", "mensual", { firstPurchase: true })!.launch, 0, "only Starter has the launch offer");
   const later = quote("starter", "mensual", { firstPurchase: false, discountPct: 10 })!;
-  assert.equal(later.total, 22.5);
+  assert.equal(later.total, 27);
   assert.equal(quote("starter", "anual", { firstPurchase: true })!.launch, 0);
   assert.equal(quote("nope" as never, "mensual"), null);
 });
