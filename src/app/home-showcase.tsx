@@ -90,40 +90,45 @@ export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: R
   );
 }
 
-/** Creads against a typical AI generator: the same rows as before, as two columns you can scan. */
+/** Creads against a typical AI generator: one compact table, row by row. */
 export function Versus({ t, ctaHref, cta }: { t: Content["diff"]; ctaHref: string; cta: string }) {
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex max-w-4xl flex-col gap-4">
-        <h2 id="how" className="scroll-mt-32 text-[2rem] leading-tight font-extrabold sm:text-[2.75rem] lg:scroll-mt-24">{t.title}</h2>
-        <p className="text-lg text-muted">{t.lead}</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex max-w-3xl flex-col gap-3">
+          <h2 id="how" className="scroll-mt-32 text-[1.8rem] leading-tight font-extrabold sm:text-[2.4rem] lg:scroll-mt-24">{t.title}</h2>
+          <p className="text-[17px] text-muted">{t.lead}</p>
+        </div>
+        <a href={ctaHref} className="shrink-0 rounded-xl bg-ink px-5 py-3 font-semibold text-bg transition-opacity hover:opacity-90">{cta}</a>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <section aria-label={t.colOther} className="flex flex-col rounded-[1.75rem] border border-line bg-surface p-6 sm:p-8">
-          <h3 className="pb-4 text-xl font-bold text-muted">{t.colOther}</h3>
-          <ul className="flex flex-col divide-y divide-line">
-            {t.rows.map(([row, them]) => (
-              <li key={row} className="flex flex-col gap-0.5 py-3.5">
-                <span className="text-sm text-muted">{row}</span>
-                <span className="flex items-center gap-2 text-[16px] text-muted"><Cross className="text-bad/80" />{them}</span>
-              </li>
+      <div className="overflow-hidden rounded-[1.5rem] border border-line bg-surface">
+        <table className="w-full text-left text-[14px] sm:text-[15px]">
+          <caption className="sr-only">{t.caption}</caption>
+          <thead>
+            <tr className="border-b border-line">
+              <th scope="col" className="hidden w-[34%] px-4 py-3 sm:table-cell"></th>
+              <th scope="col" className="px-4 py-3 font-semibold text-muted">{t.colOther}</th>
+              <th scope="col" className="bg-[image:var(--grad)] bg-clip-padding px-4 py-3">
+                <span className="flex items-center gap-2 font-bold text-white"><Mark size={18} /> Creads IA</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {t.rows.map(([row, them, us]) => (
+              <tr key={row} className="border-b border-line last:border-0">
+                <th scope="row" className="hidden px-4 py-2.5 font-medium sm:table-cell">{row}</th>
+                <td className="px-4 py-2.5 align-top text-muted">
+                  <span className="block text-[11px] font-medium text-muted/80 sm:hidden">{row}</span>
+                  <span className="flex items-start gap-1.5"><Cross className="mt-0.5 text-bad/80" />{them}</span>
+                </td>
+                <td className="bg-accent/[0.04] px-4 py-2.5 align-top font-semibold">
+                  <span className="block text-[11px] font-medium text-transparent sm:hidden" aria-hidden="true">.</span>
+                  <span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{us}</span>
+                </td>
+              </tr>
             ))}
-          </ul>
-        </section>
-        <section aria-label="Creads IA" className="rounded-[1.75rem] bg-[image:var(--grad)] p-[1.5px] shadow-[0_40px_120px_-50px_rgba(138,92,255,0.7)]">
-          <div className="flex h-full flex-col rounded-[calc(1.75rem-1.5px)] bg-bg p-6 sm:p-8">
-            <h3 className="flex items-center gap-2 pb-4 text-xl font-bold"><Mark size={22} /> Creads IA</h3>
-            <ul className="flex flex-col divide-y divide-line">
-              {t.rows.map(([row, , us]) => (
-                <li key={row} className="flex flex-col gap-0.5 py-3.5">
-                  <span className="text-sm text-muted">{row}</span>
-                  <span className="flex items-center gap-2 text-[16px] font-semibold"><Check className="text-good" />{us}</span>
-                </li>
-              ))}
-            </ul>
-            <a href={ctaHref} className="mt-6 self-start rounded-xl bg-ink px-5 py-3 font-semibold text-bg transition-opacity hover:opacity-90">{cta}</a>
-          </div>
-        </section>
+          </tbody>
+        </table>
       </div>
     </div>
   );
