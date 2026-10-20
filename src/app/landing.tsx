@@ -149,7 +149,12 @@ const FORMATS: Record<string, FormatMedia> = {
 };
 
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
-const INFLU = ["/api/vitrina/influencer-1", "/api/vitrina/influencer-2", "/api/vitrina/influencer-3"];
+// Each one animated from its photo (Kling 3.0, 5 s); the photo shows while the clip loads.
+const INFLU = [
+  { img: "/api/vitrina/influencer-1", video: H("20261020_170352", "b1e5e972-e60f-455b-b88c-5fdadfc274d6") },
+  { img: "/api/vitrina/influencer-2", video: H("20261020_170403", "22b71ec6-b5c6-402f-b5dd-4d62432fb80d") },
+  { img: "/api/vitrina/influencer-3", video: H("20261020_170357", "86391bf0-938b-416d-a0d4-edb1b30671b2") },
+];
 
 function WallTile({ c, lang }: { c: WallClip; lang: string }) {
   return (
@@ -853,10 +858,11 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               <Link href="/ia/influencer" className="mt-2 self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.influ.cta}</Link>
             </div>
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-              {INFLU.map((src, i) => (
-                <figure key={src} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
+              {INFLU.map((x, i) => (
+                <figure key={x.img} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- a redirect to a short-lived storage link */}
-                  <img src={src} alt={t.influ.alt} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={x.img} alt={t.influ.alt} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+                  <LoopVideo src={x.video} className="absolute inset-0 h-full w-full object-cover" />
                   <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10.5px] font-semibold text-white backdrop-blur-sm">{t.influ.tag}</figcaption>
                 </figure>
               ))}
