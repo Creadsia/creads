@@ -270,6 +270,33 @@ export const es: Content = {
       { name: "Producción automática", does: "Pegas un guion y recibes 3 versiones terminadas con distintos ganchos." },
     ],
   },
+  spotlight: {
+    label: "Modelos destacados",
+    inCreads: "En Creads",
+    cta: "Pruébalo ahora",
+    items: [
+      { id: "seedance-2.5", name: "Seedance", ver: "2.5", maker: "ByteDance", badge: "15 s", pill: "Audio nativo · misma cara siempre" },
+      { id: "veo-3.1-fast", name: "Veo", ver: "3.1", maker: "Google", badge: "Audio", pill: "Diálogo y sonido en la misma toma" },
+      { id: "kling-3.0", name: "Kling", ver: "3.0", maker: "Kuaishou", badge: "Acción", pill: "Movimiento con física creíble" },
+    ],
+  },
+  formats: {
+    title: "Formatos que ya venden, listos para usar",
+    lead: "Elige un formato, pon tu guion y Creads hace todos los cortes con el estilo de ese formato: encuadres, ritmo y subtítulos.",
+    all: "Ver todos los formatos",
+    items: [
+      { k: "ugc", name: "UGC a cámara", cuts: "Hasta 8 cortes", text: "Una persona cuenta su experiencia como si la grabara con su celular." },
+      { k: "podcast", name: "Podcast", cuts: "Cortes de diálogo", text: "Dos personas conversan y el beneficio sale natural." },
+      { k: "producto", name: "Producto en acción", cuts: "Hasta 8 cortes", text: "Tu producto en primer plano, en movimiento y con su mejor luz." },
+      { k: "noticiero", name: "Noticiero", cuts: "Hasta 8 cortes", text: "Una presentadora da la noticia de tu oferta con los datos clave." },
+      { k: "entrevista", name: "Entrevista", cuts: "Cortes de diálogo", text: "Preguntas y respuestas sobre tu producto, como en la calle." },
+      { k: "influencer", name: "Influencer en la calle", cuts: "Hasta 8 cortes", text: "Tu personaje recorre la ciudad y te habla a ti." },
+    ],
+  },
+  made: {
+    title: "Hecho con Creads",
+    lead: "Anuncios, clips, imágenes y voces hechos en Creads, con los mismos modelos que vas a usar tú. Toca uno para verlo y crear algo parecido.",
+  },
   outcome: {
     title: "Encuentras el anuncio que ya vende. Sale el tuyo, terminado.",
     lead: "Creads no te entrega clips sueltos para que los edites tú. Buscas en Espiar los anuncios que llevan semanas vendiendo en tu rubro y Creads hace el resto: guion, escenas, voz, subtítulos y revisión de calidad. Listo para subir a Meta, TikTok o Reels.",
@@ -311,6 +338,7 @@ export const es: Content = {
     lead: "Veo, Kling, Seedance, Gemini Omni y más, en un estudio simple y en español. Creads elige el mejor modelo para cada escena, o eliges tú.",
     label: "Cada clip está hecho con el modelo que dice.",
     try: "Probar este modelo",
+    inCreads: "En Creads",
     more: "modelos y herramientas: imagen, voz, doblaje y más",
     moreCta: "Ver todos",
     items: [

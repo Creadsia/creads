@@ -269,6 +269,33 @@ export const en = {
       { name: "Auto production", does: "Paste one script and get 3 finished versions with different hooks." },
     ],
   },
+  spotlight: {
+    label: "Featured models",
+    inCreads: "In Creads",
+    cta: "Try it now",
+    items: [
+      { id: "seedance-2.5", name: "Seedance", ver: "2.5", maker: "ByteDance", badge: "15 s", pill: "Native audio · same face every time" },
+      { id: "veo-3.1-fast", name: "Veo", ver: "3.1", maker: "Google", badge: "Audio", pill: "Dialogue and sound in one take" },
+      { id: "kling-3.0", name: "Kling", ver: "3.0", maker: "Kuaishou", badge: "Action", pill: "Motion with believable physics" },
+    ],
+  },
+  formats: {
+    title: "Formats that already sell, ready to use",
+    lead: "Pick a format, add your script and Creads makes every cut in that format's style: framing, pace and subtitles.",
+    all: "See every format",
+    items: [
+      { k: "ugc", name: "UGC to camera", cuts: "Up to 8 cuts", text: "A person tells their story as if filmed on their phone." },
+      { k: "podcast", name: "Podcast", cuts: "Dialogue cuts", text: "Two people talk and the benefit comes up naturally." },
+      { k: "producto", name: "Product in action", cuts: "Up to 8 cuts", text: "Your product up close, moving, in its best light." },
+      { k: "noticiero", name: "Newscast", cuts: "Up to 8 cuts", text: "A presenter breaks the news of your offer with the key facts." },
+      { k: "entrevista", name: "Interview", cuts: "Dialogue cuts", text: "Questions and answers about your product, street style." },
+      { k: "influencer", name: "Influencer on the street", cuts: "Up to 8 cuts", text: "Your character walks the city and talks to you." },
+    ],
+  },
+  made: {
+    title: "Made with Creads",
+    lead: "Ads, clips, images and voices made in Creads, with the same models you'll use. Tap one to watch it and make something similar.",
+  },
   outcome: {
     title: "You find the ad that already sells. Yours comes out, finished.",
     lead: "Creads doesn't hand you loose clips to edit yourself. You search Spy for the ads that have been selling for weeks in your niche and Creads does the rest: script, scenes, voice, subtitles and quality review. Ready to upload to Meta, TikTok or Reels.",
@@ -310,6 +337,7 @@ export const en = {
     lead: "Veo, Kling, Seedance, Gemini Omni and more, in one simple studio, in English and Spanish. Creads picks the best model for each scene, or you choose.",
     label: "Each clip was made with the model it names.",
     try: "Try this model",
+    inCreads: "In Creads",
     more: "models and tools: image, voice, dubbing and more",
     moreCta: "See them all",
     items: [
