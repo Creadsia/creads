@@ -43,7 +43,7 @@ export default function Spotlight({ t, media }: { t: Content["spotlight"]; media
 
         <span className="absolute right-4 top-4 rounded-lg border border-white/25 bg-black/40 px-2.5 py-1 font-display text-sm font-semibold text-white backdrop-blur-md sm:right-6 sm:top-6 sm:text-base">{s.badge}</span>
         <span className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md sm:left-6 sm:top-6">
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{s.maker}
+          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{t.inCreads}
         </span>
 
         <div key={s.id} className="spot-in absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 pb-24 text-center sm:pb-28">

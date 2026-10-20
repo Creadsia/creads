@@ -272,6 +272,7 @@ export const es: Content = {
   },
   spotlight: {
     label: "Modelos destacados",
+    inCreads: "En Creads",
     cta: "Pruébalo ahora",
     items: [
       { id: "seedance-2.5", name: "Seedance", ver: "2.5", maker: "ByteDance", badge: "15 s", pill: "Audio nativo · misma cara siempre" },
@@ -337,6 +338,7 @@ export const es: Content = {
     lead: "Veo, Kling, Seedance, Gemini Omni y más, en un estudio simple y en español. Creads elige el mejor modelo para cada escena, o eliges tú.",
     label: "Cada clip está hecho con el modelo que dice.",
     try: "Probar este modelo",
+    inCreads: "En Creads",
     more: "modelos y herramientas: imagen, voz, doblaje y más",
     moreCta: "Ver todos",
     items: [

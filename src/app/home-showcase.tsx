@@ -54,7 +54,7 @@ export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: R
                 <LoopVideo src={c.video} poster={c.still ? posterOf(c.still, 384) : undefined} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
                 <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,transparent_26%,transparent_44%,rgba(0,0,0,0.92)_100%)]" />
                 <span className="relative flex items-center justify-between p-4 text-[11px] font-semibold text-white/85">
-                  <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 backdrop-blur-md"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{m.maker}</span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 backdrop-blur-md"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{t.inCreads}</span>
                   <span className="font-mono text-white/60">{String(i + 1).padStart(2, "0")}/{String(t.items.length).padStart(2, "0")}</span>
                 </span>
                 <span className="relative flex flex-col gap-3 p-4 pt-0 text-white">

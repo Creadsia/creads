@@ -78,7 +78,6 @@ const MAKER_DOT: Record<Maker, string> = {
   minimax: "#ff8a3d",
   alibaba: "#ffc23d",
 };
-const MAKER_NAME: Record<Maker, string> = { google: "Google", kling: "Kuaishou", bytedance: "ByteDance", xai: "xAI", minimax: "MiniMax", alibaba: "Alibaba" };
 interface WallClip { id: string; still?: string; model: string; maker: Maker }
 const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
 const C = (video: string, still: string, model: string, maker: Maker): WallClip => ({ id: hf(video, "mp4"), still: hf(still, "jpg"), model, maker });
@@ -171,11 +170,7 @@ function WallTile({ c }: { c: WallClip }) {
       <LoopVideo src={c.id} poster={c.still ? `/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60` : undefined} className="absolute inset-0 h-full w-full object-cover" />
       <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
       <figcaption className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1 text-white">
-        <span className="flex items-center gap-1.5 text-[9.5px] font-semibold tracking-wide text-white/70">
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ background: MAKER_DOT[c.maker], color: MAKER_DOT[c.maker] }} />
-          {MAKER_NAME[c.maker]}
-        </span>
-        <b className="font-display text-[13px] leading-[1.05] font-semibold tracking-[-0.02em] sm:text-[15px]">{c.model}</b>
+        <b className="flex items-center gap-1.5 font-display text-[13px] leading-[1.05] font-semibold tracking-[-0.02em] sm:text-[15px]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]" style={{ background: MAKER_DOT[c.maker], color: MAKER_DOT[c.maker] }} />{c.model}</b>
       </figcaption>
     </figure>
   );
@@ -944,7 +939,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                         <div key={m.name} className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-muted/50">
                           <div className="flex items-baseline justify-between gap-3">
                             <b className="font-display text-xl font-extrabold [font-stretch:100%]">{m.name}</b>
-                            <span className="text-sm text-muted">{m.maker}</span>
                           </div>
                           <p className="text-[15px] text-muted">{m.use}</p>
                           <p className="mt-auto pt-2 text-sm">
