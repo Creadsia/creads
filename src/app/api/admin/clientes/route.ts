@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { giveStarterAvatars } from "@/lib/avatares-creads";
 import { randomBytes } from "node:crypto";
 import { isAdmin } from "@/lib/admin";
 import { createUser, findUserByEmail, forgetWorkspace, listAllUsers } from "@/lib/auth";
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
     await rest("workspaces", { method: "POST", body: JSON.stringify({ id, name, kind: "client", plan: b?.plan ? String(b.plan).slice(0, 30) : null, access, discount }) });
     const password = tempPassword();
     const user = await createUser({ email, name: String(b?.contact ?? "").slice(0, 60), password, role: "member", workspace: id });
+    after(() => giveStarterAvatars(id));
     // starting credits (e.g. for a friend to try it); a failure here doesn't undo the account
     const start = Math.round(Number(b?.credits) || 0);
     if (start > 0 && start <= 100000) await grant(id, start, "topup", "Créditos de bienvenida", "dueño").catch(() => null);

@@ -178,14 +178,29 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
   // BorderStyle 3 = opaque box behind the text
   const [border, outl, shadow, outCol, backCol] =
     look === "caja" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor("#000000", 0x30), assColor("#000000", 0x30)]
-      : look === "suave" ? [1, 0, Math.max(3, Math.round(size / 14)), assColor("#000000"), assColor("#000000", 0x60)]
-        : [1, outline, Math.max(2, Math.round(size / 24)), assColor("#000000"), assColor("#000000", 0x64)];
+      : look === "etiqueta" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor(st.accent), assColor(st.accent)]
+        : look === "neon" ? [1, Math.max(3, Math.round(size / 9)), 0, assColor(st.accent), assColor(st.accent, 0x80)]
+          : look === "suave" ? [1, 0, Math.max(3, Math.round(size / 14)), assColor("#000000"), assColor("#000000", 0x60)]
+            : [1, outline, Math.max(2, Math.round(size / 24)), assColor("#000000"), assColor("#000000", 0x64)];
   const align = st.position === "arriba" ? 8 : st.position === "centro" ? 5 : 2;
   const mv = marginPx(st.position, H, vertical);
+  // where every line sits: dragged anywhere (x, y in %), or the quick «arriba / centro / abajo»
+  const custom = st.y !== undefined;
+  const px0 = Math.round((W * (st.x ?? 50)) / 100);
+  const py0 = custom ? Math.round((H * (st.y as number)) / 100) : st.position === "arriba" ? mv : st.position === "centro" ? Math.round(H / 2) : H - mv;
+  const an = custom ? 5 : align;
+  const at = `\\an${an}\\pos(${px0},${py0})`;
+  const rise = Math.round(size * 0.5);
+  /** The opening tags of one line, with the look's entrance animation. */
+  const open = (first: boolean) =>
+    look === "subir" ? `{\\an${an}\\move(${px0},${py0 + rise},${px0},${py0},0,220)\\fad(160,0)}`
+      : look === "pop" && first ? `{${at}\\fscx70\\fscy70\\t(0,110,\\fscx110\\fscy110)\\t(110,190,\\fscx100\\fscy100)}`
+        : look === "neon" ? `{${at}\\blur${Math.max(2, Math.round(size / 18))}}`
+          : `{${at}}`;
   const ass = [
     "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "ScaledBorderAndShadow: yes", "", "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Cap,${font.ass},${size},${assColor(st.color)},${assColor(st.accent)},${outCol},${backCol},0,0,0,0,100,100,0,0,${border},${outl},${shadow},${align},50,50,${mv},1`,
+    `Style: Cap,${font.ass},${size},${assColor(look === "karaoke" ? st.accent : st.color)},${assColor(look === "karaoke" ? st.color : st.accent)},${outCol},${backCol},0,0,0,0,100,100,0,0,${border},${outl},${shadow},${align},50,50,${mv},1`,
     ...selloStyles(W, H, st.position === "arriba"),
     "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
@@ -203,19 +218,28 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
     const toks = c.map((x) => x.w);
     toks[toks.length - 1] = toks[toks.length - 1].replace(/,$/, "");
     const disp = toks.map((t) => clean(shapeWord(t, st))).map((t) => (font.capsOnly && st.case !== "lower" ? t.toLocaleUpperCase("es") : t));
-    if (look === "resaltar") {
+    if (look === "resaltar" || look === "salto") {
+      const big = look === "salto" ? "\\fscx118\\fscy118" : "", back = look === "salto" ? "\\fscx100\\fscy100" : "";
       c.forEach((w, j) => {
         const s0 = j === 0 ? a : w.s;
         const e0 = j + 1 < c.length ? c[j + 1].s : b;
         if (e0 <= s0) return;
-        const line = disp.map((t, q) => (q === j ? `{\\c${accent}}${t}{\\c${base}}` : t)).join(" ");
-        ass.push(`Dialogue: 0,${ts(s0)},${ts(e0)},Cap,,0,0,0,,${line}`);
+        const line = disp.map((t, q) => (q === j ? `{\\c${accent}${big}}${t}{\\c${base}${back}}` : t)).join(" ");
+        ass.push(`Dialogue: 0,${ts(s0)},${ts(e0)},Cap,,0,0,0,,${open(j === 0)}${line}`);
       });
+    } else if (look === "karaoke") {
+      // each word fills with the accent colour while it is said (\kf, in hundredths of a second)
+      const line = c.map((w, j) => {
+        const until = j + 1 < c.length ? c[j + 1].s : Math.min(w.e, b);
+        const cs = Math.max(1, Math.round((until - (j === 0 ? a : w.s)) * 100));
+        return `{\\kf${cs}}${disp[j]}`;
+      }).join(" ");
+      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}${line}`);
     } else if (look === "palabra") {
       // one word, a quick "pop" as it appears
-      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,{\\fscx80\\fscy80\\t(0,90,\\fscx108\\fscy108)\\t(90,160,\\fscx100\\fscy100)}${disp.join(" ")}`);
+      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}{\\fscx80\\fscy80\\t(0,90,\\fscx108\\fscy108)\\t(90,160,\\fscx100\\fscy100)}${disp.join(" ")}`);
     } else {
-      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${disp.join(" ")}`);
+      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}${disp.join(" ")}`);
     }
     srt.push(`${k + 1}\n${srtTs(a)} --> ${srtTs(b)}\n${toks.map((t) => shapeWord(t, { case: "normal", punct: true })).join(" ")}\n`);
   });

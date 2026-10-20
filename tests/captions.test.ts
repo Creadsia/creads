@@ -37,3 +37,28 @@ test("bad or old settings become safe ones", () => {
   assert.equal(old.case, "upper");
   assert.equal(old.size, 24);
 });
+
+test("new looks: karaoke fill, highlighted word that grows, entrances, glow and colour box", async () => {
+  const { captions } = await import("../src/lib/montage");
+  const { DEFAULT_STYLE } = await import("../src/lib/caption-style");
+  const ws = [{ w: "Hola", s: 0, e: 0.4 }, { w: "mundo", s: 0.45, e: 0.9 }, { w: "lindo.", s: 0.95, e: 1.4 }];
+  const run = (look: string, extra = {}) => captions(ws, 1080, 1920, "9:16", { ...DEFAULT_STYLE, look, ...extra } as never).ass;
+  assert.match(run("karaoke"), /\{\\kf\d+\}Hola \{\\kf\d+\}mundo/);
+  assert.match(run("salto"), /\\fscx118\\fscy118\}Hola/);
+  assert.match(run("subir"), /\\move\(540,\d+,540,\d+,0,220\)\\fad\(160,0\)/);
+  assert.match(run("pop"), /\\fscx70\\fscy70\\t\(/);
+  assert.match(run("neon"), /\\blur\d/);
+  assert.match(run("etiqueta"), /Style: Cap,[^\n]*,3,\d+,0,/);
+});
+
+test("subtitles can sit anywhere: x and y in % win over arriba / centro / abajo", async () => {
+  const { captions } = await import("../src/lib/montage");
+  const { DEFAULT_STYLE, normalizeStyle } = await import("../src/lib/caption-style");
+  const ws = [{ w: "Hola", s: 0, e: 0.4 }];
+  assert.match(captions(ws, 1080, 1920, "9:16", { ...DEFAULT_STYLE, x: 30, y: 40 }).ass, /\\an5\\pos\(324,768\)/);
+  assert.match(captions(ws, 1080, 1920, "9:16", { ...DEFAULT_STYLE, position: "abajo" }).ass, /\\an2\\pos\(540,\d+\)/);
+  const n = normalizeStyle({ ...DEFAULT_STYLE, x: 200, y: -5 });
+  assert.equal(n.x, 92);
+  assert.equal(n.y, 6);
+  assert.equal(normalizeStyle({ ...DEFAULT_STYLE }).y, undefined);
+});

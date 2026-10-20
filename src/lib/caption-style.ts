@@ -1,16 +1,22 @@
 // Subtitle options for the final ad. Shared by the editor (browser) and the montage (server), so the
 // preview and the rendered video follow the same rules.
 
-export type Look = "clasico" | "resaltar" | "caja" | "palabra" | "suave";
+export type Look = "clasico" | "resaltar" | "caja" | "palabra" | "suave" | "pop" | "subir" | "karaoke" | "salto" | "neon" | "etiqueta";
 export type Case = "normal" | "upper" | "lower";
 export type Position = "arriba" | "centro" | "abajo";
 
-export const LOOKS: { id: Look; name: string; hint: string }[] = [
+export const LOOKS: { id: Look; name: string; hint: string; animated?: boolean }[] = [
   { id: "resaltar", name: "Palabra resaltada", hint: "La palabra que se dice cambia de color" },
   { id: "clasico", name: "Clásico", hint: "Letras con borde negro" },
   { id: "caja", name: "Caja", hint: "Texto sobre una caja oscura" },
-  { id: "palabra", name: "Una palabra", hint: "Una palabra a la vez, grande y con salto" },
+  { id: "palabra", name: "Una palabra", hint: "Una palabra a la vez, grande y con salto", animated: true },
   { id: "suave", name: "Sombra suave", hint: "Sin borde, con sombra (más limpio)" },
+  { id: "salto", name: "Resaltada con salto", hint: "La palabra que se dice cambia de color y crece", animated: true },
+  { id: "karaoke", name: "Karaoke", hint: "El color avanza letra a letra mientras habla", animated: true },
+  { id: "pop", name: "Pop", hint: "Cada frase entra con un pequeño rebote", animated: true },
+  { id: "subir", name: "Sube y aparece", hint: "Cada frase sube suave desde abajo", animated: true },
+  { id: "neon", name: "Neón", hint: "Letras con brillo de color", animated: false },
+  { id: "etiqueta", name: "Etiqueta de color", hint: "Texto sobre una caja del color que elijas", animated: false },
 ];
 
 /** `width`: average letter width as a share of the font size (to know how many words fit on a line). */
@@ -53,7 +59,14 @@ export interface CaptionStyle {
   script: boolean;
   /** «Hecho con Creads IA» badge in a corner for the whole video (for Creads' own content). */
   sello: boolean;
+  /** Free placement anywhere on the video: the text's centre, in % of the width and height. When set, it
+   *  wins over `position` (which stays as the quick «arriba / centro / abajo» choice). */
+  x?: number;
+  y?: number;
 }
+
+/** Looks whose second colour matters (the highlighted word, the karaoke fill, the glow, the box). */
+export const USES_ACCENT: Look[] = ["resaltar", "salto", "karaoke", "neon", "etiqueta"];
 
 export const DEFAULT_STYLE: CaptionStyle = {
   look: "resaltar", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100",
@@ -92,6 +105,7 @@ export function normalizeStyle(raw: unknown): CaptionStyle {
     punct: r.punct === undefined ? DEFAULT_STYLE.punct : Boolean(r.punct),
     script: r.script === undefined ? DEFAULT_STYLE.script : Boolean(r.script),
     sello: r.sello === true,
+    ...(r.y !== undefined && r.y !== null && isFinite(Number(r.y)) ? { x: clamp(r.x ?? 50, 8, 92, 50), y: clamp(r.y, 6, 94, 80) } : {}),
   };
 }
 
