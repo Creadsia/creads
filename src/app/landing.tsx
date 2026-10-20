@@ -154,6 +154,9 @@ const SHOWN = new Set<string>([
 ]);
 const GALLERY = EXAMPLES.filter((e) => !(e.video && SHOWN.has(e.video)) && !(e.still && SHOWN.has(e.still)));
 
+// The chat demo in «Creads dentro de Claude y ChatGPT»: Don Fortunato, Creads' own character.
+const CHAT_DEMO = N("180431", "6e7f0797-31f4-4231-bc06-26d768a0a053");
+
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
 // Each one animated from its photo (Kling 3.0, 5 s); the photo shows while the clip loads.
 const INFLU = [
@@ -810,12 +813,15 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
                 <span>{t.hero.poweredBy}</span>
-                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Nano Banana Pro", "ElevenLabs"].map((m) => (
+                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Gemini Omni", "Nano Banana Pro"].map((m) => (
                   <b key={m} className="font-mono text-[13px] font-medium text-ink/85">
                     {m}
                   </b>
                 ))}
               </div>
+              <a href="#conectar" className="flex w-fit items-center gap-2 text-sm font-semibold text-muted underline decoration-line underline-offset-4 hover:text-ink">
+                <Mark size={16} /> {t.hero.alsoChat}
+              </a>
             </div>
             <ClipWall label={t.hero.wall} lang={t.lang} />
           </div>
@@ -983,13 +989,22 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                 </dl>
                 <a href="/app/api" className="self-start text-[15px] font-semibold underline decoration-line underline-offset-4 hover:decoration-ink">{t.connect.cta}</a>
               </div>
-              <div className="flex min-w-0 flex-col justify-end gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]">
-                <div className="flex h-full flex-col justify-end gap-3 rounded-[15px] bg-bg/92 p-6 sm:p-8">
-                  <span className="text-sm text-muted">{t.connect.exampleLabel}</span>
-                  <p className="font-display text-2xl leading-snug font-semibold [font-stretch:100%] sm:text-3xl">{t.connect.example}</p>
-                  <div className="mt-2 flex flex-col gap-2 text-sm text-muted">
-                    <span className="flex items-center gap-2"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />creads_crear_anuncio</span>
-                    <span className="flex items-center gap-2"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />creads_estado_anuncio → video</span>
+              {/* What it looks like inside a chat: the request, Creads working, the finished ad */}
+              <div className="stage flex min-w-0 flex-col gap-3 rounded-2xl border border-line p-5 sm:p-6" aria-label={t.connect.exampleLabel}>
+                <span className="text-xs text-muted">{t.connect.exampleLabel}</span>
+                <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-surface-2 px-4 py-3 text-[15px]">{t.connect.example}</p>
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <Mark size={16} /> <span>{t.connect.working}</span>
+                </div>
+                <div className="flex max-w-[92%] gap-3 rounded-2xl rounded-bl-md border border-line bg-surface p-3">
+                  <figure className="relative aspect-[9/16] w-24 shrink-0 overflow-hidden rounded-xl bg-surface-2 sm:w-28">
+                    <LoopVideo src={CHAT_DEMO} className="absolute inset-0 h-full w-full object-cover" />
+                  </figure>
+                  <div className="flex min-w-0 flex-col justify-center gap-1.5 text-[14px]">
+                    <b className="text-[15px]">{t.connect.reply}</b>
+                    {t.connect.replyPoints.map((x) => (
+                      <span key={x} className="flex items-center gap-1.5 text-muted"><svg viewBox="0 0 20 20" className="h-3.5 w-3.5 shrink-0 text-good" aria-hidden="true"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>{x}</span>
+                    ))}
                   </div>
                 </div>
               </div>
