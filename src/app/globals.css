@@ -214,3 +214,11 @@ h3 {
   transition: opacity 0.3s;
 }
 .outline-text:hover { opacity: 1; }
+
+/* Outcome demo: the niche's progress bar, a soft entrance when the niche changes, a slow push-in on stills. */
+@keyframes creads-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.niche-bar { transform-origin: left; animation: creads-bar var(--d, 8s) linear forwards; }
+@keyframes creads-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.niche-in { animation: creads-in 0.45s ease-out both; }
+@keyframes creads-kb { from { transform: scale(1); } to { transform: scale(1.12); } }
+.kenburns { animation: creads-kb 9s ease-out both; }

@@ -11,7 +11,8 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import CopyUrl from "./copy-url";
-import { ModelReel, Outcome, Versus, type ReelClip } from "./home-showcase";
+import { ModelReel, Versus, type ReelClip } from "./home-showcase";
+import Outcome, { type NicheMedia } from "./outcome";
 import { labHref } from "@/lib/examples";
 import { LAUNCH_PRICE, PLANS, usd as usdLabel } from "@/lib/catalog";
 
@@ -129,6 +130,16 @@ const REEL: Record<string, ReelClip> = {
   "grok-video-1.5": { video: hf("81fb90d2-22c5-404f-92d8-a201275530cf", "mp4"), still: hf("9a50f2c6-6bbd-4891-8299-f1151a77c433", "jpg"), href: labHref({ model: "grok-video-1.5" }) },
   "wan-3.0": { video: hf("3d5e741d-9422-4221-95ca-38349129b40e", "mp4"), still: hf("afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "jpg"), href: labHref({ model: "wan-3.0" }) },
   "hailuo-2.3": { video: hf("61bc428a-05e4-4443-afe7-7dd2976c69f5", "mp4"), still: hf("b8044d86-a0a2-4a5d-a52a-35814a3df137", "jpg"), href: labHref({ model: "hailuo-2.3" }) },
+};
+
+// «Elige tu rubro»: the picture of the finished ad for each niche in the Outcome demo.
+const NICHES: Record<string, NicheMedia> = {
+  skincare: { still: SCENES.serum.src, video: VIDEOS.serum },
+  cursos: { still: SCENES.coach.src, video: VIDEOS.coach },
+  inmobiliaria: { still: SCENES.realtor.src },
+  restaurante: { still: SCENES.chef.src },
+  autos: { still: SCENES.car.src },
+  turismo: { still: SCENES.valpo.src, video: VIDEOS.valpo },
 };
 
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
@@ -839,6 +850,12 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                   <span className="text-[17px]">{t.hero.cta}</span>
                   <span className="text-xs font-normal text-white/85">{t.hero.from} {fromPrice(t.lang, rate)} {t.hero.firstMonth}</span>
                 </a>
+                <a href="#resultado" className="flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-line bg-surface/60 px-5 py-3.5 font-semibold backdrop-blur hover:bg-surface">
+                  <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-black"><svg viewBox="0 0 20 20" className="h-3 w-3"><path d="M7 5l8 5-8 5z" fill="currentColor" /></svg></span>
+                  {t.hero.see}
+                </a>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
                   {t.hero.trust.map((x) => (
                     <li key={x} className="flex items-center gap-1.5">
@@ -862,9 +879,9 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
         </section>
 
         {/* What goes in, what comes out: the finished ad */}
-        <section aria-labelledby="outcome-title" className={`-mt-6 ${gutter}`}>
+        <section id="resultado" aria-labelledby="outcome-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
-            <Outcome t={t.outcome} video={VIDEOS.coach!} still={SCENES.coach.src} ctaHref="#pricing" />
+            <Outcome t={t.outcome} media={NICHES} ctaHref="#pricing" />
           </div>
         </section>
 
