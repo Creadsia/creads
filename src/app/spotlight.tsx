@@ -52,7 +52,7 @@ export default function Spotlight({ t, media }: { t: Content["spotlight"]; media
             return (
               <figure
                 key={c.video}
-                className="relative aspect-[9/16] h-[58%] shrink-0 overflow-hidden rounded-2xl border border-white/15 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] sm:h-[78%] sm:rounded-[1.4rem]"
+                className="relative aspect-[9/16] h-[58%] shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-[#111216] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)] sm:h-[78%] sm:rounded-[1.4rem]"
                 style={{
                   transform: `rotateY(${off * -16}deg) translateZ(${off === 0 ? 40 : -30}px) translateY(${Math.abs(off) * 14}px)`,
                   opacity: off === 0 ? 1 : 0.78,
