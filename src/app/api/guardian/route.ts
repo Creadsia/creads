@@ -46,6 +46,8 @@ export async function GET(req: Request) {
     after(async () => { if (await once("avatares-creads", 15 * 60)) { const { ensurePresetImages } = await import("@/lib/avatares-creads"); await ensurePresetImages().catch(() => 0); } });
     // the automatic video producer moves forward (its own request, its own time)
     after(async () => { const { kickProduction } = await import("@/lib/autoprod"); await kickProduction(); });
+    // the brand's organic autopilot (plan, produce, schedule, publish) and the bad-spend pause rule
+    after(async () => { const { kickPiloto } = await import("@/lib/piloto"); await kickPiloto(); });
     // the office's extra rounds of the day (Oficina → «Ritmo de trabajo»), riding on this 5-minute ping
     after(async () => {
       const { officeRoundDue, runAll, runMarketingRound } = await import("@/lib/oficina");

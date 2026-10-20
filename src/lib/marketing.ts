@@ -4,6 +4,7 @@ import { observedDollar, usdClpRate } from "./usd-clp";
 import { FORMATS } from "./formats";
 import { TO_CREAR_KEY } from "./guiones";
 import { claude } from "./providers/claude";
+import type { PausaAuto, Piloto, Reel, Rol } from "./piloto";
 
 // The owner's marketing studio: paid campaigns in Meta and organic content on the brand's Instagram
 // accounts, run by the office agents (Director de Marketing, Creativos, Trafficker, Community manager).
@@ -13,9 +14,13 @@ import { claude } from "./providers/claude";
 // - until Meta is connected everything works in «modo ensayo»: the move is saved, Meta isn't touched;
 // - organic accounts are the brand's own and say so; auto-replies come from the account, as the account.
 
-export interface Cuenta { id: string; nombre: string; igUserId: string; pageId?: string }
+export interface Cuenta {
+  id: string; nombre: string; igUserId: string; pageId?: string;
+  /** Organic autopilot (lib/piloto.ts): who appears on camera, what the account is for, and its schedule. */
+  avatarId?: string; rol?: Rol; angulo?: string; piloto?: Piloto;
+}
 export interface AutoReply { on: boolean; palabras: string[]; mensaje: string; publico: string; maxPorHora: number }
-export interface Pedido { id: string; at: string; titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; idea: string; estado: "pendiente" | "en producción" | "listo" }
+export interface Pedido { id: string; at: string; titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; idea: string; estado: "pendiente" | "en producción" | "listo"; avatarId?: string }
 export interface CampanaSpec {
   nombre: string; objetivo: "leads" | "trafico" | "ventas"; paises: string[]; edadMin: number; edadMax: number;
   presupuestoUsd: number; link: string; texto: string; titulo: string; cta: string; adId: string;
@@ -36,13 +41,19 @@ export interface MarketingState {
   /** Automatic production: approved ad requests become finished videos without anyone in the studio. */
   autoProd?: AutoProd;
   produccion?: ProdJob[];
+  /** The organic autopilot's reels (lib/piloto.ts). */
+  reels?: Reel[];
+  /** Daily rule that pauses campaigns spending badly. */
+  pausaAuto?: PausaAuto;
+  /** What the automatic rules did (newest first). */
+  bitacora?: { at: string; texto: string }[];
 }
 export interface AutoProd { on: boolean; maxPorDia: number; modelo: string; sello: boolean }
 export const DEFAULT_AUTOPROD: AutoProd = { on: true, maxPorDia: 3, modelo: "", sello: true };
 export type ProdEstado = "cola" | "cortes" | "escenas" | "generando" | "revisando" | "armando" | "listo" | "error";
 export interface ProdJob {
   id: string; pedidoId: string; titulo: string; at: string; updatedAt: string; estado: ProdEstado; paso?: string;
-  formato: string; idioma: "es-CL" | "en"; guion: string; modelo?: string;
+  formato: string; idioma: "es-CL" | "en"; guion: string; modelo?: string; avatarId?: string;
   cortes?: { tipo: string; texto: string }[]; adId?: string; clipIds?: string[]; reintentos?: Record<string, number>; revisado?: boolean;
   videoUrl?: string; error?: string;
 }

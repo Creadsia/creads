@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AutoProd, CampaignView, Idea, MarketingState, Pedido, ProdJob } from "@/lib/marketing";
 import { TO_CREAR_KEY } from "@/lib/guiones";
+import type { PausaAuto } from "@/lib/piloto";
+import Piloto from "./piloto";
 
 // Panel → Marketing: the marketing studio's controls. Connection with Meta, the daily cap, the campaigns
 // (live from Meta), the ad requests from Creativos, the brand's Instagram accounts and the automatic reply.
@@ -14,6 +16,7 @@ interface Data {
   conexiones: Record<ConnKey, { value: string; from: string | null }> & { updatedAt: string | null; by: string | null };
   estado: MarketingState; respuestasHoy: number; campanasMeta: CampaignView[]; moneda: string | null;
   anuncios: { id: string; title: string | null; format: string | null; final_url: string; created_at: string }[];
+  avatares: { id: string; nombre: string }[]; pausaAuto: PausaAuto;
 }
 
 type ConnKey = "pixelId" | "adAccountId" | "pageId" | "igUserId" | "testEventCode" | "capiToken" | "adsToken" | "appSecret" | "webhookToken";
@@ -166,6 +169,8 @@ export default function Marketing() {
         </form>
         <p className="text-xs text-muted">Cada cuenta debe decir en su bio que el contenido está hecho con Creads IA. Así el tráfico orgánico es transparente y Meta no la marca como no auténtica.</p>
       </section>
+
+      <Piloto s={s} avatares={d.avatares ?? []} pausa={d.pausaAuto} patch={(body) => call("PATCH", body)} />
 
       {ar && (
         <section className={card} aria-labelledby="h-ar">
