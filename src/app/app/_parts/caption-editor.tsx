@@ -1,12 +1,18 @@
 "use client";
 
-import { COLORS, type CaptionStyle, FONTS, LOOKS, SIZES, fontOf, fontPx, marginPx } from "@/lib/caption-style";
+import { useRef } from "react";
+import { COLORS, type CaptionStyle, FONTS, LOOKS, SIZES, USES_ACCENT, fontOf, fontPx, marginPx } from "@/lib/caption-style";
 
 // The subtitle editor of the final assembly: every option with a live preview drawn with the same
 // fonts, sizes and positions the video will use.
 
 const FRAME: Record<string, [number, number]> = { "9:16": [1080, 1920], "4:5": [1080, 1350], "1:1": [1080, 1080], "16:9": [1920, 1080] };
-const fontFaces = FONTS.map((f) => `@font-face{font-family:${f.css};src:url(/fonts/${f.file}) format("truetype");font-display:swap}`).join("");
+const fontFaces = FONTS.map((f) => `@font-face{font-family:${f.css};src:url(/fonts/${f.file}) format("truetype");font-display:swap}`).join("")
+  // the animated looks, looping in the preview so the customer sees the movement
+  + "@keyframes capPop{0%{transform:scale(.7)}35%{transform:scale(1.1)}55%,100%{transform:scale(1)}}"
+  + "@keyframes capUp{0%{transform:translateY(40%);opacity:0}30%,100%{transform:none;opacity:1}}"
+  + "@keyframes capKara{0%{background-position:100% 0}70%,100%{background-position:0 0}}"
+  + "@media (prefers-reduced-motion:reduce){.cap-anim{animation:none!important}}";
 
 function Chip({ on, onClick, children, label }: { on: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
@@ -38,7 +44,9 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 }
 
 /** What the subtitle looks like over the first clip. */
-function Preview({ style, aspect, sample, video }: { style: CaptionStyle; aspect: string; sample: string; video?: string | null }) {
+function Preview({ style, aspect, sample, video, onMove }: { style: CaptionStyle; aspect: string; sample: string; video?: string | null; onMove?: (x: number, y: number) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
   const [W, H] = FRAME[aspect] ?? FRAME["9:16"];
   const boxW = W > H ? 360 : 230;
   const k = boxW / W;
@@ -53,24 +61,44 @@ function Preview({ style, aspect, sample, video }: { style: CaptionStyle; aspect
   });
   const vertical = H > W;
   const mv = marginPx(style.position, H, vertical) * k;
-  const stroke = style.look === "suave" || style.look === "caja" ? 0 : Math.max(1, (fontPx(style.size, W, H) / 11) * k);
-  const pos: React.CSSProperties = style.position === "centro" ? { top: "50%", transform: "translateY(-50%)" } : style.position === "arriba" ? { top: mv } : { bottom: mv };
+  const look = style.look;
+  const boxed = look === "caja" || look === "etiqueta";
+  const stroke = look === "suave" || boxed || look === "neon" ? 0 : Math.max(1, (fontPx(style.size, W, H) / 11) * k);
+  const pos: React.CSSProperties = style.y !== undefined
+    ? { top: `${style.y}%`, left: `${style.x ?? 50}%`, right: "auto", transform: "translate(-50%, -50%)", width: "max-content", maxWidth: "92%" }
+    : style.position === "centro" ? { top: "50%", transform: "translateY(-50%)" } : style.position === "arriba" ? { top: mv } : { bottom: mv };
+  const anim = look === "pop" || look === "palabra" ? "capPop 1.6s ease-out infinite" : look === "subir" ? "capUp 1.8s ease-out infinite" : undefined;
+  const hi = Math.min(1, shown.length - 1);
+  const move = (e: React.PointerEvent) => {
+    if (!onMove || !box.current) return;
+    const r = box.current.getBoundingClientRect();
+    onMove(Math.round(((e.clientX - r.left) / r.width) * 100), Math.round(((e.clientY - r.top) / r.height) * 100));
+  };
 
   return (
-    <div className="relative mx-auto shrink-0 overflow-hidden rounded-xl bg-gradient-to-b from-slate-500 to-slate-800" style={{ width: boxW, aspectRatio: `${W} / ${H}` }}>
+    <div ref={box} className={`relative mx-auto shrink-0 touch-none overflow-hidden rounded-xl bg-gradient-to-b from-slate-500 to-slate-800 ${onMove ? "cursor-grab active:cursor-grabbing" : ""}`} style={{ width: boxW, aspectRatio: `${W} / ${H}` }}
+      onPointerDown={(e) => { if (!onMove) return; dragging.current = true; e.currentTarget.setPointerCapture(e.pointerId); move(e); }}
+      onPointerMove={(e) => { if (dragging.current) move(e); }}
+      onPointerUp={() => { dragging.current = false; }}>
       {video && <video src={`${video}#t=1`} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" aria-hidden="true" />}
-      <div className="absolute inset-x-0 flex justify-center px-2 text-center" style={pos}>
+      <div className="pointer-events-none absolute inset-x-0 flex justify-center px-2 text-center" style={pos}>
         <span
+          className="cap-anim inline-block"
           style={{
             fontFamily: font.css, fontSize: px, lineHeight: 1.15, color: style.color,
             WebkitTextStroke: stroke ? `${stroke * 2}px #000` : undefined, paintOrder: "stroke fill",
-            textShadow: style.look === "suave" ? `0 ${px / 10}px ${px / 5}px rgba(0,0,0,.75)` : stroke ? `0 ${px / 18}px 0 #000` : undefined,
-            background: style.look === "caja" ? "rgba(0,0,0,.8)" : undefined, padding: style.look === "caja" ? `${px * 0.08}px ${px * 0.25}px` : undefined,
-            borderRadius: style.look === "caja" ? px * 0.12 : undefined,
+            textShadow: look === "suave" ? `0 ${px / 10}px ${px / 5}px rgba(0,0,0,.75)` : look === "neon" ? `0 0 ${px / 6}px ${style.accent}, 0 0 ${px / 3}px ${style.accent}` : stroke ? `0 ${px / 18}px 0 #000` : undefined,
+            background: look === "caja" ? "rgba(0,0,0,.8)" : look === "etiqueta" ? style.accent : undefined, padding: boxed ? `${px * 0.08}px ${px * 0.25}px` : undefined,
+            borderRadius: boxed ? px * 0.12 : undefined,
+            animation: anim,
           }}
         >
           {shown.map((t, i) => (
-            <span key={i} style={style.look === "resaltar" && i === Math.min(1, shown.length - 1) ? { color: style.accent } : undefined}>{i ? " " : ""}{t}</span>
+            <span key={i} style={
+              (look === "resaltar" || look === "salto") && i === hi ? { color: style.accent, display: "inline-block", transform: look === "salto" ? "scale(1.18)" : undefined }
+                : look === "karaoke" && i === 0 ? { color: style.accent }
+                  : look === "karaoke" && i === hi ? { backgroundImage: `linear-gradient(90deg, ${style.accent} 50%, ${style.color} 50%)`, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", animation: "capKara 1.6s linear infinite" }
+                    : undefined}>{i ? " " : ""}{t}</span>
           ))}
         </span>
       </div>
@@ -87,8 +115,8 @@ export default function CaptionEditor({ value, onChange, aspect, sample, video }
     <div className="flex flex-col gap-4 md:flex-row">
       <style>{fontFaces}</style>
       <div className="md:sticky md:top-16 md:self-start">
-        <Preview style={s} aspect={aspect} sample={sample} video={video} />
-        <p className="mt-1.5 text-center text-xs text-muted">Vista previa · tamaño {s.size}</p>
+        <Preview style={s} aspect={aspect} sample={sample} video={video} onMove={(x, y) => set({ x: Math.min(92, Math.max(8, x)), y: Math.min(94, Math.max(6, y)) })} />
+        <p className="mt-1.5 text-center text-xs text-muted">Arrastra el texto para ponerlo donde quieras · tamaño {s.size}</p>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -97,7 +125,7 @@ export default function CaptionEditor({ value, onChange, aspect, sample, video }
             {LOOKS.map((l) => (
               <button key={l.id} type="button" aria-pressed={s.look === l.id} onClick={() => set({ look: l.id })}
                 className={`flex flex-col items-start rounded-xl border p-2.5 text-left ${s.look === l.id ? "border-accent bg-accent/10" : "border-line bg-surface"}`}>
-                <span className="text-sm font-semibold">{l.name}</span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold">{l.name}{l.animated && <span className="rounded bg-accent/15 px-1 py-0.5 text-[10px] font-bold text-accent-text">ANIMADO</span>}</span>
                 <span className="text-xs text-muted">{l.hint}</span>
               </button>
             ))}
@@ -125,14 +153,16 @@ export default function CaptionEditor({ value, onChange, aspect, sample, video }
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Group title="Color del texto"><Swatches value={s.color} onChange={(color) => set({ color })} label="Color del texto" /></Group>
-          {s.look === "resaltar" && <Group title="Color de la palabra que se dice"><Swatches value={s.accent} onChange={(accent) => set({ accent })} label="Color de resaltado" /></Group>}
+          {USES_ACCENT.includes(s.look) && <Group title={s.look === "etiqueta" ? "Color de la caja" : s.look === "neon" ? "Color del brillo" : s.look === "karaoke" ? "Color que va llenando" : "Color de la palabra que se dice"}><Swatches value={s.accent} onChange={(accent) => set({ accent })} label="Segundo color" /></Group>}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Group title="Posición">
             <div className="flex gap-1.5">
-              {(["arriba", "centro", "abajo"] as const).map((p) => <Chip key={p} on={s.position === p} onClick={() => set({ position: p })}>{p[0].toUpperCase() + p.slice(1)}</Chip>)}
+              {(["arriba", "centro", "abajo"] as const).map((p) => <Chip key={p} on={s.y === undefined && s.position === p} onClick={() => set({ position: p, x: undefined, y: undefined })}>{p[0].toUpperCase() + p.slice(1)}</Chip>)}
+              {s.y !== undefined && <Chip on onClick={() => set({ x: undefined, y: undefined })}>Libre ✕</Chip>}
             </div>
+            <span className="text-xs text-muted">O arrastra el texto en la vista previa a cualquier parte del video.</span>
           </Group>
           {s.look !== "palabra" && (
             <Group title="Palabras en pantalla (máximo)">

@@ -1,5 +1,5 @@
 import { findImage } from "./providers";
-import { mediaRefOf, mediaSaved, saveMedia } from "./media";
+import { copyMedia, mediaRefOf, mediaSaved, saveMedia } from "./media";
 
 // «Avatares de Creads»: ready-made presenters for people who don't want to create one. All are invented
 // people (never a real or famous person), drawn once by Creads (the Guardián's ping fills in any missing
@@ -80,4 +80,31 @@ export async function ensurePresetImages(max = 4): Promise<number> {
     }
   }
   return made;
+}
+
+/** The six every new account starts with (a mix of ages and styles), so the first ad can be made right away. */
+export const STARTER_AVATARS = ["valentina", "matias", "camila", "andres", "carmen", "diego"];
+
+/** Copies the starter avatars into a new account. Skips any it already has and any picture not drawn yet;
+ *  never throws (a new account works without them: they can still be added from «Avatares de Creads»). */
+export async function giveStarterAvatars(workspace: string): Promise<number> {
+  try {
+    const { dbFor } = await import("./db");
+    const db = dbFor(workspace);
+    const ready = await readyPresets();
+    const mine = (await db.list("avatars", "order=created_at.desc&limit=200").catch(() => [])) as Record<string, unknown>[];
+    const have = new Set(mine.map((a) => { try { return JSON.parse(String(a.notes ?? "{}")).preset as string; } catch { return ""; } }));
+    let added = 0;
+    for (const id of STARTER_AVATARS) {
+      const p = presetById(id);
+      if (!p || have.has(id) || !ready.has(id)) continue;
+      const image_url = await copyMedia(presetRef(id), workspace, "avatars");
+      await db.insert("avatars", { name: p.name, description: p.description, image_url, lang: p.lang, consent: true, notes: JSON.stringify({ kind: "creads", preset: id, starter: true }) });
+      added++;
+    }
+    return added;
+  } catch (e) {
+    console.error("starter avatars", e instanceof Error ? e.message : e);
+    return 0;
+  }
 }

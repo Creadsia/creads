@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { giveStarterAvatars } from "@/lib/avatares-creads";
 import { SESSION_COOKIE, cookieOptions, createSession, createUser, deleteUser, findUserByEmail, normEmail, passwordProblem } from "@/lib/auth";
 import { clientIp, tooMany } from "@/lib/rate";
 import { createClientWorkspace, emailOk, removeWorkspace } from "@/lib/signup";
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
     const user = await createUser({ email, name, password, role: "member", workspace: ws });
     userId = user.id;
     const token = await createSession(user.id, req.headers.get("user-agent") ?? "");
+    const newWs = user.workspace;
+    after(() => giveStarterAvatars(newWs)); // six ready-made presenters, so the first ad needs no setup
     userId = ""; ws = ""; // from here on the account is complete: nothing to undo
     // same id the first sign-in would use, and the browser pixel gets it too: Meta counts it once
     const eventId = `reg-${user.id}`;
