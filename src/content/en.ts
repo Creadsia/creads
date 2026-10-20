@@ -307,6 +307,7 @@ export const en = {
     days: "days",
     versions: "versions",
     theirHook: "Why it sells",
+    yourHook: "Your new hook, written by Creads",
     time: "≈ 15 minutes, not a full day of work.",
     doing: "What Creads does",
     steps: [

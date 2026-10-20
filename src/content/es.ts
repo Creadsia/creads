@@ -308,6 +308,7 @@ export const es: Content = {
     days: "días",
     versions: "versiones",
     theirHook: "Por qué vende",
+    yourHook: "Tu nuevo gancho, escrito por Creads",
     time: "≈ 15 minutos, no un día de trabajo.",
     doing: "Lo que hace Creads",
     steps: [
