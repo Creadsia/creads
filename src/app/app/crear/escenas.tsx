@@ -11,7 +11,7 @@ import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "
 // Our pick for each kind of customer: the best quality for the credits is the default and goes first.
 const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
   "veo-3.1-fast": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio para anuncios hablados." },
-  "wan-3.0": { pill: "Más económico", rank: 1, note: "Ideal para probar ideas y hacer muchas versiones." },
+  "grok-video-lite": { pill: "Más económico", rank: 1, note: "Con sonido y a muy bajo costo: ideal para probar ideas y hacer muchas versiones." },
   "veo-3.1": { pill: "Máxima calidad", rank: 2, note: "Para el anuncio final que vas a escalar." },
 };
 import type { Cut } from "./crear";

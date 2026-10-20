@@ -10,12 +10,13 @@ import { readPrivateJSON, selectRows, writePrivateJSON } from "./supabase";
 // - Google (Veo, Nano Banana) and Claude: no balance API. Google is estimated from the top-ups the
 //   owner wrote down in the panel minus what Creads recorded as spent; Claude only shows a link.
 
-export type Service = "fal" | "google" | "eleven" | "claude";
+export type Service = "fal" | "google" | "eleven" | "claude" | "xai";
 
 export const SERVICE_INFO: Record<Service, { name: string; what: string; recharge: string }> = {
   fal: { name: "fal.ai", what: "Kling, Seedance, Hailuo, Wan, Grok, imágenes, herramientas y Veo de emergencia", recharge: "https://fal.ai/dashboard/billing" },
   google: { name: "Google (Gemini)", what: "Veo, Gemini Omni y Nano Banana Pro", recharge: "https://console.cloud.google.com/billing" },
   eleven: { name: "ElevenLabs", what: "Voces, clonación, doblaje, música y efectos", recharge: "https://elevenlabs.io/app/subscription" },
+  xai: { name: "xAI (Grok)", what: "Videos Grok y búsquedas de los agentes", recharge: "https://console.x.ai" },
   claude: { name: "Claude (Anthropic)", what: "Escribe los prompts y revisa los anuncios", recharge: "https://console.anthropic.com/settings/billing" },
 };
 
@@ -26,6 +27,7 @@ export function serviceOf(kind: string | null | undefined, model: string | null 
   const k = kind ?? "";
   const m = (model ?? "").toLowerCase();
   if (k.startsWith("tool:")) return ELEVEN_TOOLS.has(k.slice(5)) ? "eleven" : "fal";
+  if (m.startsWith("grok")) return "xai";
   if (m.startsWith("veo") || m.startsWith("gemini-omni") || m.startsWith("nano-banana-pro") || m === "nano banana pro") return "google";
   return "fal";
 }
@@ -263,7 +265,7 @@ export interface ServiceStatus {
 
 interface SpendRow { kind: string | null; model: string | null; usd: number | null; created_at: string }
 
-const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i };
+const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i, xai: /\bxai\b|grok/i };
 
 export async function overview(fresh = true): Promise<{ services: ServiceStatus[]; umbrales: Umbrales; today: number; alerts: { service: Service; name: string; text: string }[] }> {
   const [umbrales, file, finanzas, fal, eleven] = await Promise.all([

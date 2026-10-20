@@ -21,6 +21,7 @@ interface VideoModel {
 
 // Shown until /api/models answers.
 const FALLBACK: VideoModel[] = [
+  { id: "grok-video-lite", label: "Grok Video Lite", usdPerSecond: 0.03 },
   { id: "veo-3.1-fast", label: "Veo 3.1 Fast", usdPerSecond: 0.15 },
   { id: "veo-3.1", label: "Veo 3.1", usdPerSecond: 0.4 },
 ].map((m) => ({ ...m, configured: true, live: false, aspects: ["9:16", "16:9"], seconds: [4, 6, 8] }));
@@ -48,7 +49,7 @@ export default function ModelLab({ code }: { code: string }) {
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
   const [imgModel, setImgModel] = useState("nano-banana-2");
-  const [model, setModel] = useState("veo-3.1-fast");
+  const [model, setModel] = useState("grok-video-lite"); // the cheapest first; the customer moves up from here
   const [seconds, setSeconds] = useState(4);
   const [frame, setFrame] = useState(""); // starting image for the video (generated, uploaded or from the library)
   const library = useTable<Img>("images");

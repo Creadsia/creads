@@ -6,6 +6,7 @@ import { falImageProviders, falVideoProviders } from "./fal";
 import { nanoBananaPro } from "./gemini";
 import { omniFlash } from "./omni";
 import { veoProviders } from "./veo";
+import { grokBase, grokLite, grokViaXai } from "./xai-video";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
 // `configured()` reports whether the provider's key is present.
@@ -13,9 +14,11 @@ const has = (name: string) => Boolean(process.env[name]);
 
 
 export const videoProviders: VideoProvider[] = [
+  grokLite, // the cheapest video with sound (xAI direct): offered first, the customer moves up from here
+  grokBase,
   ...veoProviders, // Veo 3.1: Google (Vertex, then the Gemini preview) first, fal.ai only as the emergency exit
   omniFlash, // Gemini Omni Flash, Google's new video model
-  ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
+  ...falVideoProviders.map(direct).map(grokViaXai), // Seedance via BytePlus, Grok 1.5 via xAI; fal as the fallback
 ];
 
 export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders];

@@ -417,6 +417,7 @@ export const es: Content = {
       { name: "Kling 3.0", maker: "Kuaishou", group: "video", use: "Movimiento y acción con física creíble.", cost: "10", unit: "s" },
       { name: "Wan 3.0", maker: "Alibaba", group: "video", use: "Video estilizado y creativo para contenido llamativo.", cost: "7", unit: "s" },
       { name: "Hailuo 2.3", maker: "MiniMax", group: "video", use: "Física natural y emoción en los rostros.", cost: "4", unit: "s" },
+      { name: "Grok Video Lite", maker: "xAI", group: "video", use: "El video con sonido más barato: ideal para borradores, pruebas de ganchos y contenido diario.", cost: "2", unit: "s" },
       { name: "Grok Imagine Video", maker: "xAI", group: "video", use: "Clips rápidos con movimiento natural, desde texto o desde una imagen.", cost: "10", unit: "s" },
       { name: "Nano Banana Pro", maker: "Google", group: "image", use: "Fotos de producto e imágenes con texto nítido y legible.", cost: "8", unit: "img" },
       { name: "Seedream 5", maker: "ByteDance", group: "image", use: "Imágenes en 4K y ediciones precisas por instrucciones.", cost: "4", unit: "img" },
