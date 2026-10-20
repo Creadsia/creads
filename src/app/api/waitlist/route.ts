@@ -19,9 +19,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sign-ups open very soon." }, { status: 503 });
   }
 
+  // masterclass sign-ups (creadsia.com/curso) keep their WhatsApp in the niche column
+  const masterclass = body?.plan === "masterclass";
+  const wa = typeof body?.whatsapp === "string" ? body.whatsapp.replace(/[^\d+ ]/g, "").trim().slice(0, 20) : "";
   const base = {
     email,
-    niche: String(body?.niche ?? "").slice(0, 80),
+    niche: masterclass ? `Masterclass${wa ? ` · WhatsApp ${wa}` : ""}`.slice(0, 80) : String(body?.niche ?? "").slice(0, 80),
     ads_per_month: String(body?.ads_per_month ?? "").slice(0, 20),
   };
   const extra = {
@@ -52,6 +55,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Couldn't save (code ${res.status}).` }, { status: 502 });
   }
   // the same Lead the browser pixel sent (same id), from the server
-  await sendMeta({ name: "Lead", eventId: typeof body?.eventId === "string" ? body.eventId : undefined, email, content: extra.plan ? `Reserva ${extra.plan}` : "Lista de espera" }, visitorFrom(req));
+  await sendMeta({ name: "Lead", eventId: typeof body?.eventId === "string" ? body.eventId : undefined, email, content: masterclass ? "Masterclass" : extra.plan ? `Reserva ${extra.plan}` : "Lista de espera" }, visitorFrom(req));
   return NextResponse.json({ ok: true });
 }
