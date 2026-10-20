@@ -128,3 +128,58 @@ export function Versus({ t, ctaHref, cta }: { t: Content["diff"]; ctaHref: strin
     </div>
   );
 }
+
+export interface FormatMedia { video?: string; still: string }
+
+/** «Formatos listos»: ready-made recipes; one script in, every cut of that format out. */
+export function Formats({ t, media, href }: { t: Content["formats"]; media: Record<string, FormatMedia>; href: string }) {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex max-w-3xl flex-col gap-3">
+          <h2 id="formatos-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.title}</h2>
+          <p className="text-lg text-muted">{t.lead}</p>
+        </div>
+        <a href={href} className="text-sm font-semibold text-muted underline decoration-line underline-offset-4 hover:text-ink">{t.all}</a>
+      </div>
+      <ul className="-mx-[max(16px,env(safe-area-inset-left,0px))] flex snap-x snap-mandatory gap-3 overflow-x-auto px-[max(16px,env(safe-area-inset-left,0px))] pb-3 [scrollbar-width:thin]" aria-label={t.title}>
+        {t.items.map((f) => {
+          const m = media[f.k];
+          if (!m) return null;
+          return (
+            <li key={f.k} className="w-[60vw] shrink-0 snap-start sm:w-[236px]">
+              <a href={href} className="stage group relative flex aspect-[9/16] flex-col justify-end overflow-hidden rounded-[1.5rem] border border-line">
+                {m.video
+                  ? <LoopVideo src={m.video} poster={posterOf(m.still, 384)} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
+                  : (
+                    // eslint-disable-next-line @next/next/no-img-element -- optimized still
+                    <img src={posterOf(m.still, 384)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
+                  )}
+                <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                <span className="relative flex flex-col gap-1 p-4 text-white">
+                  <span className="font-mono text-[11px] font-semibold tracking-wide text-white/75">{f.cuts}</span>
+                  <b className="font-display text-xl leading-tight font-semibold">{f.name}</b>
+                  <span className="text-[13px] leading-snug text-white/75">{f.text}</span>
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** Four plain facts about the product, big. */
+export function Facts({ items }: { items: [string, string][] }) {
+  return (
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[1.5rem] border border-line bg-line lg:grid-cols-4">
+      {items.map(([n, l]) => (
+        <div key={l} className="flex flex-col gap-1 bg-surface px-5 py-5 sm:px-6">
+          <dt className="order-2 text-sm text-muted">{l}</dt>
+          <dd className="grad-text order-1 font-display text-4xl font-semibold sm:text-5xl">{n}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}

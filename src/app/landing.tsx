@@ -11,7 +11,10 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import CopyUrl from "./copy-url";
-import { ModelReel, Versus, type ReelClip } from "./home-showcase";
+import { Facts, Formats, ModelReel, Versus, type FormatMedia, type ReelClip } from "./home-showcase";
+import Spotlight, { type SpotMedia } from "./spotlight";
+import { Gallery } from "./gallery";
+import { EXAMPLES } from "@/lib/examples";
 import Outcome, { type NicheMedia } from "./outcome";
 import { labHref } from "@/lib/examples";
 import { LAUNCH_PRICE, PLANS, usd as usdLabel } from "@/lib/catalog";
@@ -140,6 +143,23 @@ const NICHES: Record<string, NicheMedia> = {
   restaurante: { still: SCENES.chef.src },
   autos: { still: SCENES.car.src },
   turismo: { still: SCENES.valpo.src, video: VIDEOS.valpo },
+};
+
+// Cinema banner: the featured models.
+const SPOT: Record<string, SpotMedia> = {
+  "seedance-2.5": REEL["seedance-2.5"],
+  "veo-3.1-fast": { ...REEL["veo-3.1-fast"], video: hf("a1310874-fe73-4989-9e6f-7de4d4d96426", "mp4"), still: hf("b9c4463c-3d31-414a-a898-2158c8df5112", "jpg") },
+  "kling-3.0": { ...REEL["kling-3.0"], video: hf("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "mp4"), still: hf("0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "jpg") },
+};
+
+// «Formatos listos»: one picture per format.
+const FORMATS: Record<string, FormatMedia> = {
+  ugc: { still: SCENES.coach.src, video: VIDEOS.coach },
+  podcast: { still: SCENES.podcast.src, video: VIDEOS.podcast },
+  producto: { still: SCENES.serum.src, video: VIDEOS.serum },
+  noticiero: { still: SCENES.news.src },
+  entrevista: { still: SCENES.realtor.src },
+  influencer: { still: SCENES.valpo.src, video: VIDEOS.valpo },
 };
 
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
@@ -631,85 +651,6 @@ function SectionHead({ id, title, lead }: { id: string; title: string; lead?: st
   );
 }
 
-/** A still of the studio UI: settings on the left, the four scenes of one ad on the right. */
-function AppPreview({ t }: { t: Content["preview"] }) {
-  const p = t.panel;
-  const rows: [string, string][] = [
-    [p.studio, p.studioValue],
-    [p.model, p.modelValue],
-    [p.scenes, p.scenesValue],
-    [p.format, p.formatValue],
-    [p.voice, p.voiceValue],
-  ];
-  return (
-    <div className="overflow-hidden rounded-3xl border border-line bg-surface shadow-[0_50px_140px_-60px_rgba(139,124,255,0.55)]">
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="h-3 w-3 rounded-full bg-line" />
-        <span className="h-3 w-3 rounded-full bg-line" />
-        <span className="h-3 w-3 rounded-full bg-line" />
-        <span className="ml-3 flex items-center gap-2 text-sm text-muted">
-          <Mark size={16} /> creadsia.com/studio
-        </span>
-      </div>
-      <div className="grid md:grid-cols-[280px_1fr]">
-        <div className="flex flex-col gap-3 border-b border-line p-5 md:border-r md:border-b-0">
-          {rows.map(([k, v]) => (
-            <div key={k} className="flex flex-col gap-1">
-              <span className="text-xs text-muted">{k}</span>
-              <span className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm">{v}</span>
-            </div>
-          ))}
-          <div className="mt-2 flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2 text-sm">
-            <span className="text-muted">{p.cost}</span>
-            <b>{p.costValue}</b>
-          </div>
-          <span className="rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center font-semibold text-white">{p.button}</span>
-        </div>
-        <div className="flex min-w-0 flex-col gap-4 p-5">
-          <div className="grid gap-4 sm:grid-cols-[minmax(0,200px)_1fr]">
-            <figure className="relative aspect-[9/16] overflow-hidden rounded-xl bg-surface-2">
-              <Image src={SCENES.ugc.src} alt="" fill sizes="(max-width: 640px) 90vw, 200px" className="object-cover object-[50%_20%]" />
-              <span className="absolute inset-x-3 bottom-[22%] rounded bg-black/70 px-2 py-1 text-center font-display text-sm font-black text-white">
-                {t.sample.before} <span className="text-[#FFE100]">{t.sample.hot}</span>
-              </span>
-              <span className="absolute left-2 top-2 flex items-center gap-1.5 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] text-white"><span className="h-1.5 w-1.5 rounded-full bg-rec" />1 · {t.cuts[0]}</span>
-            </figure>
-            <div className="flex min-w-0 flex-col gap-3">
-              <span className="text-xs text-muted">{t.timeline}</span>
-              <ol className="grid grid-cols-4 gap-1.5">
-                {t.cuts.map((c, i) => (
-                  <li key={c} className={`flex flex-col gap-1 rounded-lg border p-2 text-xs ${i === 0 ? "border-accent-text/60 bg-accent/10" : "border-line bg-surface-2"}`}>
-                    <span className="font-mono text-[10px] text-muted">{i * 8}–{i * 8 + 8} s</span>
-                    <b className="truncate font-semibold">{c}</b>
-                  </li>
-                ))}
-              </ol>
-              <div className="flex h-10 items-center gap-[3px] rounded-lg bg-surface-2 px-3" aria-hidden="true">
-                {Array.from({ length: 64 }, (_, i) => <span key={i} className="w-[3px] rounded-full bg-muted/60" style={{ height: `${20 + Math.abs(Math.sin(i * 0.55)) * 70}%` }} />)}
-              </div>
-              <dl className="grid grid-cols-3 gap-1.5 text-xs">
-                {t.specs.map(([k, v]) => (
-                  <div key={k} className="rounded-lg bg-surface-2 px-2.5 py-2"><dt className="text-muted">{k}</dt><dd className="font-semibold">{v}</dd></div>
-                ))}
-              </dl>
-            </div>
-          </div>
-          <ul className="flex flex-wrap gap-2">
-            {t.checks.map((c) => (
-              <li key={c} className="flex items-center gap-1.5 rounded-full bg-good/12 px-3 py-1 text-sm text-good">
-                <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-                  <path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {c}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** The cheapest way in, as the visitor reads money: pesos in Spanish, dollars in English. */
 function fromPrice(lang: string, rate: number) {
   const usd = LAUNCH_PRICE; // Starter's first month, the launch offer
@@ -878,8 +819,15 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
+        {/* Cinema banner: featured models */}
+        <section aria-label={t.spotlight.label} className={`-mt-6 ${gutter}`}>
+          <div className="mx-auto max-w-7xl">
+            <Spotlight t={t.spotlight} media={SPOT} />
+          </div>
+        </section>
+
         {/* What goes in, what comes out: the finished ad */}
-        <section id="resultado" aria-labelledby="outcome-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
+        <section id="resultado" aria-labelledby="outcome-title" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
             <Outcome t={t.outcome} media={NICHES} ctaHref="#pricing" />
           </div>
@@ -896,6 +844,14 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
         <section className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
             <Versus t={t.diff} ctaHref="#pricing" cta={t.outcome.cta} />
+          </div>
+        </section>
+
+        {/* Ready-made formats */}
+        <section id="formatos" aria-labelledby="formatos-title" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto flex max-w-7xl flex-col gap-8">
+            <Formats t={t.formats} media={FORMATS} href="/ia/anuncios" />
+            <Facts items={t.stats as [string, string][]} />
           </div>
         </section>
 
@@ -924,48 +880,14 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        {/* From spying to launching: the whole job of an affiliate's ad */}
-        <section id="flujo" aria-labelledby="flujo-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto max-w-7xl">
-            <Flow t={t.flow} ctaHref="#pricing" />
-          </div>
-        </section>
-
-        {/* Featured studios */}
-        <section aria-labelledby="featured" className={gutter}>
+        {/* Made with Creads: the examples gallery */}
+        <section id="hecho" aria-labelledby="hecho-title" className={`scroll-mt-24 ${gutter}`}>
           <div className="mx-auto flex max-w-7xl flex-col gap-8">
-            <SectionHead id="featured" title={t.featured.title} />
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {t.featured.items.map((f, i) => {
-                const sc = SCENES[f.k as SceneKey];
-                return (
-                  <a key={f.title} href="#tools" className="group relative flex aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-surface-2">
-                    <Image src={sc.src} alt="" fill priority={i < 2} sizes="(max-width: 1024px) 50vw, 25vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    {VIDEOS[f.k as SceneKey] && (
-                      <LoopVideo src={VIDEOS[f.k as SceneKey]!} poster={poster(sc.src)} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    )}
-                    <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                    <span className={`absolute left-3 top-3 rounded-md px-2 py-1 text-[11px] font-bold ${f.badge.startsWith("-") ? "bg-rec text-white" : "bg-[image:var(--grad)] text-black"}`}>
-                      {f.badge}
-                    </span>
-                    <span className="relative mt-auto flex flex-col gap-1 p-4 text-white">
-                      <b className="font-display text-base leading-tight font-semibold sm:text-lg">{f.title}</b>
-                      <span className="text-sm text-white/80">{f.text}</span>
-                    </span>
-                  </a>
-                );
-              })}
+            <div className="flex max-w-3xl flex-col gap-3">
+              <h2 id="hecho-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.made.title}</h2>
+              <p className="text-lg text-muted">{t.made.lead}</p>
             </div>
-
-            {/* real numbers about the product */}
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
-              {t.stats.map(([n, l]) => (
-                <div key={l} className="flex flex-col gap-1 bg-surface px-5 py-4">
-                  <dt className="order-2 text-sm text-muted">{l}</dt>
-                  <dd className="order-1 font-display text-3xl font-semibold">{n}</dd>
-                </div>
-              ))}
-            </dl>
+            <Gallery examples={EXAMPLES} filterBy="kind" pageSize={10} columns="columns-2 sm:columns-3 lg:columns-5" />
           </div>
         </section>
 
@@ -1002,50 +924,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        {/* What's new */}
-        <section aria-labelledby="news" className={gutter}>
-          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.8fr_2fr]">
-            <SectionHead id="news" title={t.news.title} lead={t.news.lead} />
-            <ul className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
-              {t.news.items.map(([n, d]) => (
-                <li key={n} className="flex flex-col gap-1.5 bg-surface p-4">
-                  <span className="flex items-center gap-2">
-                    <span className="rounded-md bg-[image:var(--grad)] px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white">{t.tools.new}</span>
-                    <b className="font-semibold">{n}</b>
-                  </span>
-                  <span className="text-sm text-muted">{d}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-
         <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
-
-        {/* App preview */}
-        <section aria-labelledby="preview" className={gutter}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-10">
-            <SectionHead id="preview" title={t.preview.title} lead={t.preview.lead} />
-            <AppPreview t={t.preview} />
-          </div>
-        </section>
-
-        {/* Studios */}
-        <section aria-labelledby="studios" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-10">
-            <SectionHead id="studios" title={t.studios.title} lead={t.studios.lead} />
-            <dl className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-              {t.studios.items
-                .map((s) => (
-                  <div key={s.name} className="flex flex-col gap-1.5 bg-surface p-5">
-                    <dt className="font-display text-lg font-bold [font-stretch:100%]">{s.name}</dt>
-                    <dd className="text-[15px] leading-relaxed text-muted">{s.does}</dd>
-                  </div>
-                ))}
-            </dl>
-          </div>
-        </section>
 
         {/* Models */}
         <section aria-labelledby="models" className={`scroll-mt-24 ${gutter}`}>
@@ -1296,10 +1175,10 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <b className="mb-1">{t.footer.studios}</b>
-            <a href="#studios" className="text-muted hover:text-ink">{t.footer.links.ugc}</a>
-            <a href="#studios" className="text-muted hover:text-ink">{t.footer.links.reels}</a>
-            <a href="#studios" className="text-muted hover:text-ink">{t.footer.links.podcast}</a>
-            <a href="#studios" className="text-muted hover:text-ink">{t.footer.links.photos}</a>
+            <a href="#formatos" className="text-muted hover:text-ink">{t.footer.links.ugc}</a>
+            <a href="#formatos" className="text-muted hover:text-ink">{t.footer.links.reels}</a>
+            <a href="#formatos" className="text-muted hover:text-ink">{t.footer.links.podcast}</a>
+            <a href="#formatos" className="text-muted hover:text-ink">{t.footer.links.photos}</a>
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <b className="mb-1">{t.footer.platform}</b>

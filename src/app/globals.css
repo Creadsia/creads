@@ -222,3 +222,21 @@ h3 {
 .niche-in { animation: creads-in 0.45s ease-out both; }
 @keyframes creads-kb { from { transform: scale(1); } to { transform: scale(1.12); } }
 .kenburns { animation: creads-kb 9s ease-out both; }
+
+/* Spotlight banner: the model name extruded in deep violet with a lit gradient face. */
+.spot-name { display: grid; }
+.spot-name > span { grid-area: 1 / 1; }
+.spot-extrude {
+  color: #2b0b55;
+  transform: translate(0.03em, 0.045em);
+  text-shadow: 0.005em 0.008em 0 #2b0b55, 0.01em 0.016em 0 #2b0b55, 0.015em 0.024em 0 #24094a, 0.02em 0.032em 0 #1d073c, 0 0.08em 0.12em rgba(0, 0, 0, 0.6);
+}
+.spot-face {
+  background: linear-gradient(180deg, #ffffff 0%, #ffd0f6 18%, #ff2bd6 52%, #8a5cff 78%, #19e3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 28px rgba(255, 43, 214, 0.45));
+}
+@keyframes creads-spot { from { opacity: 0; transform: scale(0.94); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.spot-in { animation: creads-spot 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
