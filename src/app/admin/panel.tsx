@@ -96,6 +96,21 @@ function Del({ onDelete }: { onDelete: () => void }) {
   );
 }
 
+/** Investigación e innovación: what the department does. Its agents and reports show above. */
+function Radar() {
+  return (
+    <section className={card} aria-label="Cómo trabaja el departamento">
+      <h3 className="font-bold">Cómo trabaja</h3>
+      <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm">
+        <li><b>Proveedores y precios</b> busca cada día el mismo modelo más barato y confiable, comprado directo (Google, BytePlus, Kling, MiniMax, Alibaba…), para dejar fal.ai solo de emergencia y acercar los precios a Higgsfield.</li>
+        <li><b>Novedades IA y competencia</b> revisa los modelos nuevos de la semana y lo que lanzó la competencia, y dice qué le sirve a Creads y qué no.</li>
+        <li>Cuando algo vale la pena, te dejan un encargo para Claude en Dirección. Nada se conecta ni se gasta sin tu aprobación.</li>
+        <li>Los informes largos de investigación quedan en el Proyecto «CREADS IA» de Claude.</li>
+      </ul>
+    </section>
+  );
+}
+
 export default function AdminPanel() {
   const [tab, setTab] = useState<Tab>("oficina");
   const area = areaOfTab(tab) ?? AREAS[0];
@@ -188,7 +203,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <Estadisticas cfg={data?.config} /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : tab === "innovacion" ? <Radar /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>

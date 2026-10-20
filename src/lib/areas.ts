@@ -2,13 +2,14 @@
 // the office agents in charge of it. The CEO General (Dirección) sees every area and talks to the owner.
 // Client-safe (no server imports): used by the panel's menu and by the office.
 
-export type AreaId = "direccion" | "lanzamiento" | "numeros" | "marketing" | "clientes" | "plataforma";
+export type AreaId = "direccion" | "lanzamiento" | "numeros" | "marketing" | "clientes" | "plataforma" | "innovacion";
 export type PanelTab =
   | "oficina" | "equipo" | "lanzamiento"
   | "estadisticas" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "modelos"
   | "marketing"
   | "contactar" | "clientes" | "registros"
-  | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas";
+  | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas"
+  | "innovacion";
 
 export interface Area {
   id: AreaId;
@@ -32,9 +33,14 @@ export const AREAS: Area[] = [
   { id: "marketing", name: "Marketing", what: "Anuncios, campañas pagadas en Meta y contenido orgánico.", tabs: [["marketing", "Estudio de marketing"]], agents: ["marketing", "creativos", "trafico", "organico"] },
   { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["contactar", "Clientes a contactar"], ["clientes", "Clientes y accesos"], ["registros", "Registros"]], agents: ["soporte"] },
   {
-    id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores, seguridad y novedades de IA.",
+    id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores y seguridad.",
     tabs: [["guardian", "Guardián (salud)"], ["errores", "Errores y alarmas"], ["calidad", "Calidad de videos"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],
-    agents: ["ceo", "produccion", "seguridad", "novedades"],
+    agents: ["ceo", "produccion", "seguridad"],
+  },
+  {
+    id: "innovacion", name: "Investigación e innovación", what: "Cada día: proveedores más baratos y confiables, modelos nuevos y qué hace la competencia.",
+    tabs: [["innovacion", "Radar"]],
+    agents: ["proveedores", "novedades"],
   },
 ];
 
