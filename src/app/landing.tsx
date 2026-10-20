@@ -73,6 +73,7 @@ const MAKER_DOT: Record<Maker, string> = {
   minimax: "#ff8a3d",
   alibaba: "#ffc23d",
 };
+const MAKER_NAME: Record<Maker, string> = { google: "Google", kling: "Kuaishou", bytedance: "ByteDance", xai: "xAI", minimax: "MiniMax", alibaba: "Alibaba" };
 interface WallClip { id: string; still?: string; model: string; maker: Maker }
 const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
 const C = (video: string, still: string, model: string, maker: Maker): WallClip => ({ id: hf(video, "mp4"), still: hf(still, "jpg"), model, maker });
@@ -140,9 +141,13 @@ function WallTile({ c }: { c: WallClip }) {
   return (
     <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2">
       <LoopVideo src={c.id} poster={c.still ? `/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60` : undefined} className="absolute inset-0 h-full w-full object-cover" />
-      <figcaption className="absolute left-2 top-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2 py-1 font-mono text-[10.5px] leading-none text-white backdrop-blur-sm">
-        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: MAKER_DOT[c.maker] }} />
-        {c.model}
+      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
+      <figcaption className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1 text-white">
+        <span className="flex items-center gap-1.5 text-[9.5px] font-semibold tracking-wide text-white/70">
+          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ background: MAKER_DOT[c.maker], color: MAKER_DOT[c.maker] }} />
+          {MAKER_NAME[c.maker]}
+        </span>
+        <b className="font-display text-[13px] leading-[1.05] font-semibold tracking-[-0.02em] sm:text-[15px]">{c.model}</b>
       </figcaption>
     </figure>
   );
