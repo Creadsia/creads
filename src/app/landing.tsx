@@ -10,6 +10,8 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import CopyUrl from "./copy-url";
+import { ModelReel, Outcome, Versus, type ReelClip } from "./home-showcase";
+import { labHref } from "@/lib/examples";
 import { LAUNCH_PRICE, PLANS, usd as usdLabel } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
@@ -113,6 +115,25 @@ const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
       C("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "minimax"),
     ],
   },
+];
+
+// «Los mejores modelos»: one real clip per model, linked to the studio with that model picked.
+const REEL: Record<string, ReelClip> = {
+  "seedance-2.5": { video: hf("59617700-cf90-497f-8a75-4ed74416c22f", "mp4"), still: hf("94ba857c-b593-487c-8d18-819c0141addb", "jpg"), href: labHref({ model: "seedance-2.5" }) },
+  "veo-3.1-fast": { video: hf("70b577fc-0650-41cc-a267-6131307a18c0", "mp4"), still: hf("1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "jpg"), href: labHref({ model: "veo-3.1-fast" }) },
+  "kling-3.0": { video: hf("d4597de4-41e3-4d88-b199-a252d7d47bb3", "mp4"), still: hf("c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "jpg"), href: labHref({ model: "kling-3.0" }) },
+  "gemini-omni-flash": { video: hf("e5596388-8427-4692-9439-d29b17e7a190", "mp4"), still: hf("ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "jpg"), href: labHref({ model: "gemini-omni-flash" }) },
+  "kling-motion": { video: RECREATE.demos.capibara.after, href: "/ia/recrear" },
+  "grok-video-1.5": { video: hf("81fb90d2-22c5-404f-92d8-a201275530cf", "mp4"), still: hf("9a50f2c6-6bbd-4891-8299-f1151a77c433", "jpg"), href: labHref({ model: "grok-video-1.5" }) },
+  "wan-3.0": { video: hf("3d5e741d-9422-4221-95ca-38349129b40e", "mp4"), still: hf("afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "jpg"), href: labHref({ model: "wan-3.0" }) },
+  "hailuo-2.3": { video: hf("61bc428a-05e4-4443-afe7-7dd2976c69f5", "mp4"), still: hf("b8044d86-a0a2-4a5d-a52a-35814a3df137", "jpg"), href: labHref({ model: "hailuo-2.3" }) },
+};
+
+// «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
+const INFLU = [
+  "/api/media/ws/main/images/69e90c7c-dbd8-4884-832c-0a8afe3bf44b.png",
+  "/api/media/ws/main/images/0092fe4c-f8f7-4e81-99af-6bdba6f87352.png",
+  "/api/media/ws/main/images/f442744f-7b50-4815-a3a3-65b363f23eee.png",
 ];
 
 function WallTile({ c }: { c: WallClip }) {
@@ -838,6 +859,51 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
+        {/* What goes in, what comes out: the finished ad */}
+        <section aria-labelledby="outcome-title" className={`-mt-6 ${gutter}`}>
+          <div className="mx-auto max-w-7xl">
+            <Outcome t={t.outcome} video={VIDEOS.coach!} still={SCENES.coach.src} ctaHref="#pricing" />
+          </div>
+        </section>
+
+        {/* Every top model, with its name in big type over a real clip */}
+        <section aria-labelledby="reel-title" className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto max-w-7xl">
+            <ModelReel t={t.reel} clips={REEL} moreHref="#models" />
+          </div>
+        </section>
+
+        {/* Creads against other AI platforms */}
+        <section className={`scroll-mt-24 ${gutter}`}>
+          <div className="mx-auto max-w-7xl">
+            <Versus t={t.diff} ctaHref="#pricing" cta={t.outcome.cta} />
+          </div>
+        </section>
+
+        {/* AI influencers */}
+        <section aria-labelledby="influ-title" className={gutter}>
+          <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="flex flex-col gap-4">
+              <h2 id="influ-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.influ.title}</h2>
+              <p className="text-lg text-muted">{t.influ.lead}</p>
+              <ul className="flex flex-col gap-2">
+                {t.influ.points.map((x) => (
+                  <li key={x} className="flex gap-2"><span aria-hidden="true" className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[image:var(--grad)]" />{x}</li>
+                ))}
+              </ul>
+              <a href="/ia/influencer" className="mt-2 self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.influ.cta}</a>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              {INFLU.map((src, i) => (
+                <figure key={src} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
+                  <Image src={src} alt={t.influ.alt} fill sizes="(max-width: 1024px) 33vw, 240px" className="object-cover" />
+                  <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10.5px] font-semibold text-white backdrop-blur-sm">{t.influ.tag}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* From spying to launching: the whole job of an affiliate's ad */}
         <section id="flujo" aria-labelledby="flujo-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
@@ -1038,52 +1104,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
         </section>
 
         <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
-
-        {/* Difference */}
-        <section aria-labelledby="how" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-            <div className="flex flex-col gap-6">
-              <SectionHead id="how" title={t.diff.title} lead={t.diff.lead} />
-              <ol className="flex flex-col gap-4">
-                {t.diff.steps.map(([s, d], i) => (
-                  <li key={s} className="flex gap-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line font-display text-sm font-bold">
-                      {i + 1}
-                    </span>
-                    <span>
-                      <b className="font-semibold">{s}.</b> <span className="text-muted">{d}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div className="min-w-0 overflow-x-auto rounded-2xl border border-line bg-surface">
-              <table className="w-full min-w-[560px] text-left text-[15px]">
-                <caption className="sr-only">{t.diff.caption}</caption>
-                <thead>
-                  <tr className="border-b border-line">
-                    <th scope="col" className="p-4"></th>
-                    <th scope="col" className="p-4 font-medium text-muted">{t.diff.colOther}</th>
-                    <th scope="col" className="p-4">
-                      <span className="flex items-center gap-2 font-bold">
-                        <Mark size={20} /> Creads IA
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {t.diff.rows.map(([row, them, us]) => (
-                    <tr key={row} className="border-b border-line last:border-0">
-                      <th scope="row" className="p-4 font-medium">{row}</th>
-                      <td className="p-4 text-muted">{them}</td>
-                      <td className="p-4">{us}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
 
         {/* Why Creads: care, Latin America, people */}
         <section aria-labelledby="care" className={`scroll-mt-24 ${gutter}`}>
