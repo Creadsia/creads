@@ -82,7 +82,7 @@ export async function enqueue(p: Pedido): Promise<boolean> {
   const cfg = { ...DEFAULT_AUTOPROD, ...(m.autoProd ?? {}) };
   if (!cfg.on || (m.produccion ?? []).some((j) => j.pedidoId === p.id)) return false;
   const now = new Date().toISOString();
-  const job: ProdJob = { id: `prod-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, pedidoId: p.id, titulo: p.titulo, at: now, updatedAt: now, estado: "cola", formato: p.formato, idioma: p.idioma, guion: p.guion };
+  const job: ProdJob = { id: `prod-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, pedidoId: p.id, titulo: p.titulo, at: now, updatedAt: now, estado: "cola", formato: p.formato, idioma: p.idioma, guion: p.guion, ...(p.avatarId ? { avatarId: p.avatarId } : {}) };
   await commitMarketing((s) => {
     s.produccion = [job, ...(s.produccion ?? [])].slice(0, 60);
     const ped = s.pedidos.find((x) => x.id === p.id);

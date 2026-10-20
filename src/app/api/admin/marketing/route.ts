@@ -5,6 +5,8 @@ import { metaAds, metaToken, probarMeta } from "@/lib/meta-graph";
 import { videoProviders } from "@/lib/providers";
 import { DEFAULT_AUTOPROD } from "@/lib/marketing";
 import { metaConnView, saveMetaConn } from "@/lib/meta-conexiones";
+import { DEFAULT_PAUSA, decidirReel, kickPiloto, pilotoOf } from "@/lib/piloto";
+import { sbRest } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,7 +22,11 @@ export async function GET() {
   let camp: Awaited<ReturnType<typeof campaigns>> | null = null, metaError = "";
   try { camp = await campaigns(); } catch (e) { metaError = e instanceof Error ? e.message : "No se pudo leer Meta."; }
   const view = await metaConnView();
+  // the brand's avatars and characters, to put one on each account (organic autopilot)
+  const avatares = await sbRest<{ id: string; name: string; description: string | null }[]>("avatars?owner=eq.main&select=id,name,description&order=created_at.desc&limit=100").catch(() => []);
   return NextResponse.json({
+    avatares: avatares.map((a) => ({ id: a.id, nombre: a.name })),
+    pausaAuto: { ...DEFAULT_PAUSA, ...(m.pausaAuto ?? {}) },
     conexion: {
       anuncios: Boolean(await metaAds()), token: Boolean(await metaToken()), instagramAnuncios: Boolean(view.igUserId.value),
       webhook: Boolean(view.webhookToken.value && view.appSecret.value), pixel: Boolean(view.pixelId.value), capi: Boolean(view.capiToken.value),
@@ -52,13 +58,59 @@ export async function PATCH(req: Request) {
     await kickProduction();
     return GET();
   }
+  if (b?.reel && typeof b.reel === "object" && typeof b.reel.id === "string" && ["aprobar", "descartar", "editar"].includes(b.reel.accion)) {
+    await decidirReel(b.reel.id, b.reel.accion, { guion: typeof b.reel.guion === "string" ? b.reel.guion : undefined, caption: typeof b.reel.caption === "string" ? b.reel.caption : undefined });
+    if (b.reel.accion === "aprobar") await kickPiloto();
+    return GET();
+  }
+  if (typeof b?.aprobarTodo === "string") {
+    await commitMarketing((s) => { for (const r of s.reels ?? []) if (r.cuentaId === b.aprobarTodo && r.estado === "propuesta") { r.estado = "aprobada"; r.updatedAt = new Date().toISOString(); } });
+    await kickPiloto();
+    return GET();
+  }
+  if (b?.piloto && typeof b.piloto === "object" && typeof b.piloto.cuentaId === "string") {
+    const p = b.piloto;
+    if (p.avatarId !== undefined && p.avatarId !== "" && !/^[0-9a-f-]{36}$/i.test(String(p.avatarId))) return bad("Ese avatar no es válido.");
+    await commitMarketing((s) => {
+      const c = s.cuentas.find((x) => x.id === p.cuentaId);
+      if (!c) return;
+      const cur = pilotoOf(c);
+      if (p.avatarId !== undefined) c.avatarId = p.avatarId ? String(p.avatarId) : undefined;
+      if (["profesor", "personaje", "marca"].includes(p.rol)) c.rol = p.rol;
+      if (typeof p.angulo === "string") c.angulo = p.angulo.trim().slice(0, 300) || undefined;
+      const horas = Array.isArray(p.horas) ? [...new Set(p.horas.map(Number).filter((h: number) => Number.isInteger(h) && h >= 0 && h <= 23))].slice(0, 6) as number[] : cur.horas;
+      c.piloto = {
+        ...cur,
+        on: typeof p.on === "boolean" ? p.on : cur.on,
+        porDia: p.porDia !== undefined ? Math.max(1, Math.min(3, Math.round(Number(p.porDia) || 1))) : cur.porDia,
+        horas: horas.length ? horas : cur.horas,
+        revisar: typeof p.revisar === "boolean" ? p.revisar : cur.revisar,
+        ...(p.planearAhora === true ? { planAt: undefined } : {}),
+      };
+    });
+    if (p.on === true || p.planearAhora === true) await kickPiloto();
+    return GET();
+  }
+  if (b?.pausaAuto && typeof b.pausaAuto === "object") {
+    const a = b.pausaAuto;
+    await commitMarketing((s) => {
+      const cur = { ...DEFAULT_PAUSA, ...(s.pausaAuto ?? {}) };
+      s.pausaAuto = {
+        on: typeof a.on === "boolean" ? a.on : cur.on,
+        cpaMax: a.cpaMax !== undefined ? Math.max(1, Math.min(500, Number(a.cpaMax) || cur.cpaMax)) : cur.cpaMax,
+        gastoSinResultado: a.gastoSinResultado !== undefined ? Math.max(5, Math.min(1000, Number(a.gastoSinResultado) || cur.gastoSinResultado)) : cur.gastoSinResultado,
+      };
+    });
+    return GET();
+  }
   if (b?.capUsd !== undefined && !(Number(b.capUsd) >= 0 && Number(b.capUsd) <= 5000)) return bad("El tope diario debe ser entre US$0 y US$5.000.");
   if (b?.cuenta && (!/^\d{5,30}$/.test(String(b.cuenta.igUserId ?? "")) || String(b.cuenta.nombre ?? "").trim().length < 2)) return bad("La cuenta necesita un nombre y su número de Instagram (solo dígitos).");
   await commitMarketing((s) => {
     if (b?.capUsd !== undefined) s.capUsd = Math.round(Number(b.capUsd) * 100) / 100;
     if (b?.cuenta) {
       const c = { id: `ig-${String(b.cuenta.igUserId)}`, nombre: String(b.cuenta.nombre).trim().slice(0, 60), igUserId: String(b.cuenta.igUserId), pageId: /^\d{5,30}$/.test(String(b.cuenta.pageId ?? "")) ? String(b.cuenta.pageId) : undefined };
-      s.cuentas = [...s.cuentas.filter((x) => x.igUserId !== c.igUserId), c].slice(0, 20);
+      const old = s.cuentas.find((x) => x.igUserId === c.igUserId); // keep its character and autopilot settings
+      s.cuentas = [...s.cuentas.filter((x) => x.igUserId !== c.igUserId), { ...old, ...c, pageId: c.pageId ?? old?.pageId }].slice(0, 20);
     }
     if (typeof b?.quitarCuenta === "string") s.cuentas = s.cuentas.filter((x) => x.id !== b.quitarCuenta);
     if (b?.autoReply && typeof b.autoReply === "object") {
