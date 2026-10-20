@@ -165,7 +165,7 @@ export const en = {
     lead: "Spy on the ads that already sell in your niche. Creads writes the script, creates up to 8 scenes with Veo, Kling or Seedance, adds voice and subtitles, and checks every one. In about 15 minutes you have your edited video, in the format you need.",
     who: ["Affiliates", "Media buyers", "Agencies", "Brands & e-commerce"],
     poweredBy: "Powered by",
-    wall: "Everything here was made with AI in Creads: influencers, ads and videos from every model.",
+    wall: "Everything here was made with AI, with the same models you use in Creads.",
     cta: "Start Starter at US$15",
     from: "From",
     firstMonth: "your first month",

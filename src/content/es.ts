@@ -166,7 +166,7 @@ export const es: Content = {
     lead: "Espía los anuncios que ya venden en tu rubro. Creads escribe el guion, crea hasta 8 escenas con Veo, Kling o Seedance, les pone voz y subtítulos, y revisa cada una. En unos 15 minutos tienes tu video editado, en el formato que necesites.",
     who: ["Afiliados", "Media buyers", "Agencias", "Marcas y e-commerce"],
     poweredBy: "Con la tecnología de",
-    wall: "Todo lo que ves aquí está hecho con IA en Creads: influencers, anuncios y videos de cada modelo.",
+    wall: "Todo lo que ves aquí está hecho con IA, con los mismos modelos que usas en Creads.",
     cta: "Empezar con Starter a US$15",
     from: "Desde",
     firstMonth: "el primer mes",

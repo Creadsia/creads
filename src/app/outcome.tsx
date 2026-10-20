@@ -9,7 +9,7 @@ import LoopVideo from "./loop-video";
 // whole job for it: what Spy finds, what Creads does (a highlight sweeps down the steps) and the finished
 // ad with its new hook. The niches rotate by themselves until the visitor picks one.
 
-export interface NicheMedia { still: string; video?: string }
+export interface NicheMedia { still?: string; video?: string }
 
 const posterOf = (src: string, w = 384) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=70`;
 const Check = ({ className = "" }: { className?: string }) => (
@@ -70,8 +70,12 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
               </div>
               <div className="flex gap-3 rounded-xl border border-line bg-surface-2 p-2.5">
                 <span className="relative aspect-[9/16] w-[72px] shrink-0 self-start overflow-hidden rounded-lg bg-black">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- small optimized thumb */}
-                  <img src={posterOf(m.still, 128)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  {m.video
+                    ? <LoopVideo key={`t-${n.k}`} src={m.video} className="absolute inset-0 h-full w-full object-cover" />
+                    : m.still && (
+                      // eslint-disable-next-line @next/next/no-img-element -- small optimized thumb
+                      <img src={posterOf(m.still, 128)} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    )}
                 </span>
                 <span className="flex min-w-0 flex-col gap-1.5 text-[13px]">
                   <span className="w-fit rounded bg-good/15 px-1.5 py-0.5 font-semibold text-good">{t.active} {n.age} {t.days}</span>
@@ -106,10 +110,10 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
             <span className="self-start text-sm font-semibold text-muted">{t.outLabel}</span>
             <figure className="relative aspect-[9/16] w-[min(58vw,190px)] overflow-hidden rounded-[1.6rem] border-[5px] border-[#1c1e24] bg-surface-2 shadow-[0_40px_100px_-30px_rgba(255,43,214,0.55)]">
               {m.video
-                ? <LoopVideo key={n.k} src={m.video} poster={posterOf(m.still)} className="absolute inset-0 h-full w-full object-cover" />
+                ? <LoopVideo key={n.k} src={m.video} poster={m.still ? posterOf(m.still) : undefined} className="absolute inset-0 h-full w-full object-cover" />
                 : (
                   // eslint-disable-next-line @next/next/no-img-element -- optimized still with a slow push-in
-                  <img key={n.k} src={posterOf(m.still, 640)} alt="" className="kenburns absolute inset-0 h-full w-full object-cover" />
+                  <img key={n.k} src={posterOf(m.still ?? "", 640)} alt="" className="kenburns absolute inset-0 h-full w-full object-cover" />
                 )}
               <span key={`cap-${n.k}`} className="caption niche-in absolute inset-x-3 bottom-[22%] text-center text-[17px]">{n.hook}</span>
               <figcaption className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
