@@ -203,3 +203,14 @@ h3 {
 }
 .outcome-step { animation: creads-step calc(var(--n) * 1.1s) ease-in-out infinite; animation-delay: calc(var(--i) * 1.1s); }
 .outcome-step .outcome-dot { animation: creads-step-dot calc(var(--n) * 1.1s) ease-in-out infinite; animation-delay: calc(var(--i) * 1.1s); }
+
+/* Huge gradient type for the model marquee on the home page (soft, so it reads as atmosphere). */
+.outline-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0.32;
+  transition: opacity 0.3s;
+}
+.outline-text:hover { opacity: 1; }

@@ -88,6 +88,20 @@ export interface ReelClip { video: string; still?: string; href: string }
 export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: Record<string, ReelClip>; moreHref: string }) {
   return (
     <div className="flex flex-col gap-8">
+      <div aria-hidden="true" className="-mx-[max(16px,env(safe-area-inset-left,0px))] overflow-hidden" style={{ maskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)" }}>
+        <div className="marquee-x flex w-max" style={{ ["--speed" as string]: "48s" }}>
+          {[0, 1].map((copy) => (
+            <span key={copy} className="flex shrink-0 items-center">
+              {t.items.map((m) => (
+                <span key={m.id} className="flex items-center gap-6 pr-6 font-display text-[3.4rem] leading-none font-semibold tracking-[-0.04em] uppercase sm:text-[6rem]">
+                  <span className="outline-text">{m.name} {m.ver}</span>
+                  <span className="text-[0.4em] text-accent-text">✦</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex max-w-3xl flex-col gap-3">
           <h2 id="reel-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.title}</h2>
@@ -99,24 +113,33 @@ export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: R
         className="-mx-[max(16px,env(safe-area-inset-left,0px))] flex snap-x snap-mandatory gap-3 overflow-x-auto px-[max(16px,env(safe-area-inset-left,0px))] pb-3 [scrollbar-width:thin] sm:gap-4"
         aria-label={t.title}
       >
-        {t.items.map((m) => {
+        {t.items.map((m, i) => {
           const c = clips[m.id];
           if (!c) return null;
           return (
-            <li key={m.id} className="w-[72vw] shrink-0 snap-start sm:w-[290px]">
-              <a href={c.href} className="stage group relative flex aspect-[9/16] flex-col justify-between overflow-hidden rounded-[1.75rem] border border-line">
-                <LoopVideo src={c.video} poster={c.still ? posterOf(c.still, 384) : undefined} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]" />
-                <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/90" />
-                <span className="relative flex items-center gap-1.5 self-start p-4 text-xs font-semibold text-white/85">
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{m.maker}
+            <li key={m.id} className="group w-[72vw] shrink-0 snap-start rounded-[1.85rem] bg-line p-[1.5px] transition-[background] duration-300 hover:bg-[image:var(--grad)] focus-within:bg-[image:var(--grad)] sm:w-[290px]">
+              <a href={c.href} className="stage relative flex aspect-[9/16] flex-col justify-between overflow-hidden rounded-[1.75rem]">
+                <LoopVideo src={c.video} poster={c.still ? posterOf(c.still, 384) : undefined} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
+                <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,transparent_26%,transparent_44%,rgba(0,0,0,0.92)_100%)]" />
+                <span className="relative flex items-center justify-between p-4 text-[11px] font-semibold text-white/85">
+                  <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 backdrop-blur-md"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{m.maker}</span>
+                  <span className="font-mono text-white/60">{String(i + 1).padStart(2, "0")}/{String(t.items.length).padStart(2, "0")}</span>
                 </span>
                 <span className="relative flex flex-col gap-3 p-4 pt-0 text-white">
-                  <b className="font-display text-[2.15rem] leading-[0.9] font-semibold tracking-[-0.04em] uppercase sm:text-[2.3rem]">
+                  <b className="chroma font-display text-[2.15rem] leading-[0.9] font-semibold tracking-[-0.04em] uppercase sm:text-[2.3rem]">
                     {m.name}
-                    {m.ver && <span className="grad-text block">{m.ver}</span>}
+                    {m.ver && <span className="grad-text block [text-shadow:none]">{m.ver}</span>}
                   </b>
+                  <span className="flex flex-wrap gap-1.5">
+                    {m.specs.map((x) => <span key={x} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[11px] font-semibold backdrop-blur-md">{x}</span>)}
+                  </span>
                   <span className="text-sm leading-snug text-white/80">{m.line}</span>
-                  <span className="flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[13px] font-bold text-black transition-transform group-hover:translate-x-0.5">{t.try}</span>
+                  <span className="flex items-center justify-between gap-2 rounded-full bg-white py-1 pl-3.5 pr-1 text-[13px] font-bold text-black">
+                    {t.try}
+                    <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-white transition-transform group-hover:translate-x-0.5">
+                      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5"><path d="M4 10h11M11 5.5l4.5 4.5L11 14.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </span>
+                  </span>
                 </span>
               </a>
             </li>
