@@ -66,57 +66,52 @@ const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=6
 // Every picture and clip appears once on the page: the hero wall uses the clips, "Featured" the four
 // animated scenes, the tool grid the remaining stills and the studio preview the UGC still.
 
-// Hero wall: short silent clips generated for the site, each tagged with the model that made it.
-// Re-encoded to 480x854, 24 fps, no sound (~120-500 KB). TODO(phase 1): move to our own storage.
-type Maker = "google" | "kling" | "bytedance" | "xai" | "minimax" | "alibaba";
-const MAKER_DOT: Record<Maker, string> = {
-  google: "#4f8bff",
-  kling: "#2ee6a6",
-  bytedance: "#ff2bd6",
-  xai: "#f3f4f6",
-  minimax: "#ff8a3d",
-  alibaba: "#ffc23d",
-};
-interface WallClip { id: string; still?: string; model: string; maker: Maker }
+// Hero wall: a bit of everything Creads makes — AI influencers, finished ads, model clips, recreated
+// videos — each tile named in big type like the model reel. Clips are 480x854, silent, ~120-500 KB.
+// TODO(phase 1): move to our own storage.
 const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
-const C = (video: string, still: string, model: string, maker: Maker): WallClip => ({ id: hf(video, "mp4"), still: hf(still, "jpg"), model, maker });
-// the "Recrear" demos join the wall (no still: they appear when the clip loads)
-const W = (id: string, model: string, maker: Maker): WallClip => ({ id, model, maker });
+type Kind = "influ" | "ad" | "model" | "recreate";
+const KIND_TAG: Record<Kind, [string, string]> = { influ: ["Influencer IA", "AI influencer"], ad: ["Anuncio", "Ad"], model: ["Video IA", "AI video"], recreate: ["Recrear video", "Recreate video"] };
+interface WallClip { key: string; video?: string; img?: string; still?: string; kind: Kind; name: string; ver?: string }
+const M = (video: string, still: string, name: string, ver?: string): WallClip => ({ key: video, video: hf(video, "mp4"), still: hf(still, "jpg"), kind: "model", name, ver });
+const IN = (n: number, name: string): WallClip => ({ key: `influ-${n}`, img: `/api/vitrina/influencer-${n}`, kind: "influ", name });
 const D = RECREATE.demos;
 const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
   {
     dir: "up",
     speed: "70s",
     clips: [
-      W(D.capibara.after, "Kling Motion Control", "kling"),
-      W(RECREATE.voices.cat, "Seedance 2.5", "bytedance"),
-      C("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling 3.0 Turbo", "kling"),
-      C("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo 3.1 Lite", "google"),
-      C("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan 3.0", "alibaba"),
-      C("81fb90d2-22c5-404f-92d8-a201275530cf", "9a50f2c6-6bbd-4891-8299-f1151a77c433", "Grok Video", "xai"),
+      IN(1, "Fitness"),
+      { key: "cat", video: RECREATE.voices.cat, kind: "model", name: "Seedance", ver: "2.5" },
+      { key: "coach", video: VIDEOS.coach, still: SCENES.coach.src, kind: "ad", name: "UGC" },
+      IN(4, "Moda"),
+      M("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling", "3.0"),
+      M("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan", "3.0"),
     ],
   },
   {
     dir: "down",
     speed: "88s",
     clips: [
-      W(D.persona.after, "Kling Swap", "kling"),
-      W(D.lugar.after, "Seedance 2.5 Edit", "bytedance"),
-      C("4017cd54-61b4-43e9-97bc-5271ff328c79", "4f285d47-5240-4a5c-a485-3d0bfc2c9c55", "Seedance 2.0", "bytedance"),
-      C("9c9fb74d-c0af-46f9-9d43-211d4783ef90", "d82cb55a-cbb2-41dd-8bc7-209000b0a58d", "Grok Video", "xai"),
-      C("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "Kling 3.0 Turbo", "kling"),
-      C("59617700-cf90-497f-8a75-4ed74416c22f", "94ba857c-b593-487c-8d18-819c0141addb", "Seedance 2.5", "bytedance"),
+      M("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo", "3.1"),
+      IN(6, "Viajes"),
+      { key: "podcast", video: VIDEOS.podcast, still: SCENES.podcast.src, kind: "ad", name: "Podcast" },
+      { key: "persona", video: D.persona.after, kind: "recreate", name: "Otra", ver: "persona" },
+      IN(2, "Estilo"),
+      M("59617700-cf90-497f-8a75-4ed74416c22f", "94ba857c-b593-487c-8d18-819c0141addb", "Seedance", "2.5"),
+      M("81fb90d2-22c5-404f-92d8-a201275530cf", "9a50f2c6-6bbd-4891-8299-f1151a77c433", "Grok", "Video"),
     ],
   },
   {
     dir: "up",
     speed: "62s",
     clips: [
-      W(D.caballero.after, "Kling Motion Control", "kling"),
-      W(RECREATE.voices.viking, "Seedance 2.5", "bytedance"),
-      C("a1310874-fe73-4989-9e6f-7de4d4d96426", "b9c4463c-3d31-414a-a898-2158c8df5112", "Veo 3.1 Lite", "google"),
-      C("e5596388-8427-4692-9439-d29b17e7a190", "ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "Gemini Omni", "google"),
-      C("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "minimax"),
+      IN(3, "Lifestyle"),
+      { key: "caballero", video: D.caballero.after, kind: "recreate", name: "Kling", ver: "Motion" },
+      IN(5, "Gym"),
+      M("e5596388-8427-4692-9439-d29b17e7a190", "ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "Gemini", "Omni"),
+      { key: "serum", video: VIDEOS.serum, still: SCENES.serum.src, kind: "ad", name: "Producto" },
+      M("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "2.3"),
     ],
   },
 ];
@@ -156,13 +151,22 @@ const FORMATS: Record<string, FormatMedia> = {
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
 const INFLU = ["/api/vitrina/influencer-1", "/api/vitrina/influencer-2", "/api/vitrina/influencer-3"];
 
-function WallTile({ c }: { c: WallClip }) {
+function WallTile({ c, lang }: { c: WallClip; lang: string }) {
   return (
     <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2">
-      <LoopVideo src={c.id} poster={c.still ? `/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60` : undefined} className="absolute inset-0 h-full w-full object-cover" />
-      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
-      <figcaption className="absolute inset-x-2.5 bottom-2.5 flex flex-col gap-1 text-white">
-        <b className="flex items-center gap-1.5 font-display text-[13px] leading-[1.05] font-semibold tracking-[-0.02em] sm:text-[15px]"><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]" style={{ background: MAKER_DOT[c.maker], color: MAKER_DOT[c.maker] }} />{c.model}</b>
+      {c.video
+        ? <LoopVideo src={c.video} poster={c.still ? `/_next/image?url=${encodeURIComponent(c.still)}&w=384&q=60` : undefined} className="absolute inset-0 h-full w-full object-cover" />
+        : (
+          // eslint-disable-next-line @next/next/no-img-element -- a redirect to a short-lived storage link
+          <img src={c.img} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+        )}
+      <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.45)_0%,transparent_22%,transparent_50%,rgba(0,0,0,0.88)_100%)]" />
+      <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[9.5px] font-semibold text-white/90 backdrop-blur-md sm:text-[10.5px]">
+        <span aria-hidden="true" className="h-1 w-1 rounded-full bg-[image:var(--grad)]" />{KIND_TAG[c.kind][lang === "es" ? 0 : 1]}
+      </span>
+      <figcaption className="chroma absolute inset-x-2.5 bottom-2.5 font-display text-[1.05rem] leading-[0.9] font-semibold tracking-[-0.04em] text-white uppercase sm:text-[1.4rem]">
+        {c.name}
+        {c.ver && <span className="grad-text block [text-shadow:none]">{c.ver}</span>}
       </figcaption>
     </figure>
   );
@@ -303,7 +307,7 @@ export function MenuPanel({ k, t, href, mock }: { k: string; t: Content["menuEx"
 }
 
 /** Three columns of clips drifting up and down; each column is drawn twice so the loop has no seam. */
-function ClipWall({ label }: { label: string }) {
+function ClipWall({ label, lang }: { label: string; lang: string }) {
   return (
     <div className="relative min-w-0">
       <div
@@ -315,7 +319,7 @@ function ClipWall({ label }: { label: string }) {
             {[0, 1].map((copy) => (
               <div key={copy} className="flex flex-col gap-2.5 pb-2.5 sm:gap-3 sm:pb-3" aria-hidden={copy === 1 || undefined}>
                 {col.clips.map((c) => (
-                  <WallTile key={c.id} c={c} />
+                  <WallTile key={c.key} c={c} lang={lang} />
                 ))}
               </div>
             ))}
@@ -802,7 +806,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                 ))}
               </div>
             </div>
-            <ClipWall label={t.hero.wall} />
+            <ClipWall label={t.hero.wall} lang={t.lang} />
           </div>
         </section>
 

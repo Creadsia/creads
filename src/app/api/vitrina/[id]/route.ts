@@ -9,6 +9,9 @@ const SHOWCASE: Record<string, string> = {
   "influencer-1": "/api/media/ws/main/images/69e90c7c-dbd8-4884-832c-0a8afe3bf44b.png",
   "influencer-2": "/api/media/ws/main/images/0092fe4c-f8f7-4e81-99af-6bdba6f87352.png",
   "influencer-3": "/api/media/ws/main/images/f442744f-7b50-4815-a3a3-65b363f23eee.png",
+  "influencer-4": "/api/media/ws/main/images/c82bbd68-b3a6-442c-906c-a204da85e881.png",
+  "influencer-5": "/api/media/ws/main/images/4371e29d-3af9-4e39-b421-d7873ff8da6d.png",
+  "influencer-6": "/api/media/ws/main/images/7e348f70-5148-4574-95f7-feeaf4cf95a1.png",
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
