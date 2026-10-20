@@ -33,7 +33,7 @@ const readChoice = () => {
 };
 const saveChoice = (v: "0" | "1") => {
   document.cookie = `creads_consent=${v}; Max-Age=${365 * 86400}; Path=/; SameSite=Lax; Secure`;
-  if (v === "1") saveSource();
+  if (v === "1") { saveSource(); window.dispatchEvent(new Event("creads-consent")); }
 };
 
 export default function MetaPixel() {
@@ -59,8 +59,8 @@ export default function MetaPixel() {
       className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-2xl backdrop-blur sm:flex-nowrap">
       <p className="min-w-0 flex-1 basis-full text-muted sm:basis-auto">
         {es
-          ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
-          : <>We use cookies to measure which ads bring visitors (Meta). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
+          ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta) y cómo se usa el sitio para mejorarlo (PostHog). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
+          : <>We use cookies to measure which ads bring visitors (Meta) and how the site is used so we can improve it (PostHog). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
       </p>
       <span className="flex shrink-0 gap-2">
         <button type="button" onClick={() => { saveChoice("0"); setChoice("0"); }} className="rounded-lg border border-line px-3 py-2 font-semibold text-muted hover:text-ink">{es ? "Solo necesarias" : "Essential only"}</button>

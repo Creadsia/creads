@@ -4,6 +4,7 @@ import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "./globals.css";
 import MetaPixel from "./meta-pixel";
+import PostHog from "./posthog";
 import { PwaSetup } from "./install-app";
 import ErrorCatcher from "./error-catcher";
 import EnvBanner from "./env-banner";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="font-sans antialiased">
         {children}
         <MetaPixel />
+        <PostHog />
         <PwaSetup />
         <ErrorCatcher />
         <EnvBanner />
