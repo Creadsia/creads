@@ -132,11 +132,7 @@ const REEL: Record<string, ReelClip> = {
 };
 
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
-const INFLU = [
-  "/api/media/ws/main/images/69e90c7c-dbd8-4884-832c-0a8afe3bf44b.png",
-  "/api/media/ws/main/images/0092fe4c-f8f7-4e81-99af-6bdba6f87352.png",
-  "/api/media/ws/main/images/f442744f-7b50-4815-a3a3-65b363f23eee.png",
-];
+const INFLU = ["/api/vitrina/influencer-1", "/api/vitrina/influencer-2", "/api/vitrina/influencer-3"];
 
 function WallTile({ c }: { c: WallClip }) {
   return (
@@ -902,7 +898,8 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
               {INFLU.map((src, i) => (
                 <figure key={src} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
-                  <Image src={src} alt={t.influ.alt} fill sizes="(max-width: 1024px) 33vw, 240px" className="object-cover" />
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a redirect to a short-lived storage link */}
+                  <img src={src} alt={t.influ.alt} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
                   <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10.5px] font-semibold text-white backdrop-blur-sm">{t.influ.tag}</figcaption>
                 </figure>
               ))}
