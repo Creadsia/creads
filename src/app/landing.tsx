@@ -70,48 +70,45 @@ const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=6
 // videos — each tile named in big type like the model reel. Clips are 480x854, silent, ~120-500 KB.
 // TODO(phase 1): move to our own storage.
 const hf = (id: string, ext: "mp4" | "jpg") => `${CLIP}${id}.${ext}`;
+// New clips made for the home page on 20 Oct 2026 (Kling 3.0, 5 s), so no clip repeats across sections.
+const N = (stamp: string, id: string) => H(`20261020_${stamp}`, id);
 type Kind = "influ" | "ad" | "model" | "recreate";
 const KIND_TAG: Record<Kind, [string, string]> = { influ: ["Influencer IA", "AI influencer"], ad: ["Anuncio", "Ad"], model: ["Video IA", "AI video"], recreate: ["Recrear video", "Recreate video"] };
 interface WallClip { key: string; video?: string; img?: string; still?: string; kind: Kind; name: string; ver?: string }
 const M = (video: string, still: string, name: string, ver?: string): WallClip => ({ key: video, video: hf(video, "mp4"), still: hf(still, "jpg"), kind: "model", name, ver });
-const IN = (n: number, name: string): WallClip => ({ key: `influ-${n}`, img: `/api/vitrina/influencer-${n}`, kind: "influ", name });
-const D = RECREATE.demos;
+const V2 = (key: string, video: string, kind: Kind, name: string, ver?: string): WallClip => ({ key, video, kind, name, ver });
+// Nothing here appears anywhere else on the page (the model reel, formats and demos use other clips).
 const WALL_COLS: { clips: WallClip[]; dir: "up" | "down"; speed: string }[] = [
   {
     dir: "up",
-    speed: "70s",
+    speed: "64s",
     clips: [
-      IN(1, "Fitness"),
-      { key: "cat", video: RECREATE.voices.cat, kind: "model", name: "Seedance", ver: "2.5" },
-      { key: "coach", video: VIDEOS.coach, still: SCENES.coach.src, kind: "ad", name: "UGC" },
-      IN(4, "Moda"),
-      M("d4597de4-41e3-4d88-b199-a252d7d47bb3", "c88c6477-6b88-4339-8e55-d5fc9ad02ce3", "Kling", "3.0"),
-      M("3d5e741d-9422-4221-95ca-38349129b40e", "afff3cf2-a9d2-4b30-9e60-5b5f70596a08", "Wan", "3.0"),
+      V2("w-neon", N("171251", "f4183f28-2ebb-4fe9-857f-f78e63a7a5f5"), "influ", "Moda"),
+      M("bff9a5a4-3a41-4ecc-bea3-4326067b05b0", "0d8d1a1b-7db6-4f0b-9fb3-5a3e9ca85651", "Kling", "3.0"),
+      V2("w-unbox", N("171256", "0cdf789a-043d-4c93-91c1-9d84c13a5f88"), "ad", "Unboxing"),
+      V2("w-rooftop", N("171251", "dc5daa00-2d72-4747-a33b-2ae2c0a8ba1d"), "influ", "Estilo"),
+      V2("w-coffee", N("171256", "a339f400-6041-4fca-b3ba-cd9ebee49bef"), "ad", "Producto"),
     ],
   },
   {
     dir: "down",
-    speed: "88s",
+    speed: "80s",
     clips: [
-      M("70b577fc-0650-41cc-a267-6131307a18c0", "1d9b7270-fb34-420a-8371-9b7f65ec0bfe", "Veo", "3.1"),
-      IN(6, "Viajes"),
-      { key: "podcast", video: VIDEOS.podcast, still: SCENES.podcast.src, kind: "ad", name: "Podcast" },
-      { key: "persona", video: D.persona.after, kind: "recreate", name: "Otra", ver: "persona" },
-      IN(2, "Estilo"),
-      M("59617700-cf90-497f-8a75-4ed74416c22f", "94ba857c-b593-487c-8d18-819c0141addb", "Seedance", "2.5"),
-      M("81fb90d2-22c5-404f-92d8-a201275530cf", "9a50f2c6-6bbd-4891-8299-f1151a77c433", "Grok", "Video"),
+      M("a1310874-fe73-4989-9e6f-7de4d4d96426", "b9c4463c-3d31-414a-a898-2158c8df5112", "Veo", "3.1"),
+      V2("w-travel", N("171251", "0d4eea8e-9a96-437f-954a-9464aa24b45d"), "influ", "Viajes"),
+      V2("w-app", N("171256", "29daa9e5-9e79-4d6e-b102-813263a9561f"), "ad", "UGC"),
+      V2("w-cafe", N("171251", "55dbb429-454d-46af-8fe4-df777f251ecb"), "influ", "Lifestyle"),
+      M("4017cd54-61b4-43e9-97bc-5271ff328c79", "4f285d47-5240-4a5c-a485-3d0bfc2c9c55", "Seedance", "2.0"),
     ],
   },
   {
     dir: "up",
-    speed: "62s",
+    speed: "58s",
     clips: [
-      IN(3, "Lifestyle"),
-      { key: "caballero", video: D.caballero.after, kind: "recreate", name: "Kling", ver: "Motion" },
-      IN(5, "Gym"),
-      M("e5596388-8427-4692-9439-d29b17e7a190", "ee82f970-1ec8-4a94-b491-366c7e8e0ddf", "Gemini", "Omni"),
-      { key: "serum", video: VIDEOS.serum, still: SCENES.serum.src, kind: "ad", name: "Producto" },
-      M("61bc428a-05e4-4443-afe7-7dd2976c69f5", "b8044d86-a0a2-4a5d-a52a-35814a3df137", "Hailuo", "2.3"),
+      V2("w-street", N("171251", "e66b4ce8-51b8-4c0f-9dd4-46f36aa2e5a6"), "influ", "Streetwear"),
+      M("9c9fb74d-c0af-46f9-9d43-211d4783ef90", "d82cb55a-cbb2-41dd-8bc7-209000b0a58d", "Grok", "Video"),
+      V2("w-gym", N("171303", "2c6aaf9c-8aff-404a-87e2-2c03503a2a92"), "influ", "Gym"),
+      V2("w-sneaker", N("171256", "d35bec0e-27b9-44d8-855a-d765eaf8df7b"), "ad", "E-commerce"),
     ],
   },
 ];
@@ -130,12 +127,12 @@ const REEL: Record<string, ReelClip> = {
 
 // «Elige tu rubro»: the picture of the finished ad for each niche in the Outcome demo.
 const NICHES: Record<string, NicheMedia> = {
-  skincare: { still: SCENES.serum.src, video: VIDEOS.serum },
-  cursos: { still: SCENES.coach.src, video: VIDEOS.coach },
-  inmobiliaria: { still: SCENES.realtor.src },
-  restaurante: { still: SCENES.chef.src },
-  autos: { still: SCENES.car.src },
-  turismo: { still: SCENES.valpo.src, video: VIDEOS.valpo },
+  skincare: { video: N("171252", "6ac89351-2b7f-4e59-bc5a-af3cc092f93e") },
+  cursos: { video: N("171251", "7cad350a-7ac3-48ae-9c41-dabe7a3663b1") },
+  inmobiliaria: { video: N("171251", "437e450a-2131-4109-af7a-015a9504d83f") },
+  restaurante: { video: N("171252", "8776be07-878b-46bb-9a70-527cea6ed467") },
+  autos: { video: N("171303", "b4285f3c-19c0-4c48-81bd-881039494f47") },
+  turismo: { video: N("171251", "410f3bb9-b7ad-4d09-bf55-0417a63f09f1") },
 };
 
 // «Formatos listos»: one picture per format.
@@ -148,8 +145,22 @@ const FORMATS: Record<string, FormatMedia> = {
   influencer: { still: SCENES.valpo.src, video: VIDEOS.valpo },
 };
 
+// «Hecho con Creads»: only pieces that don't already appear higher up the page.
+const SHOWN = new Set<string>([
+  ...Object.values(REEL).flatMap((c) => [c.video, c.still ?? ""]),
+  ...Object.values(FORMATS).flatMap((f) => [f.video ?? "", f.still]),
+  ...Object.values(RECREATE.demos).flatMap((d) => [d.before, d.after]),
+  ...Object.values(RECREATE.voices),
+]);
+const GALLERY = EXAMPLES.filter((e) => !(e.video && SHOWN.has(e.video)) && !(e.still && SHOWN.has(e.still)));
+
 // «Influencer IA»: original characters made with Creads (Nano Banana Pro), shown as the influencer studio's examples.
-const INFLU = ["/api/vitrina/influencer-1", "/api/vitrina/influencer-2", "/api/vitrina/influencer-3"];
+// Each one animated from its photo (Kling 3.0, 5 s); the photo shows while the clip loads.
+const INFLU = [
+  { img: "/api/vitrina/influencer-1", video: H("20261020_170352", "b1e5e972-e60f-455b-b88c-5fdadfc274d6") },
+  { img: "/api/vitrina/influencer-2", video: H("20261020_170403", "22b71ec6-b5c6-402f-b5dd-4d62432fb80d") },
+  { img: "/api/vitrina/influencer-3", video: H("20261020_170357", "86391bf0-938b-416d-a0d4-edb1b30671b2") },
+];
 
 function WallTile({ c, lang }: { c: WallClip; lang: string }) {
   return (
@@ -853,10 +864,11 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               <Link href="/ia/influencer" className="mt-2 self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.influ.cta}</Link>
             </div>
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-              {INFLU.map((src, i) => (
-                <figure key={src} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
+              {INFLU.map((x, i) => (
+                <figure key={x.img} className={`relative aspect-[9/16] overflow-hidden rounded-2xl bg-surface-2 ${i === 1 ? "translate-y-6" : ""}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- a redirect to a short-lived storage link */}
-                  <img src={src} alt={t.influ.alt} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={x.img} alt={t.influ.alt} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+                  <LoopVideo src={x.video} className="absolute inset-0 h-full w-full object-cover" />
                   <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[10.5px] font-semibold text-white backdrop-blur-sm">{t.influ.tag}</figcaption>
                 </figure>
               ))}
@@ -871,7 +883,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               <h2 id="hecho-title" className="text-[2rem] leading-tight font-extrabold sm:text-[2.75rem]">{t.made.title}</h2>
               <p className="text-lg text-muted">{t.made.lead}</p>
             </div>
-            <Gallery examples={EXAMPLES} filterBy="kind" pageSize={10} columns="columns-2 sm:columns-3 lg:columns-5" />
+            <Gallery examples={GALLERY} filterBy="kind" pageSize={10} columns="columns-2 sm:columns-3 lg:columns-5" />
           </div>
         </section>
 
