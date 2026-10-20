@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { TOOLS } from "@/lib/tools";
 import { PageHead, SetupNotice, cardCls } from "./ui";
+import { useCredits } from "./use-credits";
+import { fmtCredits } from "@/lib/credit-math";
 
-type Counts = Record<"avatars" | "products" | "scripts" | "ads", number | null>;
+type Counts = Record<"avatars" | "products" | "scripts" | "ads" | "images", number | null>;
+interface ClipRow { id: string; kind: string | null; model: string | null; url: string | null; status: string; created_at: string; prompt?: string | null }
+
+const DAY = 86_400_000;
+const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+const WEEKDAY = ["D", "L", "M", "M", "J", "V", "S"];
+const kindLabel = (k: string | null) => (k === "gen:image" ? "Imagen" : k?.startsWith("tool:") ? "Herramienta" : k === "gen:video" ? "Video" : "Corte de anuncio");
+const isVideo = (u: string | null) => Boolean(u && /\.(mp4|webm|mov)(\?|$)/i.test(u));
 
 interface Step { n: number; title: string; text: string; href: string; cta: string; done: boolean; optional?: boolean }
 
@@ -14,9 +23,11 @@ export default function Home({ full = true }: { full?: boolean }) {
   const [voices, setVoices] = useState<number | null>(null);
   const [missing, setMissing] = useState(false);
   const [working, setWorking] = useState<{ id: string; title: string | null; format: string | null; status: string }[]>([]);
+  const [clips, setClips] = useState<ClipRow[] | null>(null);
+  const { info } = useCredits();
 
   useEffect(() => {
-    const tables = ["avatars", "products", "scripts", "ads"] as const;
+    const tables = ["avatars", "products", "scripts", "ads", "images"] as const;
     Promise.all(tables.map((t) => fetch(`/api/data/${t}?count=1`).then(async (r) => ({ t, ok: r.ok, d: await r.json().catch(() => ({})) })).catch(() => ({ t, ok: false, d: {} as Record<string, unknown> }))))
       .then((all) => {
         if (all.some((x) => !x.ok)) setMissing(true);
@@ -24,6 +35,7 @@ export default function Home({ full = true }: { full?: boolean }) {
       });
     // ads still being made: a way back to them right from the start page
     fetch("/api/data/ads").then((r) => (r.ok ? r.json() : null)).then((d) => setWorking(((d?.rows ?? []) as { id: string; title: string | null; format: string | null; status: string }[]).filter((a) => a.status !== "done" && a.status !== "draft").slice(0, 3))).catch(() => {});
+    fetch("/api/data/clips").then((r) => (r.ok ? r.json() : null)).then((d) => setClips(((d?.rows ?? []) as ClipRow[]))).catch(() => {});
     fetch("/api/voices").then((r) => (r.ok ? r.json() : null)).then((d) => setVoices(d ? (d.voices ?? []).filter((v: { category?: string }) => v.category === "cloned").length : 0)).catch(() => setVoices(0));
   }, []);
 
@@ -40,12 +52,6 @@ export default function Home({ full = true }: { full?: boolean }) {
   const doneCount = steps.filter((x) => x.done).length;
   const nextStep = steps.find((x) => !x.done && !x.optional) ?? null;
 
-  const tiles: [string, number | null | undefined, string, string][] = [
-    ["Avatares", c?.avatars, "/app/avatares", "Ver avatares"],
-    ["Productos", c?.products, "/app/productos", "Ver productos"],
-    ["Guiones guardados", c?.scripts, "/app/guiones", "Abrir guiones"],
-    ["Anuncios", c?.ads, "/app/biblioteca", "Ver anuncios terminados"],
-  ];
 
   return (
     <>
@@ -98,35 +104,7 @@ export default function Home({ full = true }: { full?: boolean }) {
           {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Las Historias están en «Crear anuncio», junto a UGC y Podcast; las otras, en «Herramientas» del menú.</p>}
         </section>
       ) : (
-        c && (
-          <section className="flex flex-col gap-3 rounded-2xl border border-line bg-[image:var(--grad)] p-[1px]">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-[15px] bg-surface p-5">
-              <div className="flex max-w-xl flex-col gap-1">
-                <h2 className="font-display text-xl font-bold">Haz tu próximo anuncio</h2>
-                <p className="text-sm text-muted">Mira qué está funcionando en tu nicho, conviértelo en un guion mejor y créalo en el formato que quieras.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {full && <Link href="/app/spy" className="rounded-xl border border-line px-5 py-2.5 font-semibold">1 · Espiar</Link>}
-                <Link href="/app/guiones" className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-accent-ink">{full ? "2" : "1"} · Crear guion</Link>
-                <Link href="/app/crear" className="rounded-xl border border-line px-5 py-2.5 font-semibold">{full ? "3" : "2"} · Crear anuncio</Link>
-              </div>
-            </div>
-          </section>
-        )
-      )}
-
-      {!starting && (
-        <ol className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3" aria-label="Tu avance">
-          {tiles.map(([label, n, href, cta]) => (
-            <li key={label}>
-              <Link href={href} className="flex h-full flex-col gap-1 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-accent/60">
-                <span className="font-mono text-3xl font-bold tabular-nums">{n == null ? "—" : n}</span>
-                <span className="font-semibold">{label}</span>
-                <span className="text-sm text-accent-text">{cta} →</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        c && <Dashboard c={c} clips={clips} working={working.length} full={full} balance={info?.unlimited ? null : info?.balance ?? null} plan={info?.plan ?? null} paidUntil={info?.paidUntil ?? null} unlimited={!!info?.unlimited} />
       )}
 
       {full && !starting && c && (
@@ -142,6 +120,124 @@ export default function Home({ full = true }: { full?: boolean }) {
               <Link key={t.id} href={`/app/herramientas/${t.id}`} className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">{t.name}</Link>
             ))}
           </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+/** The studio's start page once the account is set up: what you have, what you made this week, what's next. */
+function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimited }: {
+  c: Counts; clips: ClipRow[] | null; working: number; full: boolean; balance: number | null; plan: string | null; paidUntil: string | null; unlimited: boolean;
+}) {
+  const now = new Date();
+  const days = Array.from({ length: 7 }, (_, i) => new Date(now.getTime() - (6 - i) * DAY));
+  const done = (clips ?? []).filter((x) => x.status === "done");
+  const perDay = days.map((d) => done.filter((x) => x.created_at.slice(0, 10) === dayKey(d)).length);
+  const week = perDay.reduce((a, b) => a + b, 0);
+  const top = Math.max(1, ...perDay);
+  const recent = done.filter((x) => x.url).slice(0, 6);
+  // what the balance still makes: a 30 s ad ≈ 46 credits economic, ≈ 154 with Veo Fast / Seedance
+  const ads = balance == null ? null : { eco: Math.floor(balance / 46), rec: Math.floor(balance / 154) };
+  const until = paidUntil ? new Date(paidUntil).toLocaleDateString("es-CL", { day: "numeric", month: "long" }) : null;
+
+  const stats: [string, number | null, string][] = [
+    ["Anuncios", c.ads, "/app/biblioteca"],
+    ["En producción", working, "/app/videos"],
+    ["Guiones", c.scripts, "/app/guiones"],
+    ["Imágenes", c.images, "/app/biblioteca"],
+    ["Avatares", c.avatars, "/app/avatares"],
+  ];
+
+  return (
+    <>
+      <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
+        {/* credits */}
+        <section aria-label="Tus créditos" className="rounded-2xl bg-[image:var(--grad)] p-[1px]">
+          <div className="flex h-full flex-col justify-between gap-4 rounded-[15px] bg-surface p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm text-muted">Tus créditos{plan ? ` · Plan ${plan}` : ""}</span>
+                <b className="font-display text-4xl font-bold tabular-nums">{unlimited ? "Ilimitados" : balance == null ? "—" : fmtCredits(balance).replace(/ cr[eé]ditos?$/i, "")}</b>
+                {until && !unlimited && <span className="text-xs text-muted">Tu plan se renueva el {until}</span>}
+              </div>
+              <Link href="/app/planes" className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">Recargar</Link>
+            </div>
+            {ads && (
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.eco}</b><span className="block text-xs text-muted">anuncios de 30 s con modelos económicos</span></div>
+                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.rec}</b><span className="block text-xs text-muted">con Veo Fast o Seedance</span></div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* this week */}
+        <section aria-label="Tu semana" className="flex flex-col justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm text-muted">Esta semana</span>
+            <span className="text-sm"><b className="font-display text-2xl tabular-nums">{clips ? week : "—"}</b> {week === 1 ? "creación" : "creaciones"}</span>
+          </div>
+          <div className="flex h-24 items-end gap-2" role="img" aria-label={`Creaciones por día en los últimos 7 días: ${perDay.join(", ")}`}>
+            {perDay.map((n, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-[10px] tabular-nums text-muted">{n || ""}</span>
+                <span className="w-full rounded-t-md" style={{ height: `${Math.max(6, (n / top) * 64)}px`, background: i === 6 ? "var(--grad)" : n ? "var(--accent-text)" : "var(--surface-2)", opacity: i === 6 || !n ? 1 : 0.55 }} />
+                <span className="text-[10px] text-muted">{WEEKDAY[days[i].getDay()]}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted">{week === 0 ? "Tu primera creación de la semana está a un clic." : week >= 10 ? "¡Vas con todo! Prueba tus mejores ganchos en varias versiones." : "Cada versión nueva es otra oportunidad de encontrar el anuncio ganador."}</p>
+        </section>
+      </div>
+
+      {/* next ad */}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
+        <div className="flex max-w-xl flex-col gap-1">
+          <h2 className="font-display text-lg font-bold">Haz tu próximo anuncio</h2>
+          <p className="text-sm text-muted">Mira qué está funcionando en tu nicho, conviértelo en un guion mejor y créalo en el formato que quieras.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {full && <Link href="/app/spy" className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">1 · Espiar</Link>}
+          <Link href="/app/guiones" className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">{full ? "2" : "1"} · Crear guion</Link>
+          <Link href="/app/crear" className="rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-sm font-semibold text-white">{full ? "3" : "2"} · Crear anuncio</Link>
+        </div>
+      </section>
+
+      {/* numbers */}
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="Tu cuenta">
+        {stats.map(([label, n, href]) => (
+          <li key={label}>
+            <Link href={href} className="flex flex-col gap-0.5 rounded-xl border border-line bg-surface px-4 py-3 transition-colors hover:border-accent/60">
+              <b className="font-display text-2xl tabular-nums">{n == null ? "—" : n}</b>
+              <span className="text-sm text-muted">{label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {/* last made */}
+      {recent.length > 0 && (
+        <section aria-labelledby="recientes" className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="recientes" className="font-display text-lg font-bold">Lo último que hiciste</h2>
+            <Link href="/app/biblioteca" className="text-sm text-accent-text">Ver todo →</Link>
+          </div>
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {recent.map((x) => (
+              <li key={x.id} className="flex flex-col gap-1">
+                <a href={x.url!} target="_blank" rel="noopener" className="relative block aspect-[9/16] overflow-hidden rounded-xl border border-line bg-surface-2">
+                  {isVideo(x.url)
+                    ? <video src={`${x.url}#t=0.5`} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />
+                    : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={x.url!} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                </a>
+                <span className="truncate text-xs text-muted">{kindLabel(x.kind)}{x.model ? ` · ${x.model}` : ""}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </>
