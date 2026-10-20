@@ -41,6 +41,7 @@ async function api<T>(url: string, method: string, body?: unknown): Promise<T> {
 function Badge({ r }: { r?: Report }) {
   if (!r) return <span className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">Sin informe</span>;
   if (r.error) return <span className="rounded-full bg-warn/15 px-2.5 py-1 text-xs font-semibold text-warn">⚠ No pudo trabajar</span>;
+  if (r.visto && r.estado !== "ok") return <span className="whitespace-nowrap rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-muted">✓ Revisado</span>;
   const m = { ok: ["bg-good/15 text-good", "✓ Todo normal"], atencion: ["bg-warn/15 text-warn", "● Revisar"], urgente: ["bg-bad/15 text-bad", "▲ Urgente"] }[r.estado];
   return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${m[0]}`}>{m[1]}</span>;
 }
@@ -380,6 +381,11 @@ export function AreaTeam({ area }: { area: AreaId }) {
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5">
                   <Badge r={r} />
+                  {r && !r.error && r.estado !== "ok" && (
+                    <button type="button" onClick={() => api<View>("/api/admin/oficina", "PATCH", { agent: a.id, visto: !r.visto }).then(setV).catch(() => {})}
+                      title={r.visto ? "Volver a marcarlo como pendiente" : "Ya lo viste o ya está resuelto: deja de marcarse como urgente hasta el próximo informe"}
+                      className={`${btn} text-xs`}>{r.visto ? "Deshacer" : "✓ Ya lo vi"}</button>
+                  )}
                   {r && !r.error && <button type="button" onClick={() => setOpen(open === a.id ? null : a.id)} aria-expanded={open === a.id} className={`${btn} text-xs`}>{open === a.id ? "Ocultar" : "Informe"}</button>}
                   <button type="button" onClick={() => setTalk(talk === a.id ? null : a.id)} aria-expanded={talk === a.id} className={`${btn} text-xs`}>{talk === a.id ? "Cerrar chat" : "Hablar"}</button>
                   <button type="button" disabled={!!busy || !v.ready || !a.on} onClick={() => run(a.id)} className={`${btn} text-xs`}>{busy === a.id ? "Trabajando…" : "Trabajar ahora"}</button>
@@ -391,7 +397,7 @@ export function AreaTeam({ area }: { area: AreaId }) {
         })}
       </ul>
       {talk && <Chat v={v} agent={talk} setAgent={setTalk} ids={team.map((a) => a.id)} title="Habla con el equipo del área" onSpent={load} />}
-      {v.state.pending.some((p) => p.estado === "pendiente") && <p className="text-xs text-muted">Hay movimientos esperando tu aprobación en <b>Dirección</b>.</p>}
+      {v.state.pending.some((p) => p.estado === "pendiente") && <p className="text-xs text-muted">Hay movimientos esperando tu aprobación en <a href="/admin?tab=oficina" className="font-semibold text-accent-text underline">Dirección → ver y aprobar</a>.</p>}
     </section>
   );
 }

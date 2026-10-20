@@ -10,7 +10,9 @@ import { randomUUID } from "node:crypto";
 const BASE = "https://api.comfy.org/v2/models";
 export const GENJUTSU = "higgsfield/higgsfield-genjutsu-motion-transfer-v1.0";
 
-export const comfyConfigured = () => (process.env.COMFY_API_KEY ?? "").trim().length > 10;
+// Off by default (owner, 20 Oct 2026: Comfy has no balance and won't be topped up yet). After topping it
+// up, set COMFY_ENABLED=1 in Vercel and «Mi personaje · Máxima calidad» comes back by itself.
+export const comfyConfigured = () => process.env.COMFY_ENABLED === "1" && (process.env.COMFY_API_KEY ?? "").trim().length > 10;
 const headers = () => ({ "X-API-Key": (process.env.COMFY_API_KEY ?? "").trim(), "content-type": "application/json" });
 
 /** Plain words for Comfy's error types (the owner sees them; customers get a safe version). */

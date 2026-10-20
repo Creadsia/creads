@@ -68,6 +68,10 @@ export async function PATCH(req: Request) {
       const id = typeof b?.agent === "string" ? b.agent : "";
       if (id && findAgent(s, id)) {
         if (typeof b.agentOn === "boolean") s.agents[id] = { on: b.agentOn };
+        if (typeof b.visto === "boolean" && s.last[id]) {
+          if (b.visto) s.last[id].visto = new Date().toISOString();
+          else delete s.last[id].visto;
+        }
         if (b.agentEngine === "claude" || b.agentEngine === "grok") s.agentEngine = { ...(s.agentEngine ?? {}), [id]: b.agentEngine };
         if (typeof b.mission === "string" && BUILTIN_IDS.includes(id)) s.missions[id] = b.mission.trim().slice(0, 4000);
         if (b.mission === null && BUILTIN_IDS.includes(id)) delete s.missions[id]; // back to the original instructions
