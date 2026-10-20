@@ -67,6 +67,8 @@ export type Estado = "ok" | "atencion" | "urgente";
 export interface Report {
   at: string; estado: Estado; resumen: string; informe: string; propuestas: string[]; fuentes: string[]; usd: number; model: string;
   prioridades?: string[]; error?: string;
+  /** When the owner marked this report as seen (the warning stops counting as open). */
+  visto?: string;
 }
 export interface AgentConfig { name: string; area: string; mission: string; search: boolean; sharePct: number; sources: Source[]; equipo?: AreaId }
 export interface OfficeState {

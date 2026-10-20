@@ -9,6 +9,7 @@ import { probe, workdir } from "../src/lib/montage";
 import { writeFile } from "node:fs/promises";
 
 process.env.COMFY_API_KEY = "test-comfy-key-123";
+process.env.COMFY_ENABLED = "1";
 process.env.SUPABASE_URL = "https://sb.test";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
 process.env.ANTHROPIC_API_KEY = "test";
