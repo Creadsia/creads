@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Content } from "@/content/en";
 import { Logo, Mark } from "./brand";
 import AffiliateForm from "./affiliate-form";
@@ -896,7 +897,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                   <li key={x} className="flex gap-2"><span aria-hidden="true" className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[image:var(--grad)]" />{x}</li>
                 ))}
               </ul>
-              <a href="/ia/influencer" className="mt-2 self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.influ.cta}</a>
+              <Link href="/ia/influencer" className="mt-2 self-start rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white transition-transform hover:-translate-y-px">{t.influ.cta}</Link>
             </div>
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
               {INFLU.map((src, i) => (
