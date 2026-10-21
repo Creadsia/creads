@@ -12,9 +12,9 @@ import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "
 
 // Our pick for each kind of customer: the best quality for the credits is the default and goes first.
 const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
-  "veo-3.1-fast": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio para anuncios hablados." },
-  "veo-3.1-lite": { pill: "Más económico", rank: 1, note: "Ideal para probar ideas y hacer muchas versiones." },
-  "veo-3.1": { pill: "Máxima calidad", rank: 2, note: "Para el anuncio final que vas a escalar." },
+  "kling-3.0": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio, y funciona perfecto con tu voz." },
+  "veo-3.1-fast": { pill: "Alternativa", rank: 1, note: "Muy buena imagen; cortes de 8 s." },
+  "veo-3.1": { pill: "Máxima calidad · caro", rank: 3, note: "Casi 3 veces el precio de Kling. Solo para el anuncio final." },
 };
 import type { Cut } from "./crear";
 
@@ -54,7 +54,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [copied, setCopied] = useState<number | "all" | null>(null);
 
   const [models, setModels] = useState<Model[]>([]);
-  const [model, setModel] = useState("veo-3.1-fast");
+  const [model, setModel] = useState("kling-3.0");
   const [confirm, setConfirm] = useState(false);
   const [adId, setAdId] = useState<string | null>(null);
   const [starting, setStarting] = useState<string>("");
@@ -78,7 +78,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const videoSecs = cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
   // Seedance refuses a real person's face as the starting image
   const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
-  useEffect(() => { if (m && faceRefused(m)) setModel("veo-3.1-fast"); }); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (m && faceRefused(m)) setModel("kling-3.0"); }); // eslint-disable-line react-hooks/exhaustive-deps
   const canVoice = takesOwnVoice(format);
   const voice = canVoice ? v.voice : "";
   const natural = v.natural;
@@ -268,7 +268,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
           {starting ? <p className="rounded-lg bg-accent/10 p-3 text-sm">{starting} No cierres esta página.</p> : (
             <>
               {(() => {
-                const usable = models.filter((x) => x.configured && !x.needsImage && !x.silent && !faceRefused(x));
+                // Veo 3.1 Lite (preview) fails on every ad for now: not offered
+                const usable = models.filter((x) => x.configured && !x.needsImage && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
                 const other = models.filter((x) => !usable.includes(x));
                 // recommended first, then the cheapest and the best quality, then the rest by price
                 const order = (id: string) => (MODEL_TAGS[id] ? MODEL_TAGS[id].rank : 9);
