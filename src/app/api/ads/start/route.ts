@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const { db } = s;
   const b = await req.json().catch(() => null);
-  const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 8) : [];
+  const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 12) : [];
   const model = findVideo(String(b?.model ?? ""));
   if (!clips.length || clips.some((c) => !c?.prompt || !c?.texto)) return NextResponse.json({ error: "Faltan las escenas." }, { status: 400 });
   if (!model) return NextResponse.json({ error: "Elige un modelo de video." }, { status: 400 });

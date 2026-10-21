@@ -290,7 +290,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
         </section>
       )}
 
-      {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(cuts.length ? 1 : 0)} onNext={() => setStep(3)} />}
+      {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(cuts.length ? 1 : 0)} onNext={() => setStep(3)} onCuts={setCuts} />}
       {step >= 3 && (
         // Escenas counts its own steps 2 (scenes) and 3 (videos)
         <Escenas step={step - 1} setStep={(n) => setStep(n === 1 ? 1 : n + 1)} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche}

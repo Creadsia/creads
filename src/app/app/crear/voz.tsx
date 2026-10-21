@@ -24,10 +24,30 @@ export const takeKey = (voice: string, text: string) => `${voice}|${text}`;
 export const takeOf = (v: VoiceChoice, cuts: Cut[], i: number) => (v.takes[i]?.key === takeKey(v.voice, cuts[i]?.texto ?? "") ? v.takes[i] : null);
 export const voiceReady = (v: VoiceChoice, cuts: Cut[], format: FormatId) => !takesOwnVoice(format) || !v.voice || cuts.every((_, i) => takeOf(v, cuts, i)?.url);
 /** Too long to fit one lip-synced clip (10 s; Veo makes 8 s). */
+/** Longest cut that fits one lip-synced take, even on Veo (8 s). */
+const MAX_WORDS = 14;
+
+/** Splits every cut that is too long for one take, at the sentence end (or comma) closest to its middle. */
+export function splitLong(cuts: Cut[]): Cut[] {
+  const out: Cut[] = [];
+  const split = (c: Cut) => {
+    const w = c.texto.trim().split(/\s+/).filter(Boolean);
+    if (w.length <= MAX_WORDS) { out.push(c); return; }
+    const mid = w.length / 2;
+    const at = (re: RegExp) => w.map((x, i) => (i < w.length - 1 && i >= 2 && re.test(x) ? i : -1)).filter((i) => i >= 0).sort((a, b) => Math.abs(a + 1 - mid) - Math.abs(b + 1 - mid))[0];
+    const cut = at(/[.?!…]$/) ?? at(/[,;:]$/) ?? Math.floor(mid) - 1;
+    split({ ...c, texto: w.slice(0, cut + 1).join(" "), traduccion: "" });
+    split({ ...c, texto: w.slice(cut + 1).join(" "), traduccion: "" });
+  };
+  cuts.forEach(split);
+  return out;
+}
+
 export const tooLongCut = (cuts: Cut[], veo = false) => cuts.findIndex((c) => words(c.texto) / 2.2 + 1.5 > (veo ? 8 : 10));
 
-export default function Voz({ format, lang, cuts, value, onChange, onBack, onNext }: {
+export default function Voz({ format, lang, cuts, value, onChange, onBack, onNext, onCuts }: {
   format: FormatId; lang: "en" | "es-CL"; cuts: Cut[]; value: VoiceChoice; onChange: (v: VoiceChoice) => void; onBack: () => void; onNext: () => void;
+  onCuts: (c: Cut[]) => void;
 }) {
   const f = formatById(format);
   const avatars = useTable<Avatar>("avatars");
@@ -35,6 +55,16 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
   const [accents, setAccents] = useState<Accent[]>([]);
   const [busy, setBusy] = useState<number | "all" | null>(null);
   const [err, setErr] = useState("");
+  const [splitNote, setSplitNote] = useState("");
+  // a cut too long for one voiced take is split in two automatically (nobody has to count words)
+  useEffect(() => {
+    if (!takesOwnVoice(format) || !cuts.length) return;
+    const next = splitLong(cuts);
+    if (next.length !== cuts.length) {
+      onCuts(next.slice(0, 12));
+      setSplitNote(`Dividimos los cortes largos para que la voz calce perfecto: ahora son ${Math.min(12, next.length)} cortes, con las mismas palabras.`);
+    }
+  }, [cuts, format]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetch("/api/voices").then((r) => r.json()).then((d) => setVoices(d.voices ?? [])).catch(() => {});
@@ -109,6 +139,7 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
       </div>
       <p className="text-sm text-muted">Elige quién habla y con qué voz, y grábala. Creads escucha cada corte y revisa que diga exactamente tu texto. Recién cuando te guste, se hace el video y se le sincroniza la boca a esta misma voz. Grabar cuesta centavos.</p>
 
+      {splitNote && <p className="rounded-lg bg-good/10 p-3 text-sm text-good">✓ {splitNote}</p>}
       {f.av !== "none" && (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-muted">{f.avLabel ?? "¿Quién habla?"}</span>
