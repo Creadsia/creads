@@ -80,7 +80,7 @@ export async function trimPoints(file: string, dur: number) {
   let a = 0, b = dur;
   for (const [s, e] of sil) {
     if (s <= 0.05 && e < 1.5) a = Math.max(0, e - 0.06);
-    if (e >= dur - 0.05 && s > dur - 3) b = Math.min(dur, s + 0.18);
+    if (e >= dur - 0.05) b = Math.min(dur, s + 0.25);
   }
   return { a, b: Math.max(b, a + 0.5) };
 }

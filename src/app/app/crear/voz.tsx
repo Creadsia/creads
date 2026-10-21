@@ -14,14 +14,24 @@ interface Avatar extends Row { name: string; image_url: string | null; voice_id?
 interface Voice { id: string; name: string; category: string; preview?: string }
 interface Accent { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; preview?: string }[] }
 export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean }
-export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[] }
+export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string }
+
+/** «Creads = Cri ads» lines: what the voice reads instead of each hard word (captions keep the real spelling). */
+export function sayable(text: string, say = "") {
+  let out = text;
+  for (const line of say.split(/\n|;/)) {
+    const [w, p] = line.split("=").map((x) => x?.trim());
+    if (w && p) out = out.replace(new RegExp(`(?<![\\p{L}])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}])`, "giu"), p);
+  }
+  return out;
+}
 
 const GENDER: Record<string, string> = { male: "hombre", female: "mujer" };
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 
-export const takeKey = (voice: string, text: string) => `${voice}|${text}`;
+export const takeKey = (voice: string, text: string, say = "") => `${voice}|${say}|${text}`;
 /** The approved recording of a cut (only if it was made with this voice and this exact text). */
-export const takeOf = (v: VoiceChoice, cuts: Cut[], i: number) => (v.takes[i]?.key === takeKey(v.voice, cuts[i]?.texto ?? "") ? v.takes[i] : null);
+export const takeOf = (v: VoiceChoice, cuts: Cut[], i: number) => (v.takes[i]?.key === takeKey(v.voice, cuts[i]?.texto ?? "", v.say) ? v.takes[i] : null);
 export const voiceReady = (v: VoiceChoice, cuts: Cut[], format: FormatId) => !takesOwnVoice(format) || !v.voice || cuts.every((_, i) => takeOf(v, cuts, i)?.url);
 /** Too long to fit one lip-synced clip (10 s; Veo makes 8 s). */
 /** Longest cut that fits one lip-synced take, even on Veo (8 s). */
@@ -118,12 +128,13 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
       for (let i = 0; i < cuts.length; i++) {
         if (only !== undefined ? i !== only : takeOf(value, cuts, i)?.url) continue;
         const text = cuts[i].texto;
-        const res = await fetch("/api/voices/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voiceId: value.voice, text, model: "eleven_multilingual_v2" }) }).catch(() => null);
+        const spoken = sayable(text, value.say);
+        const res = await fetch("/api/voices/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voiceId: value.voice, text: spoken, model: "eleven_multilingual_v2" }) }).catch(() => null);
         const d = res ? await res.json().catch(() => ({})) : {};
         if (!res?.ok || !d.url) throw new Error(d.error || "No se pudo grabar la voz.");
-        takes[i] = { key: takeKey(value.voice, text), url: d.url, checking: true };
+        takes[i] = { key: takeKey(value.voice, text, value.say), url: d.url, checking: true };
         onChange({ ...value, takes: [...takes] });
-        await check(i, d.url, text, takes);
+        await check(i, d.url, spoken, takes);
         onChange({ ...value, takes: [...takes] });
       }
       refreshCredits();
@@ -171,6 +182,13 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
         </select>
       </label>
       {preview && <audio key={preview} src={preview} controls preload="none" className="h-9 w-full max-w-sm" aria-label="Escuchar la voz" />}
+      {value.voice && (
+        <label className="flex flex-col gap-1 text-sm font-semibold">
+          Cómo se pronuncian tus marcas o palabras difíciles (opcional)
+          <textarea rows={2} value={value.say ?? ""} onChange={(e) => set({ say: e.target.value })} placeholder={"Una por línea. Ej:\nCreads = Cri ads\ncreadsia.com = creads ia punto com"} className={`${inputCls} text-sm font-normal`} />
+          <span className="text-xs font-normal text-muted">La voz lo dice así; los subtítulos siguen escritos como en tu guion. Si cambias esto, vuelve a grabar.</span>
+        </label>
+      )}
 
       {value.voice && (
         <>

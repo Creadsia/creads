@@ -28,3 +28,10 @@ test("long cuts are split for the voice, keeping every word", async () => {
   assert.ok(out.every((c) => c.texto.split(/\s+/).length <= 14));
   assert.equal(out.map((c) => c.texto).join(" "), texto);
 });
+
+test("pronunciation: the voice reads the brand as written in the guide", async () => {
+  const { sayable } = await import("../src/app/app/crear/voz");
+  assert.equal(sayable("Por eso creamos Creads IA.", "Creads = Cri ads"), "Por eso creamos Cri ads IA.");
+  assert.equal(sayable("Entra a creadsia.com hoy", "creadsia.com = creads ia punto com"), "Entra a creads ia punto com hoy");
+  assert.equal(sayable("Sin cambios", ""), "Sin cambios");
+});
