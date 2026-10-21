@@ -21,8 +21,10 @@ const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
 // the story can't add or drop a lip-sync nobody paid for.
 async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<string, unknown> | null> }, clip: Record<string, unknown>, ws: string) {
   const kind = String(clip.kind ?? "");
-  if (!kind.startsWith("shot:ls:")) return null;
-  const voiceId = kind.slice(8);
+  // story shots ("shot:ls:<voice>") and ad cuts ("ad:ls:<voice>") that speak with a chosen voice
+  const m = /^(?:shot|ad):ls:(.+)$/.exec(kind);
+  if (!m) return null;
+  const voiceId = m[1];
   const line = String(clip.text ?? "").trim().slice(0, 200);
   if (!line || !(await canUseVoice(ws, voiceId))) return null;
   const ad = clip.ad_id ? await db.get("ads", String(clip.ad_id)) : null;
@@ -74,6 +76,11 @@ export async function GET(req: Request) {
       let url = mediaRefOf(ws, "videos", name);
       if (!(await mediaSaved(ws, "videos", name))) url = await saveMedia(ws, "videos", await (await fetch(out)).arrayBuffer(), "video/mp4", name);
       const row = await db.update("clips", id, { status: "done", url, error: null });
+      if (clip.ad_id) {
+        const all = await db.list("clips", `ad_id=eq.${clip.ad_id}&select=status`);
+        const ad = await db.get("ads", String(clip.ad_id));
+        if (ad?.format !== "historia" && all.length && all.every((c) => c.status === "done")) await db.update("ads", String(clip.ad_id), { status: "review" });
+      }
       return NextResponse.json({ clip: row });
     }
 

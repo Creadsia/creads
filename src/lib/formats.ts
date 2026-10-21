@@ -61,6 +61,8 @@ export const FORMATS: Format[] = [
 export const formatById = (id: string) => FORMATS.find((f) => f.id === id) ?? FORMATS[0];
 /** Whether the clips of this format show people (voice-over formats show only scenes). */
 export const showsPeople = (id: string) => !formatById(id).narr;
+/** One person talks to the camera (UGC, reply to a comment, field report): their lines can be recorded with a chosen voice and lip-synced. */
+export const takesOwnVoice = (id: string) => { const f = formatById(id); return !f.narr && (f.speakers?.length ?? 1) <= 1; };
 /**
  * Models that refuse photos of real people (Seedance) can't animate an opening frame drawn from the
  * avatar's face, nor one with a person holding the product. Checked before charging anything.
