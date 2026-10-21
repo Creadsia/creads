@@ -47,10 +47,10 @@ export async function canUseVoice(ws: string, voiceId: string) {
 
 /** Spanish accents offered in the studio, with real voices from ElevenLabs' public library. */
 export const ACCENTS = [
-  { locale: "es-CL", label: "Chilena" },
-  { locale: "es-AR", label: "Argentina" },
-  { locale: "es-CO", label: "Colombiana" },
-  { locale: "es-MX", label: "Mexicana" },
+  { locale: "es-CL", label: "Chilena", accent: "chilean" },
+  { locale: "es-AR", label: "Argentina", accent: "argentine" },
+  { locale: "es-CO", label: "Colombiana", accent: "colombian" },
+  { locale: "es-MX", label: "Mexicana", accent: "mexican" },
 ] as const;
 
 let accentCache: { at: number; list: SharedVoice[] } | null = null;
@@ -58,7 +58,11 @@ let accentCache: { at: number; list: SharedVoice[] } | null = null;
 /** A few real voices per accent (the most used ones), refreshed every hour. */
 export async function accentVoices(): Promise<SharedVoice[]> {
   if (accentCache && Date.now() - accentCache.at < 3_600_000) return accentCache.list;
-  const lists = await Promise.all(ACCENTS.map((a) => sharedVoices(a.locale, 8).catch(() => [] as SharedVoice[])));
+  // by locale first; if the library tags that country only by accent name, by accent
+  const lists = await Promise.all(ACCENTS.map(async (a) => {
+    const byLocale = await sharedVoices(a.locale, 8).catch(() => [] as SharedVoice[]);
+    return byLocale.length ? byLocale : sharedVoices(a.locale, 8, a.accent).catch(() => [] as SharedVoice[]);
+  }));
   const list = lists.flat();
   if (list.length) accentCache = { at: Date.now(), list };
   return list;

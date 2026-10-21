@@ -119,8 +119,8 @@ export const elevenlabs: VoiceProvider = {
 export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string }
 
 /** Public library voices for one Spanish locale (es-CL, es-AR, es-CO…), most used first. */
-export async function sharedVoices(locale: string, size = 8): Promise<SharedVoice[]> {
-  const q = new URLSearchParams({ language: "es", locale, page_size: String(size), sort: "cloned_by_count" });
+export async function sharedVoices(locale: string, size = 8, accent?: string): Promise<SharedVoice[]> {
+  const q = new URLSearchParams({ language: "es", page_size: String(size), sort: "cloned_by_count", ...(accent ? { accent } : { locale }) });
   const res = await fetch(`${API}/v1/shared-voices?${q}`, { headers: { "xi-api-key": key() }, cache: "no-store" });
   if (!res.ok) return fail(res, "ElevenLabs (biblioteca)");
   const data = await res.json();
