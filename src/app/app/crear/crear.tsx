@@ -140,7 +140,8 @@ export default function Crear({ full = true }: { full?: boolean }) {
 
       <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
         {STEPS.map((s, i) => {
-          const can = i === 0 || (i <= 3 && cuts.length > 0) || (i === 4 && cuts.length > 0 && step >= 4);
+          // the voice tab always opens (it explains what it needs); scenes and videos need the cuts
+          const can = i === 0 || i === 2 || (i <= 3 && cuts.length > 0) || (i === 4 && cuts.length > 0 && step >= 4);
           return (
             <li key={s}>
               <button type="button" disabled={!can} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}
@@ -289,7 +290,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
         </section>
       )}
 
-      {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
+      {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(cuts.length ? 1 : 0)} onNext={() => setStep(3)} />}
       {step >= 3 && (
         // Escenas counts its own steps 2 (scenes) and 3 (videos)
         <Escenas step={step - 1} setStep={(n) => setStep(n === 1 ? 1 : n + 1)} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche}

@@ -41,6 +41,16 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
     fetch("/api/voices/acentos").then((r) => r.json()).then((d) => setAccents(d.accents ?? [])).catch(() => {});
   }, []);
 
+  if (!cuts.length) {
+    return (
+      <section className={cardCls}>
+        <h2 className="font-display text-xl font-bold">3 · Voz</h2>
+        <p className="text-sm">La voz se graba sobre tu guion, corte por corte. Primero pega o abre tu guion en el paso 1 y sepáralo en cortes; después vuelves aquí a grabarla y escucharla.</p>
+        <div><button type="button" onClick={onBack} className={btnCls}>Ir a mi guion →</button></div>
+      </section>
+    );
+  }
+
   if (!takesOwnVoice(format)) {
     return (
       <section className={cardCls}>
