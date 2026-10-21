@@ -1,3 +1,4 @@
+import { DEFAULT_USD_PER_CREDIT, SECOND_USD } from "@/lib/credit-math";
 import Image from "next/image";
 import Link from "next/link";
 import type { Content } from "@/content/en";
@@ -904,7 +905,8 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                           <p className="mt-auto pt-2 text-sm">
                             {m.cost ? (
                               <span className="rounded-full bg-surface-2 px-2.5 py-1">
-                                <b>{m.cost}</b> {m.unit === "s" ? t.models.perSecond : t.models.perImage}
+                                {/* credits per unit → seconds of the balance (1 s = one second of a talking-avatar ad) */}
+                                <b>{(Math.round(((Number(m.cost) * DEFAULT_USD_PER_CREDIT) / SECOND_USD) * 10) / 10).toLocaleString("es-CL")} s</b> {m.unit === "s" ? t.models.perSecond : t.models.perImage}
                               </span>
                             ) : g === "brain" || g === "voice" ? (
                               <span className="rounded-full bg-good/12 px-2.5 py-1 text-good">{t.models.included}</span>

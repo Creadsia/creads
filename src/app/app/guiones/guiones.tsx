@@ -291,7 +291,7 @@ export default function Guiones() {
       <section className={cardCls} aria-labelledby="que-hacer">
         <div className="flex flex-col gap-1">
           <h2 id="que-hacer" className="font-display text-lg font-bold">2 · ¿Qué quieres hacer?</h2>
-          <p className="text-sm text-muted">Si recién empiezas, parte por <b>Desarmar el guion</b>: vas a ver cada parte y por qué funciona. Gratis mientras tengas créditos: no descuenta nada.</p>
+          <p className="text-sm text-muted">Si recién empiezas, parte por <b>Desarmar el guion</b>: vas a ver cada parte y por qué funciona. Gratis mientras tengas saldo: no descuenta nada.</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-tour="guion-modos">
           {MODES.map((m) => (

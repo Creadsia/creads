@@ -54,7 +54,7 @@ export async function GET(req: Request) {
     // after 5 minutes it fails, and the credits go back if they were taken for it.
     if ((clip.status === "starting" || clip.status === "syncing") && Date.now() - Date.parse(String(clip.updated_at ?? clip.created_at)) > STALE_MS) {
       const since = new Date(Date.parse(String(clip.updated_at ?? clip.created_at)) - (clip.status === "syncing" ? 20 * 60_000 : 60_000)).toISOString();
-      const row = await db.claim("clips", id, { in: [String(clip.status)] }, { status: "failed", error: "Se cortó a medio camino. Te devolvimos los créditos; vuelve a intentarlo." });
+      const row = await db.claim("clips", id, { in: [String(clip.status)] }, { status: "failed", error: "Se cortó a medio camino. Te devolvimos los segundos; vuelve a intentarlo." });
       if (row && (await chargedSince(ws, id, since).catch(() => false))) await refundJob(ws, id);
       return NextResponse.json({ clip: row ?? (await db.get("clips", id)) });
     }

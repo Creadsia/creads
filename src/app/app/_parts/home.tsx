@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { TOOLS } from "@/lib/tools";
 import { PageHead, SetupNotice, cardCls } from "./ui";
 import { useCredits } from "./use-credits";
-import { fmtCredits } from "@/lib/credit-math";
+import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 
 type Counts = Record<"avatars" | "products" | "scripts" | "ads" | "images", number | null>;
 interface ClipRow { id: string; kind: string | null; model: string | null; url: string | null; status: string; created_at: string; prompt?: string | null }
@@ -104,7 +104,7 @@ export default function Home({ full = true }: { full?: boolean }) {
           {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Las Historias están en «Crear anuncio», junto a UGC y Podcast; las otras, en «Herramientas» del menú.</p>}
         </section>
       ) : (
-        c && <Dashboard c={c} clips={clips} working={working.length} full={full} balance={info?.unlimited ? null : info?.balance ?? null} plan={info?.plan ?? null} paidUntil={info?.paidUntil ?? null} unlimited={!!info?.unlimited} />
+        c && <Dashboard c={c} clips={clips} working={working.length} full={full} balance={info?.unlimited ? null : info?.balance ?? null} plan={info?.plan ?? null} paidUntil={info?.paidUntil ?? null} unlimited={!!info?.unlimited} rate={info?.rate} />
       )}
 
       {full && !starting && c && (
@@ -127,8 +127,8 @@ export default function Home({ full = true }: { full?: boolean }) {
 }
 
 /** The studio's start page once the account is set up: what you have, what you made this week, what's next. */
-function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimited }: {
-  c: Counts; clips: ClipRow[] | null; working: number; full: boolean; balance: number | null; plan: string | null; paidUntil: string | null; unlimited: boolean;
+function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimited, rate }: {
+  c: Counts; clips: ClipRow[] | null; working: number; full: boolean; balance: number | null; plan: string | null; paidUntil: string | null; unlimited: boolean; rate?: number;
 }) {
   const now = new Date();
   const days = Array.from({ length: 7 }, (_, i) => new Date(now.getTime() - (6 - i) * DAY));
@@ -138,7 +138,8 @@ function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimite
   const top = Math.max(1, ...perDay);
   const recent = done.filter((x) => x.url).slice(0, 6);
   // what the balance still makes: a 30 s ad ≈ 46 credits economic, ≈ 154 with Veo Fast / Seedance
-  const ads = balance == null ? null : { eco: Math.floor(balance / 46), rec: Math.floor(balance / 154) };
+  const secs = balance == null ? null : secondsOf(balance, rate);
+  const ads = secs == null ? null : { eco: adsOf(secs), rec: Math.floor(secs / 120) };
   const until = paidUntil ? new Date(paidUntil).toLocaleDateString("es-CL", { day: "numeric", month: "long" }) : null;
 
   const stats: [string, number | null, string][] = [
@@ -153,20 +154,20 @@ function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimite
     <>
       <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
         {/* credits */}
-        <section aria-label="Tus créditos" className="rounded-2xl bg-[image:var(--grad)] p-[1px]">
+        <section aria-label="Tus segundos de video" className="rounded-2xl bg-[image:var(--grad)] p-[1px]">
           <div className="flex h-full flex-col justify-between gap-4 rounded-[15px] bg-surface p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm text-muted">Tus créditos{plan ? ` · Plan ${plan}` : ""}</span>
-                <b className="font-display text-4xl font-bold tabular-nums">{unlimited ? "Ilimitados" : balance == null ? "—" : fmtCredits(balance).replace(/ cr[eé]ditos?$/i, "")}</b>
+                <span className="text-sm text-muted">Tus segundos de video{plan ? ` · Plan ${plan}` : ""}</span>
+                <b className="font-display text-4xl font-bold tabular-nums">{unlimited ? "Ilimitados" : secs == null ? "—" : fmtSeconds(secs)}</b>
                 {until && !unlimited && <span className="text-xs text-muted">Tu plan se renueva el {until}</span>}
               </div>
               <Link href="/app/planes" className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">Recargar</Link>
             </div>
             {ads && (
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.eco}</b><span className="block text-xs text-muted">anuncios de 30 s con modelos económicos</span></div>
-                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.rec}</b><span className="block text-xs text-muted">con Veo Fast o Seedance</span></div>
+                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.eco}</b><span className="block text-xs text-muted">anuncios de 30 s con avatar que habla</span></div>
+                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.rec}</b><span className="block text-xs text-muted">con Veo 3.1 (máxima calidad)</span></div>
               </div>
             )}
           </div>

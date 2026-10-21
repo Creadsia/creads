@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
@@ -48,14 +50,14 @@ const D = {
 
 /** Credits pill: balance, and a quick way to buy more. */
 export function CreditsPill() {
-  const { info } = useCredits();
-  const low = info && !info.unlimited && (info.balance ?? 0) < 100;
+  const { info, seconds } = useCredits();
+  const low = seconds != null && seconds < 30;
   return (
-    <Link href="/app/planes" title="Planes y créditos" data-tour="creditos"
+    <Link href="/app/planes" title="Tus segundos de video" data-tour="creditos"
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-surface-2 ${low ? "border-warn/50 text-warn" : "border-line"}`}>
       <Svg d={D.coin} />
-      <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : (info.balance ?? 0).toLocaleString("es-CL")}</span>
-      <span className="hidden text-muted sm:inline">créditos</span>
+      <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : fmtSeconds(seconds ?? 0)}</span>
+      <span className="hidden text-muted sm:inline">de video</span>
     </Link>
   );
 }
@@ -130,19 +132,19 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           <div className="mx-1 mb-2 rounded-xl bg-surface-2 p-3">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-xs font-semibold text-muted">{plan}</span>
-              <span className="font-mono text-sm font-bold">{!info ? "…" : info.unlimited ? "Sin límite" : `${(info.balance ?? 0).toLocaleString("es-CL")} créditos`}</span>
+              <span className="font-mono text-sm font-bold">{!info ? "…" : info.unlimited ? "Sin límite" : `${fmtSeconds(secondsOf(info.balance ?? 0, info.rate))} de video`}</span>
             </div>
-            {until && <p className="mt-0.5 text-xs text-muted">Tus créditos vencen el {until}</p>}
+            {until && <p className="mt-0.5 text-xs text-muted">Tus segundos vencen el {until}</p>}
             {!info?.unlimited && (
               <Link href="/app/planes" role="menuitem" onClick={close}
                 className="mt-2 block rounded-lg bg-[image:var(--grad)] px-3 py-1.5 text-center text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                {info?.expired || !info?.plan ? "Activar plan" : "Comprar créditos"}
+                {info?.expired || !info?.plan ? "Activar plan" : "Sumar segundos"}
               </Link>
             )}
           </div>
 
           <Link href="/app/cuenta" role="menuitem" onClick={close} className={item}><Svg d={D.user} />Mi cuenta</Link>
-          <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes y créditos</Link>
+          <Link href="/app/planes" role="menuitem" onClick={close} className={item}><Svg d={D.card} />Planes</Link>
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
           <Link href="/app/api" role="menuitem" onClick={close} className={item}><Svg d={D.code} />API y conector</Link>

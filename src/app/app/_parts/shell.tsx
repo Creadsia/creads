@@ -9,6 +9,7 @@ import InstallBanner from "./install-banner";
 import Assistant from "./assistant";
 import FailNotices from "./fail-notices";
 import { Guides, HelpButton } from "./tour";
+import { fmtSeconds } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -111,7 +112,7 @@ function BackButton({ path }: { path: string }) {
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
 function navFor(user: ShellUser) {
-  const account: Item[] = [{ href: "/app/planes", label: "Planes y créditos", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }, { href: "/app/ayuda", label: "Centro de ayuda", icon: I.help }];
+  const account: Item[] = [{ href: "/app/planes", label: "Planes", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }, { href: "/app/ayuda", label: "Centro de ayuda", icon: I.help }];
   // giving access is the owner's alone
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
@@ -162,18 +163,18 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
 
 /** The account's credits in the menu (the owner has no limit). */
 function CreditsBox() {
-  const { info } = useCredits();
-  const low = info && !info.unlimited && (info.balance ?? 0) < 100;
+  const { info, seconds } = useCredits();
+  const low = seconds != null && seconds < 30;
   return (
     <Link href="/app/planes" data-tour="creditos" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-muted">Créditos</span>
+        <span className="text-xs font-semibold text-muted">Segundos de video</span>
         <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
-          {!info ? "…" : info.unlimited ? "Sin límite" : (info.balance ?? 0).toLocaleString("es-CL")}
+          {!info ? "…" : info.unlimited ? "Sin límite" : fmtSeconds(seconds ?? 0)}
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Comprar más créditos"}
+        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te queda poco video." : "Sumar más segundos"}
       </p>
     </Link>
   );
@@ -190,12 +191,12 @@ function ActivatePlan() {
     <Link href="/app/planes" className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <span aria-hidden="true" className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full opacity-40 blur-[60px]" style={{ background: "var(--grad)" }} />
       <span className="relative flex flex-col gap-0.5">
-        <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
+        <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin segundos de video"}</b>
         <span className="text-sm text-muted">
           {never ? "Puedes recorrer todo el estudio. Para generar videos, imágenes y voces, elige un plan: Starter cuesta US$19,99 el primer mes." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
         </span>
       </span>
-      <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Comprar créditos"}</span>
+      <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Sumar segundos"}</span>
     </Link>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
 import { type ItemId, LAUNCH_PCT, PACKS, hasLaunch, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
@@ -11,7 +12,9 @@ import PayBadges from "../pay-badges";
 // New accounts always get the launch offer on Starter (first purchase), so the price shown here is the price charged.
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
-const ADS = (credits: number) => Math.max(1, Math.round(credits / 144)); // a finished 30 s ad with Veo Lite ≈ 144 credits
+// shown in seconds of video (talking avatar); credits stay underneath
+const SECS = (credits: number) => secondsOf(credits);
+const ADS = (credits: number) => adsOf(SECS(credits));
 const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
 function Check({ className = "text-good" }: { className?: string }) {
@@ -99,7 +102,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
         {/* LEFT: the plan and what it gets you */}
         <section className="order-2 flex min-w-0 flex-col gap-5 lg:order-1" aria-labelledby="tu-plan">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tus créditos" : "Tu plan"}</h1>
+            <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tu recarga" : "Tu plan"}</h1>
           </div>
 
           {!isPack && (
@@ -126,11 +129,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                   <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${on ? "border-ink" : "border-line"}`}>{on && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-center gap-2">
-                      <b className="text-lg">{isPlan ? (x as (typeof PLANS)[number]).name : `${x.credits.toLocaleString("es-CL")} créditos`}</b>
+                      <b className="text-lg">{isPlan ? (x as (typeof PLANS)[number]).name : `+${fmtSeconds(SECS(x.credits))} de video`}</b>
                       {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
-                      {isPlan ? `${x.credits.toLocaleString("es-CL")} créditos al mes · ≈ ${ADS(x.credits)} anuncios de 30 s` : `≈ ${ADS(x.credits)} anuncios de 30 s · se suman a tu plan`}
+                      {isPlan ? `${fmtSeconds(SECS(x.credits))} de video al mes · ≈ ${ADS(x.credits)} anuncios de 30 s` : `≈ ${ADS(x.credits)} anuncios de 30 s · se suman a tu plan`}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end">
@@ -150,7 +153,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <li key={f} className="flex gap-2"><Check />{f}</li>
               ))}
               <li className="flex gap-2"><Check />Revisión de calidad automática en cada anuncio</li>
-              <li className="flex gap-2"><Check />Si un modelo falla, tus créditos vuelven solos</li>
+              <li className="flex gap-2"><Check />Si un modelo falla, tus segundos vuelven solos</li>
             </ul>
           </div>
 
@@ -171,11 +174,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
               {renews ? (
-                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio del plan"}{plan && hasLaunch(plan.id) ? " (con la oferta de lanzamiento)" : ""} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes y créditos».</p>
+                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio del plan"}{plan && hasLaunch(plan.id) ? " (con la oferta de lanzamiento)" : ""} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes».</p>
               ) : (
-                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes y créditos» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
+                <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}
-              <p>El plan anual se paga una sola vez y sus créditos duran el año. Las recargas se compran después, desde «Planes y créditos», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
+              <p>El plan anual se paga una sola vez y sus segundos duran el año. Las recargas se compran después, desde «Planes», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
           </details>
@@ -194,7 +197,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">
-                {q.period === "mensual" ? (renews ? `Luego ${usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${usd(plan?.monthly ?? 0)}/mes si renuevas.`) : q.period === "anual" ? `${q.credits.toLocaleString("es-CL")} créditos para todo el año.` : `${pack?.credits.toLocaleString("es-CL")} créditos que se suman a tu plan y vencen con él.`}
+                {q.period === "mensual" ? (renews ? `Luego ${usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${usd(plan?.monthly ?? 0)}/mes si renuevas.`) : q.period === "anual" ? `${fmtSeconds(SECS(q.credits))} de video para todo el año.` : `${fmtSeconds(SECS(pack?.credits ?? 0))} de video que se suman a tu plan y vencen con él.`}
               </span>
               <span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
               </span>
@@ -238,7 +241,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
             </button>
             <p className="text-center text-xs text-muted">
-              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los segundos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
             </p>
 
             <div className="flex flex-col items-center gap-2 text-center">

@@ -1,3 +1,4 @@
+import { adsOf, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
 
 // The Creads connector (MCP, «Streamable HTTP» without sessions): Claude, ChatGPT or any MCP client calls
@@ -32,14 +33,15 @@ export const mediaRef = (u: string) => {
 
 export const TOOLS: Tool[] = [
   {
-    name: "creads_saldo", title: "Ver créditos",
-    description: "Shows how many Creads credits the user's account has left (credits pay for images and videos).",
+    name: "creads_saldo", title: "Ver saldo de video",
+    description: "Shows how many seconds of video the user's Creads account has left (one second of a talking-avatar ad uses one second; pricier models use more; images use about one second each).",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { title: "Ver créditos", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Ver saldo de video", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     run: async (_a, call) => {
-      const d = await call<{ unlimited?: boolean; balance?: number | null; plan?: string | null }>("/api/credits");
-      if (d.unlimited) return { text: "La cuenta no tiene límite de créditos.", data: { ilimitado: true } };
-      return { text: `La cuenta tiene ${d.balance ?? 0} créditos${d.plan ? ` (plan ${d.plan})` : ""}.`, data: { creditos: d.balance ?? 0, plan: d.plan ?? null } };
+      const d = await call<{ unlimited?: boolean; balance?: number | null; plan?: string | null; rate?: number }>("/api/credits");
+      if (d.unlimited) return { text: "La cuenta no tiene límite.", data: { ilimitado: true } };
+      const s = secondsOf(d.balance ?? 0, d.rate);
+      return { text: `La cuenta tiene ${fmtSeconds(s)} de video (≈ ${adsOf(s)} anuncios de 30 s con avatar que habla)${d.plan ? `, plan ${d.plan}` : ""}.`, data: { segundos: s, plan: d.plan ?? null } };
     },
   },
   {

@@ -21,6 +21,6 @@ export async function GET(req: Request) {
       history: moves.map((m) => ({ id: m.id, delta: m.delta, kind: m.kind, note: m.note, created_at: m.created_at })),
     });
   } catch {
-    return NextResponse.json({ error: "No se pudieron leer tus créditos." }, { status: 502 });
+    return NextResponse.json({ error: "No se pudieron leer tus segundos de video." }, { status: 502 });
   }
 }

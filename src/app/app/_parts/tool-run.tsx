@@ -196,7 +196,7 @@ function AudioInput({ value, onChange, limits }: { value: { url: string; secs: n
 // ---------- results ----------
 
 function Result({ job, output, extra }: { job: Job; output: "image" | "video" | "audio"; extra?: (url: string) => React.ReactNode }) {
-  if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "No se pudo crear. Si se usaron créditos, ya volvieron a tu saldo."}</p>;
+  if (job.status === "failed") return <p className="text-sm text-bad">{job.error || "No se pudo crear. Si se usó saldo, ya volvieron a tu saldo."}</p>;
   if (job.status === "stuck") return <p className="text-sm text-warn">{job.error}</p>;
   if (job.status !== "done" || !job.url) return (
     <div className="flex flex-col gap-1 text-sm">
@@ -343,7 +343,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
         const n = (fails.current.get(id) ?? 0) + 1;
         fails.current.set(id, n);
         if (n < 40) timers.current.set(id, setTimeout(() => check(id), 15000));
-        else setJobs((js) => js.map((j) => (j.id === id ? { ...j, status: "stuck", error: "No pudimos revisar este trabajo. Recarga la página para volver a intentarlo; si falló, los créditos vuelven solos." } : j)));
+        else setJobs((js) => js.map((j) => (j.id === id ? { ...j, status: "stuck", error: "No pudimos revisar este trabajo. Recarga la página para volver a intentarlo; si falló, los segundos vuelven solos." } : j)));
       });
   }, [t.id, t.output]);
 
@@ -492,7 +492,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
             {busy ? <span className="inline-flex items-center gap-2"><Spinner />Iniciando…</span> : `${t.name} · ${money(usd)}`}
           </button>
           {missing && <p className="text-xs text-muted">{missing}</p>}
-          {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. <a href="/app/planes" className="font-semibold underline">Suma créditos</a>.</p>}
+          {!covers(usd) && <p className="text-xs text-warn">Te falta video para esto. <a href="/app/planes" className="font-semibold underline">Suma segundos</a>.</p>}
           {err && <p className="text-sm text-bad">{err}</p>}
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { User } from "./auth";
-import { DEFAULT_USD_PER_CREDIT, creditsFor } from "./credit-math";
+import { DEFAULT_USD_PER_CREDIT, SECOND_USD, creditsFor, fmtSeconds, secondsOf } from "./credit-math";
 import type { Finanzas } from "./finance";
 import { SbError, readPrivateJSON, sbRest, sbRpc } from "./supabase";
 
@@ -73,11 +73,11 @@ export async function needsCredits(user: User): Promise<string | null> {
   try {
     const st = await creditStatus(user.workspace);
     if ((st.balance ?? 0) > 0) return null;
-    if (st.paidUntil && !st.expired) return "Te quedaste sin créditos. Suma una recarga en «Planes y créditos» y sigues al tiro.";
+    if (st.paidUntil && !st.expired) return "Te quedaste sin segundos de video. Suma una recarga en «Planes» y sigues al tiro.";
   } catch {
-    return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
+    return "No pudimos revisar tus segundos de video. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas un plan activo. Elige uno en «Planes y créditos» (Starter a US$15 el primer mes).";
+  return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (Starter a US$15 el primer mes).";
 }
 
 /**
@@ -92,25 +92,25 @@ export async function chargeJob(user: User, usd: number, note: string, ref: stri
     const id = await sbRpc<number | null>("use_free_redo", { p_owner: ws, p_ad: opts.freeRedoOf, p_clip: ref }).catch(() => null);
     if (id) return { credits: 0, ref, free: true };
     // asked for free but there's no voucher left: don't charge behind the customer's back
-    throw new CreditError("Este corte ya usó su rehecho gratis. Si quieres rehacerlo otra vez, usa «Rehacer este corte» (gasta créditos).", 409);
+    throw new CreditError("Este corte ya usó su rehecho gratis. Si quieres rehacerlo otra vez, usa «Rehacer este corte» (descuenta segundos).", 409);
   }
   try {
     const [rate, b] = await Promise.all([usdPerCredit(), billingOf(ws)]);
-    if (expired(b)) throw new CreditError("Tu plan venció. Renuévalo en «Planes y créditos» y sigues al tiro.");
+    if (expired(b)) throw new CreditError("Tu plan venció. Renuévalo en «Planes» y sigues al tiro.");
     const credits = creditsFor(usd, rate, b.discount);
     const rows = await sbRpc<{ ok: boolean; balance: number }[]>("spend_credits", {
       p_owner: ws, p_amount: credits, p_note: note.slice(0, 200), p_ref: ref, p_usd: +usd.toFixed(4), p_by: user.email, p_free: false,
     });
     const r = rows[0];
     if (!r?.ok) {
-      throw new CreditError(`Te faltan créditos: esto usa ${credits.toLocaleString("es-CL")} y te quedan ${Number(r?.balance ?? 0).toLocaleString("es-CL")}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes y créditos» (Starter a US$15 el primer mes)." : "Suma créditos en «Planes y créditos»."}`);
+      throw new CreditError(`Te falta video: esto usa ${fmtSeconds(Math.max(1, Math.round((credits * rate) / SECOND_USD)))} y te quedan ${fmtSeconds(secondsOf(Number(r?.balance ?? 0), rate))}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes» (Starter a US$15 el primer mes)." : "Suma segundos en «Planes»."}`);
     }
     return { credits, ref, free: false };
   } catch (err) {
     if (err instanceof CreditError) throw err;
     // the credits system isn't set up yet: customers can't spend (fail closed)
-    if (err instanceof SbError && err.missing) throw new CreditError("Los créditos aún no están activados. Escríbenos a hola@creadsia.com.", 503);
-    throw new CreditError("No pudimos revisar tus créditos. Intenta de nuevo en un momento.", 503);
+    if (err instanceof SbError && err.missing) throw new CreditError("El saldo aún no está activado. Escríbenos a hola@creadsia.com.", 503);
+    throw new CreditError("No pudimos revisar tus segundos de video. Intenta de nuevo en un momento.", 503);
   }
 }
 

@@ -119,7 +119,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
       if (!res || !res.ok) {
         // don't spend on a redo without the correction the customer asked for
         if (before) setClips((cs) => cs.map((c) => (c.id === id ? before : c)));
-        return say(id, "No pudimos aplicar tu corrección. No se usaron créditos; intenta de nuevo.");
+        return say(id, "No pudimos aplicar tu corrección. No se usó tu saldo; intenta de nuevo.");
       }
     }
     await run(id, undefined, free, before);
@@ -225,7 +225,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
     const voice = vs?.voiceId ? (vs.lipsync === "pro" ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(String(c.text || "")), String(c.text || "")) : 0;
     return m.usdPerSecond * secs + frame + voice;
   };
-  const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos según el modelo");
+  const cost = (usd: number) => (usd > 0 ? price(usd) : "segundos según el modelo");
   const retryAllUsd = failed.reduce((t, c) => t + clipUsd(c, retryModel), 0);
   const waitingUsd = waiting.reduce((t, c) => t + clipUsd(c), 0);
   const ratio = ad.aspect === "16:9" ? "aspect-video" : ad.aspect === "1:1" ? "aspect-square" : ad.aspect === "4:5" ? "aspect-[4/5]" : "aspect-[9/16]";
@@ -261,7 +261,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
             </label>
             {ask === "all" ? (
               <div className="flex basis-full flex-wrap items-center gap-2 rounded-lg bg-surface p-2">
-                <span>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length} cortes`} usa ≈ {cost(retryAllUsd)}. Si alguno vuelve a fallar, esos créditos se devuelven solos.</span>
+                <span>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length} cortes`} usa ≈ {cost(retryAllUsd)}. Si alguno vuelve a fallar, esos segundos se devuelven solos.</span>
                 <button type="button" onClick={() => { setAsk(null); retryFailed(); }} className={btnCls}>Sí, reintentar</button>
                 <button type="button" onClick={() => setAsk(null)} className={ghostCls}>Cancelar</button>
               </div>
@@ -320,7 +320,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
                       )}
                       {ask === c.id ? (
                         <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2 text-xs">
-                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los créditos vuelven solos.{ad.final_url ? " Cuando esté listo, rearmamos tu anuncio solos." : ""}</span>
+                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los segundos vuelven solos.{ad.final_url ? " Cuando esté listo, rearmamos tu anuncio solos." : ""}</span>
                           <div className="flex gap-2">
                             {/* a model that refused the face would refuse again: retry with the one chosen above */}
                             <button type="button" onClick={() => { setAsk(null); if (refused(c)) run(c.id, retryModel); else redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>

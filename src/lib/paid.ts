@@ -1,3 +1,4 @@
+import { SECOND_USD, fmtSeconds } from "./credit-math";
 import { type Service, ensureDailyCap, ensureFunds, explainFailure } from "./balances";
 import { type User, isOwner } from "./auth";
 import { CreditError, chargeJob, refundJob, usdPerCredit } from "./credits";
@@ -63,8 +64,7 @@ export async function ensureNewAccountLimit(ws: string, usd: number) {
     const back = new Set(refunds.map((r) => r.ref));
     const spent = charges.filter((c) => !back.has(`charge:${c.id}`)).reduce((s, r) => s + Number(r.usd ?? 0), 0); // failed jobs that were refunded don't count
     if (spent + usd <= cap) return;
-    const credits = Math.floor(cap / (await usdPerCredit()));
-    throw new CreditError(`Por seguridad, durante sus primeros 2 días las cuentas nuevas pueden usar hasta ${credits.toLocaleString("es-CL")} créditos por día. Mañana tienes más; si lo necesitas hoy, escríbenos a hola@creadsia.com y lo habilitamos al tiro.`, 429);
+    throw new CreditError(`Por seguridad, durante sus primeros 2 días las cuentas nuevas pueden usar hasta ${fmtSeconds(Math.floor(cap / SECOND_USD))} de video por día. Mañana tienes más; si lo necesitas hoy, escríbenos a hola@creadsia.com y lo habilitamos al tiro.`, 429);
   } catch (err) {
     if (err instanceof CreditError) throw err;
     console.error("new account limit", ws, err instanceof Error ? err.message : err); // never block on a read error

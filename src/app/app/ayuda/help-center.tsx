@@ -23,7 +23,7 @@ export default function HelpCenter() {
       <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <label htmlFor="ayuda-q" className="font-semibold">¿En qué te ayudamos?</label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input id="ayuda-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ej: créditos, clonar mi voz, falló mi video…" className={`${inputCls} flex-1 py-2.5 text-base`} />
+          <input id="ayuda-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ej: segundos, clonar mi voz, falló mi video…" className={`${inputCls} flex-1 py-2.5 text-base`} />
           <button type="button" onClick={() => askAssistant(q.trim() || undefined)} className="rounded-lg bg-[image:var(--grad)] px-4 py-2.5 text-sm font-semibold text-white">
             {q.trim() ? "Preguntarle al asistente" : "Hablar con el asistente"}
           </button>

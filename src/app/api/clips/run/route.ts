@@ -88,12 +88,12 @@ export async function POST(req: Request) {
     if (talks && !ownVoice && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
     // Seedance refuses real faces: say so now instead of charging and failing
     if (!story && refusesFrame(provider, String(ad.format ?? "ugc"), { face: Boolean(face), product: Boolean(prod) })) {
-      return giveBack(NextResponse.json({ error: `${provider.label} no acepta fotos de personas reales (tu avatar, o una persona con tu producto). Elige Veo 3.1 Fast o Kling 3.0. No se usaron créditos.` }, { status: 400 }));
+      return giveBack(NextResponse.json({ error: `${provider.label} no acepta fotos de personas reales (tu avatar, o una persona con tu producto). Elige Veo 3.1 Fast o Kling 3.0. No se usó tu saldo.` }, { status: 400 }));
     }
     // «Avatar que habla» (Kling Avatar): the presenter's picture talks with the approved voice, in one step
     const talking = !story && Boolean(provider.talking);
-    if (talking && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usaron créditos.` }, { status: 400 }));
-    if (talking && !face && !clip.image_url) return giveBack(NextResponse.json({ error: `${provider.label} necesita un avatar (la foto de quien habla). Elígelo en Escenas. No se usaron créditos.` }, { status: 400 }));
+    if (talking && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usó tu saldo.` }, { status: 400 }));
+    if (talking && !face && !clip.image_url) return giveBack(NextResponse.json({ error: `${provider.label} necesita un avatar (la foto de quien habla). Elígelo en Escenas. No se usó tu saldo.` }, { status: 400 }));
     const talkSecs = Math.min(15, Math.max(3, Math.ceil(line.split(/\s+/).filter(Boolean).length / 2.4 + 0.8)));
     const asked = talking ? talkSecs : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
