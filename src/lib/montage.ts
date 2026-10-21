@@ -112,12 +112,29 @@ export function respell(words: Word[], script: string): Word[] {
   const b = toks.map(bare);
   const n = a.length, m = b.length;
   if (!n || !m) return words;
+  // one heard word can stand for several script words ("creadsia.com" ↔ "Creads IA punto com")
+  const said = (t: string) => (t === "punto" || t === "dot" ? "" : t);
+  const joins = (i: number, j: number) => {
+    for (let k = 2; k <= Math.min(5, j); k++) if (a[i - 1] && b.slice(j - k, j).map(said).join("") === a[i - 1]) return k;
+    return 0;
+  };
   // edit distance table (match = 0, substitute/insert/delete = 1)
   const d: number[][] = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
-  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) d[i][j] = Math.min(d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), d[i - 1][j] + 1, d[i][j - 1] + 1);
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
+    d[i][j] = Math.min(d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), d[i - 1][j] + 1, d[i][j - 1] + 1);
+    const k = joins(i, j);
+    if (k) d[i][j] = Math.min(d[i][j], d[i - 1][j - k]);
+  }
   const out = words.map((w) => ({ ...w }));
   let i = n, j = m;
   while (i > 0 && j > 0) {
+    const k = joins(i, j);
+    if (k && d[i][j] === d[i - 1][j - k]) {
+      // a web address reads better as heard ("creadsia.com"); anything else takes the script's words
+      if (!/[a-z]\.[a-z]/i.test(words[i - 1].w)) out[i - 1].w = toks.slice(j - k, j).join(" ");
+      i--; j -= k;
+      continue;
+    }
     const diag = d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
     if (d[i][j] === diag) {
       // same word, or a word heard wrong in the same spot: show the script's spelling

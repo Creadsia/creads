@@ -4,6 +4,8 @@ import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
 import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { cleanNiche } from "@/lib/niches";
+import { canUseVoice } from "@/lib/voices";
+import { takesOwnVoice } from "@/lib/formats";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -22,10 +24,16 @@ export async function POST(req: Request) {
       b?.avatarId ? db.get("avatars", String(b.avatarId)) : null,
       b?.productId ? db.get("products", String(b.productId)) : null,
     ]);
+    // The person's lines recorded with a chosen voice (ElevenLabs) and lip-synced, instead of the voice the
+    // video model makes up (which stumbles on Spanish words and brand names). The studio sends the choice
+    // ("" = the model's voice); the API and connectors default to the avatar's own voice.
+    const format = String(b?.format ?? "ugc");
+    const wanted = typeof b?.voiceId === "string" ? b.voiceId : typeof avatar?.voice_id === "string" ? avatar.voice_id : "";
+    const voiceId = wanted && takesOwnVoice(format) && (await canUseVoice(s.user.workspace, wanted)) ? wanted : null;
     const ad = await db.insert("ads", {
       title: String(b?.title ?? "Anuncio").slice(0, 120),
       script_id: b?.scriptId || null,
-      format: String(b?.format ?? "ugc"),
+      format,
       aspect: String(b?.aspect ?? "9:16"),
       model: model.id,
       status: "generating",
@@ -34,6 +42,7 @@ export async function POST(req: Request) {
         niche: cleanNiche(b?.niche) || null,
         avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
+        voiceId,
       },
     });
     const rows = [];

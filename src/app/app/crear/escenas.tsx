@@ -3,7 +3,8 @@
 import CreadsAvatars from "../_parts/creads-avatars";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { type FormatId, formatById, refusesFrame } from "@/lib/formats";
+import { type FormatId, formatById, refusesFrame, takesOwnVoice } from "@/lib/formats";
+import { lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import AdWork from "../_parts/ad-work";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
@@ -18,7 +19,8 @@ import type { Cut } from "./crear";
 
 // Steps 3 and 4 of "Crear anuncio": direct the scenes, then generate every cut with the chosen model.
 
-interface Avatar extends Row { name: string; description: string | null; image_url: string | null; voice_name: string | null }
+interface Avatar extends Row { name: string; description: string | null; image_url: string | null; voice_name: string | null; voice_id?: string | null }
+interface Voice { id: string; name: string; category: string }
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
@@ -53,9 +55,13 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [adId, setAdId] = useState<string | null>(null);
   const [starting, setStarting] = useState<string>("");
   const { price, covers, info } = useCredits();
+  // The voice that says the lines: one chosen from ElevenLabs (recorded, then lip-synced) or the one the video model makes up.
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [voiceId, setVoiceId] = useState<string | null>(null); // null = not touched yet: follows the avatar's voice
 
   useEffect(() => {
     fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {});
+    fetch("/api/voices").then((r) => r.json()).then((d) => setVoices(d.voices ?? [])).catch(() => {});
   }, []);
   useEffect(() => { if (!avatarId && avatars.rows?.length && f.av !== "none") setAvatarId(avatars.rows[0].id); }, [avatars.rows, avatarId, f.av]);
 
@@ -68,7 +74,11 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   // Seedance refuses a real person's face as the starting image
   const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
   useEffect(() => { if (m && faceRefused(m)) setModel("veo-3.1-fast"); }); // eslint-disable-line react-hooks/exhaustive-deps
-  const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) : 0;
+  const canVoice = takesOwnVoice(format);
+  const voice = canVoice ? (voiceId ?? (avatar?.voice_id && voices.some((v) => v.id === avatar.voice_id) ? avatar.voice_id : "")) : "";
+  const tooLong = voice ? cuts.findIndex((c) => words(c.texto) / 2.2 + 1.5 > (model.startsWith("veo") ? 8 : 10)) : -1;
+  const voiceUsd = voice ? cuts.reduce((a, c) => a + lipsyncUsd(lipsyncSeconds(c.texto), c.texto), 0) : 0;
+  const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) + voiceUsd : 0;
 
   async function direct(e?: React.FormEvent) {
     e?.preventDefault();
@@ -111,7 +121,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
         title, format, lang, niche, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
-        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null,
+        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice,
         clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i) })),
       }),
     }).catch(() => null);
@@ -285,9 +295,25 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                   </div>
                 );
               })()}
+              {canVoice && (
+                <div className="flex flex-col gap-1.5 rounded-xl border border-line p-3">
+                  <label className="flex flex-col gap-1 text-sm font-semibold">
+                    🗣 Voz de la persona
+                    <select value={voice} onChange={(e) => setVoiceId(e.target.value)} className={`${inputCls} font-normal`}>
+                      <option value="">Voz automática (la crea el modelo de video)</option>
+                      {voices.some((v) => v.category === "cloned") && <optgroup label="Tus voces">{voices.filter((v) => v.category === "cloned").map((v) => <option key={v.id} value={v.id}>★ {v.name}</option>)}</optgroup>}
+                      <optgroup label="Biblioteca">{voices.filter((v) => v.category !== "cloned").map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+                    </select>
+                  </label>
+                  <span className="text-xs text-muted">{voice
+                    ? "Cada frase se graba con esta voz, palabra por palabra, y se le sincronizan los labios a la persona. Recomendado en español: no se equivoca con palabras ni marcas."
+                    : "El modelo de video inventa la voz. En español a veces se equivoca con palabras y marcas: elige una voz para evitarlo."}</span>
+                  {tooLong >= 0 && <span className="text-xs text-warn">El corte {tooLong + 1} es muy largo para ponerle voz (máximo unas 18 palabras). Vuelve al paso 2 y divídelo en dos.</span>}
+                </div>
+              )}
               <p className="rounded-lg bg-surface-2 p-3 text-sm" data-tour="crear-precio">
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
-                {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}<br />
+                {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}{voice ? ` · Voz: ${voices.find((v) => v.id === voice)?.name ?? "elegida"}` : ""}<br />
                 {takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
                 Precio estimado: <b>{price(usd)}</b>{info && !info.unlimited ? ` · te quedan ${(info.balance ?? 0).toLocaleString("es-CL")}` : ""}. Si un corte falla, sus créditos vuelven solos.
                 {model.startsWith("veo") && aspect !== "9:16" && aspect !== "16:9" ? " Veo no hace 4:5 ni 1:1: se genera en 9:16." : ""}
@@ -295,7 +321,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               {!confirm ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
-                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd)} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
+                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || tooLong >= 0} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
                   {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o <a href="/app/planes" className="font-semibold underline">suma créditos</a>.</span>}
                 </div>
               ) : (

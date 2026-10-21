@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   // «Edición Pro»: headlines, zooms, flashes, sounds and a closing card on top of the montage
   const pro = b?.pro === true;
   const str = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, n) : "");
-  const cierreHint = { titulo: str(b?.cierre?.titulo, 28), linea: str(b?.cierre?.linea, 48) };
+  const cierreHint = { titulo: str(b?.cierre?.titulo, 28), linea: str(b?.cierre?.linea, 48), notas: str(b?.indicaciones, 600), estilo: str(b?.estilo, 20) };
   try {
     const ad = await db.get("ads", adId);
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });

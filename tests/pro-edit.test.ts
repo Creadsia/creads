@@ -32,3 +32,19 @@ test("Edición Pro: garbage from the AI still gives a usable plan", () => {
   assert.equal(plan.cierre.titulo, "¡Pruébalo hoy!");
   assert.ok(proAss(plan, 720, 1280, 12).includes("¡Pruébalo hoy!"));
 });
+
+test("the editor brief and style reach the prompt", () => {
+  const p = proPrompt("Pide tu café hoy", [{ w: "Pide", s: 0, e: 0.3 }], "es", { notas: "Marca: Café Lumbre. Evitar: precios.", estilo: "elegante" });
+  assert.match(p, /Café Lumbre/);
+  assert.match(p, /calm and premium/);
+  assert.match(proPrompt("x", [], "es"), /energetic/);
+});
+
+test("a web address heard as one word keeps its spelling in the captions", async () => {
+  const { respell } = await import("../src/lib/montage");
+  const w = (x: string, s: number) => ({ w: x, s, e: s + 0.2 });
+  const out = respell([w("Entra", 0), w("a", 0.3), w("creadsia.com.", 0.5)], "Entra a Creads IA punto com.");
+  assert.deepEqual(out.map((x) => x.w), ["Entra", "a", "creadsia.com."]);
+  const out2 = respell([w("Entra", 0), w("a", 0.3), w("creadsiacom", 0.5)], "Entra a Creads IA punto com.");
+  assert.deepEqual(out2.map((x) => x.w), ["Entra", "a", "Creads IA punto com."]);
+});
