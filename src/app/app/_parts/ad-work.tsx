@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatById } from "@/lib/formats";
 import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
-import { billedSeconds } from "@/lib/historias";
+import { billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
 import { btnCls, cardCls, ghostCls, inputCls, Working } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
@@ -21,7 +21,14 @@ interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]
 const QUICK_FIXES = ["Otra toma", "Más natural", "Que mire a la cámara", "Misma persona que en los otros cortes", "Mejor luz", "Sin texto en pantalla", "Que hable más lento", "Que no se corte la frase"];
 
 
-export default function AdWork({ adId }: { adId: string }) {
+/**
+ * In «Crear anuncio» the same ad is shown one stage at a time: «videos» (the cuts being made), «correcciones»
+ * (the automatic review and redoing a cut) and «edicion» (Edición Pro, captions, the final video). Without
+ * a view (Videos → an ad) everything shows on one page.
+ */
+export type AdView = "videos" | "correcciones" | "edicion";
+
+export default function AdWork({ adId, view, onNext }: { adId: string; view?: AdView; onNext?: () => void }) {
   const [ad, setAd] = useState<Ad | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [err, setErr] = useState("");
@@ -45,7 +52,7 @@ export default function AdWork({ adId }: { adId: string }) {
   const say = (id: string, text: string) => setClipMsg((m) => ({ ...m, [id]: text }));
   // paid actions ask first, inline: one clip (its id) or all failed clips ("all")
   const [ask, setAsk] = useState<string | null>(null);
-  const [retryModel, setRetryModel] = useState("veo-3.1-fast");
+  const [retryModel, setRetryModel] = useState("kling-3.0");
   useEffect(() => { fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {}); }, []);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   // when the cuts being redone finish, the ad is (re)assembled by itself: no extra clicks
@@ -175,6 +182,13 @@ export default function AdWork({ adId }: { adId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoBuild, ready, running, phase]);
 
+  // opening «Correcciones» with every cut ready and no review yet: review right away (free)
+  const autoReviewed = useRef(false);
+  useEffect(() => {
+    if (view === "correcciones" && ready && !running && !review && !phase && !autoReviewed.current) { autoReviewed.current = true; doReview(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, ready, running, review, phase]);
+
   if (!ad) return <div className={cardCls}><p className="text-muted">{err || "Cargando…"}</p></div>;
   const f = formatById(ad.format ?? "ugc");
   const done = clips.filter((c) => c.status === "done").length;
@@ -205,7 +219,9 @@ export default function AdWork({ adId }: { adId: string }) {
     const takesRefs = (m.id === "veo-3.1" || m.id === "veo-3.1-fast") && hasRefs;
     const secs = veo ? (takesRefs ? 8 : asked <= 4 ? 4 : asked <= 6 ? 6 : 8) : billedSeconds(asked, m.durations ?? undefined);
     const frame = !takesRefs && hasRefs && !c.image_url ? 0.134 : 0; // Nano Banana Pro opening frame
-    return m.usdPerSecond * secs + frame;
+    const vs = ad.settings as { voiceId?: string | null; lipsync?: string | null } | null;
+    const voice = vs?.voiceId ? (vs.lipsync === "pro" ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(String(c.text || "")), String(c.text || "")) : 0;
+    return m.usdPerSecond * secs + frame + voice;
   };
   const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos según el modelo");
   const retryAllUsd = failed.reduce((t, c) => t + clipUsd(c, retryModel), 0);
@@ -214,11 +230,11 @@ export default function AdWork({ adId }: { adId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className={cardCls}>
+      {view !== "edicion" && <section className={cardCls}>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="font-display text-xl font-bold">{ad.title || "Anuncio"}</h2>
-            <p className="text-sm text-muted">{f.icon} {f.name} · {ad.aspect} · {done} de {clips.length} cortes listos</p>
+            <h2 className="font-display text-xl font-bold">{view === "correcciones" ? "6 · Correcciones" : view === "videos" ? "5 · Videos" : ad.title || "Anuncio"}</h2>
+            <p className="text-sm text-muted">{view === "correcciones" ? "Creads revisa cada corte: que diga el guion exacto y que se vea bien. Los errores graves se rehacen gratis; también puedes pedir un cambio en cualquier corte." : `${f.icon} ${f.name} · ${ad.aspect} · ${done} de ${clips.length} cortes listos`}</p>
           </div>
           {busyClips && <Working label="Generando cortes…" className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text" />}
         </div>
@@ -252,6 +268,15 @@ export default function AdWork({ adId }: { adId: string }) {
             )}
           </div>
         )}
+        {view === "correcciones" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={doReview} disabled={!!phase || running || !all} className={ghostCls}>
+              {phase === "review" ? "Revisando cada corte… (≈ 1 min)" : phase === "redo" ? "Rehaciendo cortes…" : review ? "Revisar de nuevo" : "Revisar"}
+            </button>
+            {review && <span className="text-sm text-muted">{review.filter((r) => r.issues.length).length === 0 ? "Todos los cortes dicen el guion y se ven bien ✓" : `${review.filter((r) => r.issues.length).length} corte(s) con observaciones: revísalos abajo.`}</span>}
+          </div>
+        )}
+        {view === "correcciones" && note && <p className="rounded-lg bg-accent/10 p-3 text-sm">{note}</p>}
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
           {clips.map((c) => {
             const rv = reviewOf(c.id);
@@ -274,7 +299,7 @@ export default function AdWork({ adId }: { adId: string }) {
                   <p className="line-clamp-3 text-xs">“{c.text}”</p>
                   {(rv?.issues.length ? rv.issues.join(" · ") : c.error) && <p className="text-xs text-bad">{rv?.issues.length ? rv.issues.join(" · ") : c.error}</p>}
                   {clipMsg[c.id] && <p role="status" className="text-xs text-warn">{clipMsg[c.id]}</p>}
-                  {(c.status === "done" || c.status === "failed") && (
+                  {(c.status === "failed" || (c.status === "done" && view !== "videos")) && (
                     <div className="mt-auto flex flex-col gap-1">
                       <input aria-label={`Qué corregir en el corte ${c.idx + 1}`} value={notes[c.id] ?? ""} onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
@@ -312,10 +337,16 @@ export default function AdWork({ adId }: { adId: string }) {
             );
           })}
         </ul>
-      </section>
+        {view && onNext && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={onNext} disabled={!all || running || !!phase} className={btnCls}>{view === "videos" ? "Siguiente: correcciones →" : "Siguiente: edición final →"}</button>
+            {!all && <span className="text-sm text-muted">{busyClips ? "Espera a que terminen los cortes." : "Faltan cortes por terminar."}</span>}
+          </div>
+        )}
+      </section>}
 
-      <section className={cardCls}>
-        <h2 className="font-display text-xl font-bold">Revisar y armar el anuncio</h2>
+      {(!view || view === "edicion") && <section className={cardCls}>
+        <h2 className="font-display text-xl font-bold">{view ? "7 · Edición final" : "Revisar y armar el anuncio"}</h2>
         {!all ? (
           <p className="text-sm text-muted">Cuando todos los cortes estén listos, Creads los revisa (que digan el guion exacto y que sea la misma persona en todos) y arma el anuncio final con subtítulos.</p>
         ) : (
@@ -384,9 +415,9 @@ export default function AdWork({ adId }: { adId: string }) {
           </>
         )}
         {err && <p className="text-sm text-bad">{err}</p>}
-      </section>
+      </section>}
 
-      {ad.final_url && (
+      {ad.final_url && (!view || view === "edicion") && (
         <section className={cardCls}>
           <h2 className="font-display text-xl font-bold">Tu anuncio está listo 🎬</h2>
           <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_1fr]">

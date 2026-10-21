@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type FormatId, formatById, refusesFrame, takesOwnVoice } from "@/lib/formats";
 import { lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
-import { type VoiceChoice, takeOf, tooLongCut, voiceReady } from "./voz";
-import AdWork from "../_parts/ad-work";
+import { type VoiceChoice, takeOf, voiceReady } from "./voz";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 
@@ -23,7 +22,6 @@ import type { Cut } from "./crear";
 interface Avatar extends Row { name: string; description: string | null; image_url: string | null; voice_name: string | null; voice_id?: string | null }
 interface Voice { id: string; name: string; category: string; preview?: string }
 interface Accent { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; preview?: string }[] }
-const GENDER: Record<string, string> = { male: "hombre", female: "mujer" };
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
@@ -34,9 +32,9 @@ const FRAME_USD = 0.134;
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
 
-export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche, v, onVoiceStep }: {
+export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche, v, onVoiceStep, adId, setAdId }: {
   step: number; setStep: (n: number) => void; format: FormatId; lang: "en" | "es-CL"; title: string; cuts: Cut[]; scriptId: string | null; niche: string;
-  v: VoiceChoice; onVoiceStep: () => void;
+  v: VoiceChoice; onVoiceStep: () => void; adId: string | null; setAdId: (id: string) => void;
 }) {
   const f = formatById(format);
   const avatars = useTable<Avatar>("avatars");
@@ -56,7 +54,6 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [models, setModels] = useState<Model[]>([]);
   const [model, setModel] = useState("kling-3.0");
   const [confirm, setConfirm] = useState(false);
-  const [adId, setAdId] = useState<string | null>(null);
   const [starting, setStarting] = useState<string>("");
   const { price, covers, info } = useCredits();
   // the voice chosen, recorded and approved in step 3 (Voz): the video is lip-synced to those takes
@@ -82,7 +79,6 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const canVoice = takesOwnVoice(format);
   const voice = canVoice ? v.voice : "";
   const natural = v.natural;
-  const tooLong = voice ? tooLongCut(cuts, model.startsWith("veo")) : -1;
   const allRecorded = voiceReady(v, cuts, format);
   const voiceUsd = voice ? cuts.reduce((a, c) => a + (natural ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(c.texto), c.texto), 0) : 0;
   const libVoice = accents.flatMap((a) => a.voices.map((x) => ({ ...x, accent: a.label }))).find((x) => x.ref === voice);
@@ -261,10 +257,10 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
         </form>
       )}
 
-      {step === 3 && adId && <AdWork adId={adId} />}
       {step === 3 && !adId && (
         <section className={cardCls}>
           <h2 className="font-display text-xl font-bold">5 · Videos</h2>
+          <p className="text-sm text-muted">Elige el modelo y genera los cortes. Cada corte usa la voz que aprobaste y se le sincroniza la boca.</p>
           {starting ? <p className="rounded-lg bg-accent/10 p-3 text-sm">{starting} No cierres esta página.</p> : (
             <>
               {(() => {

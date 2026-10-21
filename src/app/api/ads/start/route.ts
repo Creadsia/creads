@@ -4,7 +4,7 @@ import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
 import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { cleanNiche } from "@/lib/niches";
-import { resolveVoice } from "@/lib/voices";
+import { defaultVoice, resolveVoice } from "@/lib/voices";
 import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
 
@@ -29,9 +29,13 @@ export async function POST(req: Request) {
     // video model makes up (which stumbles on Spanish words and brand names). The studio sends the choice
     // ("" = the model's voice); the API and connectors default to the avatar's own voice.
     const format = String(b?.format ?? "ugc");
-    const wanted = typeof b?.voiceId === "string" ? b.voiceId : typeof avatar?.voice_id === "string" ? avatar.voice_id : "";
-    const voiceId = wanted && takesOwnVoice(format) ? await resolveVoice(s.user.workspace, wanted) : null;
-    if (wanted && takesOwnVoice(format) && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
+    const lang = b?.lang === "es-CL" ? "es-CL" : "en";
+    const wanted = typeof b?.voiceId === "string" ? b.voiceId : null; // null = not chosen (API): the avatar's or a matching accent voice
+    let voiceId: string | null = null;
+    if (takesOwnVoice(format)) {
+      voiceId = wanted === null ? await defaultVoice(s.user.workspace, avatar, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
+      if (wanted && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
+    }
     // «Boca natural» (sync.so lipsync-2-pro) instead of the fast lip-sync: the most natural mouth, a bit more expensive
     const lipsync = voiceId && b?.lipsync === "pro" ? "pro" : null;
     // the voice the customer already heard and approved, one recording per cut (the video is lip-synced to it)
@@ -44,7 +48,7 @@ export async function POST(req: Request) {
       model: model.id,
       status: "generating",
       settings: {
-        lang: b?.lang === "es-CL" ? "es-CL" : "en",
+        lang,
         niche: cleanNiche(b?.niche) || null,
         avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,

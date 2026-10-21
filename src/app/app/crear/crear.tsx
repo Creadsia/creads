@@ -7,6 +7,7 @@ import { NICHES } from "@/lib/niches";
 import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
 import Voz, { type VoiceChoice, splitLong } from "./voz";
+import AdWork from "../_parts/ad-work";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
 
@@ -25,21 +26,45 @@ const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const secs = (t: string) => Math.max(2, Math.round(words(t) / PACE));
 const SPEAKER: Record<string, string> = { host: "Conductor", guest: "Invitado", reporter: "Reportero", homeowner: "Dueño de casa", voice: "Quien graba", person: "Persona", dialogo: "Diálogo" };
 
-const STEPS = ["Guion", "Cortes", "Voz", "Escenas", "Videos"];
+// The order that avoids errors: the script, then the voice (heard and approved), then the scene prompts,
+// the videos lip-synced to that voice, the corrections, and the final edit. «Cortes» is part of the script.
+const TABS: { label: string; steps: number[] }[] = [
+  { label: "Guion", steps: [0, 1] },
+  { label: "Voz", steps: [2] },
+  { label: "Escenas", steps: [3] },
+  { label: "Videos", steps: [4] },
+  { label: "Correcciones", steps: [5] },
+  { label: "Edición final", steps: [6] },
+];
 
 // Another style of ad, next to the formats: it opens its own studio.
 const MORE_KINDS = [
   { href: "/app/historias", icon: "🎬", name: "Historias animadas", tag: "Mini película con IA" },
 ];
 
+/** The language a script is written in (null while it's too short to tell). */
+export function guessLang(t: string): "en" | "es-CL" | null {
+  const w = t.toLowerCase().split(/[^a-záéíóúñü¿¡']+/).filter(Boolean);
+  if (w.length < 6) return null;
+  const es = w.filter((x) => /[áéíóúñ¿¡]/.test(x) || ["el", "la", "los", "las", "que", "de", "y", "tu", "es", "con", "para", "un", "una", "por", "en", "mi", "no"].includes(x)).length;
+  const en = w.filter((x) => ["the", "and", "you", "your", "is", "to", "of", "for", "with", "this", "that", "it", "my", "in", "on"].includes(x)).length;
+  if (es >= 3 && es > en * 1.5) return "es-CL";
+  if (en >= 3 && en > es * 1.5) return "en";
+  return null;
+}
+
 export default function Crear({ full = true }: { full?: boolean }) {
   const scripts = useTable<Script>("scripts");
   const [step, setStep] = useState(0);
   // step 3: who talks, with which voice, recorded and approved before any video is paid for
+  const [adId, setAdId] = useState<string | null>(null);
   const [voice, setVoice] = useState<VoiceChoice>({ avatarId: "", voice: "", natural: true, takes: [] });
   // «Grabar la voz» in the menu opens this page at step 3 (or explains it needs the script first)
   const [wantVoice, setWantVoice] = useState(false);
-  const [lang, setLang] = useState<"en" | "es-CL">("en");
+  // Spanish by default (Latin America); the script's own language wins (an English setting with a Spanish
+  // script made the model speak Spanish with an American accent)
+  const [lang, setLang] = useState<"en" | "es-CL">("es-CL");
+  const [langNote, setLangNote] = useState("");
   const [format, setFormat] = useState<FormatId>("ugc");
   const [text, setText] = useState("");
   const [cap, setCap] = useState(8);
@@ -139,14 +164,16 @@ export default function Crear({ full = true }: { full?: boolean }) {
       {scripts.missing && <SetupNotice />}
 
       <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
-        {STEPS.map((s, i) => {
-          // the voice tab always opens (it explains what it needs); scenes and videos need the cuts
-          const can = i === 0 || i === 2 || (i <= 3 && cuts.length > 0) || (i === 4 && cuts.length > 0 && step >= 4);
+        {TABS.map((t, i) => {
+          const first = t.steps[0];
+          // guion and voz always open (they explain what they need); scenes need the cuts; videos the scenes; the rest the ad
+          const can = first <= 2 || (first === 3 && cuts.length > 0) || (first === 4 && cuts.length > 0 && (step >= 4 || Boolean(adId))) || (first >= 5 && Boolean(adId));
+          const on = t.steps.includes(step);
           return (
-            <li key={s}>
-              <button type="button" disabled={!can} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${step === i ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>
-                <span className="font-mono text-xs">{i + 1}</span>{s}
+            <li key={t.label}>
+              <button type="button" disabled={!can} onClick={() => setStep(first === 0 && step === 1 ? 1 : first)} aria-current={on ? "step" : undefined}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${on ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>
+                <span className="font-mono text-xs">{i + 2}</span>{t.label}
               </button>
             </li>
           );
@@ -159,7 +186,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
       {step === 0 && (
         <form onSubmit={split} className={cardCls}>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="font-display text-xl font-bold">1 · Guion</h2>
+            <h2 className="font-display text-xl font-bold">2 · Guion</h2>
             <div className="flex flex-wrap items-end gap-3">
             <Field label="Nicho (para ordenar tus anuncios)">
               <input value={niche} onChange={(e) => pickNiche(e.target.value)} list="niches" placeholder="Ej: Reparación de cimientos" className={`${inputCls} w-64`} />
@@ -168,7 +195,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
             <Field label="Idioma del video">
               <select value={lang} onChange={(e) => setLang(e.target.value as "en" | "es-CL")} className={inputCls}>
                 <option value="en">Inglés (EE. UU.)</option>
-                <option value="es-CL">Español (Chile)</option>
+                <option value="es-CL">Español (Latinoamérica)</option>
               </select>
             </Field>
             </div>
@@ -179,7 +206,8 @@ export default function Crear({ full = true }: { full?: boolean }) {
               <button type="button" onClick={() => { setText(""); setFromGuion(false); }} className="text-xs font-semibold text-muted underline hover:text-ink">Empezar con uno en blanco</button>
             </p>
           )}
-          <textarea data-tour="crear-guion" value={text} onChange={(e) => setText(e.target.value)} rows={8} aria-label="Guion"
+          {langNote && <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-sm">{langNote}</p>}
+          <textarea data-tour="crear-guion" value={text} onChange={(e) => { setText(e.target.value); const g = guessLang(e.target.value); if (g && g !== lang) { setLang(g); setLangNote(g === "es-CL" ? "Tu guion está en español: dejamos el video en español." : "Your script is in English: the video is set to English."); } }} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
           <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en <a href="/app/guiones" className="font-semibold text-accent-text underline">Crear guion</a> (paso 1).</p>
 
@@ -252,7 +280,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
         <section className={cardCls}>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h2 className="font-display text-xl font-bold">2 · Cortes</h2>
+              <h2 className="font-display text-xl font-bold">2 · Guion: revisa los cortes</h2>
               <input aria-label="Título" value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputCls} font-semibold`} />
             </div>
             <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-muted">{f.icon} {f.name} · {cuts.length} cortes · ≈ {total} s</span>
@@ -291,10 +319,13 @@ export default function Crear({ full = true }: { full?: boolean }) {
       )}
 
       {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(cuts.length ? 1 : 0)} onNext={() => setStep(3)} onCuts={setCuts} />}
-      {step >= 3 && (
+      {(step === 3 || (step === 4 && !adId)) && (
         // Escenas counts its own steps 2 (scenes) and 3 (videos)
         <Escenas step={step - 1} setStep={(n) => setStep(n === 1 ? 1 : n + 1)} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche}
-          v={voice} onVoiceStep={() => setStep(2)} />
+          v={voice} onVoiceStep={() => setStep(2)} adId={adId} setAdId={(id) => { setAdId(id); setStep(4); }} />
+      )}
+      {step >= 4 && adId && (
+        <AdWork key={step} adId={adId} view={step === 4 ? "videos" : step === 5 ? "correcciones" : "edicion"} onNext={() => setStep(step + 1)} />
       )}
     </>
   );

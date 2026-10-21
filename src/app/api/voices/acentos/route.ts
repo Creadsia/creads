@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   try {
     const voices = await accentVoices();
     return NextResponse.json({
-      accents: ACCENTS.map((a) => ({ ...a, voices: voices.filter((v) => v.accent === a.locale).map(({ ref, name, gender, age, preview }) => ({ ref, name, gender, age, preview })) })),
+      accents: ACCENTS.map((a) => ({ locale: a.locale, label: a.label, voices: voices.filter((v) => v.accent === a.locale).map(({ ref, name, gender, age, preview, mine }) => ({ ref, name, gender, age, preview, mine: Boolean(mine) })) })),
     });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudieron leer las voces.") }, { status: 502 });

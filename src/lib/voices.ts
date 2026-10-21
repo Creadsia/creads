@@ -45,28 +45,68 @@ export async function canUseVoice(ws: string, voiceId: string) {
   return (await voicesFor(ws)).some((v) => v.id === voiceId);
 }
 
-/** Spanish accents offered in the studio, with real voices from ElevenLabs' public library. */
+/** Spanish accents offered in the studio, each with real men's and women's voices. */
 export const ACCENTS = [
-  { locale: "es-CL", label: "Chilena", accent: "chilean" },
-  { locale: "es-AR", label: "Argentina", accent: "argentine" },
-  { locale: "es-CO", label: "Colombiana", accent: "colombian" },
-  { locale: "es-VE", label: "Venezolana", accent: "venezuelan" },
-  { locale: "es-MX", label: "Mexicana", accent: "mexican" },
+  { locale: "es-CL", label: "Chilena", accent: "chilean", words: /chilen|chile\b/i },
+  { locale: "es-AR", label: "Argentina", accent: "argentine", words: /argentin|rioplat/i },
+  { locale: "es-VE", label: "Venezolana", accent: "venezuelan", words: /venezol/i },
+  { locale: "es-CO", label: "Colombiana", accent: "colombian", words: /colombi|paisa/i },
+  { locale: "es-MX", label: "Mexicana", accent: "mexican", words: /mexican|méxic/i },
 ] as const;
+
+const genderOf = (v: { labels?: Record<string, string>; name: string }) => {
+  const g = (v.labels?.gender ?? "").toLowerCase();
+  if (g === "male" || g === "female") return g;
+  if (/\b(mujer|femenin|woman|female|chica|señora)\b/i.test(v.name)) return "female";
+  if (/\b(hombre|masculin|man|male|chico|señor)\b/i.test(v.name)) return "male";
+  return "";
+};
 
 let accentCache: { at: number; list: SharedVoice[] } | null = null;
 
-/** A few real voices per accent (the most used ones), refreshed every hour. */
+/**
+ * Per accent: the voices Creads made for it (in our own account, first), then real people's voices from
+ * the ElevenLabs library — Professional Voice Clones first — a few men and a few women. Refreshed hourly.
+ */
 export async function accentVoices(): Promise<SharedVoice[]> {
   if (accentCache && Date.now() - accentCache.at < 3_600_000) return accentCache.list;
-  // by locale first; if the library tags that country only by accent name, by accent
+  const own = await elevenlabs.voices().catch(() => [] as Voice[]);
   const lists = await Promise.all(ACCENTS.map(async (a) => {
-    const byLocale = await sharedVoices(a.locale, 8).catch(() => [] as SharedVoice[]);
-    return byLocale.length ? byLocale : sharedVoices(a.locale, 8, a.accent).catch(() => [] as SharedVoice[]);
+    const mine: SharedVoice[] = own
+      .filter((v) => a.words.test(`${v.name} ${v.labels?.accent ?? ""} ${v.labels?.description ?? ""}`) || v.labels?.accent?.toLowerCase() === a.accent)
+      .map((v) => ({ ref: v.id, id: v.id, owner: "", name: v.name, gender: genderOf(v), age: v.labels?.age ?? "", accent: a.locale, preview: v.preview, mine: true }));
+    const lib: SharedVoice[] = [];
+    for (const gender of ["male", "female"] as const) {
+      const tries = [
+        { locale: a.locale, gender, professional: true }, { locale: a.locale, gender },
+        { locale: a.locale, accent: a.accent, gender, professional: true }, { locale: a.locale, accent: a.accent, gender },
+      ];
+      for (const t of tries) {
+        const got = await sharedVoices({ ...t, size: 3 }).catch(() => [] as SharedVoice[]);
+        if (got.length) { lib.push(...got.filter((g) => !lib.some((x) => x.id === g.id) && !mine.some((x) => x.id === g.id))); break; }
+      }
+    }
+    return [...mine, ...lib];
   }));
   const list = lists.flat();
   if (list.length) accentCache = { at: Date.now(), list };
   return list;
+}
+
+/** A presenter's gender from their description (to offer voices that match the face). */
+export function genderOfText(t: string): "male" | "female" | "" {
+  if (/\b(woman|female|girl|lady|mujer|señora|chica|she|her)\b/i.test(t)) return "female";
+  if (/\b(man|male|guy|boy|hombre|señor|chico|he|his)\b/i.test(t)) return "male";
+  return "";
+}
+
+/** The voice an ad gets when nobody chose one (API, connectors): the avatar's own, else a matching Chilean voice. */
+export async function defaultVoice(ws: string, avatar: { voice_id?: unknown; description?: unknown; name?: unknown } | null, lang: string): Promise<string | null> {
+  if (typeof avatar?.voice_id === "string" && avatar.voice_id && (await canUseVoice(ws, avatar.voice_id))) return avatar.voice_id;
+  if (lang !== "es-CL") return null;
+  const g = genderOfText(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`);
+  const cl = (await accentVoices()).filter((v) => v.accent === "es-CL" && (!g || v.gender === g));
+  return cl.length ? resolveVoice(ws, cl[0].ref) : null;
 }
 
 /**

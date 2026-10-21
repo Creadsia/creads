@@ -56,7 +56,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
       { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true, optional: true },
       { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
       { href: "/app/crear?paso=voz", label: "Grabar la voz", icon: I.mic, step: 3 },
-      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 4 },
+      { href: "/app/crear", label: "Escenas, video y edición", icon: I.create, step: 4 },
     ],
   },
   {

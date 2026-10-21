@@ -10,11 +10,16 @@ import type { Cut } from "./crear";
 // which voice, records every cut (ElevenLabs), Creads listens to each take and checks it says exactly the
 // text, and only then the video is paid for — lip-synced to these same approved takes.
 
-interface Avatar extends Row { name: string; image_url: string | null; voice_id?: string | null; voice_name?: string | null }
+interface Avatar extends Row { name: string; image_url: string | null; description?: string | null; voice_id?: string | null; voice_name?: string | null }
 interface Voice { id: string; name: string; category: string; preview?: string }
-interface Accent { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; preview?: string }[] }
+interface AccentVoice { ref: string; name: string; gender: string; age: string; preview?: string; mine?: boolean }
+interface Accent { locale: string; label: string; voices: AccentVoice[] }
 export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean }
-export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string }
+export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string; accent?: string; gender?: "male" | "female"; manual?: boolean }
+
+/** A presenter's gender from their description, so the voice matches the face. */
+const genderOf = (t: string): "male" | "female" | undefined =>
+  /\b(woman|female|girl|lady|mujer|señora|chica)\b/i.test(t) ? "female" : /\b(man|male|guy|boy|hombre|señor|chico)\b/i.test(t) ? "male" : undefined;
 
 /** «Creads = Cri ads» lines: what the voice reads instead of each hard word (captions keep the real spelling). */
 export function sayable(text: string, say = "") {
@@ -26,7 +31,6 @@ export function sayable(text: string, say = "") {
   return out;
 }
 
-const GENDER: Record<string, string> = { male: "hombre", female: "mujer" };
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 
 export const takeKey = (voice: string, text: string, say = "") => `${voice}|${say}|${text}`;
@@ -102,16 +106,22 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
   }
 
   const set = (p: Partial<VoiceChoice>) => onChange({ ...value, ...p });
-  const lib = accents.flatMap((a) => a.voices.map((v) => ({ ...v, accent: a.label })));
-  const libVoice = lib.find((v) => v.ref === value.voice);
-  const preview = libVoice?.preview ?? voices.find((v) => v.id === value.voice)?.preview;
+  const avatar = avatars.rows?.find((a) => a.id === value.avatarId);
+  const gender = value.gender ?? genderOf(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`) ?? "male";
+  const accent = value.accent ?? "es-CL";
+  const mineList: AccentVoice[] = voices.filter((v) => v.category === "cloned").map((v) => ({ ref: v.id, name: v.name, gender: "", age: "", preview: v.preview, mine: true }));
+  const shown: AccentVoice[] = accent === "mine" ? mineList : (accents.find((a) => a.locale === accent)?.voices ?? []).filter((v) => !v.gender || v.gender === gender);
+  // until the customer picks, the voice follows the presenter: their own voice, else the first matching one
+  const autoPick = !value.manual ? (avatar?.voice_id && voices.some((v) => v.id === avatar.voice_id) ? avatar.voice_id : shown[0]?.ref ?? "") : value.voice;
+  if (!value.manual && autoPick && autoPick !== value.voice) queueMicrotask(() => set({ voice: autoPick }));
   const long = tooLongCut(cuts);
   const ready = voiceReady(value, cuts, format);
   const recorded = cuts.filter((_, i) => takeOf(value, cuts, i)?.url).length;
 
   function pickAvatar(a: Avatar | null) {
     const own = a?.voice_id && voices.some((v) => v.id === a.voice_id) ? a.voice_id : "";
-    set({ avatarId: a?.id ?? "", ...(own ? { voice: own } : {}) });
+    const g = genderOf(`${a?.description ?? ""} ${a?.name ?? ""}`);
+    set({ avatarId: a?.id ?? "", ...(own ? { voice: own, accent: "mine" } : {}), ...(g ? { gender: g } : {}) });
   }
 
   async function check(i: number, url: string, text: string, current: Take[]) {
@@ -168,20 +178,40 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
         </div>
       )}
 
-      <label className="flex flex-col gap-1 text-sm font-semibold">
-        🗣 Voz
-        <select value={value.voice} onChange={(e) => set({ voice: e.target.value })} className={`${inputCls} font-normal`}>
-          <option value="">Voz automática (la crea el modelo de video, puede equivocarse en español)</option>
-          {voices.some((v) => v.category === "cloned") && <optgroup label="Tus voces">{voices.filter((v) => v.category === "cloned").map((v) => <option key={v.id} value={v.id}>★ {v.name}</option>)}</optgroup>}
-          {accents.filter((a) => a.voices.length).map((a) => (
-            <optgroup key={a.locale} label={`Acento ${a.label.toLowerCase()} (voces reales)`}>
-              {a.voices.map((v) => <option key={v.ref} value={v.ref}>{v.name}{GENDER[v.gender] ? ` · ${GENDER[v.gender]}` : ""}{v.age ? ` · ${v.age.replace("_", " ")}` : ""}</option>)}
-            </optgroup>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold">🗣 Acento</span>
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Acento">
+          {[...accents.map((a) => ({ id: a.locale, label: a.label })), ...(mineList.length ? [{ id: "mine", label: "★ Tus voces" }] : [])].map((a) => (
+            <button key={a.id} type="button" role="radio" aria-checked={accent === a.id} onClick={() => set({ accent: a.id, manual: false })}
+              className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${accent === a.id ? "border-transparent bg-[image:var(--grad)] text-white" : "border-line text-muted hover:text-ink"}`}>{a.label}</button>
           ))}
-          <optgroup label="Otras voces">{voices.filter((v) => v.category !== "cloned").map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
-        </select>
-      </label>
-      {preview && <audio key={preview} src={preview} controls preload="none" className="h-9 w-full max-w-sm" aria-label="Escuchar la voz" />}
+        </div>
+        {accent !== "mine" && (
+          <div className="flex gap-1.5" role="radiogroup" aria-label="Voz de hombre o mujer">
+            {([["male", "Hombre"], ["female", "Mujer"]] as const).map(([g, l]) => (
+              <button key={g} type="button" role="radio" aria-checked={gender === g} onClick={() => set({ gender: g, manual: false })}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${gender === g ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>{l}</button>
+            ))}
+            {avatar && genderOf(`${avatar.description ?? ""} ${avatar.name}`) && genderOf(`${avatar.description ?? ""} ${avatar.name}`) !== gender && <span className="text-xs text-warn">Ojo: {avatar.name} es {gender === "male" ? "mujer" : "hombre"}.</span>}
+          </div>
+        )}
+        {accents.length === 0 ? <p className="text-sm text-muted">Cargando voces…</p> : shown.length === 0 ? <p className="text-sm text-muted">No hay voces de este tipo todavía: prueba otro acento.</p> : (
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {shown.map((v) => (
+              <li key={v.ref} className={`flex flex-col gap-1.5 rounded-xl border p-2.5 ${value.voice === v.ref ? "border-accent bg-accent/10" : "border-line"}`}>
+                <button type="button" onClick={() => set({ voice: v.ref, manual: true })} aria-pressed={value.voice === v.ref} className="flex items-center justify-between gap-2 text-left text-sm">
+                  <span><b>{v.mine ? "★ " : ""}{v.name}</b>{v.age ? <span className="text-xs text-muted"> · {v.age.replace("_", " ")}</span> : null}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${value.voice === v.ref ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted"}`}>{value.voice === v.ref ? "Elegida" : "Elegir"}</span>
+                </button>
+                {v.preview && <audio src={v.preview} controls preload="none" className="h-8 w-full" aria-label={`Escuchar ${v.name}`} />}
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" onClick={() => set({ voice: "", manual: true })} className={`self-start text-xs underline ${value.voice ? "text-muted" : "font-semibold text-warn"}`}>
+          {value.voice ? "Prefiero la voz automática del modelo de video" : "Estás usando la voz automática (puede equivocarse en español): elige una voz de arriba"}
+        </button>
+      </div>
       {value.voice && (
         <label className="flex flex-col gap-1 text-sm font-semibold">
           Cómo se pronuncian tus marcas o palabras difíciles (opcional)

@@ -116,21 +116,32 @@ export const elevenlabs: VoiceProvider = {
 
 /** Starts a dub of a hosted video/audio into `target` (ISO 639-1). Returns ElevenLabs' dubbing id. */
 /** One voice of ElevenLabs' public library (real people who share their voice), for the accent picker. */
-export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string }
+export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string; mine?: boolean }
 
-/** Public library voices for one Spanish locale (es-CL, es-AR, es-CO…), most used first. */
-export async function sharedVoices(locale: string, size = 8, accent?: string): Promise<SharedVoice[]> {
-  const q = new URLSearchParams({ language: "es", page_size: String(size), sort: "cloned_by_count", ...(accent ? { accent } : { locale }) });
+/**
+ * Public library voices for one Spanish accent: by locale (es-CL…) or accent name, one gender, and
+ * optionally only Professional Voice Clones (studio recordings of real people: the most natural).
+ * The sample played is the one recorded in Spanish for that accent when the library has it.
+ */
+export async function sharedVoices(o: { locale: string; accent?: string; gender?: "male" | "female"; professional?: boolean; size?: number }): Promise<SharedVoice[]> {
+  const q = new URLSearchParams({ language: "es", page_size: String(o.size ?? 4), sort: "cloned_by_count" });
+  if (o.accent) q.set("accent", o.accent); else q.set("locale", o.locale);
+  if (o.gender) q.set("gender", o.gender);
+  if (o.professional) q.set("category", "professional");
   const res = await fetch(`${API}/v1/shared-voices?${q}`, { headers: { "xi-api-key": key() }, cache: "no-store" });
   if (!res.ok) return fail(res, "ElevenLabs (biblioteca)");
   const data = await res.json();
   return ((data?.voices ?? []) as Record<string, unknown>[])
     .filter((v) => typeof v.voice_id === "string" && typeof v.public_owner_id === "string" && v.free_users_allowed !== false)
-    .map((v) => ({
-      ref: `lib:${v.public_owner_id}:${v.voice_id}`, id: String(v.voice_id), owner: String(v.public_owner_id),
-      name: String(v.name ?? "Voz"), gender: String(v.gender ?? ""), age: String(v.age ?? ""), accent: locale,
-      preview: typeof v.preview_url === "string" ? v.preview_url : undefined,
-    }));
+    .map((v) => {
+      const langs = (Array.isArray(v.verified_languages) ? v.verified_languages : []) as { language?: string; locale?: string; preview_url?: string }[];
+      const es = langs.find((l) => l.language === "es" && l.locale === o.locale) ?? langs.find((l) => l.language === "es");
+      return {
+        ref: `lib:${v.public_owner_id}:${v.voice_id}`, id: String(v.voice_id), owner: String(v.public_owner_id),
+        name: String(v.name ?? "Voz"), gender: String(v.gender ?? o.gender ?? ""), age: String(v.age ?? ""), accent: o.locale,
+        preview: es?.preview_url ?? (typeof v.preview_url === "string" ? v.preview_url : undefined),
+      };
+    });
 }
 
 /** Adds a public library voice to Creads' account so it can read lines; returns its voice id. */
