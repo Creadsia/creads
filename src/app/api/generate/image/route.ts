@@ -49,7 +49,8 @@ export async function POST(req: Request) {
       db.insert("images", { prompt, url, model: provider.id, aspect }),
       db.insert("clips", { kind: "gen:image", prompt, model: provider.label, status: "done", url, usd: provider.usdPerImage }),
     ]).catch(() => null);
-    return NextResponse.json({ url, model: provider.id, usd: provider.usdPerImage });
+    // what it really costs Creads stays with Creads (customers see credits, not dollars)
+    return NextResponse.json({ url, model: provider.id, ...(s.user.workspace === "main" ? { usd: provider.usdPerImage } : {}) });
   } catch (err) {
     console.error("generate/image", provider.id, err instanceof Error ? err.message : err);
     if (ref) await refundJob(s.user.workspace, ref);

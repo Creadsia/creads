@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiKeyFromRequest, userFromToken } from "@/lib/auth";
 import { CORS, originOf } from "@/lib/oauth";
+import { tooMany } from "@/lib/rate";
 import { handle, type Call, type Ctx } from "@/lib/mcp";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
   const key = apiKeyFromRequest(req);
   const user = key ? await userFromToken(key) : null;
   if (!user) return unauthorized(req);
+  const limited = await tooMany("mcp", user.id);
+  if (limited) return NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32000, message: "Demasiadas consultas seguidas: espera unos minutos y sigue." } }, { status: 429, headers: CORS });
   const origin = originOf(req);
   const call: Call = async <T,>(path: string, body?: unknown) => {
     const res = await fetch(`${origin}${path}`, {
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => undefined);
   if (body === undefined) return NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, { status: 400, headers: CORS });
   const batch = Array.isArray(body);
-  const msgs = (batch ? body : [body]).slice(0, 20) as Record<string, unknown>[];
+  const msgs = (batch ? body : [body]).slice(0, 5) as Record<string, unknown>[];
   const out = (await Promise.all(msgs.map((m) => handle(m, call, origin, ctx)))).filter(Boolean);
   if (!out.length) return new Response(null, { status: 202, headers: CORS });
   return NextResponse.json(batch ? out : out[0], { headers: CORS });

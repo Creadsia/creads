@@ -23,6 +23,8 @@ export interface User {
   last_login: string | null;
   /** What this person's workspace may use: the whole studio, or only "Crear anuncio". */
   access?: Access;
+  /** Acting through an API key or a connector (not a browser): stricter spending limits apply. */
+  viaKey?: boolean;
 }
 export type Access = "full" | "ads";
 
@@ -259,8 +261,22 @@ export function apiKeyFromRequest(req: Request): string {
   return m ? m[1] : "";
 }
 
-/** For API routes: the user behind the request's session cookie, or behind its API key. */
-export const userFromRequest = (req: Request) => userFromToken(apiKeyFromRequest(req) || tokenFromCookieHeader(req.headers.get("cookie")));
+/**
+ * What an API key (or a connector's token) may do: make and follow ads and images, read its own files,
+ * avatars, voices and credits. Never the account itself (team, passwords, payments, keys, admin): a
+ * leaked key can't take over the account or the team.
+ */
+const KEY_ROUTES = /^\/api\/(v1\/|mcp$|ads\/start$|clips\/|credits$|cuts$|data\/(ads|clips|avatars|products|scripts)(\/|$)|generate\/|media\/|montage$|review$|scenes$|voices(\/acentos)?$|models$)/;
+export const keyMayUse = (req: Request) => {
+  try { return KEY_ROUTES.test(new URL(req.url).pathname); } catch { return false; }
+};
+
+/** For API routes: the user behind the request's session cookie, or behind its API key (only on the routes a key may use). */
+export const userFromRequest = (req: Request) => {
+  const key = apiKeyFromRequest(req);
+  if (key) return keyMayUse(req) ? userFromToken(key).then((u) => (u ? { ...u, viaKey: true } : null)) : Promise.resolve(null);
+  return userFromToken(tokenFromCookieHeader(req.headers.get("cookie")));
+};
 
 // ---------- API keys ----------
 // An API key is a long-lived session of the account that made it (stored hashed, like every session), so a

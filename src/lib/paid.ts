@@ -15,7 +15,8 @@ export async function payFor(user: User, usd: number, note: string, svc: Service
   if (user.workspace !== "main" && !opts.freeRedoOf) await ensureNewAccountLimit(user.workspace, cost);
   const charge = await chargeJob(user, usd, note, opts.ref, { freeRedoOf: opts.freeRedoOf });
   try {
-    if (user.workspace !== "main") await ensureDailyCap(cost); // the owner sees the alert but is never blocked
+    // the owner's own browser is never blocked; a key of the owner's team is (a leaked key can't drain the providers)
+    if (user.workspace !== "main" || user.viaKey) await ensureDailyCap(cost);
     await ensureFunds(svc, cost, opts.chars ?? 0);
   } catch (err) {
     await refundJob(user.workspace, charge.ref, "Devuelto: el servicio no estaba disponible");

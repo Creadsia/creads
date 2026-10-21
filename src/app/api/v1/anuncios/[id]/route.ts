@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { session, SESSION_ENDED } from "@/lib/access";
 import { advanceAd, loadAd, publicAd, studioAs } from "@/lib/api-ads";
+import { tooMany } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -9,6 +10,8 @@ export const maxDuration = 300;
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
+  const limited = await tooMany("mcp", s.user.id);
+  if (limited) return limited;
   const job = await loadAd(s.user.workspace, (await ctx.params).id);
   if (!job) return NextResponse.json({ error: "No encontré ese anuncio." }, { status: 404 });
   const now = await advanceAd(job, studioAs(req));

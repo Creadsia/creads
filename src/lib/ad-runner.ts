@@ -43,7 +43,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       });
       const ids = ad.clips.map((c) => c.id);
       for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map((id) => studio("/api/clips/run", { id }).catch(() => null)));
-      return { estado: "generando", paso: `Generando ${ids.length} cortes con ${videoProviders.find((p) => p.id === modelo)?.label ?? modelo}`, modelo, adId: ad.ad.id, clipIds: ids };
+      return { estado: "generando", paso: `Generando ${ids.length} cortes`, modelo, adId: ad.ad.id, clipIds: ids };
     }
     if (j.estado === "generando") {
       const ids = j.clipIds ?? [];
