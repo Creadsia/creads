@@ -28,7 +28,7 @@ export const CATEGORIAS: Categoria[] = [
   {
     slug: "anuncios", menu: "Anuncios",
     title: "Anuncios terminados con IA, listos para subir",
-    lead: "Pega un guion o parte de un anuncio que ya vende. Creads arma los cortes, la voz, los subtítulos y revisa cada corte antes de entregarte el anuncio.",
+    lead: "Pega un guion o parte de un anuncio que lleva semanas activo. Creads arma los cortes, la voz, los subtítulos y revisa cada corte antes de entregarte el anuncio.",
     points: ["UGC a cámara, podcast, testimonio, noticiero y más formatos", "Revisión de calidad en cada corte antes de armar", "9:16 para Reels y TikTok, 4:5 para el feed", "En español de Chile o en inglés"],
     app: "/app/crear", cta: "Crear mi anuncio", examples: "anuncio", flow: true,
     seo: "Crea anuncios en video con IA: UGC, podcast y testimonios con voz, subtítulos y revisión de calidad. Listos para Meta y TikTok.",
