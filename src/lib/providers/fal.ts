@@ -212,8 +212,9 @@ export const FAL_VIDEO: FalVideo[] = [
     build: wan,
   },
   {
-    // Seedance 2.0 Mini (fal, 2026-10): $0.1547/s at 720p ($0.0721 at 480p). Being tested with real faces.
+    // Seedance 2.0 Mini (fal, 2026-10): $0.1547/s at 720p ($0.0721 at 480p). Scenes without real faces only.
     id: "seedance-2.0-mini",
+    noFaces: true, // tested 2026-10-21: refused the avatar's real face twice (like the other Seedance)
     label: "Seedance 2.0 Mini",
     usdPerSecond: 0.1547,
     i2v: "bytedance/seedance-2.0/mini/image-to-video",
