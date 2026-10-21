@@ -39,3 +39,12 @@ test("the editor brief and style reach the prompt", () => {
   assert.match(p, /calm and premium/);
   assert.match(proPrompt("x", [], "es"), /energetic/);
 });
+
+test("a web address heard as one word keeps its spelling in the captions", async () => {
+  const { respell } = await import("../src/lib/montage");
+  const w = (x: string, s: number) => ({ w: x, s, e: s + 0.2 });
+  const out = respell([w("Entra", 0), w("a", 0.3), w("creadsia.com.", 0.5)], "Entra a Creads IA punto com.");
+  assert.deepEqual(out.map((x) => x.w), ["Entra", "a", "creadsia.com."]);
+  const out2 = respell([w("Entra", 0), w("a", 0.3), w("creadsiacom", 0.5)], "Entra a Creads IA punto com.");
+  assert.deepEqual(out2.map((x) => x.w), ["Entra", "a", "Creads IA punto com."]);
+});
