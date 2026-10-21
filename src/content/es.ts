@@ -33,12 +33,6 @@ export const es: Content = {
       { tag: "", text: "Afiliados: comisión mensual por cada cliente que traigas" },
     ],
   },
-  demoAd: {
-    title: "Así sale un anuncio de Creads",
-    lead: "Este video salió tal cual de Creads, sin editar fuera: escribimos el guion, elegimos el avatar y Creads hizo el resto.",
-    points: ["Guion dividido en cortes", "Avatar con voz chilena, la misma cara en todos los cortes", "Subtítulos animados", "Revisión de calidad de cada corte"],
-    cta: "Haz el tuyo desde US$19,99",
-  },
   menu: [
     { label: "Anuncios", href: "/ia/anuncios", badge: "", ex: "anuncios" },
     { label: "Espiar", href: "/ia/espiar", badge: "", ex: "espiar" },

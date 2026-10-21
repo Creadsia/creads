@@ -32,12 +32,6 @@ export const en = {
       { tag: "", text: "Affiliates: a monthly commission for every customer you bring" },
     ],
   },
-  demoAd: {
-    title: "This is how a Creads ad comes out",
-    lead: "This video came straight out of Creads, with no outside editing: we wrote the script, picked the avatar and Creads did the rest.",
-    points: ["Script split into cuts", "Avatar with a Chilean voice, the same face in every cut", "Animated subtitles", "Quality review of every cut"],
-    cta: "Make yours from US$19.99",
-  },
   menu: [
     { label: "Ads", href: "#anuncio", badge: "", ex: "anuncios" },
     { label: "Spy", href: "#resultado", badge: "", ex: "espiar" },

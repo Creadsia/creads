@@ -796,26 +796,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        {/* One finished ad exactly as Creads delivers it (no outside editing) */}
-        <section id="anuncio" aria-labelledby="anuncio-title" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto grid max-w-5xl items-center gap-8 rounded-[2rem] border border-line bg-surface p-6 sm:p-10 md:grid-cols-[minmax(0,300px)_1fr]">
-            <video src="/videos/anuncio-creads.mp4" poster="/videos/anuncio-creads.jpg" controls playsInline preload="none" className="mx-auto aspect-[9/16] w-full max-w-[300px] rounded-2xl bg-black" />
-            <div className="flex flex-col gap-4">
-              <h2 id="anuncio-title" className="font-display text-3xl font-semibold sm:text-4xl">{t.demoAd.title}</h2>
-              <p className="max-w-[52ch] text-lg text-muted">{t.demoAd.lead}</p>
-              <ul className="flex flex-col gap-2 text-sm">
-                {t.demoAd.points.map((x) => (
-                  <li key={x} className="flex items-start gap-2">
-                    <svg viewBox="0 0 20 20" className="mt-0.5 h-4 w-4 shrink-0 text-good" aria-hidden="true"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    {x}
-                  </li>
-                ))}
-              </ul>
-              <a href="/empezar?plan=starter&periodo=mensual" className="w-fit rounded-xl bg-[image:var(--grad)] px-6 py-3 font-semibold text-white">{t.demoAd.cta}</a>
-            </div>
-          </div>
-        </section>
-
         {/* What goes in, what comes out: the finished ad */}
         <section id="resultado" aria-labelledby="outcome-title" className={`-mt-6 scroll-mt-24 ${gutter}`}>
           <div className="mx-auto max-w-7xl">
