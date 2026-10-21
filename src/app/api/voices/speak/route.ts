@@ -12,6 +12,8 @@ const USD_PER_CHAR = 0.00022;
 
 export const maxDuration = 60;
 
+class VoicePickError extends Error {}
+
 // Reads a line with a voice and stores the mp3 in our storage.
 export async function POST(req: Request) {
   const s = await session(req);
@@ -27,7 +29,11 @@ export async function POST(req: Request) {
   if (text.length < 2 || !choice) return NextResponse.json({ error: "Elige una voz y escribe el texto." }, { status: 400 });
   let ref = "";
   try {
-    const voiceId = await resolveVoice(s.user.workspace, choice); // also a real accent voice from the library
+    // also a real accent voice from the library (added to the account the first time)
+    const voiceId = await resolveVoice(s.user.workspace, choice).catch((e) => {
+      console.error("voices/speak add", e instanceof Error ? e.message : e);
+      throw new VoicePickError(s.user.workspace === "main" && e instanceof Error ? e.message : "");
+    });
     if (!voiceId) return NextResponse.json({ error: "Esa voz no está en tu cuenta." }, { status: 403 });
     ref = (await payFor(s.user, text.length * USD_PER_CHAR, "Voz IA", "eleven", { chars: text.length })).ref;
     const { bytes, mime } = await elevenlabs.speak(voiceId, text, { model, lang });
@@ -36,6 +42,9 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("voices/speak", err instanceof Error ? err.message : err);
     if (ref) await refundJob(s.user.workspace, ref);
+    if (err instanceof VoicePickError) return NextResponse.json({ error: `Esa voz no se pudo usar. Elige otra de la lista.${err.message ? ` (${err.message})` : ""}` }, { status: 400 });
+    // Creadsia's own team sees the real reason (to fix it fast); customers get the calm message
+    if (s.user.workspace === "main" && err instanceof Error) return NextResponse.json({ error: `No se pudo grabar: ${err.message.slice(0, 300)}` }, { status: failStatus(err) });
     return NextResponse.json({ error: await failMessage(err, s.user, "eleven") }, { status: failStatus(err) });
   }
 }

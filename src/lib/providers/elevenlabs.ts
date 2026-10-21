@@ -132,7 +132,9 @@ export async function sharedVoices(o: { locale: string; accent?: string; gender?
   if (!res.ok) return fail(res, "ElevenLabs (biblioteca)");
   const data = await res.json();
   return ((data?.voices ?? []) as Record<string, unknown>[])
-    .filter((v) => typeof v.voice_id === "string" && typeof v.public_owner_id === "string" && v.free_users_allowed !== false)
+    // only voices any API account can use at the normal price: no custom rate, no special terms
+    .filter((v) => typeof v.voice_id === "string" && typeof v.public_owner_id === "string" && v.free_users_allowed !== false
+      && (v.rate == null || Number(v.rate) <= 1) && v.fiat_rate == null && !v.live_moderation_enabled)
     .map((v) => {
       const langs = (Array.isArray(v.verified_languages) ? v.verified_languages : []) as { language?: string; locale?: string; preview_url?: string }[];
       const es = langs.find((l) => l.language === "es" && l.locale === o.locale) ?? langs.find((l) => l.language === "es");
