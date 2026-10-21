@@ -66,11 +66,12 @@ export const TOOLS: Tool[] = [
       idioma: { type: "string", enum: ["es-CL", "en"], default: "es-CL", description: "Spoken language: Chilean Spanish or English." },
       titulo: { type: "string", maxLength: 80, description: "Short name to find it later." },
       avatar: { type: "string", description: "Optional: id of one of the account's avatars (from creads_avatares), so the same person appears in every cut." },
+      edicion: { type: "string", enum: ["pro", "simple"], default: "pro", description: "pro (default): the ad comes out edited like an agency would: animated headlines on the key words, zooms and flashes on every cut, sound effects and a closing card. simple: only cuts and subtitles." },
       modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = Creads picks the most economical one that works." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
-      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}) });
+      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro" });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
   },

@@ -14,6 +14,8 @@ export interface AdJob {
   avatarId?: string;
   cortes?: { tipo: string; texto: string }[]; adId?: string; clipIds?: string[]; reintentos?: Record<string, number>; revisado?: boolean;
   videoUrl?: string; error?: string;
+  /** «pro» (default): headlines, zooms, flashes, sounds and a closing card. «simple»: cuts + subtitles only. */
+  edicion?: "pro" | "simple";
 }
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
@@ -67,7 +69,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       return todo.length ? { estado: "generando", revisado: true, paso: `Rehaciendo ${todo.length} corte(s) que la revisión encontró con errores` } : { estado: "armando", revisado: true, paso: "Revisión de calidad aprobada" };
     }
     if (j.estado === "armando") {
-      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello } }, 290_000);
+      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello }, pro: j.edicion !== "simple" }, 290_000);
       return { estado: "listo", paso: "Video terminado", videoUrl: d.url };
     }
     return {};

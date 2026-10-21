@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const ffmpegFiles = ["./node_modules/ffmpeg-static/ffmpeg", "./assets/fonts/**"];
+const ffmpegFiles = ["./node_modules/ffmpeg-static/ffmpeg", "./assets/fonts/**", "./assets/sfx/**"];
 
 // Security headers for every page and API answer.
 // The page scripts Next.js writes inline need 'unsafe-inline'; everything else is locked to our own site,

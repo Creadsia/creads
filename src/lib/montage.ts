@@ -18,7 +18,7 @@ function ffmpeg() {
 }
 
 /** Runs ffmpeg and returns its log (ffmpeg writes everything to stderr). */
-async function ff(args: string[], timeoutMs = 240_000) {
+export async function ff(args: string[], timeoutMs = 240_000) {
   try {
     // only local files: a customer's upload disguised as a playlist can't make FFmpeg fetch other addresses
     const r = await run(ffmpeg(), ["-hide_banner", "-protocol_whitelist", "file,pipe", ...args], { maxBuffer: 64 * 1024 * 1024, timeout: timeoutMs });

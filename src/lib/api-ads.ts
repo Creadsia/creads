@@ -20,7 +20,7 @@ const DONE = new Set(["listo", "error"]);
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr).map((f) => f.id);
 
-export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string } | string {
+export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string; edicion: "pro" | "simple" } | string {
   const guion = typeof b.guion === "string" ? b.guion.trim() : "";
   if (guion.length < 20) return "Manda el guion en «guion» (al menos 20 caracteres).";
   if (guion.length > 4000) return "El guion es muy largo (máximo 4.000 caracteres).";
@@ -39,7 +39,7 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
     if (typeof b.avatar !== "string" || !/^[0-9a-f-]{36}$/i.test(b.avatar)) return "El avatar no es válido: usa el id de uno de tus avatares (GET /api/v1/avatares).";
     avatarId = b.avatar;
   }
-  return { guion, formato, idioma, modelo, titulo, sello: b.sello === true, ...(avatarId ? { avatarId } : {}) };
+  return { guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(avatarId ? { avatarId } : {}) };
 }
 
 export async function createAd(ws: string, userId: string, o: Exclude<ReturnType<typeof readOrder>, string>): Promise<ApiAd> {
