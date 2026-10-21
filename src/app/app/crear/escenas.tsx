@@ -25,7 +25,7 @@ interface Avatar extends Row { name: string; description: string | null; image_u
 interface Voice { id: string; name: string; category: string; preview?: string }
 interface Accent { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; preview?: string }[] }
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
-interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
+interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string; es?: string }
 interface Scene { dir: Dir; prompt: string }
 interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean; talking?: boolean }
 
@@ -260,8 +260,12 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
                       <p className="font-medium">“{cuts[i].texto}”</p>
-                      <p className="text-sm"><b>{s.dir.setting}</b>{s.dir.action ? ` — ${s.dir.action}` : ""}{s.dir.broll ? ` ${s.dir.broll}` : ""}</p>
-                      <p className="text-xs text-muted">{s.dir.framing}{s.dir.emotion ? ` · ${s.dir.emotion}` : ""}</p>
+                      {s.dir.es || lang === "en" ? (
+                        <p className="text-sm">{lang === "en" ? <><b>{s.dir.setting}</b>{s.dir.action ? ` — ${s.dir.action}` : ""}</> : s.dir.es}</p>
+                      ) : (
+                        <p className="text-sm"><b>{s.dir.setting}</b>{s.dir.action ? ` — ${s.dir.action}` : ""}{s.dir.broll ? ` ${s.dir.broll}` : ""}</p>
+                      )}
+                      {lang === "en" && <p className="text-xs text-muted">{s.dir.framing}{s.dir.emotion ? ` · ${s.dir.emotion}` : ""}</p>}
                       <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2">
                         <label className="flex flex-col gap-1 text-xs font-semibold">
                           ¿Qué quieres cambiar en esta escena?
@@ -278,7 +282,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                         <span className="text-[11px] text-muted">Lo que dice la persona no cambia: solo lo que se ve.</span>
                       </div>
                       <details>
-                        <summary className="cursor-pointer text-xs font-semibold text-muted">Editar el prompt a mano (avanzado, en inglés)</summary>
+                        <summary className="cursor-pointer text-xs font-semibold text-muted">Editar el prompt a mano (avanzado{lang === "en" ? "" : ": va en inglés porque los modelos de video lo siguen mejor"})</summary>
                         <textarea value={s.prompt} onChange={(e) => editPrompt(i, e.target.value)} rows={10} aria-label={`Prompt del corte ${i + 1}`}
                           className="mt-2 w-full rounded-lg border border-line bg-surface-2 p-3 font-mono text-xs" />
                         <p className="text-xs text-muted">Lo que cambies aquí es lo que se usa al generar este corte.</p>

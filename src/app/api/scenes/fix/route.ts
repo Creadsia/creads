@@ -8,7 +8,7 @@ import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 60;
 
-interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
+interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string; es?: string }
 
 // «¿Qué quieres cambiar en esta escena?»: before anything is generated, rewrites one cut's prompt (and its
 // short description) with the change the customer wrote in their own words. The spoken words never change.
@@ -43,8 +43,8 @@ Rewrite the prompt applying the change. Rules:
 - Keep any FORMAT LOCK / REMINDER / LANGUAGE / PRODUCT / LESSONS block as it is; keep the same person, wardrobe and overall style unless the change asks otherwise.
 - Make it believable real phone footage; no on-screen text, logos or captions.
 - Plain English.
-Also update the short scene description fields to match the new prompt (English, a few words each).
-Reply ONLY JSON: {"prompt":"the full new prompt","dir":{"setting":"…","framing":"…","action":"…","broll":"…","emotion":"…","movement":"…"},"cambios":"en español, 1 frase: qué cambió"}`,
+Also update the short scene description fields to match the new prompt (English, a few words each), and "es": the same scene in 1–2 natural Spanish sentences for the customer.
+Reply ONLY JSON: {"prompt":"the full new prompt","dir":{"setting":"…","framing":"…","action":"…","broll":"…","emotion":"…","movement":"…","es":"…"},"cambios":"en español, 1 frase: qué cambió"}`,
       }),
     );
     if (!r?.prompt || (line && !r.prompt.includes(line.slice(0, 20)))) throw new Error("La IA cambió las palabras del corte; intenta de nuevo.");

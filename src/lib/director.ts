@@ -17,6 +17,8 @@ export interface CutIn {
 }
 
 export interface Direction {
+  /** What the customer reads (their language): the scene in 1–2 sentences. */
+  es?: string;
   label?: string;
   framing?: string;
   movement?: string;
@@ -142,7 +144,9 @@ export function directorPrompt(ctx: SceneContext, cuts: CutIn[]): string {
       return `CUT ${n} [${c.tipo}] ~${dur}s | ${says}${c.persona ? ` | ON-CAMERA PERSON: ${c.persona}` : ""} | ${c.mostrarFijo && c.mostrar ? `WHAT WE SEE (decided by the customer, follow it exactly, translate it to English): ${c.mostrar}` : `suggested visual: ${c.mostrar || "-"}`}`;
     })
     .join("\n");
-  const shape = `Reply ONLY JSON array: [{"label":"1","framing":"shot type (different from the previous cut)","movement":"camera and subject movement","setting":"exact location","action":"what happens, synced to specific words: 'On \\"...\\" ...'","broll":"optional cutaway or empty","emotion":"tone","style":""}]`;
+  // the customer reads the scene in their own language; the model gets the English prompt
+  const es = ctx.lang === "es-CL" ? `,"es":"1 o 2 frases en español natural (Chile) para el cliente: dónde está, cómo es la toma y qué hace en este corte"` : "";
+  const shape = `Reply ONLY JSON array: [{"label":"1","framing":"shot type (different from the previous cut)","movement":"camera and subject movement","setting":"exact location","action":"what happens, synced to specific words: 'On \\"...\\" ...'","broll":"optional cutaway or empty","emotion":"tone","style":""${es}}]`;
   const producer = dir ? `THE PRODUCER'S DIRECTION FOR THE WHOLE VIDEO (written in Spanish — follow it in every cut where it applies; top priority after the locked words): "${dir}"` : "";
   const product = ctx.product ? `PRODUCT the presenter shows in the video: ${ctx.product.description || ctx.product.name}. Show it clearly whenever the words talk about it.` : "";
   const chile = ctx.lang === "es-CL" ? "The video is in Chilean Spanish and happens in Chile: Chilean homes, streets and details." : "";
