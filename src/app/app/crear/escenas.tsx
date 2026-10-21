@@ -268,7 +268,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
             <>
               {(() => {
                 // Veo 3.1 Lite (preview) fails on every ad for now: not offered
-                const usable = models.filter((x) => x.configured && (!x.needsImage || (x.talking && voice)) && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
+                const usable = models.filter((x) => x.configured && (!x.needsImage || (x.talking && canVoice)) && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
                 const other = models.filter((x) => !usable.includes(x));
                 // recommended first, then the cheapest and the best quality, then the rest by price
                 const order = (id: string) => (MODEL_TAGS[id] ? MODEL_TAGS[id].rank : 9);
@@ -281,14 +281,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                         const tag = MODEL_TAGS[x.id];
                         const on = x.id === model;
                         return (
-                          <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => setModel(x.id)}
-                            className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors ${on ? "border-accent bg-accent/10" : "border-line hover:border-accent/50"}`}>
+                          <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => (x.talking && !voice ? onVoiceStep() : setModel(x.id))}
+                            className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors ${on ? "border-accent bg-accent/10" : x.talking ? "border-accent/60 hover:border-accent" : "border-line hover:border-accent/50"}`}>
                             <span className="flex w-full flex-wrap items-center justify-between gap-2">
                               <b className="text-sm">{x.label}</b>
-                              {tag && <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tag.rank === 0 ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"}`}>{tag.pill}</span>}
+                              {tag && <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tag.rank <= 0 && (tag.rank < 0 || !voice) ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"}`}>{tag.pill}</span>}
                             </span>
                             <span className="text-xs text-muted">{price(x.usdPerSecond * 8)} por corte de 8 s</span>
                             {tag?.note && <span className="text-xs text-muted">{tag.note}</span>}
+                            {x.talking && !voice && <span className="text-xs font-semibold text-warn">Primero graba la voz en el paso Voz (toca aquí para ir).</span>}
                           </button>
                         );
                       })}
