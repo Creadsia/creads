@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const WORK_KEY = "creads-crear-en-curso";
 import { FORMATS, type FormatId, formatById } from "@/lib/formats";
 import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import { NICHES } from "@/lib/niches";
@@ -80,6 +82,36 @@ export default function Crear({ full = true }: { full?: boolean }) {
   const [saved, setSaved] = useState("");
   const [niche, setNiche] = useState("");
   const [fromGuion, setFromGuion] = useState(false);
+
+  // The ad in progress survives a reload, a closed tab or an error screen: script, cuts, the recorded voice
+  // and the ad being made are kept in this browser and come back where they were left.
+  const [resumed, setResumed] = useState(false);
+  const loadedWork = useRef(false);
+  useEffect(() => {
+    try {
+      const w = JSON.parse(localStorage.getItem(WORK_KEY) || "null");
+      if (w && Date.now() - (w.at ?? 0) < 7 * 86_400_000 && (w.cuts?.length || w.text)) {
+        setText(w.text ?? ""); setLang(w.lang === "en" ? "en" : "es-CL"); if (w.format) setFormat(w.format);
+        setTitle(w.title ?? ""); setCuts(w.cuts ?? []); setScriptId(w.scriptId ?? null); setAdId(w.adId ?? null);
+        if (w.voice) setVoice(w.voice);
+        setStep(Number.isInteger(w.step) ? w.step : 0); setResumed(true);
+      }
+    } catch {}
+    loadedWork.current = true;
+  }, []);
+  useEffect(() => {
+    if (!loadedWork.current) return;
+    try {
+      if (!text && !cuts.length) return localStorage.removeItem(WORK_KEY);
+      const v = { ...voice, takes: voice.takes.map((t) => (t ? { key: t.key, url: t.url, ok: t.ok, heard: t.heard } : t)) };
+      localStorage.setItem(WORK_KEY, JSON.stringify({ at: Date.now(), step, text, lang, format, title, cuts, scriptId, adId, voice: v }));
+    } catch {}
+  }, [step, text, lang, format, title, cuts, scriptId, adId, voice]);
+  function startOver() {
+    try { localStorage.removeItem(WORK_KEY); } catch {}
+    setText(""); setCuts([]); setTitle(""); setScriptId(null); setAdId(null); setStep(0); setResumed(false);
+    setVoice({ avatarId: "", voice: "", natural: true, takes: [] });
+  }
   useEffect(() => { try { const v = localStorage.getItem("creads-niche"); if (v) setNiche(v); } catch {} }, []);
   useEffect(() => {
     const go = () => { if (new URLSearchParams(window.location.search).get("paso") === "voz") setWantVoice(true); };
@@ -163,6 +195,12 @@ export default function Crear({ full = true }: { full?: boolean }) {
       </PageHead>
       {scripts.missing && <SetupNotice />}
 
+      {resumed && (
+        <p role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-good/40 bg-good/10 px-3 py-2 text-sm">
+          <span>✓ Retomamos tu anuncio donde lo dejaste{title ? `: «${title}»` : ""}.</span>
+          <button type="button" onClick={startOver} className="text-xs font-semibold text-muted underline hover:text-ink">Empezar uno nuevo</button>
+        </p>
+      )}
       <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
         {TABS.map((t, i) => {
           const first = t.steps[0];
