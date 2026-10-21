@@ -6,7 +6,7 @@ import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghost
 import { NICHES } from "@/lib/niches";
 import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
-import Voz, { type VoiceChoice } from "./voz";
+import Voz, { type VoiceChoice, splitLong } from "./voz";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
 
@@ -275,7 +275,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
                     <p className="text-sm text-muted">{c.traduccion}</p>
                     <p className="text-sm"><span className="text-muted">Se ve: </span>{c.mostrar}</p>
                     {c.persona && <p className="text-xs text-muted">Persona: {c.persona}</p>}
-                    <p className={`font-mono text-xs ${s > maxSec ? "text-warn" : "text-muted"}`}>{words(c.texto)} palabras · ≈ {s} s{s > maxSec ? ` · se pasa de ${maxSec} s, acórtalo` : ""}</p>
+                    <p className={`font-mono text-xs ${s > maxSec ? "text-warn" : "text-muted"}`}>{words(c.texto)} palabras · ≈ {s} s{s > maxSec ? " · largo: en el paso Voz se divide solo" : ""}</p>
                   </div>
                 </li>
               );
@@ -284,7 +284,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={saveScript} className={ghostCls}>☆ Guardar guion</button>
             <button type="button" onClick={() => setStep(0)} className={ghostCls}>← Cambiar guion o formato</button>
-            <button type="button" onClick={() => setStep(2)} className={btnCls}>Siguiente: la voz →</button>
+            <button type="button" onClick={() => { setCuts((cs) => splitLong(cs).slice(0, 12)); setStep(2); }} className={btnCls}>Siguiente: la voz →</button>
             {saved && <span className="text-sm text-muted">{saved}</span>}
           </div>
         </section>

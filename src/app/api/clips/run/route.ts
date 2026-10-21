@@ -81,15 +81,14 @@ export async function POST(req: Request) {
     if (ownVoice && !(await canUseVoice(ws, ownVoice))) ownVoice = null;
     const line = story ? shotPlan?.dialogue?.line ?? "" : String(clip.text ?? "").trim();
     // the recorded line must fit inside the clip the lip-sync works on (10 s at most; Veo makes 8 s)
-    if (ownVoice && !story && line.trim().split(/\s+/).length / 2.2 + 1.5 > (provider.id.startsWith("veo") ? 8 : 10)) {
-      return giveBack(NextResponse.json({ error: "Este corte es muy largo para ponerle tu voz (máximo unas 18 palabras). Divídelo en dos cortes en el paso 2. No se usaron créditos." }, { status: 400 }));
-    }
+    // a long line (older ads, the API) is never refused: the video is made as long as the line needs
+    const longLine = ownVoice && !story ? Math.min(15, Math.ceil(line.trim().split(/\s+/).length / 2.2 + 1.5)) : 0;
     if (talks && !ownVoice && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
     // Seedance refuses real faces: say so now instead of charging and failing
     if (!story && refusesFrame(provider, String(ad.format ?? "ugc"), { face: Boolean(face), product: Boolean(prod) })) {
       return giveBack(NextResponse.json({ error: `${provider.label} no acepta fotos de personas reales (tu avatar, o una persona con tu producto). Elige Veo 3.1 Fast o Kling 3.0. No se usaron créditos.` }, { status: 400 }));
     }
-    const asked = story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? lipsyncSeconds(line) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const asked = story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).

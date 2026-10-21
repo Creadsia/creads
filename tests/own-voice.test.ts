@@ -23,7 +23,7 @@ test("natural lip-sync costs more than the fast one and fits the line", () => {
 test("long cuts are split for the voice, keeping every word", async () => {
   const { splitLong } = await import("../src/app/app/crear/voz");
   const texto = "Tu anuncio ganador se quemó otra vez y ahora necesitas tres nuevos para mañana. Yo antes perdía un día entero grabando y editando cada video.";
-  const out = splitLong([{ tipo: "Hook", texto, traduccion: "" }]);
+  const out = splitLong([{ tipo: "Hook", texto, traduccion: "", mostrar: "" }]);
   assert.ok(out.length >= 2);
   assert.ok(out.every((c) => c.texto.split(/\s+/).length <= 14));
   assert.equal(out.map((c) => c.texto).join(" "), texto);

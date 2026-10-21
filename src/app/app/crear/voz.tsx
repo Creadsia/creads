@@ -179,7 +179,7 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
             <span><b>👄 Boca 100% natural</b> <span className="text-muted">— la sincronización de labios más realista (se nota en primeros planos). Cuesta un poco más en el video.</span></span>
           </label>
           {long >= 0 ? (
-            <p className="rounded-lg bg-warn/10 p-3 text-sm text-warn">El corte {long + 1} es muy largo para una sola toma con voz (máximo unas 18 palabras). Vuelve a los cortes y divídelo en dos.</p>
+            <p className="rounded-lg bg-surface-2 p-3 text-sm text-muted">Ajustando los cortes para la voz…</p>
           ) : (
             <div className="flex flex-col gap-2 rounded-xl bg-surface-2 p-3">
               {cuts.map((c, i) => {

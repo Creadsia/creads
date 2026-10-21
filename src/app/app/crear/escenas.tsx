@@ -321,9 +321,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               {!confirm ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
-                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || tooLong >= 0 || !allRecorded} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
+                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || !allRecorded} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
                   {!allRecorded && <span className="text-sm text-muted">Primero graba y escucha la voz en el paso 3. <button type="button" onClick={onVoiceStep} className="underline">Ir a la voz</button></span>}
-                  {tooLong >= 0 && <span className="text-sm text-warn">El corte {tooLong + 1} es muy largo para Veo con voz propia: elige Kling 3.0 o divídelo.</span>}
                   {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o <a href="/app/planes" className="font-semibold underline">suma créditos</a>.</span>}
                 </div>
               ) : (
