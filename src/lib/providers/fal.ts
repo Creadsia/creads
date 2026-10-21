@@ -217,6 +217,7 @@ export const FAL_VIDEO: FalVideo[] = [
     label: "Seedance 2.0 Mini",
     usdPerSecond: 0.1547,
     i2v: "bytedance/seedance-2.0/mini/image-to-video",
+    t2v: "bytedance/seedance-2.0/mini/text-to-video",
     durations: range(4, 15),
     livePrice: false,
     build: seedance,

@@ -24,6 +24,17 @@ export const VOICE_MODELS = [
   { id: "eleven_flash_v2_5", label: "Rápida y económica" },
 ] as const;
 
+/**
+ * How our own brand is said, in every recording of every account: «Cre ads» (separated), «creadsia.com» as
+ * «Cre ads IA punto com». Only what the voice reads changes; captions keep the written «Creads».
+ */
+export function sayBrand(text: string) {
+  return text
+    .replace(/\bcreadsia\.com\b/gi, "Cre ads IA punto com")
+    .replace(/\bCreads(?=\s*IA\b)/gi, "Cre ads")
+    .replace(/\bCreads\b/gi, "Cre ads");
+}
+
 export const elevenlabs: VoiceProvider = {
   id: "elevenlabs",
   configured: () => Boolean(process.env.ELEVENLABS_API_KEY),
@@ -61,8 +72,9 @@ export const elevenlabs: VoiceProvider = {
     return String(data.voice_id);
   },
 
-  async speak(voiceId, text, opts) {
+  async speak(voiceId, text0, opts) {
     if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) throw new Error("Voz inválida.");
+    const text = sayBrand(text0);
     const res = await fetch(`${API}/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": key(), "content-type": "application/json", accept: "audio/mpeg" },

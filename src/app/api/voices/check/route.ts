@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { elevenlabs } from "@/lib/providers/elevenlabs";
+import { elevenlabs, sayBrand } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { compare } from "@/lib/textmatch";
 import { publicError } from "@/lib/public-error";
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!text || !ownsMedia(b?.url, s.user.workspace)) return NextResponse.json({ error: "Falta la grabación." }, { status: 400 });
   try {
     const { words } = await elevenlabs.transcribe!(await fetchableUrl(b.url, s.user.workspace, 600), lang);
-    const r = compare(text, words, lang);
+    const r = compare(sayBrand(text), words, lang); // the take says «Cre ads»: compare with what was read
     return NextResponse.json({ ok: r.sim >= 0.9 && !r.severe, sim: r.sim, heard: r.heard, issues: r.issues });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo revisar la voz.") }, { status: 502 });

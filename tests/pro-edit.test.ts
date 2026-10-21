@@ -48,3 +48,13 @@ test("a web address heard as one word keeps its spelling in the captions", async
   const out2 = respell([w("Entra", 0), w("a", 0.3), w("creadsiacom", 0.5)], "Entra a Creads IA punto com.");
   assert.deepEqual(out2.map((x) => x.w), ["Entra", "a", "Creads IA punto com."]);
 });
+
+test("the brand is read «Cre ads» and captioned «Creads»", async () => {
+  const { sayBrand } = await import("../src/lib/providers/elevenlabs");
+  assert.equal(sayBrand("Por eso creamos Creads IA. Entra a creadsia.com"), "Por eso creamos Cre ads IA. Entra a Cre ads IA punto com");
+  const { respell } = await import("../src/lib/montage");
+  const w = (x: string, s: number) => ({ w: x, s, e: s + 0.2 });
+  const out = respell([w("creamos", 0), w("Cre", 0.4), w("ads", 0.6), w("IA", 0.9)], "creamos Creads IA");
+  assert.deepEqual(out.map((x) => x.w), ["creamos", "Creads", "IA"]);
+  assert.equal(out[1].e, 0.8);
+});

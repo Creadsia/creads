@@ -118,16 +118,26 @@ export function respell(words: Word[], script: string): Word[] {
     for (let k = 2; k <= Math.min(5, j); k++) if (a[i - 1] && b.slice(j - k, j).map(said).join("") === a[i - 1]) return k;
     return 0;
   };
+  // and the other way round: two heard words for one script word («Cre» «ads» ↔ «Creads»)
+  const pair = (i: number, j: number) => i >= 2 && a[i - 2] + a[i - 1] === b[j - 1];
   // edit distance table (match = 0, substitute/insert/delete = 1)
   const d: number[][] = Array.from({ length: n + 1 }, (_, i) => Array.from({ length: m + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)));
   for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++) {
     d[i][j] = Math.min(d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), d[i - 1][j] + 1, d[i][j - 1] + 1);
     const k = joins(i, j);
     if (k) d[i][j] = Math.min(d[i][j], d[i - 1][j - k]);
+    if (pair(i, j)) d[i][j] = Math.min(d[i][j], d[i - 2][j - 1]);
   }
   const out = words.map((w) => ({ ...w }));
+  const drop = new Set<number>();
   let i = n, j = m;
   while (i > 0 && j > 0) {
+    if (pair(i, j) && d[i][j] === d[i - 2][j - 1]) {
+      out[i - 2] = { ...out[i - 2], w: toks[j - 1], e: out[i - 1].e };
+      drop.add(i - 1);
+      i -= 2; j--;
+      continue;
+    }
     const k = joins(i, j);
     if (k && d[i][j] === d[i - 1][j - k]) {
       // a web address reads better as heard ("creadsia.com"); anything else takes the script's words
@@ -143,7 +153,7 @@ export function respell(words: Word[], script: string): Word[] {
     } else if (d[i][j] === d[i - 1][j] + 1) i--;
     else j--;
   }
-  return out;
+  return out.filter((_, x) => !drop.has(x));
 }
 
 /**
