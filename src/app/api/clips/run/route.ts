@@ -9,7 +9,7 @@ import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
-import { type StorySettings, billedSeconds, lipsyncSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
+import { type StorySettings, billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
 import { refusesFrame } from "@/lib/formats";
 
@@ -25,6 +25,7 @@ interface Settings {
   product?: { image_url?: string | null } | null;
   frames?: string[];
   voiceId?: string | null; // ads: the person's lines are recorded with this voice and lip-synced
+  lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so lipsync-2-pro)
 }
 
 /** Starts (or restarts) the generation of one clip. Spends money: the studio asks before calling it. */
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
     // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
     const nb2 = findImage("nano-banana-2");
     const frameModel = nb2?.configured() ? nb2 : nanoBananaPro;
-    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? frameModel.usdPerImage : 0) + (ownVoice ? lipsyncUsd(videoSecs, line) : 0);
+    const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? frameModel.usdPerImage : 0) + (ownVoice ? (!story && st.lipsync === "pro" ? lipsyncProUsd(videoSecs, line) : lipsyncUsd(videoSecs, line)) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
     await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
     // what was paid for travels with the clip: the lip-sync step reads it from here, not from the
     // story (which the customer may edit while the clip renders)
-    const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : ownVoice ? { kind: `ad:ls:${ownVoice}` } : {};
+    const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : ownVoice ? { kind: `ad:${st.lipsync === "pro" ? "lsp" : "ls"}:${ownVoice}` } : {};
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd, ...extra });
     // redoing a cut of a finished ad puts it back in «En producción» (its last final video stays in
     // «Anuncios terminados» until it's rebuilt)

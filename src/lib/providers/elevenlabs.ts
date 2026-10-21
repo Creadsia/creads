@@ -115,6 +115,36 @@ export const elevenlabs: VoiceProvider = {
 // (US$0.50/min; the Creator plan includes 12 min a month).
 
 /** Starts a dub of a hosted video/audio into `target` (ISO 639-1). Returns ElevenLabs' dubbing id. */
+/** One voice of ElevenLabs' public library (real people who share their voice), for the accent picker. */
+export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string }
+
+/** Public library voices for one Spanish locale (es-CL, es-AR, es-CO…), most used first. */
+export async function sharedVoices(locale: string, size = 8): Promise<SharedVoice[]> {
+  const q = new URLSearchParams({ language: "es", locale, page_size: String(size), sort: "cloned_by_count" });
+  const res = await fetch(`${API}/v1/shared-voices?${q}`, { headers: { "xi-api-key": key() }, cache: "no-store" });
+  if (!res.ok) return fail(res, "ElevenLabs (biblioteca)");
+  const data = await res.json();
+  return ((data?.voices ?? []) as Record<string, unknown>[])
+    .filter((v) => typeof v.voice_id === "string" && typeof v.public_owner_id === "string" && v.free_users_allowed !== false)
+    .map((v) => ({
+      ref: `lib:${v.public_owner_id}:${v.voice_id}`, id: String(v.voice_id), owner: String(v.public_owner_id),
+      name: String(v.name ?? "Voz"), gender: String(v.gender ?? ""), age: String(v.age ?? ""), accent: locale,
+      preview: typeof v.preview_url === "string" ? v.preview_url : undefined,
+    }));
+}
+
+/** Adds a public library voice to Creads' account so it can read lines; returns its voice id. */
+export async function addSharedVoice(owner: string, voiceId: string, name: string): Promise<string> {
+  if (!/^[A-Za-z0-9]{6,80}$/.test(owner) || !/^[A-Za-z0-9]{10,40}$/.test(voiceId)) throw new Error("Voz inválida.");
+  const res = await fetch(`${API}/v1/voices/add/${owner}/${voiceId}`, {
+    method: "POST", headers: { "xi-api-key": key(), "content-type": "application/json" },
+    body: JSON.stringify({ new_name: name.slice(0, 60) }),
+  });
+  if (!res.ok) return fail(res, "ElevenLabs (agregar voz)");
+  const data = await res.json();
+  return String(data?.voice_id ?? voiceId);
+}
+
 export async function dubStart(sourceUrl: string, target: string, name: string): Promise<string> {
   const form = new FormData();
   form.append("source_url", sourceUrl);

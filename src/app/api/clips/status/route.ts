@@ -14,6 +14,7 @@ import { customerText, publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
+const LIPSYNC_PRO = "fal-ai/sync-lipsync/v2"; // with model "lipsync-2-pro": the most natural mouth
 
 /** Story shots whose speaker has their own voice: after the animation, the line is recorded with that
  * voice and lip-synced onto the clip (a second job, "ls:<fal job>"). */
@@ -22,14 +23,15 @@ const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
 async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<string, unknown> | null> }, clip: Record<string, unknown>, ws: string) {
   const kind = String(clip.kind ?? "");
   // story shots ("shot:ls:<voice>") and ad cuts ("ad:ls:<voice>") that speak with a chosen voice
-  const m = /^(?:shot|ad):ls:(.+)$/.exec(kind);
+  const m = /^(?:shot|ad):(lsp?):(.+)$/.exec(kind);
   if (!m) return null;
-  const voiceId = m[1];
+  const pro = m[1] === "lsp";
+  const voiceId = m[2];
   const line = String(clip.text ?? "").trim().slice(0, 200);
   if (!line || !(await canUseVoice(ws, voiceId))) return null;
   const ad = clip.ad_id ? await db.get("ads", String(clip.ad_id)) : null;
   const st = ad?.settings as StorySettings | null;
-  return { line, voiceId, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
+  return { line, voiceId, pro, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
 }
 
 const STALE_MS = 5 * 60_000;
@@ -111,7 +113,10 @@ export async function GET(req: Request) {
       try {
         const { bytes } = await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2", lang: voice.lang });
         const audio = await saveMedia(ws, "historias", bytes, "audio/mpeg");
-        const job = await falSubmit(LIPSYNC, { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) }, "Sincronizar labios");
+        const media = { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) };
+        const job = voice.pro
+          ? await falSubmit(LIPSYNC_PRO, { ...media, model: "lipsync-2-pro", sync_mode: "cut_off" }, "Sincronizar labios")
+          : await falSubmit(LIPSYNC, media, "Sincronizar labios");
         const row = await db.update("clips", id, { status: "generating", provider_job: `ls:${job}` });
         return NextResponse.json({ clip: row });
       } catch (err) {
