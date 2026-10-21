@@ -51,11 +51,12 @@ type Item = { href: string; label: string; icon: string; soon?: boolean; externa
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   {
-    group: "Tu campaña",
+    group: "Haz tu anuncio",
     items: [
-      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true },
+      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true, optional: true },
       { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
-      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 3 },
+      { href: "/app/crear?paso=voz", label: "Grabar la voz", icon: I.mic, step: 3 },
+      { href: "/app/crear", label: "Crear anuncio", icon: I.create, step: 4 },
     ],
   },
   {
@@ -132,7 +133,7 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
       {groups.map((g, i) => {
         const open = !g.more || moreOpen;
         return (
-          <div key={i} className="flex flex-col gap-0.5" data-tour={g.group === "Tu campaña" ? "nav-campana" : g.group === "Tu marca" ? "nav-marca" : undefined}>
+          <div key={i} className="flex flex-col gap-0.5" data-tour={g.group === "Haz tu anuncio" ? "nav-campana" : g.group === "Tu marca" ? "nav-marca" : undefined}>
             {g.group && (g.more ? (
               <button type="button" onClick={toggleMore} aria-expanded={open} className="flex items-center justify-between px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase hover:text-ink">
                 {g.group}<span aria-hidden="true" className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
@@ -141,9 +142,9 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
               <span className="flex items-baseline justify-between gap-2 px-3 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{g.group}{g.hint && <span className="font-medium tracking-normal normal-case">{g.hint}</span>}</span>
             ))}
             {open && g.items.map((it) => {
-              const on = it.href === "/app" ? path === "/app" : path.startsWith(it.href) || (it.href === "/app/crear" && path.startsWith("/app/historias"));
+              const on = it.href.includes("?") ? false : it.href === "/app" ? path === "/app" : path.startsWith(it.href) || (it.href === "/app/crear" && path.startsWith("/app/historias"));
               return (
-                <Link key={it.href} href={it.href} onClick={onPick} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
+                <Link key={it.href} href={it.href} onClick={() => { onPick?.(); if (it.href.includes("?paso=")) setTimeout(() => window.dispatchEvent(new Event("creads-paso")), 50); }} prefetch={it.external ? false : undefined} aria-current={on ? "page" : undefined}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${on ? "bg-accent/12 text-accent-text" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
                   {it.step ? <span aria-hidden="true" className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border text-[10px] font-bold ${on ? "border-current" : "border-line"}`}>{it.step}</span> : <Icon d={it.icon} />}
                   <span className="flex-1">{it.step ? <span className="sr-only">Paso {it.step}: </span> : null}{it.label}{it.optional && <span className="ml-1.5 text-[11px] font-medium text-muted">(opcional)</span>}</span>

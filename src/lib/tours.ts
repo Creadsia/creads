@@ -17,7 +17,7 @@ export const TOURS: Tour[] = [
     id: "inicio", path: "/app", exact: true, title: "Recorrido por Creads", video: "primer-anuncio", listed: true,
     steps: [
       { title: "Bienvenido a Creads 👋", text: "En 1 minuto te muestro dónde está cada cosa. Puedes saltar la guía cuando quieras y volver a verla con el botón «Ayuda» de arriba." },
-      { target: "nav-campana|nav-menu", title: "Tu campaña, en 3 pasos", text: "En el menú, «Tu campaña» es cómo se hace cada anuncio: 1) espía qué está funcionando en tu nicho, 2) conviértelo en un guion mejor, 3) créalo en video." },
+      { target: "nav-campana|nav-menu", title: "Tu anuncio, paso a paso", text: "En el menú, «Haz tu anuncio» es cómo se hace cada anuncio: 1) espía qué está funcionando (opcional), 2) escribe el guion, 3) graba y escucha la voz, 4) crea el video." },
       { target: "nav-marca|nav-menu", title: "Tu marca, una sola vez", text: "En «Tu marca» van tu voz, tu avatar (la cara de quien habla) y tus productos. Se configuran una vez y sirven para todos tus anuncios." },
       { target: "primeros-pasos", title: "Tu lista para partir", text: "Aquí vas viendo qué te falta. El paso marcado es el siguiente que te conviene hacer.", optional: true },
       { target: "creditos", title: "Tus créditos", text: "Cada video, imagen o voz usa créditos. Si algo falla, los créditos vuelven solos." },

@@ -50,6 +50,7 @@ export const ACCENTS = [
   { locale: "es-CL", label: "Chilena", accent: "chilean" },
   { locale: "es-AR", label: "Argentina", accent: "argentine" },
   { locale: "es-CO", label: "Colombiana", accent: "colombian" },
+  { locale: "es-VE", label: "Venezolana", accent: "venezuelan" },
   { locale: "es-MX", label: "Mexicana", accent: "mexican" },
 ] as const;
 

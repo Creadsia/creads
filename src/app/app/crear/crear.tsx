@@ -6,6 +6,7 @@ import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghost
 import { NICHES } from "@/lib/niches";
 import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
+import Voz, { type VoiceChoice } from "./voz";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
 
@@ -24,7 +25,7 @@ const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const secs = (t: string) => Math.max(2, Math.round(words(t) / PACE));
 const SPEAKER: Record<string, string> = { host: "Conductor", guest: "Invitado", reporter: "Reportero", homeowner: "Dueño de casa", voice: "Quien graba", person: "Persona", dialogo: "Diálogo" };
 
-const STEPS = ["Guion", "Cortes", "Escenas", "Videos"];
+const STEPS = ["Guion", "Cortes", "Voz", "Escenas", "Videos"];
 
 // Another style of ad, next to the formats: it opens its own studio.
 const MORE_KINDS = [
@@ -34,6 +35,10 @@ const MORE_KINDS = [
 export default function Crear({ full = true }: { full?: boolean }) {
   const scripts = useTable<Script>("scripts");
   const [step, setStep] = useState(0);
+  // step 3: who talks, with which voice, recorded and approved before any video is paid for
+  const [voice, setVoice] = useState<VoiceChoice>({ avatarId: "", voice: "", natural: true, takes: [] });
+  // «Grabar la voz» in the menu opens this page at step 3 (or explains it needs the script first)
+  const [wantVoice, setWantVoice] = useState(false);
   const [lang, setLang] = useState<"en" | "es-CL">("en");
   const [format, setFormat] = useState<FormatId>("ugc");
   const [text, setText] = useState("");
@@ -51,6 +56,13 @@ export default function Crear({ full = true }: { full?: boolean }) {
   const [niche, setNiche] = useState("");
   const [fromGuion, setFromGuion] = useState(false);
   useEffect(() => { try { const v = localStorage.getItem("creads-niche"); if (v) setNiche(v); } catch {} }, []);
+  useEffect(() => {
+    const go = () => { if (new URLSearchParams(window.location.search).get("paso") === "voz") setWantVoice(true); };
+    go();
+    window.addEventListener("creads-paso", go);
+    return () => window.removeEventListener("creads-paso", go);
+  }, []);
+  useEffect(() => { if (wantVoice && cuts.length) { setStep(2); setWantVoice(false); } }, [wantVoice, cuts.length]);
   const pickNiche = (v: string) => { setNiche(v); try { localStorage.setItem("creads-niche", v); } catch {} };
 
   // a script sent from the Generador de guiones
@@ -115,7 +127,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
 
   return (
     <>
-      <Stepper flow="anuncio" current={2} />
+      <Stepper flow="anuncio" current={step === 2 ? 2 : 3} />
       <PageHead title="Crear anuncio" lead="Pega tu guion, revisa los cortes, elige quién habla y genera los videos.">
         {scripts.rows && scripts.rows.length > 0 && (
           <select aria-label="Abrir un guion guardado" value="" onChange={(e) => openScript(e.target.value)} className={inputCls}>
@@ -128,7 +140,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
 
       <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
         {STEPS.map((s, i) => {
-          const can = i === 0 || (i <= 2 && cuts.length > 0) || (i === 3 && cuts.length > 0 && step >= 3);
+          const can = i === 0 || (i <= 3 && cuts.length > 0) || (i === 4 && cuts.length > 0 && step >= 4);
           return (
             <li key={s}>
               <button type="button" disabled={!can} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}
@@ -140,6 +152,9 @@ export default function Crear({ full = true }: { full?: boolean }) {
         })}
       </ol>
 
+      {wantVoice && !cuts.length && step === 0 && (
+        <p className="rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">🎙 <b>Grabar la voz</b> es el paso 3: primero pega o abre tu guion aquí abajo y sepáralo en cortes. Después grabas y escuchas la voz, y recién ahí se hace el video.</p>
+      )}
       {step === 0 && (
         <form onSubmit={split} className={cardCls}>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -268,14 +283,17 @@ export default function Crear({ full = true }: { full?: boolean }) {
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={saveScript} className={ghostCls}>☆ Guardar guion</button>
             <button type="button" onClick={() => setStep(0)} className={ghostCls}>← Cambiar guion o formato</button>
-            <button type="button" onClick={() => setStep(2)} className={btnCls}>Siguiente: escenas →</button>
+            <button type="button" onClick={() => setStep(2)} className={btnCls}>Siguiente: la voz →</button>
             {saved && <span className="text-sm text-muted">{saved}</span>}
           </div>
         </section>
       )}
 
-      {step >= 2 && (
-        <Escenas step={step} setStep={setStep} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche} />
+      {step === 2 && <Voz format={format} lang={lang} cuts={cuts} value={voice} onChange={setVoice} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
+      {step >= 3 && (
+        // Escenas counts its own steps 2 (scenes) and 3 (videos)
+        <Escenas step={step - 1} setStep={(n) => setStep(n === 1 ? 1 : n + 1)} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche}
+          v={voice} onVoiceStep={() => setStep(2)} />
       )}
     </>
   );
