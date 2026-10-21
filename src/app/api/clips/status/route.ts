@@ -31,7 +31,8 @@ async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<stri
   if (!line || !(await canUseVoice(ws, voiceId))) return null;
   const ad = clip.ad_id ? await db.get("ads", String(clip.ad_id)) : null;
   const st = ad?.settings as StorySettings | null;
-  return { line, voiceId, pro, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
+  const approved = (ad?.settings as { audios?: (string | null)[] } | null)?.audios?.[Number(clip.idx)] ?? null;
+  return { line, voiceId, pro, approved, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
 }
 
 const STALE_MS = 5 * 60_000;
@@ -111,8 +112,9 @@ export async function GET(req: Request) {
       const mine = await db.claim("clips", id, { in: ["generating"] }, { status: "syncing", url });
       if (!mine) return NextResponse.json({ clip: await db.get("clips", id) });
       try {
-        const { bytes } = await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2", lang: voice.lang });
-        const audio = await saveMedia(ws, "historias", bytes, "audio/mpeg");
+        // the recording the customer approved before the video; otherwise record the line now
+        // (multilingual_v2 detects the language itself: a forced language_code is rejected)
+        const audio = voice.approved ?? (await saveMedia(ws, "historias", (await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
         const media = { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) };
         const job = voice.pro
           ? await falSubmit(LIPSYNC_PRO, { ...media, model: "lipsync-2-pro", sync_mode: "cut_off" }, "Sincronizar labios")

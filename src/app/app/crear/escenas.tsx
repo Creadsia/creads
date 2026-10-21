@@ -62,6 +62,9 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [voiceId, setVoiceId] = useState<string | null>(null); // null = not touched yet: follows the avatar's voice
   const [accents, setAccents] = useState<Accent[]>([]);
   const [natural, setNatural] = useState(true); // «Boca 100% natural» (lipsync-2-pro)
+  // Voice first: every cut is recorded and heard before any video is paid for; the video is lip-synced to it.
+  const [takes, setTakes] = useState<{ key: string; url: string }[]>([]);
+  const [recording, setRecording] = useState<number | "all" | null>(null);
 
   useEffect(() => {
     fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {});
@@ -86,6 +89,21 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const libVoice = accents.flatMap((a) => a.voices.map((v) => ({ ...v, accent: a.label }))).find((v) => v.ref === voice);
   const voiceName = libVoice ? `${libVoice.name} (${libVoice.accent})` : voices.find((v) => v.id === voice)?.name;
   const preview = libVoice?.preview ?? voices.find((v) => v.id === voice)?.preview;
+  const takeKey = (i: number) => `${voice}|${cuts[i]?.texto ?? ""}`;
+  const takeOf = (i: number) => takes[i]?.key === takeKey(i) ? takes[i].url : "";
+  const allRecorded = !voice || cuts.every((_, i) => takeOf(i));
+  async function record(i: number) {
+    const res = await fetch("/api/voices/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voiceId: voice, text: cuts[i].texto, model: "eleven_multilingual_v2" }) }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    if (!res?.ok || !d.url) throw new Error(d.error || "No se pudo grabar la voz.");
+    setTakes((t) => { const n = [...t]; n[i] = { key: takeKey(i), url: d.url }; return n; });
+  }
+  async function recordAll(only?: number) {
+    setErr(""); setRecording(only ?? "all");
+    try { for (let i = 0; i < cuts.length; i++) if (only === undefined ? !takeOf(i) : i === only) await record(i); refreshCredits(); }
+    catch (e) { setErr(e instanceof Error ? e.message : "No se pudo grabar la voz."); }
+    finally { setRecording(null); }
+  }
   const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) + voiceUsd : 0;
 
   async function direct(e?: React.FormEvent) {
@@ -129,7 +147,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
         title, format, lang, niche, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
-        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice, lipsync: voice && natural ? "pro" : null,
+        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice, lipsync: voice && natural ? "pro" : null, audios: voice ? cuts.map((_, i) => takeOf(i) || null) : null,
         clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i) })),
       }),
     }).catch(() => null);
@@ -328,6 +346,22 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                   <span className="text-xs text-muted">{voice
                     ? "Cada frase se graba con esta voz, palabra por palabra, y se le sincronizan los labios a la persona. Recomendado en español: no se equivoca con palabras ni marcas."
                     : "El modelo de video inventa la voz. En español a veces se equivoca con palabras y marcas: elige una voz para evitarlo."}</span>
+                  {voice && tooLong < 0 && (
+                    <div className="flex flex-col gap-2 rounded-lg bg-surface-2 p-3">
+                      <b className="text-sm">Paso 1 · Graba y escucha la voz (antes de pagar el video)</b>
+                      <span className="text-xs text-muted">Cuesta centavos. Si una palabra suena mal, regraba solo ese corte o corrige el texto en el paso 2. El video se sincroniza con esta misma voz.</span>
+                      {cuts.map((c, i) => (
+                        <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="w-16 shrink-0 font-mono text-xs text-muted">Corte {i + 1}</span>
+                          <span className="min-w-0 flex-1 truncate">“{c.texto}”</span>
+                          {takeOf(i) ? <audio src={takeOf(i)} controls preload="none" className="h-8 w-56" aria-label={`Voz del corte ${i + 1}`} /> : <span className="text-xs text-muted">sin grabar</span>}
+                          {takeOf(i) && <button type="button" disabled={recording !== null} onClick={() => recordAll(i)} className="text-xs font-semibold text-accent-text underline">{recording === i ? "Grabando…" : "Regrabar"}</button>}
+                        </div>
+                      ))}
+                      {!allRecorded && <button type="button" disabled={recording !== null} onClick={() => recordAll()} className={btnCls}>{recording === "all" ? "Grabando la voz…" : `🎙 Grabar la voz (${cuts.length} cortes)`}</button>}
+                      {allRecorded && <span className="text-xs text-good">✓ Voz lista. Si te gusta cómo suena, sigue con el video (paso 2).</span>}
+                    </div>
+                  )}
                   {tooLong >= 0 && <span className="text-xs text-warn">El corte {tooLong + 1} es muy largo para ponerle voz (máximo unas 18 palabras). Vuelve al paso 2 y divídelo en dos.</span>}
                 </div>
               )}
@@ -341,7 +375,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               {!confirm ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
-                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || tooLong >= 0} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
+                  <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || tooLong >= 0 || !allRecorded} onClick={() => setConfirm(true)} className={btnCls}>{voice ? "Paso 2 · " : ""}Generar los {cuts.length} videos</button>
+                  {!allRecorded && <span className="text-sm text-muted">Primero graba y escucha la voz.</span>}
                   {!covers(usd) && <span className="text-sm text-warn">Te faltan créditos para este anuncio. Elige un modelo más barato o <a href="/app/planes" className="font-semibold underline">suma créditos</a>.</span>}
                 </div>
               ) : (

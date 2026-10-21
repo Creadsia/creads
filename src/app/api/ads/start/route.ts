@@ -5,6 +5,7 @@ import { findVideo } from "@/lib/providers";
 import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { cleanNiche } from "@/lib/niches";
 import { resolveVoice } from "@/lib/voices";
+import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
     if (wanted && takesOwnVoice(format) && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
     // «Boca natural» (sync.so lipsync-2-pro) instead of the fast lip-sync: the most natural mouth, a bit more expensive
     const lipsync = voiceId && b?.lipsync === "pro" ? "pro" : null;
+    // the voice the customer already heard and approved, one recording per cut (the video is lip-synced to it)
+    const audios = voiceId && Array.isArray(b?.audios) ? clips.map((_, i) => (ownsMedia(b.audios[i], s.user.workspace) ? String(b.audios[i]) : null)) : null;
     const ad = await db.insert("ads", {
       title: String(b?.title ?? "Anuncio").slice(0, 120),
       script_id: b?.scriptId || null,
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
         voiceId,
         lipsync,
+        audios,
       },
     });
     const rows = [];
