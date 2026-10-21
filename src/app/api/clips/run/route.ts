@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
-    const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url;
+    const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url && !(talking && Number(clip.idx) > 0);
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
     // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
     const nb2 = findImage("nano-banana-2");
@@ -114,6 +114,16 @@ export async function POST(req: Request) {
 
     let refs: MediaRef[] = [];
     let image = (clip.image_url as string | null) || "";
+    // talking avatar: every cut starts from the same picture as the first one (same room, same light, same
+    // clothes), like a real person filming in one place; the edit's zooms and cuts give the rhythm
+    if (talking && !image && Number(clip.idx) > 0) {
+      for (let t = 0; t < 25 && !image; t++) {
+        const first = (await db.list("clips", `ad_id=eq.${ad.id}&idx=eq.0&select=image_url,status`))[0] as { image_url?: string | null; status?: string } | undefined;
+        if (first?.image_url) image = String(first.image_url);
+        else if (!first || first.status === "failed") break;
+        else await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
     if (TAKES_REFS.has(provider.id) && (face || prod)) {
       refs = [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])];
     } else if ((face || prod) && !image) {
