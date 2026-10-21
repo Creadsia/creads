@@ -7,16 +7,28 @@ import { API_FORMATS } from "./api-ads";
 export const PROTOCOLS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 type Json = Record<string, unknown>;
 export type Call = <T>(path: string, body?: unknown) => Promise<T>;
+/** Server helpers for files of the caller's own account (the route builds them with its workspace). */
+export interface Ctx {
+  /** A direct download link for one of the account's files, valid for an hour (null if it isn't theirs). */
+  link: (ref: string) => Promise<string | null>;
+  /** The picture itself (base64), so the chat can show it; null if it isn't theirs or is too big. */
+  picture: (ref: string) => Promise<{ data: string; mimeType: string } | null>;
+}
 
 interface Tool {
   name: string; title: string; description: string;
   inputSchema: Json;
   annotations: { title: string; readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean };
-  run: (args: Json, call: Call, origin: string) => Promise<{ text: string; data?: Json }>;
+  run: (args: Json, call: Call, origin: string, ctx: Ctx) => Promise<{ text: string; data?: Json; images?: string[] }>;
 }
 
 const str = (v: unknown, max = 4000) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const abs = (origin: string, u: string) => (u.startsWith("http") ? u : `${origin}${u.startsWith("/") ? "" : "/"}${u}`);
+/** «https://www.creadsia.com/api/media/…» (as the tools hand them out) → the account's own file reference. */
+export const mediaRef = (u: string) => {
+  const i = u.indexOf("/api/media/");
+  return i >= 0 ? u.slice(i).split(/[?#]/)[0] : u;
+};
 
 export const TOOLS: Tool[] = [
   {
@@ -32,16 +44,17 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "creads_crear_imagen", title: "Crear imagen",
-    description: "Creates one image with Creads from a detailed description (ads, products, social posts). Spends the account's credits. Returns a link to the image. Describe scene, subject, style and any exact text to show.",
+    description: "Creates one image with Creads from a detailed description (ads, products, social posts). Spends the account's credits. Returns the image itself, its link (to use in creads_crear_avatar) and a download link valid for an hour. Describe scene, subject, style and any exact text to show.",
     inputSchema: { type: "object", properties: {
       descripcion: { type: "string", minLength: 10, maxLength: 4000, description: "What the image shows, in detail (any language)." },
       formato: { type: "string", enum: ["9:16", "1:1", "4:5", "16:9"], default: "4:5", description: "Aspect ratio: 4:5 feed, 9:16 stories/reels, 1:1 square, 16:9 wide." },
     }, required: ["descripcion"], additionalProperties: false },
     annotations: { title: "Crear imagen", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    run: async (a, call, origin) => {
+    run: async (a, call, origin, ctx) => {
       const d = await call<{ url: string }>("/api/generate/image", { prompt: str(a.descripcion), aspect: str(a.formato, 5) || "4:5" });
       const url = abs(origin, d.url);
-      return { text: `Imagen lista: ${url}`, data: { url } };
+      const descarga = await ctx.link(d.url).catch(() => null);
+      return { text: `Imagen lista: ${url}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}`, data: { url, ...(descarga ? { descarga } : {}) }, images: [d.url] };
     },
   },
   {
@@ -62,16 +75,17 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "creads_estado_anuncio", title: "Ver avance de un anuncio",
-    description: "Shows the progress of a video ad ordered with creads_crear_anuncio and moves it to its next step. When «listo», returns the video link (it opens in the user's Creads account).",
+    description: "Shows the progress of a video ad ordered with creads_crear_anuncio and moves it to its next step. When «listo», returns the video link (it opens in the user's Creads account) and a direct download link valid for an hour.",
     inputSchema: { type: "object", properties: { id: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "The ad id (ad_…)." } }, required: ["id"], additionalProperties: false },
     annotations: { title: "Ver avance de un anuncio", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    run: async (a, call) => {
+    run: async (a, call, _origin, ctx) => {
       const id = str(a.id, 30);
       if (!/^ad_[a-z0-9]{6,20}$/.test(id)) throw new Error("El id debe ser como ad_xxxxxx.");
       const d = await call<{ anuncio: { estado: string; paso?: string | null; video_url?: string | null; error?: string | null } & Json }>(`/api/v1/anuncios/${id}`);
       const x = d.anuncio;
-      const text = x.estado === "listo" ? `Listo: ${x.video_url}` : x.estado === "error" ? `No se pudo terminar: ${x.error ?? "error"}` : `En proceso: ${x.paso ?? x.estado}. Vuelve a consultar en 30 a 60 segundos.`;
-      return { text, data: x };
+      const descarga = x.estado === "listo" && x.video_url ? await ctx.link(mediaRef(x.video_url)).catch(() => null) : null;
+      const text = x.estado === "listo" ? `Listo: ${x.video_url}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}` : x.estado === "error" ? `No se pudo terminar: ${x.error ?? "error"}` : `En proceso: ${x.paso ?? x.estado}. Vuelve a consultar en 30 a 60 segundos.`;
+      return { text, data: { ...x, ...(descarga ? { descarga } : {}) } };
     },
   },
   {
@@ -83,6 +97,60 @@ export const TOOLS: Tool[] = [
       const d = await call<{ avatares: { id: string; nombre: string; descripcion: string | null }[] }>("/api/v1/avatares");
       if (!d.avatares.length) return { text: "La cuenta todavía no tiene avatares. Se crean en Creads → Avatares (o se elige uno de los Avatares de Creads).", data: { avatares: [] } };
       return { text: d.avatares.slice(0, 30).map((x) => `• ${x.nombre} (${x.id})${x.descripcion ? `: ${x.descripcion.slice(0, 80)}` : ""}`).join("\n"), data: { avatares: d.avatares } };
+    },
+  },
+  {
+    name: "creads_ver_imagen", title: "Ver una imagen",
+    description: "Shows one of the account's images (a link from creads_crear_imagen or creads_avatares) so you can look at it, plus a direct download link valid for an hour. Free.",
+    inputSchema: { type: "object", properties: { url: { type: "string", maxLength: 600, description: "The image link (https://www.creadsia.com/api/media/…)." } }, required: ["url"], additionalProperties: false },
+    annotations: { title: "Ver una imagen", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (a, _call, _origin, ctx) => {
+      const ref = mediaRef(str(a.url, 600));
+      const descarga = await ctx.link(ref).catch(() => null);
+      if (!descarga) throw new Error("Esa imagen no es de esta cuenta de Creads.");
+      return { text: `Descarga directa (1 hora): ${descarga}`, data: { descarga }, images: [ref] };
+    },
+  },
+  {
+    name: "creads_voces", title: "Ver voces",
+    description: "Lists the voices the account can use (its own cloned voices first, then the library), with their ids for creads_crear_avatar. Free.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { title: "Ver voces", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (_a, call) => {
+      const d = await call<{ voices: { id: string; name: string; category?: string; labels?: Record<string, string> }[] }>("/api/voices");
+      const own = (v: { category?: string }) => ["cloned", "generated", "professional_owned"].includes(v.category ?? "");
+      const list = [...d.voices.filter(own), ...d.voices.filter((v) => !own(v))].slice(0, 60).map((v) => ({ id: v.id, nombre: v.name, propia: own(v), ...(v.labels ? { rasgos: Object.values(v.labels).join(", ") } : {}) }));
+      if (!list.length) return { text: "No hay voces disponibles.", data: { voces: [] } };
+      return { text: list.map((v) => `• ${v.nombre}${v.propia ? " (tuya)" : ""} (${v.id})${v.rasgos ? `: ${v.rasgos}` : ""}`).join("\n"), data: { voces: list } };
+    },
+  },
+  {
+    name: "creads_crear_avatar", title: "Crear avatar",
+    description: "Saves a presenter (avatar) in the account from one of its images, so the same face (and voice) appears in every cut of creads_crear_anuncio. Use an image link from creads_crear_imagen. Only for invented people or real people who gave their permission: ask the user before confirming «consentimiento». Free.",
+    inputSchema: { type: "object", properties: {
+      nombre: { type: "string", minLength: 1, maxLength: 60 },
+      imagen: { type: "string", maxLength: 600, description: "Image link of this account (from creads_crear_imagen): a clear face, looking at the camera." },
+      descripcion: { type: "string", maxLength: 400, description: "How the person looks, best in English (age, hair, clothes, place). Creads repeats it in every scene." },
+      idioma: { type: "string", enum: ["es-CL", "es", "en"], default: "es-CL" },
+      voz: { type: "string", maxLength: 60, description: "Optional: a voice id from creads_voces." },
+      consentimiento: { type: "boolean", description: "true only if the person is invented by AI or the real person gave permission." },
+    }, required: ["nombre", "imagen", "consentimiento"], additionalProperties: false },
+    annotations: { title: "Crear avatar", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    run: async (a, call) => {
+      if (a.consentimiento !== true) throw new Error("Para crear un avatar, la persona tiene que ser inventada o haber dado su permiso.");
+      const voz = str(a.voz, 60);
+      let voice_name: string | undefined;
+      if (voz) {
+        const v = await call<{ voices: { id: string; name: string }[] }>("/api/voices");
+        voice_name = v.voices.find((x) => x.id === voz)?.name;
+        if (!voice_name) throw new Error("Esa voz no está en tu cuenta. Revisa creads_voces.");
+      }
+      const d = await call<{ row: { id: string; name: string } }>("/api/data/avatars", {
+        name: str(a.nombre, 60), image_url: mediaRef(str(a.imagen, 600)), description: str(a.descripcion, 400) || null,
+        lang: ["es-CL", "es", "en"].includes(String(a.idioma)) ? a.idioma : "es-CL", consent: true,
+        ...(voz ? { voice_id: voz, voice_name } : {}),
+      });
+      return { text: `Avatar «${d.row.name}» creado (id ${d.row.id}). Úsalo como «avatar» en creads_crear_anuncio.`, data: { id: d.row.id, nombre: d.row.name } };
     },
   },
   {
@@ -111,7 +179,7 @@ function friendly(e: unknown): string {
 }
 
 /** One JSON-RPC message → its answer (null for notifications). */
-export async function handle(msg: Json, call: Call, origin: string): Promise<Json | null> {
+export async function handle(msg: Json, call: Call, origin: string, ctx: Ctx): Promise<Json | null> {
   const id = msg?.id;
   const method = typeof msg?.method === "string" ? msg.method : "";
   if (msg?.jsonrpc !== "2.0" || !method) return id === undefined ? null : fail(id, -32600, "Invalid request");
@@ -133,8 +201,9 @@ export async function handle(msg: Json, call: Call, origin: string): Promise<Jso
       const tool = TOOLS.find((t) => t.name === params.name);
       if (!tool) return fail(id, -32602, `Unknown tool: ${String(params.name)}`);
       try {
-        const r = await tool.run((params.arguments ?? {}) as Json, call, origin);
-        return ok(id, { content: [{ type: "text", text: r.text }], ...(r.data ? { structuredContent: r.data } : {}), isError: false });
+        const r = await tool.run((params.arguments ?? {}) as Json, call, origin, ctx);
+        const pics = (await Promise.all((r.images ?? []).slice(0, 4).map((u) => ctx.picture(u).catch(() => null)))).filter((p): p is { data: string; mimeType: string } => Boolean(p));
+        return ok(id, { content: [{ type: "text", text: r.text }, ...pics.map((p) => ({ type: "image", ...p }))], ...(r.data ? { structuredContent: r.data } : {}), isError: false });
       } catch (e) {
         return ok(id, { content: [{ type: "text", text: friendly(e) }], isError: true });
       }

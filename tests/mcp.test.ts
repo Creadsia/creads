@@ -7,7 +7,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "x";
 process.env.FAL_KEY = "test";
 
 import { checkRequest, issueCode, okRedirect, readClient, redeemCode, registerClient } from "../src/lib/oauth";
-import { handle, TOOLS, type Call } from "../src/lib/mcp";
+import { handle, mediaRef, TOOLS, type Call, type Ctx } from "../src/lib/mcp";
 
 test("apps register themselves; the client id can't be forged or changed", () => {
   const r = registerClient("Claude", ["https://claude.ai/api/mcp/auth_callback"]);
@@ -55,10 +55,11 @@ test("a code works once, only for the same app and address, and only with the ri
 
 test("MCP: initialize, tools with titles and read/write annotations, and a tool call", async () => {
   const noCall: Call = async () => { throw new Error("no"); };
-  const init = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, noCall, "https://www.creadsia.com");
+  const noCtx: Ctx = { link: async () => null, picture: async () => null };
+  const init = await handle({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, noCall, "https://www.creadsia.com", noCtx);
   assert.equal((init!.result as { protocolVersion: string }).protocolVersion, "2025-06-18");
-  assert.equal(await handle({ jsonrpc: "2.0", method: "notifications/initialized" }, noCall, ""), null);
-  const list = await handle({ jsonrpc: "2.0", id: 2, method: "tools/list" }, noCall, "");
+  assert.equal(await handle({ jsonrpc: "2.0", method: "notifications/initialized" }, noCall, "", noCtx), null);
+  const list = await handle({ jsonrpc: "2.0", id: 2, method: "tools/list" }, noCall, "", noCtx);
   const tools = (list!.result as { tools: { name: string; title: string; annotations: Record<string, unknown> }[] }).tools;
   assert.equal(tools.length, TOOLS.length);
   for (const t of tools) {
@@ -68,17 +69,45 @@ test("MCP: initialize, tools with titles and read/write annotations, and a tool 
   }
   const asked: unknown[] = [];
   const call: Call = async <T,>(path: string, body?: unknown) => { asked.push([path, body]); return { url: "/m/img.png" } as T; };
-  const r = await handle({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "creads_crear_imagen", arguments: { descripcion: "Un medidor de luz en una pared de ladrillo, foto realista" } } }, call, "https://www.creadsia.com");
+  const r = await handle({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "creads_crear_imagen", arguments: { descripcion: "Un medidor de luz en una pared de ladrillo, foto realista" } } }, call, "https://www.creadsia.com", noCtx);
   const res = r!.result as { content: { text: string }[]; isError: boolean; structuredContent: { url: string } };
   assert.equal(res.isError, false);
   assert.equal(res.structuredContent.url, "https://www.creadsia.com/m/img.png");
   assert.deepEqual(asked[0], ["/api/generate/image", { prompt: "Un medidor de luz en una pared de ladrillo, foto realista", aspect: "4:5" }]);
   const broke: Call = async () => { throw new Error("No te quedan créditos. Compra un plan en /app/planes"); };
-  const e = await handle({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "creads_saldo", arguments: {} } }, broke, "");
+  const e = await handle({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "creads_saldo", arguments: {} } }, broke, "", noCtx);
   const er = e!.result as { content: { text: string }[]; isError: boolean };
   assert.equal(er.isError, true);
   assert.doesNotMatch(er.content[0].text, /plan|compra/i, "no upgrade pitch inside the chat");
   const out: Call = async () => { throw new Error("El proveedor de imágenes se quedó sin saldo. Carga saldo y vuelve a intentar."); };
-  const e2 = await handle({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "creads_saldo", arguments: {} } }, out, "");
+  const e2 = await handle({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "creads_saldo", arguments: {} } }, out, "", noCtx);
   assert.match((e2!.result as { content: { text: string }[] }).content[0].text, /sin saldo/, "other problems keep their real message");
+});
+
+test("MCP: a new image comes back as a picture with its download link; avatars need consent and a real voice", async () => {
+  const ctx: Ctx = {
+    link: async (ref) => (ref.startsWith("/api/media/ws/acme/") ? `https://sb.example/sign/${ref.slice(11)}?token=t` : null),
+    picture: async (ref) => (ref.endsWith(".png") ? { data: "iVBORw0KGgo=", mimeType: "image/png" } : null),
+  };
+  const call: Call = async <T,>() => ({ url: "/api/media/ws/acme/images/a.png" }) as T;
+  const r = await handle({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "creads_crear_imagen", arguments: { descripcion: "Retrato de un hombre en un estudio oscuro" } } }, call, "https://www.creadsia.com", ctx);
+  const res = r!.result as { content: { type: string; text?: string; data?: string }[]; structuredContent: { descarga?: string } };
+  assert.equal(res.content[1].type, "image");
+  assert.match(res.structuredContent.descarga ?? "", /^https:\/\/sb\.example\/sign\//);
+  assert.equal(mediaRef("https://www.creadsia.com/api/media/ws/acme/images/a.png?x=1"), "/api/media/ws/acme/images/a.png");
+
+  const asked: unknown[] = [];
+  const db: Call = async <T,>(path: string, body?: unknown) => {
+    asked.push([path, body]);
+    if (path === "/api/voices") return { voices: [{ id: "v1", name: "Benjamin S", category: "cloned" }] } as T;
+    return { row: { id: "av1", name: "Nico" } } as T;
+  };
+  const tool = (args: Record<string, unknown>) => handle({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "creads_crear_avatar", arguments: args } }, db, "", ctx);
+  const no = (await tool({ nombre: "Nico", imagen: "https://www.creadsia.com/api/media/ws/acme/images/a.png", consentimiento: false }))!.result as { isError: boolean };
+  assert.equal(no.isError, true, "no consent, no avatar");
+  const badVoice = (await tool({ nombre: "Nico", imagen: "x", voz: "zzz", consentimiento: true }))!.result as { isError: boolean };
+  assert.equal(badVoice.isError, true, "only the account's voices");
+  const okr = (await tool({ nombre: "Nico", imagen: "https://www.creadsia.com/api/media/ws/acme/images/a.png", voz: "v1", consentimiento: true }))!.result as { isError: boolean };
+  assert.equal(okr.isError, false);
+  assert.deepEqual(asked.at(-1), ["/api/data/avatars", { name: "Nico", image_url: "/api/media/ws/acme/images/a.png", description: null, lang: "es-CL", consent: true, voice_id: "v1", voice_name: "Benjamin S" }]);
 });
