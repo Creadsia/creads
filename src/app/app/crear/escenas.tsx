@@ -115,6 +115,22 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   }
   const allPrompts = () => (scenes ?? []).map((s) => s.prompt).join("\n\n────────────\n\n");
   const editPrompt = (i: number, prompt: string) => setScenes((ss) => ss && ss.map((x, k) => (k === i ? { ...x, prompt } : x)));
+  // «¿Qué quieres cambiar en esta escena?»: the change in the customer's words, applied by the AI (free)
+  const [wish, setWish] = useState<Record<number, string>>({});
+  const [fixing, setFixing] = useState<number | null>(null);
+  const [fixed, setFixed] = useState<Record<number, string>>({});
+  async function changeScene(i: number) {
+    const sc = scenes?.[i];
+    if (!sc || !wish[i]?.trim()) return;
+    setFixing(i); setErr("");
+    const res = await fetch("/api/scenes/fix", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prompt: sc.prompt, dir: sc.dir, texto: cuts[i].texto, cambio: wish[i], format }) }).catch(() => null);
+    const d = res ? await res.json().catch(() => ({})) : {};
+    setFixing(null);
+    if (!res?.ok || !d.prompt) return setErr(d.error || "No se pudo cambiar la escena. Intenta de nuevo.");
+    setScenes((ss) => ss && ss.map((x, k) => (k === i ? { prompt: d.prompt, dir: d.dir ?? x.dir } : x)));
+    setFixed((f) => ({ ...f, [i]: d.cambios || "Escena cambiada." }));
+    setWish((w) => ({ ...w, [i]: "" }));
+  }
 
   function framePrompt(i: number) {
     const d = scenes?.[i]?.dir ?? {};
@@ -235,8 +251,23 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                       <p className="font-medium">“{cuts[i].texto}”</p>
                       <p className="text-sm"><b>{s.dir.setting}</b>{s.dir.action ? ` — ${s.dir.action}` : ""}{s.dir.broll ? ` ${s.dir.broll}` : ""}</p>
                       <p className="text-xs text-muted">{s.dir.framing}{s.dir.emotion ? ` · ${s.dir.emotion}` : ""}</p>
+                      <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2">
+                        <label className="flex flex-col gap-1 text-xs font-semibold">
+                          ¿Qué quieres cambiar en esta escena?
+                          <textarea rows={2} value={wish[i] ?? ""} onChange={(e) => setWish({ ...wish, [i]: e.target.value })}
+                            placeholder="Ej: que esté en la cocina, que muestre el producto en la mano, más energía, plano más cerrado"
+                            className={`${inputCls} text-sm font-normal`} />
+                        </label>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" disabled={fixing !== null || !wish[i]?.trim()} onClick={() => changeScene(i)} className="rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent-text hover:bg-accent/25 disabled:opacity-50">
+                            {fixing === i ? "Cambiando la escena…" : "Cambiar escena (gratis)"}
+                          </button>
+                          {fixed[i] && <span className="text-xs text-good">✓ {fixed[i]}</span>}
+                        </div>
+                        <span className="text-[11px] text-muted">Lo que dice la persona no cambia: solo lo que se ve.</span>
+                      </div>
                       <details>
-                        <summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver y editar el prompt</summary>
+                        <summary className="cursor-pointer text-xs font-semibold text-muted">Editar el prompt a mano (avanzado, en inglés)</summary>
                         <textarea value={s.prompt} onChange={(e) => editPrompt(i, e.target.value)} rows={10} aria-label={`Prompt del corte ${i + 1}`}
                           className="mt-2 w-full rounded-lg border border-line bg-surface-2 p-3 font-mono text-xs" />
                         <p className="text-xs text-muted">Lo que cambies aquí es lo que se usa al generar este corte.</p>
