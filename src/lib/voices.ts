@@ -54,39 +54,36 @@ export const ACCENTS = [
   { locale: "es-MX", label: "Mexicana", accent: "mexican", words: /mexican|méxic/i },
 ] as const;
 
-const genderOf = (v: { labels?: Record<string, string>; name: string }) => {
-  const g = (v.labels?.gender ?? "").toLowerCase();
-  if (g === "male" || g === "female") return g;
-  if (/\b(mujer|femenin|woman|female|chica|señora)\b/i.test(v.name)) return "female";
-  if (/\b(hombre|masculin|man|male|chico|señor)\b/i.test(v.name)) return "male";
-  return "";
-};
 
 let accentCache: { at: number; list: SharedVoice[] } | null = null;
 
+const STEM: Record<string, string> = { "es-CL": "chile", "es-AR": "argentin", "es-VE": "venezuel", "es-CO": "colombi", "es-MX": "mexic" };
+const PER_GENDER = 4;
+
 /**
- * Per accent: the voices Creads made for it (in our own account, first), then real people's voices from
- * the ElevenLabs library — Professional Voice Clones first — a few men and a few women. Refreshed hourly.
+ * The same preset voices for every account: per country, up to 4 men and 4 women, real people from the
+ * ElevenLabs library whose Spanish is verified for that country (Professional Voice Clones first, then
+ * the most used). Nobody's cloned voice is ever here: those only show in their own account's list.
+ * Refreshed hourly.
  */
 export async function accentVoices(): Promise<SharedVoice[]> {
   if (accentCache && Date.now() - accentCache.at < 3_600_000) return accentCache.list;
-  const own = await elevenlabs.voices().catch(() => [] as Voice[]);
   const lists = await Promise.all(ACCENTS.map(async (a) => {
-    const mine: SharedVoice[] = own
-      .filter((v) => a.words.test(`${v.name} ${v.labels?.accent ?? ""} ${v.labels?.description ?? ""}`) || v.labels?.accent?.toLowerCase() === a.accent)
-      .map((v) => ({ ref: v.id, id: v.id, owner: "", name: v.name, gender: genderOf(v), age: v.labels?.age ?? "", accent: a.locale, preview: v.preview, mine: true }));
-    const lib: SharedVoice[] = [];
-    for (const gender of ["male", "female"] as const) {
+    const stem = STEM[a.locale];
+    const byGender = await Promise.all((["male", "female"] as const).map(async (gender) => {
+      const picked: SharedVoice[] = [];
       const tries = [
         { locale: a.locale, gender, professional: true }, { locale: a.locale, gender },
         { locale: a.locale, accent: a.accent, gender, professional: true }, { locale: a.locale, accent: a.accent, gender },
       ];
       for (const t of tries) {
-        const got = await sharedVoices({ ...t, size: 3 }).catch(() => [] as SharedVoice[]);
-        if (got.length) { lib.push(...got.filter((g) => !lib.some((x) => x.id === g.id) && !mine.some((x) => x.id === g.id))); break; }
+        if (picked.length >= PER_GENDER) break;
+        const got = await sharedVoices({ ...t, size: 12, stem }).catch(() => [] as SharedVoice[]);
+        for (const g of got) if (g.real && picked.length < PER_GENDER && !picked.some((x) => x.id === g.id)) picked.push({ ...g, gender });
       }
-    }
-    return [...mine, ...lib];
+      return picked;
+    }));
+    return byGender.flat();
   }));
   const list = lists.flat();
   if (list.length) accentCache = { at: Date.now(), list };

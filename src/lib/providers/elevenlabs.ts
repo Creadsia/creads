@@ -116,14 +116,14 @@ export const elevenlabs: VoiceProvider = {
 
 /** Starts a dub of a hosted video/audio into `target` (ISO 639-1). Returns ElevenLabs' dubbing id. */
 /** One voice of ElevenLabs' public library (real people who share their voice), for the accent picker. */
-export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string; mine?: boolean }
+export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string; mine?: boolean; real?: boolean }
 
 /**
  * Public library voices for one Spanish accent: by locale (es-CL…) or accent name, one gender, and
  * optionally only Professional Voice Clones (studio recordings of real people: the most natural).
  * The sample played is the one recorded in Spanish for that accent when the library has it.
  */
-export async function sharedVoices(o: { locale: string; accent?: string; gender?: "male" | "female"; professional?: boolean; size?: number }): Promise<SharedVoice[]> {
+export async function sharedVoices(o: { locale: string; accent?: string; gender?: "male" | "female"; professional?: boolean; size?: number; stem?: string }): Promise<SharedVoice[]> {
   const q = new URLSearchParams({ language: "es", page_size: String(o.size ?? 4), sort: "cloned_by_count" });
   if (o.accent) q.set("accent", o.accent); else q.set("locale", o.locale);
   if (o.gender) q.set("gender", o.gender);
@@ -138,7 +138,10 @@ export async function sharedVoices(o: { locale: string; accent?: string; gender?
     .map((v) => {
       const langs = (Array.isArray(v.verified_languages) ? v.verified_languages : []) as { language?: string; locale?: string; preview_url?: string }[];
       const es = langs.find((l) => l.language === "es" && l.locale === o.locale) ?? langs.find((l) => l.language === "es");
+      // the accent is really that country's: verified in that locale, or tagged with that accent
+      const real = langs.some((l) => l.locale === o.locale) || (o.stem ? `${v.accent ?? ""} ${(langs.map((l) => (l as { accent?: string }).accent ?? "")).join(" ")}`.toLowerCase().includes(o.stem) : false);
       return {
+        real,
         ref: `lib:${v.public_owner_id}:${v.voice_id}`, id: String(v.voice_id), owner: String(v.public_owner_id),
         name: String(v.name ?? "Voz"), gender: String(v.gender ?? o.gender ?? ""), age: String(v.age ?? ""), accent: o.locale,
         preview: es?.preview_url ?? (typeof v.preview_url === "string" ? v.preview_url : undefined),
