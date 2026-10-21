@@ -27,6 +27,7 @@ interface Settings {
   voiceId?: string | null; // ads: the person's lines are recorded with this voice and lip-synced
   lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so lipsync-2-pro)
   audios?: (string | null)[]; // ads: the approved recording of each cut (step «Voz»)
+  secs?: (number | null)[]; // ads: seconds chosen per cut
 }
 
 /** Starts (or restarts) the generation of one clip. Spends money: the studio asks before calling it. */
@@ -95,7 +96,8 @@ export async function POST(req: Request) {
     if (talking && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usó tu saldo.` }, { status: 400 }));
     if (talking && !face && !clip.image_url) return giveBack(NextResponse.json({ error: `${provider.label} necesita un avatar (la foto de quien habla). Elígelo en Escenas. No se usó tu saldo.` }, { status: 400 }));
     const talkSecs = Math.min(15, Math.max(3, Math.ceil(line.split(/\s+/).filter(Boolean).length / 2.4 + 0.8)));
-    const asked = talking ? talkSecs : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const chosen = !story && !talking ? st.secs?.[Number(clip.idx)] ?? null : null;
+    const asked = talking ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).

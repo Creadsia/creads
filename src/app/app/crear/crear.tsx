@@ -18,6 +18,10 @@ export interface Cut {
   texto: string;
   traduccion: string;
   mostrar: string;
+  /** The customer rewrote «what is seen»: the director follows it exactly. */
+  mostrarFijo?: boolean;
+  /** Seconds of video for this cut, chosen by the customer (none: from the words, or the recorded voice). */
+  segundos?: number;
   speaker?: string;
   persona?: string;
 }
@@ -26,6 +30,8 @@ interface Script extends Row { title: string | null; lang: string; format: strin
 const PACE = 2.7; // words per second when speaking naturally
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const secs = (t: string) => Math.max(2, Math.round(words(t) / PACE));
+/** A cut's length: what the customer chose, else the estimate from its words. */
+const cutSecs = (c: Cut) => (c.segundos && c.segundos > 0 ? c.segundos : secs(c.texto));
 const SPEAKER: Record<string, string> = { host: "Conductor", guest: "Invitado", reporter: "Reportero", homeowner: "Dueño de casa", voice: "Quien graba", person: "Persona", dialogo: "Diálogo" };
 
 // The order that avoids errors: the script, then the voice (heard and approved), then the scene prompts,
@@ -179,7 +185,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
   }
 
   const editCut = (i: number, patch: Partial<Cut>) => setCuts((cs) => cs.map((c, k) => (k === i ? { ...c, ...patch } : c)));
-  const total = useMemo(() => cuts.reduce((a, c) => a + secs(c.texto), 0), [cuts]);
+  const total = useMemo(() => cuts.reduce((a, c) => a + cutSecs(c), 0), [cuts]);
   const ready = text.trim().length >= 40 && (format !== "ronda" || ronda.place.trim()) && (format !== "comentario" || comment.question.trim());
 
   return (
@@ -324,11 +330,12 @@ export default function Crear({ full = true }: { full?: boolean }) {
             <span className="rounded-full bg-surface-2 px-3 py-1 text-sm font-semibold text-muted">{f.icon} {f.name} · {cuts.length} cortes · ≈ {total} s</span>
           </div>
           <div className="flex h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden="true">
-            {cuts.map((c, i) => <i key={i} className={`block border-r-2 border-surface ${secs(c.texto) > maxSec ? "bg-warn" : "bg-accent"}`} style={{ width: `${(secs(c.texto) / Math.max(total, 1)) * 100}%` }} />)}
+            {cuts.map((c, i) => <i key={i} className={`block border-r-2 border-surface ${cutSecs(c) > maxSec ? "bg-warn" : "bg-accent"}`} style={{ width: `${(cutSecs(c) / Math.max(total, 1)) * 100}%` }} />)}
           </div>
           <ol className="flex flex-col gap-3">
             {cuts.map((c, i) => {
-              const s = secs(c.texto);
+              const s = cutSecs(c);
+              const need = Math.max(2, Math.ceil(words(c.texto) / 2.8)); // the fastest natural reading of the line
               return (
                 <li key={i} className="grid gap-3 rounded-xl border border-line p-3 md:grid-cols-[110px_1fr]">
                   <div className="flex items-center gap-2 md:flex-col md:items-start">
@@ -339,9 +346,24 @@ export default function Crear({ full = true }: { full?: boolean }) {
                   <div className="flex min-w-0 flex-col gap-2">
                     <textarea aria-label={`Texto del corte ${i + 1}`} value={c.texto} rows={2} onChange={(e) => editCut(i, { texto: e.target.value })} className={`${inputCls} font-medium leading-relaxed`} />
                     <p className="text-sm text-muted">{c.traduccion}</p>
-                    <p className="text-sm"><span className="text-muted">Se ve: </span>{c.mostrar}</p>
+                    <label className="flex flex-col gap-1 text-xs font-semibold">
+                      Qué se ve en este corte <span className="font-normal text-muted">(la IA lo propuso; cámbialo como quieras)</span>
+                      <textarea rows={2} value={c.mostrar} onChange={(e) => editCut(i, { mostrar: e.target.value, mostrarFijo: true })}
+                        placeholder="Ej: ella en la cocina mostrando el producto a la cámara, plano medio"
+                        className={`${inputCls} text-sm font-normal`} />
+                    </label>
                     {c.persona && <p className="text-xs text-muted">Persona: {c.persona}</p>}
-                    <p className={`font-mono text-xs ${s > maxSec ? "text-warn" : "text-muted"}`}>{words(c.texto)} palabras · ≈ {s} s{s > maxSec ? " · largo: en el paso Voz se divide solo" : ""}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-muted">{words(c.texto)} palabras · duración del video:</span>
+                      <span className="inline-flex items-center overflow-hidden rounded-lg border border-line" role="group" aria-label={`Segundos del corte ${i + 1}`}>
+                        <button type="button" onClick={() => editCut(i, { segundos: Math.max(2, s - 1) })} disabled={s <= 2} className="px-2 py-1 font-bold hover:bg-surface-2 disabled:opacity-40" aria-label="Un segundo menos">−</button>
+                        <b className="min-w-[3.2rem] px-1 text-center font-mono tabular-nums">{s} s</b>
+                        <button type="button" onClick={() => editCut(i, { segundos: Math.min(15, s + 1) })} disabled={s >= 15} className="px-2 py-1 font-bold hover:bg-surface-2 disabled:opacity-40" aria-label="Un segundo más">+</button>
+                      </span>
+                      {c.segundos ? <button type="button" onClick={() => editCut(i, { segundos: undefined })} className="text-muted underline">automático</button> : <span className="text-muted">(automático)</span>}
+                      {s < need && <span className="text-warn">Ojo: en {s} s puede que no alcance a decir todo ({need} s mínimo).</span>}
+                      {s > maxSec && <span className="text-warn">Largo: en el paso Voz se divide solo.</span>}
+                    </div>
                   </div>
                 </li>
               );

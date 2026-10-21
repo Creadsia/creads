@@ -14,7 +14,7 @@ interface Avatar extends Row { name: string; image_url: string | null; descripti
 interface Voice { id: string; name: string; category: string; preview?: string }
 interface AccentVoice { ref: string; name: string; gender: string; age: string; preview?: string; mine?: boolean }
 interface Accent { locale: string; label: string; voices: AccentVoice[] }
-export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean }
+export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean; dur?: number }
 export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string; accent?: string; gender?: "male" | "female"; manual?: boolean }
 
 /** A presenter's gender from their description, so the voice matches the face. */
@@ -50,8 +50,8 @@ export function splitLong(cuts: Cut[]): Cut[] {
     const mid = w.length / 2;
     const at = (re: RegExp) => w.map((x, i) => (i < w.length - 1 && i >= 2 && re.test(x) ? i : -1)).filter((i) => i >= 0).sort((a, b) => Math.abs(a + 1 - mid) - Math.abs(b + 1 - mid))[0];
     const cut = at(/[.?!…]$/) ?? at(/[,;:]$/) ?? Math.floor(mid) - 1;
-    split({ ...c, texto: w.slice(0, cut + 1).join(" "), traduccion: "" });
-    split({ ...c, texto: w.slice(cut + 1).join(" "), traduccion: "" });
+    split({ ...c, texto: w.slice(0, cut + 1).join(" "), traduccion: "", segundos: undefined });
+    split({ ...c, texto: w.slice(cut + 1).join(" "), traduccion: "", segundos: undefined });
   };
   cuts.forEach(split);
   return out;
@@ -142,7 +142,15 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
         const res = await fetch("/api/voices/speak", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ voiceId: value.voice, text: spoken, model: "eleven_multilingual_v2" }) }).catch(() => null);
         const d = res ? await res.json().catch(() => ({})) : {};
         if (!res?.ok || !d.url) throw new Error(d.error || "No se pudo grabar la voz.");
-        takes[i] = { key: takeKey(value.voice, text, value.say), url: d.url, checking: true };
+        // how long the take lasts: the video of this cut is made just that long (no filler the AI makes up)
+        const dur = await new Promise<number | undefined>((ok) => {
+          const a = new Audio(d.url);
+          a.preload = "metadata";
+          a.onloadedmetadata = () => ok(Number.isFinite(a.duration) ? a.duration : undefined);
+          a.onerror = () => ok(undefined);
+          setTimeout(() => ok(undefined), 8000);
+        });
+        takes[i] = { key: takeKey(value.voice, text, value.say), url: d.url, checking: true, dur };
         onChange({ ...value, takes: [...takes] });
         await check(i, d.url, spoken, takes);
         onChange({ ...value, takes: [...takes] });

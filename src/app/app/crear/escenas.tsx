@@ -76,7 +76,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const takesRefs = model === "veo-3.1" || model === "veo-3.1-fast";
   const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
   const talkSecs = (t: string) => Math.min(15, Math.max(3, Math.ceil(words(t) / 2.4 + 0.8)));
-  const videoSecs = models.find((x) => x.id === model)?.talking ? cuts.reduce((a, c) => a + talkSecs(c.texto), 0) : cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
+  // each cut lasts what the customer chose, else as long as its recorded voice, else the estimate from its words
+  const chosenSecs = (i: number): number | undefined => {
+    const c = cuts[i];
+    if (c?.segundos && c.segundos > 0) return c.segundos;
+    const dur = takeOf(v, cuts, i)?.dur;
+    return dur ? Math.min(15, Math.max(2, Math.ceil(dur + 0.4))) : undefined;
+  };
+  const cutLen = (i: number) => chosenSecs(i) ?? clipSecs(cuts[i].texto);
+  const videoSecs = models.find((x) => x.id === model)?.talking ? cuts.reduce((a, c, i) => a + (takeOf(v, cuts, i)?.dur ? Math.ceil(takeOf(v, cuts, i)!.dur!) : talkSecs(c.texto)), 0) : cuts.reduce((a, c, i) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : cutLen(i) <= 4 ? 4 : cutLen(i) <= 6 ? 6 : 8) : cutLen(i)), 0);
   // Seedance refuses a real person's face as the starting image
   const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
   useEffect(() => { if (m && faceRefused(m)) setModel("kling-3.0"); }); // eslint-disable-line react-hooks/exhaustive-deps
@@ -147,7 +155,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       body: JSON.stringify({
         title, format, lang, niche, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
         avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice, lipsync: voice && natural ? "pro" : null, audios: voice ? cuts.map((_, i) => takeOf(v, cuts, i)?.url || null) : null,
-        clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i) })),
+        clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i), segundos: chosenSecs(i) })),
       }),
     }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
