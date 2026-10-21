@@ -18,6 +18,8 @@ export interface AdJob {
   edicion?: "pro" | "simple";
   /** Notes for the Pro editor (brand, product, audience, what to highlight or avoid). */
   indicaciones?: string;
+  /** The Pro edit's look: template and brand colours. */
+  look?: { plantilla?: string; c1?: string; c2?: string };
 }
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
@@ -71,7 +73,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       return todo.length ? { estado: "generando", revisado: true, paso: `Rehaciendo ${todo.length} corte(s) que la revisión encontró con errores` } : { estado: "armando", revisado: true, paso: "Revisión de calidad aprobada" };
     }
     if (j.estado === "armando") {
-      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello }, pro: j.edicion !== "simple", ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}) }, 290_000);
+      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello }, pro: j.edicion !== "simple", ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}) }, 290_000);
       return { estado: "listo", paso: "Video terminado", videoUrl: d.url };
     }
     return {};

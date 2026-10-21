@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { COLORS, type CaptionStyle, FONTS, LOOKS, SIZES, USES_ACCENT, fontOf, fontPx, marginPx } from "@/lib/caption-style";
+import { CAPTION_PRESETS, COLORS, type CaptionStyle, FONTS, LOOKS, SIZES, USES_ACCENT, fontOf, fontPx, marginPx } from "@/lib/caption-style";
 
 // The subtitle editor of the final assembly: every option with a live preview drawn with the same
 // fonts, sizes and positions the video will use.
@@ -120,6 +120,26 @@ export default function CaptionEditor({ value, onChange, aspect, sample, video }
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <Group title="Estilos listos (un clic; después puedes cambiar cualquier detalle)">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+            {CAPTION_PRESETS.map((p) => {
+              const st = { ...s, ...p.style } as CaptionStyle;
+              const on = (Object.keys(p.style) as (keyof CaptionStyle)[]).every((k) => s[k] === p.style[k]);
+              const sample = st.case === "upper" ? "TU ANUNCIO" : "Tu anuncio";
+              return (
+                <button key={p.id} type="button" aria-pressed={on} onClick={() => set({ ...p.style, x: undefined, y: undefined })}
+                  className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left ${on ? "border-accent bg-accent/10" : "border-line bg-surface hover:border-accent/50"}`}>
+                  <span className="w-full rounded-md bg-gradient-to-b from-slate-600 to-slate-800 px-2 py-1.5 text-center text-base leading-tight" style={{ fontFamily: fontOf(st.font).css, color: st.color, ...(st.look === "etiqueta" ? { background: st.accent } : st.look === "caja" ? { background: "rgba(0,0,0,.75)" } : {}), ...(st.look === "neon" ? { textShadow: `0 0 8px ${st.accent}, 0 0 16px ${st.accent}` } : st.look === "suave" || st.look === "subir" ? { textShadow: "0 2px 6px rgba(0,0,0,.6)" } : { WebkitTextStroke: "0.6px #000" }) }}>
+                    {sample.split(" ")[0]} <span style={{ color: ["resaltar", "salto", "karaoke", "subir"].includes(st.look) ? st.accent : undefined }}>{sample.split(" ")[1]}</span>
+                  </span>
+                  <span className="text-sm font-semibold">{p.name}</span>
+                  <span className="text-xs text-muted">{p.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Group>
+
         <Group title="Estilo">
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
             {LOOKS.map((l) => (

@@ -9,7 +9,7 @@ import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
-import { cutTimes, cleanPlan, proPass, proPrompt, type ProPlan } from "@/lib/pro-edit";
+import { cutTimes, cleanPlan, proPass, proPrompt, resolveLook, type ProPlan } from "@/lib/pro-edit";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
   // «Edición Pro»: headlines, zooms, flashes, sounds and a closing card on top of the montage
   const pro = b?.pro === true;
   const str = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, n) : "");
+  const look = resolveLook(b?.look); // the advertiser's look: template + brand colours + sounds
   const cierreHint = { titulo: str(b?.cierre?.titulo, 28), linea: str(b?.cierre?.linea, 48), notas: str(b?.indicaciones, 600), estilo: str(b?.estilo, 20) };
   try {
     const ad = await db.get("ads", adId);
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
       if (cierreHint.titulo) proPlan.cierre.titulo = cierreHint.titulo;
       if (cierreHint.linea) proPlan.cierre.linea = cierreHint.linea;
       // a failed Pro pass never loses the ad: the plain montage (cuts + captions) is delivered instead
-      const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan)
+      const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan, look)
         .catch((e) => { console.error("montage pro", e instanceof Error ? e.message : e); return null; });
       if (r) { bytes = r.bytes; duration = r.seconds; } else proPlan = null;
     }
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
     const ws = s.user.workspace;
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
     const srtUrl = cap && cap.cues ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
-    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(duration * 10) / 10, captions: cap && cap.cues ? style : null, pro: proPlan } });
+    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), look: pro ? { plantilla: look.id, c1: look.c1, c2: look.c2, sonidos: look.sfx !== "ninguno" } : undefined, srt: srtUrl, duration: Math.round(duration * 10) / 10, captions: cap && cap.cues ? style : null, pro: proPlan } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration, pro: proPlan });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo armar el anuncio.") }, { status: 502 });

@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatById } from "@/lib/formats";
-import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
+import { CAPTION_PRESETS, type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
+import { LOOKS } from "@/lib/edit-looks";
+
+// each edit look comes with subtitles that match it (the customer can still change them)
+const LOOK_CAPTIONS: Record<string, string> = { limpio: "resaltado", impacto: "impacto", elegante: "luxury", noticia: "noticia", neon: "creads" };
 import { billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
 import { btnCls, cardCls, ghostCls, inputCls, Working } from "./ui";
@@ -42,6 +46,15 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
   const [cierre, setCierre] = useState({ titulo: "", linea: "" });
   const [indicaciones, setIndicaciones] = useState("");
   const [estilo, setEstilo] = useState("energico");
+  // the look of the edit: template, the advertiser's brand colour (optional) and sounds
+  const [plantilla, setPlantilla] = useState("limpio");
+  const [marca, setMarca] = useState("");
+  const [sonidos, setSonidos] = useState(true);
+  function pickLook(id: string) {
+    setPlantilla(id);
+    const cap = CAPTION_PRESETS.find((p) => p.id === LOOK_CAPTIONS[id]);
+    if (cap) setCapStyle((c) => normalizeStyle({ ...c, ...cap.style, x: undefined, y: undefined }));
+  }
   // start from the style used last time (per browser)
   useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -162,7 +175,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
   async function doBuild() {
     setAutoBuild(false);
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre, indicaciones, estilo }) }).catch(() => null);
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre, indicaciones, estilo, look: { plantilla, ...(marca ? { c1: marca } : {}), sonidos } }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
     const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
@@ -372,6 +385,40 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
                   <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">NUEVO</span>
                 </label>
                 <p className="text-xs text-muted">La IA edita tu anuncio como una agencia: títulos animados en las palabras clave, zoom y destello en cada corte, efectos de sonido y una placa final con tu marca. Sin costo extra.</p>
+                {pro && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold">Look de la edición</span>
+                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-3" role="radiogroup" aria-label="Look de la edición">
+                      {Object.values(LOOKS).map((l) => {
+                        const c1 = marca || l.c1;
+                        return (
+                          <button key={l.id} type="button" role="radio" aria-checked={plantilla === l.id} onClick={() => pickLook(l.id)}
+                            className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left ${plantilla === l.id ? "border-accent bg-accent/10" : "border-line bg-bg hover:border-accent/50"}`}>
+                            <span className="w-full rounded-md px-2 py-2 text-center leading-none" style={{ background: l.endBg }}>
+                              {l.box ? (
+                                <span className="inline-block px-1.5 py-0.5 text-lg" style={{ background: c1, color: l.text, fontFamily: "CapBebas" }}>{l.upper ? "OFERTA HOY" : "Oferta hoy"}</span>
+                              ) : (
+                                <span className="text-lg" style={{ color: l.text, fontFamily: l.font === "Anton" ? "CapAnton" : l.font === "Poppins ExtraBold" ? "CapPoppins" : l.font === "Archivo Black" ? "CapArchivo" : "CapMontserrat", textShadow: l.glow ? `0 0 10px ${c1}` : l.outline ? "0 0 2px #000, 0 2px 0 #000" : "none" }}>
+                                  {l.upper ? "OFERTA " : "Oferta "}<span style={{ color: c1 }}>{l.upper ? "HOY" : "hoy"}</span>
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-sm font-semibold">{l.name}</span>
+                            <span className="text-xs text-muted">{l.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <label className="flex items-center gap-2">
+                        Color de tu marca
+                        <input type="color" value={marca || LOOKS[plantilla]?.c1 || "#FFD400"} onChange={(e) => setMarca(e.target.value)} className="h-8 w-12 cursor-pointer rounded border border-line bg-bg" aria-label="Color de tu marca" />
+                      </label>
+                      {marca && <button type="button" onClick={() => setMarca("")} className="text-xs text-muted underline">usar el del look</button>}
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={sonidos} onChange={(e) => setSonidos(e.target.checked)} /> Efectos de sonido</label>
+                    </div>
+                  </div>
+                )}
                 {pro && (
                   <div className="grid gap-2 sm:grid-cols-2">
                     <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">

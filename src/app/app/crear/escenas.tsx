@@ -34,9 +34,11 @@ const FRAME_USD = 0.134;
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
 
-export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche, v, onVoiceStep, adId, setAdId }: {
+export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche, v, onVoiceStep, adId, setAdId, onNewScenes }: {
   step: number; setStep: (n: number) => void; format: FormatId; lang: "en" | "es-CL"; title: string; cuts: Cut[]; scriptId: string | null; niche: string;
   v: VoiceChoice; onVoiceStep: () => void; adId: string | null; setAdId: (id: string) => void;
+  /** New scene prompts = a new ad: the previous ad's videos must not show in «Videos». */
+  onNewScenes?: () => void;
 }) {
   const f = formatById(format);
   const avatars = useTable<Avatar>("avatars");
@@ -110,6 +112,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudieron dirigir las escenas.");
       setScenes(d.scenes); setRulesUsed(d.rulesUsed ?? 0);
+      onNewScenes?.();
     } catch (e2) { setErr(e2 instanceof Error ? e2.message : "No se pudieron dirigir las escenas."); }
     finally { setBusy(false); }
   }

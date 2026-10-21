@@ -142,7 +142,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
       }
       sessionStorage.removeItem(TO_CREAR_KEY);
       const d = JSON.parse(raw) as { text?: string; lang?: string; title?: string };
-      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setStep(0); setFromGuion(true); }
+      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setAdId(null); setStep(0); setFromGuion(true); }
     } catch {}
   }, []);
 
@@ -155,6 +155,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
     if (!s) return;
     setText(s.text); setLang(s.lang === "es-CL" ? "es-CL" : "en"); pickFormat((s.format as FormatId) || "ugc");
     setTitle(s.title ?? ""); setScriptId(s.id); setSaved("");
+    setAdId(null);
     if (s.cuts?.length) { setCuts(s.cuts); setStep(1); } else { setCuts([]); setStep(0); }
   }
 
@@ -169,7 +170,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "No se pudo dividir el guion.");
-      setTitle(d.titulo || "Anuncio"); setCuts(d.cortes); setScriptId(null); setStep(1);
+      setTitle(d.titulo || "Anuncio"); setCuts(d.cortes); setScriptId(null); setAdId(null); setStep(1);
     } catch (e2) { setErr(e2 instanceof Error ? e2.message : "No se pudo dividir el guion."); }
     finally { setBusy(false); }
   }
@@ -382,10 +383,10 @@ export default function Crear({ full = true }: { full?: boolean }) {
       {(step === 3 || (step === 4 && !adId)) && (
         // Escenas counts its own steps 2 (scenes) and 3 (videos)
         <Escenas step={step - 1} setStep={(n) => setStep(n === 1 ? 1 : n + 1)} format={format} lang={lang} title={title} cuts={cuts} scriptId={scriptId} niche={niche}
-          v={voice} onVoiceStep={() => setStep(2)} adId={adId} setAdId={(id) => { setAdId(id); setStep(4); }} />
+          v={voice} onVoiceStep={() => setStep(2)} adId={adId} setAdId={(id) => { setAdId(id); setStep(4); }} onNewScenes={() => setAdId(null)} />
       )}
       {step >= 4 && adId && (
-        <AdWork key={step} adId={adId} view={step === 4 ? "videos" : step === 5 ? "correcciones" : "edicion"} onNext={() => setStep(step + 1)} />
+        <AdWork key={`${adId}-${step}`} adId={adId} view={step === 4 ? "videos" : step === 5 ? "correcciones" : "edicion"} onNext={() => setStep(step + 1)} />
       )}
     </>
   );

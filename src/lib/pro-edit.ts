@@ -14,8 +14,13 @@ export interface Cierre { titulo: string; linea: string }
 export interface ProPlan { golpes: Golpe[]; cierre: Cierre }
 
 export const END_SECS = 2.2;
-const PINK = "&HD62BFF&"; // #FF2BD6 in ASS (BBGGRR)
-const CYAN = "&HFFE319&"; // #19E3FF
+
+import { type ProLook, LOOKS } from "./edit-looks";
+export { LOOKS, resolveLook, type ProLook } from "./edit-looks";
+
+/** #RRGGBB → ASS colour &HBBGGRR& (optionally with alpha 00–FF). */
+const ass = (hex: string, alpha = "") => { const h = hex.replace("#", ""); return `&H${alpha}${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
+const ffc = (hex: string) => `0x${hex.replace("#", "").toUpperCase()}`;
 
 /** The prompt that turns the script + word timings into the edit plan. */
 /** What the customer tells the editor: the closing card, free notes about the brand/product, and a style. */
@@ -78,15 +83,21 @@ const t2 = (s: number) => {
 const escAss = (s: string) => s.replace(/\\/g, "").replace(/[{}]/g, "").replace(/\n/g, " ");
 
 /** «palabras *clave*» → ASS with the key word in pink or cyan. */
-function colorize(texto: string, accent: string) {
-  return escAss(texto.toUpperCase()).replace(/\*([^*]+)\*/g, `{\\c${accent}}$1{\\c&HFFFFFF&}`).replace(/\*/g, "");
+function colorize(texto: string, accent: string, look: ProLook) {
+  const t = look.upper ? texto.toUpperCase() : texto;
+  return escAss(t).replace(/\*([^*]+)\*/g, `{\\c${accent}}$1{\\c${ass(look.text)}}`).replace(/\*/g, "");
 }
 
 /** The overlay: headlines, closing card text. W×H of the ad, T = length before the closing card. */
-export function proAss(plan: ProPlan, W: number, H: number, T: number) {
+export function proAss(plan: ProPlan, W: number, H: number, T: number, look: ProLook = LOOKS.neon) {
   const s = W / 720; // everything was designed at 720 wide
-  const big = Math.round(80 * s), endBig = Math.round(92 * s), endLine = Math.round(44 * s), pill = Math.round(34 * s);
+  const big = Math.round(look.size * s), endBig = Math.round(92 * s), endLine = Math.round(44 * s), pill = Math.round(34 * s);
   const top = Math.round(H * 0.11);
+  const ol = Math.round(look.outline * s), m = Math.round(46 * s);
+  // a box headline: BorderStyle 3 draws a solid box in the outline colour behind the text
+  const golpe = look.box
+    ? `Style: Golpe,${look.font},${big},${ass(look.text, "00")},${ass(look.text, "00")},${ass(look.c1, "00")},${ass(look.c1, "00")},0,0,0,0,100,100,1,0,3,${Math.round(14 * s)},0,8,${m},${m},${top},1`
+    : `Style: Golpe,${look.font},${big},${ass(look.text, "00")},${ass(look.text, "00")},&H00000000,&H64000000,0,0,0,0,100,100,1,0,1,${ol},${look.outline ? Math.round(3 * s) : Math.round(4 * s)},8,${m},${m},${top},1`;
   const head = `[Script Info]
 ScriptType: v4.00+
 PlayResX: ${W}
@@ -96,30 +107,33 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Golpe,Archivo Black,${big},&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,0,0,0,0,100,100,1,0,1,${Math.round(6 * s)},${Math.round(3 * s)},8,${Math.round(46 * s)},${Math.round(46 * s)},${top},1
-Style: Brillo,Archivo Black,${big},&HFF000000,&HFF000000,&H30D62BFF,&HFF000000,0,0,0,0,100,100,1,0,1,${Math.round(16 * s)},0,8,${Math.round(46 * s)},${Math.round(46 * s)},${top},1
-Style: Fin,Archivo Black,${endBig},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,40,40,0,1
-Style: FinLinea,Montserrat ExtraBold,${endLine},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,60,60,0,1
-Style: Pastilla,Montserrat ExtraBold,${pill},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,40,40,0,1
+${golpe}
+Style: Brillo,${look.font},${big},&HFF000000,&HFF000000,${ass(look.c1, "30")},&HFF000000,0,0,0,0,100,100,1,0,1,${Math.round(16 * s)},0,8,${m},${m},${top},1
+Style: Fin,${look.font},${endBig},${ass(look.endText, "00")},${ass(look.endText, "00")},&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,40,40,0,1
+Style: FinLinea,${look.lineFont},${endLine},${ass(look.endText, "00")},${ass(look.endText, "00")},&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,60,60,0,1
+Style: Pastilla,${look.lineFont},${pill},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,40,40,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
   const ev: string[] = [];
   plan.golpes.forEach((g, i) => {
-    const accent = i % 2 ? CYAN : PINK;
-    const pop = `\\fad(40,110)\\fscx165\\fscy165\\frz${i % 2 ? 4 : -4}\\t(0,150,\\fscx100\\fscy100\\frz0)`;
-    const txt = colorize(g.texto, accent);
-    ev.push(`Dialogue: 0,${t2(g.desde)},${t2(g.hasta)},Brillo,,0,0,0,,{${pop}\\blur${Math.round(10 * s)}\\3c${accent}}${txt.replace(/\{\\c[^}]*\}/g, "")}`);
-    ev.push(`Dialogue: 1,${t2(g.desde)},${t2(g.hasta)},Golpe,,0,0,0,,{${pop}}${txt}`);
+    const accent = ass(i % 2 ? look.c2 : look.c1);
+    const anim = look.pop
+      ? `\\fad(40,110)\\fscx165\\fscy165${look.tilt ? `\\frz${i % 2 ? 4 : -4}` : ""}\\t(0,150,\\fscx100\\fscy100${look.tilt ? "\\frz0" : ""})`
+      : `\\fad(260,200)`;
+    // in a box the key word keeps the text colour (the box is the accent)
+    const txt = look.box ? colorize(g.texto.replace(/\*/g, ""), ass(look.text), look) : colorize(g.texto, accent, look);
+    if (look.glow) ev.push(`Dialogue: 0,${t2(g.desde)},${t2(g.hasta)},Brillo,,0,0,0,,{${anim}\\blur${Math.round(10 * s)}\\3c${accent}}${txt.replace(/\{\\c[^}]*\}/g, "")}`);
+    ev.push(`Dialogue: 1,${t2(g.desde)},${t2(g.hasta)},Golpe,,0,0,0,,{${anim}}${txt}`);
   });
-  // closing card (the dark background is drawn by FFmpeg): title pops, a gradient-coloured underline, the line, a pill
+  // closing card (the background is drawn by FFmpeg): title, a two-colour underline, the line
   const a = T, b = T + END_SECS;
   const cx = Math.round(W / 2), cy = Math.round(H * 0.42);
-  ev.push(`Dialogue: 2,${t2(a)},${t2(b)},Fin,,0,0,0,,{\\pos(${cx},${cy})\\fscx40\\fscy40\\t(0,220,\\fscx100\\fscy100)}${escAss(plan.cierre.titulo)}`);
+  ev.push(`Dialogue: 2,${t2(a)},${t2(b)},Fin,,0,0,0,,{\\pos(${cx},${cy})${look.pop ? "\\fscx40\\fscy40\\t(0,220,\\fscx100\\fscy100)" : "\\fad(250,0)"}}${escAss(plan.cierre.titulo)}`);
   const bw = Math.round(W * 0.3), bh = Math.max(4, Math.round(8 * s)), by = cy + Math.round(endBig * 0.75);
-  ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx - bw},${by})\\c${PINK}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
-  ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx},${by})\\c${CYAN}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
+  ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx - bw},${by})\\c${ass(look.c1)}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
+  ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx},${by})\\c${ass(look.c2)}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
   ev.push(`Dialogue: 2,${t2(a + 0.25)},${t2(b)},FinLinea,,0,0,0,,{\\pos(${cx},${by + Math.round(70 * s)})\\fad(150,0)}${escAss(plan.cierre.linea)}`);
   return head + ev.join("\n") + "\n";
 }
@@ -138,29 +152,32 @@ const SFX = path.join(process.cwd(), "assets", "sfx");
  * The extra pass over the finished ad (`input`, T seconds long, W×H). Returns the new video's bytes.
  * `ff` is the montage's FFmpeg runner (same binary, same limits).
  */
-export async function proPass(ff: (args: string[], timeoutMs?: number) => Promise<string>, dir: string, input: string, W: number, H: number, T: number, cuts: number[], plan: ProPlan) {
-  await writeFile(path.join(dir, "pro.ass"), proAss(plan, W, H, T));
+export async function proPass(ff: (args: string[], timeoutMs?: number) => Promise<string>, dir: string, input: string, W: number, H: number, T: number, cuts: number[], plan: ProPlan, look: ProLook = LOOKS.neon) {
+  await writeFile(path.join(dir, "pro.ass"), proAss(plan, W, H, T, look));
   const esc = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
   const FONTS = path.join(process.cwd(), "assets", "fonts");
   const total = T + END_SECS;
 
-  // punch-in: 12% bigger on each cut, back to normal in 0.35 s (and a gentle one at the start)
-  const z = [0, ...cuts].map((c) => `if(between(t,${c},${(c + 0.35).toFixed(3)}),${c === 0 ? 0.08 : 0.12}*(1-(t-${c})/0.35),0)`).join("+");
-  const zoom = `scale=w='trunc(${W}*(1+${z})/2)*2':h=-2:eval=frame,crop=${W}:${H}`;
-  const flashes = cuts.map((c) => [
+  // punch-in on each cut (as strong as the look asks), back to normal in 0.35 s, and a gentle one at the start
+  const zk = look.zoom;
+  const z = zk > 0 ? [0, ...cuts].map((c) => `if(between(t,${c},${(c + 0.35).toFixed(3)}),${(c === 0 ? zk * 0.66 : zk).toFixed(3)}*(1-(t-${c})/0.35),0)`).join("+") : "";
+  const zoom = z ? `scale=w='trunc(${W}*(1+${z})/2)*2':h=-2:eval=frame,crop=${W}:${H}` : "";
+  const flashes = look.flash ? cuts.map((c) => [
     `drawbox=x=0:y=0:w=iw:h=ih:color=white@0.55:t=fill:enable='between(t,${c},${(c + 0.04).toFixed(3)})'`,
-    `drawbox=x=0:y=0:w=iw:h=ih:color=0xFF2BD6@0.2:t=fill:enable='between(t,${(c + 0.04).toFixed(3)},${(c + 0.12).toFixed(3)})'`,
-  ].join(",")).join(",");
-  const endBg = `drawbox=x=0:y=0:w=iw:h=ih:color=0x05040A@1:t=fill:enable='gte(t,${T.toFixed(3)})'`;
-  const bar = `drawbox=x=0:y=0:w='max(1,iw*min(t,${T.toFixed(3)})/${T.toFixed(3)})':h=${Math.max(4, Math.round(H / 240))}:color=0xFF2BD6:t=fill:enable='lt(t,${T.toFixed(3)})'`;
+    `drawbox=x=0:y=0:w=iw:h=ih:color=${ffc(look.c1)}@0.2:t=fill:enable='between(t,${(c + 0.04).toFixed(3)},${(c + 0.12).toFixed(3)})'`,
+  ].join(",")).join(",") : "";
+  const endBg = `drawbox=x=0:y=0:w=iw:h=ih:color=${ffc(look.endBg)}@1:t=fill:enable='gte(t,${T.toFixed(3)})'`;
+  const bar = look.bar ? `drawbox=x=0:y=0:w='max(1,iw*min(t,${T.toFixed(3)})/${T.toFixed(3)})':h=${Math.max(4, Math.round(H / 240))}:color=${ffc(look.c1)}:t=fill:enable='lt(t,${T.toFixed(3)})'` : "";
   const vf = [`tpad=stop_mode=clone:stop_duration=${END_SECS}`, zoom, flashes, endBg, bar, `ass=filename='${esc(path.join(dir, "pro.ass"))}':fontsdir='${esc(FONTS)}'`].filter(Boolean).join(",");
 
   // sounds: impact at the start, a whoosh on every cut, a pop on every headline, a riser into the closing card
-  const sounds: { file: string; at: number; vol: number }[] = [
-    { file: "impact.wav", at: 0, vol: 0.45 },
-    ...cuts.map((c, i) => ({ file: i % 2 ? "whoosh2.wav" : "whoosh.wav", at: Math.max(0, c - 0.12), vol: 0.22 })),
-    ...plan.golpes.map((g) => ({ file: "pop.wav", at: g.desde, vol: 0.18 })),
-    { file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 },
+  // as loud as the look: «fuerte» (all of it), «suave» (soft whooshes and the riser only), «ninguno»
+  const k = look.sfx === "suave" ? 0.6 : 1;
+  const sounds: { file: string; at: number; vol: number }[] = look.sfx === "ninguno" ? [] : [
+    ...(look.sfx === "fuerte" ? [{ file: "impact.wav", at: 0, vol: 0.45 }] : []),
+    ...cuts.map((c, i) => ({ file: i % 2 ? "whoosh2.wav" : "whoosh.wav", at: Math.max(0, c - 0.12), vol: 0.22 * k })),
+    ...(look.sfx === "fuerte" ? plan.golpes.map((g) => ({ file: "pop.wav", at: g.desde, vol: 0.18 })) : []),
+    { file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 * k },
   ];
   const args = ["-y", "-v", "error", "-i", input];
   sounds.forEach((x) => args.push("-i", path.join(SFX, x.file)));

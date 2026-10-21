@@ -37,6 +37,10 @@ export const COLORS: { hex: string; name: string }[] = [
   { hex: "#FF4FD8", name: "Rosado" },
   { hex: "#FF3B3B", name: "Rojo" },
   { hex: "#111111", name: "Negro" },
+  { hex: "#D4AF37", name: "Dorado" },
+  { hex: "#F5F1EA", name: "Crema" },
+  { hex: "#8A5CFF", name: "Violeta" },
+  { hex: "#FF8A00", name: "Naranjo" },
 ];
 
 /** Sizes offered as quick picks (like a text editor). */
@@ -139,3 +143,21 @@ export function assColor(hex: string, alpha = 0) {
 }
 /** Inline override form "&HBBGGRR&". */
 export const assInline = (hex: string) => `&H${hex.slice(5, 7)}${hex.slice(3, 5)}${hex.slice(1, 3)}&`.toUpperCase();
+
+/**
+ * Ready-made subtitle styles (one click sets everything): from calm UGC to luxury, Creads' neon and the
+ * high-energy TikTok look. The customer can still change any detail after picking one.
+ */
+export const CAPTION_PRESETS: { id: string; name: string; hint: string; style: Partial<CaptionStyle> }[] = [
+  { id: "ugc", name: "UGC tranqui", hint: "Natural, como un video real de celular", style: { look: "suave", font: "poppins", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "normal", name: "Normal", hint: "Clásico con borde, se lee en todo", style: { look: "clasico", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "resaltado", name: "Palabra resaltada", hint: "La palabra que se dice en amarillo", style: { look: "resaltar", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: false } },
+  { id: "impacto", name: "Impacto TikTok", hint: "Grande, mayúsculas, con salto", style: { look: "salto", font: "anton", size: 32, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
+  { id: "palabra", name: "Una a una", hint: "Una palabra a la vez, grande", style: { look: "palabra", font: "archivo", size: 34, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 1, position: "centro", punct: false } },
+  { id: "luxury", name: "Luxury", hint: "Crema y dorado, entra suave", style: { look: "subir", font: "poppins", size: 22, color: "#F5F1EA", accent: "#D4AF37", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "karaoke", name: "Karaoke", hint: "El color avanza mientras habla", style: { look: "karaoke", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "creads", name: "Creads neón", hint: "Brillo rosado, el estilo de Creads", style: { look: "neon", font: "archivo", size: 28, color: "#FFFFFF", accent: "#FF4FD8", case: "upper", words: 2, position: "abajo", punct: false } },
+  { id: "etiqueta", name: "Etiqueta", hint: "Texto sobre una caja de color", style: { look: "etiqueta", font: "inter", size: 24, color: "#FFFFFF", accent: "#FF3B3B", case: "normal", words: 3, position: "abajo", punct: false } },
+  { id: "pop", name: "Pop color", hint: "Rebota al entrar, amarillo", style: { look: "pop", font: "poppins", size: 28, color: "#FFE100", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
+  { id: "noticia", name: "Noticia", hint: "Caja oscura, letra condensada", style: { look: "caja", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 4, position: "abajo", punct: false } },
+];
