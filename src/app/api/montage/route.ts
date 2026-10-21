@@ -89,9 +89,10 @@ export async function POST(req: Request) {
       proPlan = cleanPlan(raw, offset, fallback);
       if (cierreHint.titulo) proPlan.cierre.titulo = cierreHint.titulo;
       if (cierreHint.linea) proPlan.cierre.linea = cierreHint.linea;
-      const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan);
-      bytes = r.bytes;
-      duration = r.seconds;
+      // a failed Pro pass never loses the ad: the plain montage (cuts + captions) is delivered instead
+      const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan)
+        .catch((e) => { console.error("montage pro", e instanceof Error ? e.message : e); return null; });
+      if (r) { bytes = r.bytes; duration = r.seconds; } else proPlan = null;
     }
 
     const stamp = Date.now();
