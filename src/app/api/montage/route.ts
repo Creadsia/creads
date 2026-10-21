@@ -4,11 +4,14 @@ import path from "node:path";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
 import { normalizeStyle } from "@/lib/caption-style";
-import { type BuildClip, build, captions, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
+import { type BuildClip, build, captions, ff, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
+import { cutTimes, cleanPlan, proPass, proPrompt, type ProPlan } from "@/lib/pro-edit";
+import { textAI } from "@/lib/providers";
+import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 300;
 
@@ -30,6 +33,10 @@ export async function POST(req: Request) {
   const adId = String(b?.adId ?? "");
   const withCaptions = b?.captions !== false;
   const style = normalizeStyle(b?.style);
+  // «Edición Pro»: headlines, zooms, flashes, sounds and a closing card on top of the montage
+  const pro = b?.pro === true;
+  const str = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, n) : "");
+  const cierreHint = { titulo: str(b?.cierre?.titulo, 28), linea: str(b?.cierre?.linea, 48) };
   try {
     const ad = await db.get("ads", adId);
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
@@ -68,14 +75,31 @@ export async function POST(req: Request) {
     const [W, H] = frameSize(aspect);
     // captions, and/or the «Hecho con Creads IA» badge (also without captions)
     const cap = (withCaptions && timeline.length) || style.sello ? captions(withCaptions ? timeline : [], W, H, aspect, style, offset) : null;
-    const bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
+    let bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
+    let duration = offset;
+    let proPlan: ProPlan | null = null;
+    if (pro) {
+      const script = clips.map((c) => c.text ?? "").join(" ").trim();
+      const fallback = { titulo: cierreHint.titulo || (lang === "es" ? "¡Pruébalo hoy!" : "Try it today!"), linea: cierreHint.linea || "" };
+      let raw: unknown = null;
+      if (textAI.configured() && script) {
+        raw = await textAI.complete({ prompt: proPrompt(script, timeline, lang, cierreHint), json: true, maxTokens: 900 })
+          .then((t) => parseJSON(t)).catch(() => null);
+      }
+      proPlan = cleanPlan(raw, offset, fallback);
+      if (cierreHint.titulo) proPlan.cierre.titulo = cierreHint.titulo;
+      if (cierreHint.linea) proPlan.cierre.linea = cierreHint.linea;
+      const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan);
+      bytes = r.bytes;
+      duration = r.seconds;
+    }
 
     const stamp = Date.now();
     const ws = s.user.workspace;
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
     const srtUrl = cap && cap.cues ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
-    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(offset * 10) / 10, captions: cap && cap.cues ? style : null } });
-    return NextResponse.json({ ad: row, url, srt: srtUrl, duration: offset });
+    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), srt: srtUrl, duration: Math.round(duration * 10) / 10, captions: cap && cap.cues ? style : null, pro: proPlan } });
+    return NextResponse.json({ ad: row, url, srt: srtUrl, duration, pro: proPlan });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo armar el anuncio.") }, { status: 502 });
   }

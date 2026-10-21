@@ -622,26 +622,6 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
   }
 }
 
-function ToolCard({ x, t, es }: { x: Tool; t: Content["tools"]; es: boolean }) {
-  return (
-    <a href="#pricing" className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-colors hover:border-muted/60">
-      <div className="stage relative aspect-[16/10] overflow-hidden bg-[#0d0e11]">
-        <span aria-hidden="true" className="absolute inset-0"><ToolArt art={x.art} es={es} /></span>
-        {x.badge && (
-          <span className={`absolute top-2 right-2 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold leading-none ${x.badge === "new" ? "bg-[image:var(--grad)] text-white" : "bg-black/70 text-white/80"}`}>
-            {x.badge === "new" ? t.new : t.soon}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-1 p-3.5">
-        <span className="text-[11px] font-semibold text-accent-text">{t.groups[x.group as keyof typeof t.groups]}</span>
-        <b className="font-semibold leading-tight">{x.name}</b>
-        <span className="text-sm leading-snug text-muted">{x.text}</span>
-        <span className="mt-auto pt-2 font-mono text-[11px] leading-tight text-muted/90">{x.models}</span>
-      </div>
-    </a>
-  );
-}
 
 const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
 
@@ -780,17 +760,13 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
         {/* Hero: a dark stage. Pitch + composer on the left, a moving wall of AI clips tagged with their model on the right. */}
         <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
           <div className="relative mx-auto grid max-w-7xl items-center gap-10 py-12 sm:py-16 lg:min-h-[min(820px,calc(100svh-120px))] lg:grid-cols-[1fr_1.08fr] lg:py-12">
-            <div className="relative z-10 flex min-w-0 flex-col gap-7">
+            <div className="relative z-10 flex min-w-0 flex-col gap-6">
               <h1 className="chroma font-display text-[2.55rem] leading-[1.02] font-semibold sm:text-6xl lg:text-[4.1rem]">
                 {t.hero.title.split(/(?<=\.) /).map((part) => (
                   <span key={part} className="block">{part}</span>
                 ))}
               </h1>
               <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
-              <ul aria-label={t.lang === "es" ? "Para quién" : "Who it's for"} className="flex flex-wrap gap-2">
-                {t.hero.who.map((w) => <li key={w} className="rounded-full border border-line bg-surface px-3 py-1 text-sm font-semibold">{w}</li>)}
-              </ul>
-              <Composer t={t.composer} />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <a href="#pricing" className="flex shrink-0 flex-col items-center whitespace-nowrap rounded-xl bg-[image:var(--grad)] px-6 py-3.5 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">
                   <span className="text-[17px]">{t.hero.cta}</span>
@@ -801,6 +777,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                   {t.hero.see}
                 </a>
               </div>
+              <Composer t={t.composer} />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
                   {t.hero.trust.map((x) => (
@@ -810,14 +787,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
                     </li>
                   ))}
                 </ul>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-                <span>{t.hero.poweredBy}</span>
-                {["Veo 3.1", "Kling 3.0", "Seedance 2.5", "Gemini Omni", "Nano Banana Pro"].map((m) => (
-                  <b key={m} className="font-mono text-[13px] font-medium text-ink/85">
-                    {m}
-                  </b>
-                ))}
               </div>
               <a href="#conectar" className="flex w-fit items-center gap-2 text-sm font-semibold text-muted underline decoration-line underline-offset-4 hover:text-ink">
                 <Mark size={16} /> {t.hero.alsoChat}
@@ -910,22 +879,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        {/* Tools: every tool with a picture of what it does and the models behind it */}
-        <section aria-labelledby="tools" className={`scroll-mt-24 ${gutter}`}>
-          <div className="mx-auto flex max-w-7xl flex-col gap-6">
-            <SectionHead id="tools" title={t.tools.title} lead={t.tools.lead} />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-              {t.tools.items.map((x) => <ToolCard key={x.name} x={x} t={t.tools} es={t.lang === "es"} />)}
-              <a href="#models" className="stage group relative flex flex-col justify-end gap-2 overflow-hidden rounded-2xl border border-line bg-black p-4 text-white">
-                <span aria-hidden="true" className="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-60 blur-[60px]" style={{ background: "var(--grad)" }} />
-                <span className="relative font-display text-4xl font-semibold">20+</span>
-                <b className="relative leading-tight">{t.tools.more}</b>
-                <span className="relative text-sm text-white/70 group-hover:text-white">{t.tools.moreCta} →</span>
-              </a>
-            </div>
-          </div>
-        </section>
-
         <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
 
         {/* Models */}
@@ -1012,7 +965,6 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           </div>
         </section>
 
-        <CtaStrip t={t.nudge} lang={t.lang} rate={rate} />
 
         {/* Why Creads: care, Latin America, people */}
         <section aria-labelledby="care" className={`scroll-mt-24 ${gutter}`}>
@@ -1168,7 +1120,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
             <h2 className="relative max-w-3xl text-[2.2rem] font-black [font-stretch:118%] sm:text-6xl">{t.start.title}</h2>
             <p className="relative max-w-[52ch] text-lg text-muted">{t.start.lead}</p>
             <div className="relative flex flex-col items-center gap-3 sm:flex-row">
-              <a href="/empezar?plan=plus&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">
+              <a href="/empezar?plan=starter&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">
                 {t.start.cta}
               </a>
               <a href="#pricing" className="rounded-xl border border-line px-6 py-3.5 font-semibold hover:bg-surface-2">{t.start.see}</a>

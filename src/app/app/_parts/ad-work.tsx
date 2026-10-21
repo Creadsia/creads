@@ -30,6 +30,9 @@ export default function AdWork({ adId }: { adId: string }) {
   const [note, setNote] = useState("");
   const [captionsOn, setCaptionsOn] = useState(true);
   const [capStyle, setCapStyle] = useState<CaptionStyle>(DEFAULT_STYLE);
+  // «Edición Pro» (on by default): animated headlines, zooms, flashes, sounds and a closing card
+  const [pro, setPro] = useState(true);
+  const [cierre, setCierre] = useState({ titulo: "", linea: "" });
   // start from the style used last time (per browser)
   useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -150,7 +153,7 @@ export default function AdWork({ adId }: { adId: string }) {
   async function doBuild() {
     setAutoBuild(false);
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle }) }).catch(() => null);
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
     const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
@@ -328,6 +331,20 @@ export default function AdWork({ adId }: { adId: string }) {
             {note && <p className="rounded-lg bg-accent/10 p-3 text-sm">{note}</p>}
 
             <div className="flex flex-col gap-3 rounded-xl bg-surface-2 p-4">
+              <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3">
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input type="checkbox" checked={pro} onChange={(e) => setPro(e.target.checked)} /> ✨ Edición Pro
+                  <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">NUEVO</span>
+                </label>
+                <p className="text-xs text-muted">La IA edita tu anuncio como una agencia: títulos animados en las palabras clave, zoom y destello en cada corte, efectos de sonido y una placa final con tu marca. Sin costo extra.</p>
+                {pro && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input value={cierre.titulo} maxLength={28} onChange={(e) => setCierre({ ...cierre, titulo: e.target.value })} placeholder="Placa final: tu marca o web (opcional)" aria-label="Título de la placa final" className="rounded-lg border border-line bg-bg px-3 py-2 text-sm" />
+                    <input value={cierre.linea} maxLength={48} onChange={(e) => setCierre({ ...cierre, linea: e.target.value })} placeholder="Frase final, ej: Pide el tuyo hoy (opcional)" aria-label="Frase de la placa final" className="rounded-lg border border-line bg-bg px-3 py-2 text-sm" />
+                    <span className="text-xs text-muted sm:col-span-2">Si los dejas vacíos, la IA los saca de tu guion.</span>
+                  </div>
+                )}
+              </div>
               <label className="flex items-center gap-2 text-sm font-semibold">
                 <input type="checkbox" checked={captionsOn} onChange={(e) => setCaptionsOn(e.target.checked)} /> Subtítulos
               </label>
@@ -339,14 +356,14 @@ export default function AdWork({ adId }: { adId: string }) {
                 {!review && !ad.final_url ? (
                   <>
                     <button type="button" onClick={reviewAndBuild} disabled={!!phase || running || autoBuild} className={btnCls}>
-                      {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : phase || autoBuild ? "Revisando y armando…" : "Revisar y armar el anuncio"}
+                      {phase === "build" ? (pro ? "Editando en Pro… (≈ 2–3 min)" : "Armando el anuncio… (≈ 1–2 min)") : phase || autoBuild ? "Revisando y editando…" : pro ? "✨ Revisar y hacer Edición Pro" : "Revisar y armar el anuncio"}
                     </button>
                     <button type="button" onClick={doBuild} disabled={!!phase || running} className="text-sm text-muted underline">Armar sin revisar</button>
                     <span className="basis-full text-xs text-muted">La revisión marca los cortes con errores graves antes de armar; si no hay, se arma solo. Todo en un paso.</span>
                   </>
                 ) : (
                   <button type="button" onClick={doBuild} disabled={!!phase || running} className={btnCls}>
-                    {phase === "build" ? "Armando el anuncio… (≈ 1–2 min)" : ad.final_url ? "Volver a armar" : "Armar anuncio"}
+                    {phase === "build" ? (pro ? "Editando en Pro… (≈ 2–3 min)" : "Armando el anuncio… (≈ 1–2 min)") : ad.final_url ? (pro ? "✨ Volver a editar en Pro" : "Volver a armar") : pro ? "✨ Edición Pro" : "Armar anuncio"}
                   </button>
                 )}
               </div>

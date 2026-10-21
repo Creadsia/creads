@@ -60,7 +60,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
         {t.plans.map((p) => {
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
-          const ads = Math.max(1, Math.round(credits / 144)); // a finished 30 s ad with Veo Lite ≈ 144 credits
+          const ads = Math.max(1, Math.round(credits / 250)); // a finished 30 s ad with Kling 3.0 ≈ 250 credits (images + video)
           const promo = !yearly && hasLaunch(p.id);
           const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
           const perAd = Math.round((monthNow / ads) * 100) / 100;

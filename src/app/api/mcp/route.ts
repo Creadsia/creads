@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { apiKeyFromRequest, userFromToken } from "@/lib/auth";
 import { CORS, originOf } from "@/lib/oauth";
-import { handle, type Call } from "@/lib/mcp";
+import { handle, type Call, type Ctx } from "@/lib/mcp";
+import { fetchableUrl, ownsMedia } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -30,11 +31,24 @@ export async function POST(req: Request) {
     if (!res.ok) throw new Error(d.error || `Creads respondió ${res.status}.`);
     return d;
   };
+  // files of this account only: a signed download link (1 h) and, for pictures, the bytes so the chat sees them
+  const ws = user.workspace;
+  const ctx: Ctx = {
+    link: async (ref) => (ownsMedia(ref, ws) ? fetchableUrl(ref, ws, 3600) : null),
+    picture: async (ref) => {
+      if (!ownsMedia(ref, ws) || !/\.(png|jpe?g|webp)$/i.test(ref)) return null;
+      const res = await fetch(await fetchableUrl(ref, ws, 300), { signal: AbortSignal.timeout(20_000) });
+      const type = res.headers.get("content-type") ?? "";
+      if (!res.ok || !/^image\/(png|jpeg|webp)/.test(type)) return null;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return buf.byteLength > 3_500_000 ? null : { data: buf.toString("base64"), mimeType: type.split(";")[0] };
+    },
+  };
   const body = await req.json().catch(() => undefined);
   if (body === undefined) return NextResponse.json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, { status: 400, headers: CORS });
   const batch = Array.isArray(body);
   const msgs = (batch ? body : [body]).slice(0, 20) as Record<string, unknown>[];
-  const out = (await Promise.all(msgs.map((m) => handle(m, call, origin)))).filter(Boolean);
+  const out = (await Promise.all(msgs.map((m) => handle(m, call, origin, ctx)))).filter(Boolean);
   if (!out.length) return new Response(null, { status: 202, headers: CORS });
   return NextResponse.json(batch ? out : out[0], { headers: CORS });
 }

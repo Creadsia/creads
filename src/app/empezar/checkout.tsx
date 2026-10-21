@@ -108,7 +108,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left ${period === p ? "border-accent-text bg-surface" : "border-line text-muted"}`}>
                   <b className="text-sm text-ink">{p === "mensual" ? "Mensual" : "Anual"}</b>
-                  <span className="text-xs">{p === "mensual" ? `Starter −${LAUNCH_PCT}% el primer mes` : "2 meses gratis"}</span>
+                  <span className="text-xs">{p === "mensual" ? `Starter −${LAUNCH_PCT}% el primer mes` : "15% menos"}</span>
                 </button>
               ))}
             </div>
