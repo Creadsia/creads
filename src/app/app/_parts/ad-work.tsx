@@ -14,7 +14,7 @@ import { refreshCredits, useCredits } from "./use-credits";
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
-interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null }
+interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null; talking?: boolean }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
 // One-tap corrections for a cut: the most common fixes, so nobody has to think of the words.
@@ -214,6 +214,8 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
     const m = models.find((x) => x.id === modelId);
     if (!m) return 0;
     const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
+    // talking avatar: as long as the voice, from the picture already drawn
+    if (m.talking) return m.usdPerSecond * Math.min(15, Math.max(3, Math.ceil(words / 2.4 + 0.8)));
     const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     const veo = m.id.startsWith("veo");
     const takesRefs = (m.id === "veo-3.1" || m.id === "veo-3.1-fast") && hasRefs;

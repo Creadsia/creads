@@ -46,6 +46,8 @@ export interface VideoProvider {
   silent?: boolean;
   /** True when the model refuses starting images with a real person's face (Seedance). */
   noFaces?: boolean;
+  /** «Avatar que habla»: animates the presenter's picture from a recorded voice (image + audio → video, one step). */
+  talking?: boolean;
   /** For providers whose result links need our key (Veo): fetch the finished file so we can re-host it. */
   download?(url: string): Promise<ArrayBuffer>;
 }

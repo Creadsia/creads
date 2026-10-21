@@ -29,8 +29,8 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
   const idioma = b.idioma === "en" ? "en" : "es-CL";
   let modelo: string | undefined;
   if (b.modelo !== undefined && b.modelo !== null && b.modelo !== "") {
-    const p = videoProviders.find((x) => x.id === b.modelo && x.configured() && !x.silent && !x.needsImage);
-    if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter((x) => x.configured() && !x.silent && !x.needsImage).map((x) => x.id).join(", ")}.`;
+    const p = videoProviders.find((x) => x.id === b.modelo && x.configured() && !x.silent && (!x.needsImage || Boolean(x.talking)));
+    if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter((x) => x.configured() && !x.silent && (!x.needsImage || Boolean(x.talking))).map((x) => x.id).join(", ")}.`;
     modelo = p.id;
   }
   const titulo = (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);

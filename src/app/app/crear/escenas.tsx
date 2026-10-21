@@ -11,7 +11,8 @@ import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "
 
 // Our pick for each kind of customer: the best quality for the credits is the default and goes first.
 const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
-  "kling-3.0": { pill: "⭐ Recomendado", rank: 0, note: "La mejor relación calidad/precio, y funciona perfecto con tu voz." },
+  "kling-avatar-2-pro": { pill: "⭐ Recomendado con tu voz", rank: -1, note: "Tu avatar habla con la voz que grabaste, en un solo paso: boca precisa y la misma cara en todo el anuncio." },
+  "kling-3.0": { pill: "Escenas con acción", rank: 0, note: "Para tomas con movimiento (caminar, mostrar un producto). Se le sincroniza la boca después." },
   "veo-3.1-fast": { pill: "Alternativa", rank: 1, note: "Muy buena imagen; cortes de 8 s." },
   "veo-3.1": { pill: "Máxima calidad · caro", rank: 3, note: "Casi 3 veces el precio de Kling. Solo para el anuncio final." },
 };
@@ -25,7 +26,7 @@ interface Accent { locale: string; label: string; voices: { ref: string; name: s
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string }
 interface Scene { dir: Dir; prompt: string }
-interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean }
+interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean; talking?: boolean }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
@@ -52,7 +53,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [copied, setCopied] = useState<number | "all" | null>(null);
 
   const [models, setModels] = useState<Model[]>([]);
-  const [model, setModel] = useState("kling-3.0");
+  // with a recorded voice, the talking avatar is the default (one step, no lip-sync pass)
+  const [model, setModel] = useState(v.voice && takesOwnVoice(format) ? "kling-avatar-2-pro" : "kling-3.0");
   const [confirm, setConfirm] = useState(false);
   const [starting, setStarting] = useState<string>("");
   const { price, covers, info } = useCredits();
@@ -72,7 +74,8 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const m = models.find((x) => x.id === model);
   const takesRefs = model === "veo-3.1" || model === "veo-3.1-fast";
   const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
-  const videoSecs = cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
+  const talkSecs = (t: string) => Math.min(15, Math.max(3, Math.ceil(words(t) / 2.4 + 0.8)));
+  const videoSecs = models.find((x) => x.id === model)?.talking ? cuts.reduce((a, c) => a + talkSecs(c.texto), 0) : cuts.reduce((a, c) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : clipSecs(c.texto) <= 4 ? 4 : clipSecs(c.texto) <= 6 ? 6 : 8) : clipSecs(c.texto)), 0);
   // Seedance refuses a real person's face as the starting image
   const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
   useEffect(() => { if (m && faceRefused(m)) setModel("kling-3.0"); }); // eslint-disable-line react-hooks/exhaustive-deps
@@ -80,7 +83,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const voice = canVoice ? v.voice : "";
   const natural = v.natural;
   const allRecorded = voiceReady(v, cuts, format);
-  const voiceUsd = voice ? cuts.reduce((a, c) => a + (natural ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(c.texto), c.texto), 0) : 0;
+  const voiceUsd = voice && m?.talking ? cuts.reduce((a, c) => a + c.texto.length * 0.00022, 0) : voice ? cuts.reduce((a, c) => a + (natural ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(c.texto), c.texto), 0) : 0;
   const libVoice = accents.flatMap((a) => a.voices.map((x) => ({ ...x, accent: a.label }))).find((x) => x.ref === voice);
   const voiceName = libVoice ? `${libVoice.name} (${libVoice.accent})` : voices.find((x) => x.id === voice)?.name;
   const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) + voiceUsd : 0;
@@ -265,7 +268,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
             <>
               {(() => {
                 // Veo 3.1 Lite (preview) fails on every ad for now: not offered
-                const usable = models.filter((x) => x.configured && !x.needsImage && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
+                const usable = models.filter((x) => x.configured && (!x.needsImage || (x.talking && voice)) && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
                 const other = models.filter((x) => !usable.includes(x));
                 // recommended first, then the cheapest and the best quality, then the rest by price
                 const order = (id: string) => (MODEL_TAGS[id] ? MODEL_TAGS[id].rank : 9);

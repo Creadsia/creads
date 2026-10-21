@@ -46,6 +46,8 @@ interface FalVideo {
   noFaces?: boolean;
   /** fal's live price list only works for flat per-second prices; tiered models keep our static 720p price. */
   livePrice?: boolean;
+  /** Image + recorded voice → talking video (the clip lasts as long as the voice). */
+  talking?: boolean;
   build: Build;
 }
 
@@ -98,6 +100,14 @@ const wan: Build = (req, image) => ({
   audio: req.withAudio,
   enable_prompt_expansion: false, // keep the director's prompt as written
   ...(image ? { start_image_url: image } : {}),
+});
+
+// Kling AI Avatar 2 (Pro): the presenter's picture talks with the recorded voice, in one step (no second
+// lip-sync pass). The prompt only guides delivery; the words come from the audio.
+const klingAvatar: Build = (req, image) => ({
+  image_url: image,
+  audio_url: req.refs?.find((r) => r.role === "audio")?.url,
+  prompt: "A real person talking to their phone camera in a casual UGC video: natural, relaxed delivery, subtle facial expressions, small natural head movements and occasional hand gestures in rhythm with the speech, natural blinking. Not exaggerated, not theatrical.",
 });
 
 // Grok Imagine Video 1.5 (xAI): 1–15 s.
@@ -202,6 +212,15 @@ export const FAL_VIDEO: FalVideo[] = [
     build: wan,
   },
   {
+    id: "kling-avatar-2-pro",
+    label: "Kling Avatar 2 Pro · avatar que habla",
+    usdPerSecond: 0.115, // fal 2026-10-21: $0.115 per second of video
+    i2v: "fal-ai/kling-video/ai-avatar/v2/pro",
+    durations: range(3, 15),
+    talking: true,
+    build: klingAvatar,
+  },
+  {
     id: "grok-video-1.5",
     label: "Grok Imagine Video 1.5",
     usdPerSecond: 0.14, // 720p ($0.08 at 480p, $0.25 at 1080p)
@@ -260,11 +279,13 @@ function falVideo(m: FalVideo): VideoProvider {
     needsImage: !m.t2v,
     silent: Boolean(m.silent),
     noFaces: Boolean(m.noFaces),
+    talking: Boolean(m.talking),
 
     async submit(req) {
       const image = req.refs?.find((r) => r.role === "first_frame")?.url;
       const endpoint = image ? m.i2v : m.t2v;
       if (!endpoint) throw new Error(`${m.label} necesita una imagen de partida.`);
+      if (m.talking && !req.refs?.some((r) => r.role === "audio")) throw new Error(`${m.label} necesita la voz grabada.`);
       const go = async (prompt: string) => ({ provider: m.id, jobId: await falSubmit(endpoint, m.build({ ...req, prompt }, image), m.label) });
       try {
         return await go(m.maxPrompt ? await fitPrompt(req.prompt, m.maxPrompt) : req.prompt);
