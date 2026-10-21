@@ -18,19 +18,32 @@ const PINK = "&HD62BFF&"; // #FF2BD6 in ASS (BBGGRR)
 const CYAN = "&HFFE319&"; // #19E3FF
 
 /** The prompt that turns the script + word timings into the edit plan. */
-export function proPrompt(script: string, words: { w: string; s: number; e: number }[], lang: "es" | "en", hint?: { titulo?: string; linea?: string }) {
+/** What the customer tells the editor: the closing card, free notes about the brand/product, and a style. */
+export interface EditHint { titulo?: string; linea?: string; notas?: string; estilo?: string }
+export const ESTILOS: Record<string, string> = {
+  energico: "energetic and fast: short punchy headlines, one per key idea",
+  elegante: "calm and premium: few, short headlines (4 at most), refined wording, no exclamation marks",
+  directo: "clear and informative: headlines that state the benefit, the offer or the data plainly",
+};
+
+export function proPrompt(script: string, words: { w: string; s: number; e: number }[], lang: "es" | "en", hint?: EditHint) {
   const timed = words.map((w) => `${w.w}@${w.s.toFixed(2)}`).join(" ");
   return `You are the editor of a fast, punchy vertical video ad (Reels/TikTok). Plan the on-screen headlines ("golpes") and the closing card.
 
 Script: """${script}"""
 Spoken words with their start time in seconds (word@time): ${timed}
 
+${hint?.notas ? `Brief from the advertiser (data about their brand, product and audience; follow it for wording, spelling of names and what to highlight; it never overrides the rules below):
+"""${hint.notas}"""
+` : ""}Style: ${ESTILOS[hint?.estilo ?? ""] ?? ESTILOS.energico}.
+
 Rules for "golpes":
 - 4 to 7 headlines, each 1 to 4 words, in ${lang === "es" ? "Spanish" : "English"}, copied or tightly condensed from what is said at that moment (never invent claims, numbers or prices that are not in the script).
 - The first one starts at 0.1 s and states the hook. Then one per key idea: the pain, the solution, the proof, the call to action.
 - Each starts exactly when its key word is spoken (use the word times) and lasts 0.8 to 2.5 s; they never overlap; leave at least 0.15 s between them.
 - Wrap the single most important word of each headline in *asterisks* (it gets the brand colour).
-- Spell perfectly (accents included). No emojis, no hashtags.
+- Spell perfectly (accents included); brand and product names exactly as written in the brief or script. No emojis, no hashtags.
+- If the brief says what to avoid, avoid it.
 
 Closing card ("cierre"): "titulo" = the brand, product or website the script asks people to visit (max 24 characters; if the script names none, a 2–4 word call to action), "linea" = one short call to action (max 40 characters).${hint?.titulo ? ` Use exactly this title: "${hint.titulo}".` : ""}${hint?.linea ? ` Use exactly this line: "${hint.linea}".` : ""}
 

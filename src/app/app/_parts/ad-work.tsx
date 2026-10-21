@@ -33,6 +33,8 @@ export default function AdWork({ adId }: { adId: string }) {
   // «Edición Pro» (on by default): animated headlines, zooms, flashes, sounds and a closing card
   const [pro, setPro] = useState(true);
   const [cierre, setCierre] = useState({ titulo: "", linea: "" });
+  const [indicaciones, setIndicaciones] = useState("");
+  const [estilo, setEstilo] = useState("energico");
   // start from the style used last time (per browser)
   useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -153,7 +155,7 @@ export default function AdWork({ adId }: { adId: string }) {
   async function doBuild() {
     setAutoBuild(false);
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre }) }).catch(() => null);
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre, indicaciones, estilo }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
     const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
@@ -339,6 +341,17 @@ export default function AdWork({ adId }: { adId: string }) {
                 <p className="text-xs text-muted">La IA edita tu anuncio como una agencia: títulos animados en las palabras clave, zoom y destello en cada corte, efectos de sonido y una placa final con tu marca. Sin costo extra.</p>
                 {pro && (
                   <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">
+                      Indicaciones para la edición (recomendado)
+                      <textarea value={indicaciones} maxLength={600} rows={3} onChange={(e) => setIndicaciones(e.target.value)} placeholder={"Ej: Marca: Café Lumbre (se escribe así). Producto: café de grano tostado en Chile. Público: oficinistas de 25 a 40. Destacar: envío gratis en Santiago. Evitar: hablar de precios. Cierre: cafelumbre.cl"} className="rounded-lg border border-line bg-bg px-3 py-2 text-sm font-normal" />
+                      <span className="font-normal text-muted">Cuéntale a la IA tu marca, qué quieres destacar y qué evitar. Así los títulos salen bien escritos y en tu tono.</span>
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2 sm:col-span-2" role="radiogroup" aria-label="Estilo de edición">
+                      <span className="text-xs font-semibold">Estilo:</span>
+                      {([["energico", "Enérgico"], ["elegante", "Elegante"], ["directo", "Directo"]] as const).map(([v, l]) => (
+                        <button key={v} type="button" role="radio" aria-checked={estilo === v} onClick={() => setEstilo(v)} className={`rounded-full border px-3 py-1 text-xs ${estilo === v ? "border-transparent bg-[image:var(--grad)] text-white" : "border-line"}`}>{l}</button>
+                      ))}
+                    </div>
                     <input value={cierre.titulo} maxLength={28} onChange={(e) => setCierre({ ...cierre, titulo: e.target.value })} placeholder="Placa final: tu marca o web (opcional)" aria-label="Título de la placa final" className="rounded-lg border border-line bg-bg px-3 py-2 text-sm" />
                     <input value={cierre.linea} maxLength={48} onChange={(e) => setCierre({ ...cierre, linea: e.target.value })} placeholder="Frase final, ej: Pide el tuyo hoy (opcional)" aria-label="Frase de la placa final" className="rounded-lg border border-line bg-bg px-3 py-2 text-sm" />
                     <span className="text-xs text-muted sm:col-span-2">Si los dejas vacíos, la IA los saca de tu guion.</span>

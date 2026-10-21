@@ -5,7 +5,7 @@ import { createAd, listAds, publicAd, readOrder } from "@/lib/api-ads";
 
 export const dynamic = "force-dynamic";
 
-// Public API v1. POST {guion, formato?, idioma?, modelo?, titulo?, sello?, avatar?, edicion? ("pro" by default, or "simple")} → a new ad (202, follow it with
+// Public API v1. POST {guion, formato?, idioma?, modelo?, titulo?, sello?, avatar?, edicion? ("pro" by default, or "simple"), indicaciones? (notes for the Pro editor)} → a new ad (202, follow it with
 // GET /api/v1/anuncios/{id}). GET → the account's latest ads. Auth: `Authorization: Bearer creads_sk_…`.
 
 export async function POST(req: Request) {

@@ -32,3 +32,10 @@ test("Edición Pro: garbage from the AI still gives a usable plan", () => {
   assert.equal(plan.cierre.titulo, "¡Pruébalo hoy!");
   assert.ok(proAss(plan, 720, 1280, 12).includes("¡Pruébalo hoy!"));
 });
+
+test("the editor brief and style reach the prompt", () => {
+  const p = proPrompt("Pide tu café hoy", [{ w: "Pide", s: 0, e: 0.3 }], "es", { notas: "Marca: Café Lumbre. Evitar: precios.", estilo: "elegante" });
+  assert.match(p, /Café Lumbre/);
+  assert.match(p, /calm and premium/);
+  assert.match(proPrompt("x", [], "es"), /energetic/);
+});
