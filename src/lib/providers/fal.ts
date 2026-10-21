@@ -212,6 +212,16 @@ export const FAL_VIDEO: FalVideo[] = [
     build: wan,
   },
   {
+    // Seedance 2.0 Mini (fal, 2026-10): $0.1547/s at 720p ($0.0721 at 480p). Being tested with real faces.
+    id: "seedance-2.0-mini",
+    label: "Seedance 2.0 Mini",
+    usdPerSecond: 0.1547,
+    i2v: "bytedance/seedance-2.0/mini/image-to-video",
+    durations: range(4, 15),
+    livePrice: false,
+    build: seedance,
+  },
+  {
     id: "kling-avatar-2-pro",
     label: "Kling Avatar 2 Pro · avatar que habla",
     usdPerSecond: 0.115, // fal 2026-10-21: $0.115 per second of video
