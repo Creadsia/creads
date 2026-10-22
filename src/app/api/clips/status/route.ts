@@ -14,7 +14,7 @@ import { customerText, publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
-const LIPSYNC_PRO = "fal-ai/sync-lipsync/v2"; // with model "lipsync-2-pro": the most natural mouth
+const LIPSYNC_PRO = "fal-ai/sync-lipsync/v3"; // sync-3: the most natural mouth (replaced lipsync-2-pro, 21 Oct 2026)
 
 /** Story shots whose speaker has their own voice: after the animation, the line is recorded with that
  * voice and lip-synced onto the clip (a second job, "ls:<fal job>"). */
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
         const audio = voice.approved ?? (await saveMedia(ws, "historias", (await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
         const media = { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) };
         const job = voice.pro
-          ? await falSubmit(LIPSYNC_PRO, { ...media, model: "lipsync-2-pro", sync_mode: "cut_off" }, "Sincronizar labios")
+          ? await falSubmit(LIPSYNC_PRO, { ...media, sync_mode: "cut_off" }, "Sincronizar labios")
           : await falSubmit(LIPSYNC, media, "Sincronizar labios");
         const row = await db.update("clips", id, { status: "generating", provider_job: `ls:${job}` });
         return NextResponse.json({ clip: row });

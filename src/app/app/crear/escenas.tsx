@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { type FormatId, formatById, refusesFrame, takesOwnVoice } from "@/lib/formats";
 import { lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
+import { avatarVideo } from "@/lib/avatar-video";
 import { fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { type VoiceChoice, takeOf, voiceReady } from "./voz";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
@@ -12,7 +13,9 @@ import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "
 
 // Our pick for each kind of customer: the best quality for the credits is the default and goes first.
 const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> = {
-  "kling-avatar-2-pro": { pill: "⭐ Recomendado con tu voz", rank: -1, note: "Tu avatar habla con la voz que grabaste, en un solo paso: boca precisa y la misma cara en todo el anuncio." },
+  "persona-real": { pill: "⭐ Persona real", rank: -3, note: "El video que grabaste de la persona, con tu voz en los labios. Lo más real: la cara, la ropa y el lugar son de verdad." },
+  "minimax-h3-max": { pill: "⭐ Persona IA · escena a tu gusto", rank: -2, note: "Tu avatar en el lugar que pidas (mall, casa, auto…). Primero se dibuja la escena de cada corte, se anima y se le pone tu voz en los labios." },
+  "kling-avatar-2-pro": { pill: "Avatar que habla", rank: -1, note: "Tu avatar habla con tu voz en un solo paso, pero siempre en el mismo lugar: no sigue la escena de cada corte." },
   "kling-3.0": { pill: "Escenas con acción", rank: 0, note: "Para tomas con movimiento (caminar, mostrar un producto). Se le sincroniza la boca después." },
   "veo-3.1-fast": { pill: "Alternativa", rank: 1, note: "Muy buena imagen; cortes de 8 s." },
   "veo-3.1": { pill: "Máxima calidad · caro", rank: 3, note: "Casi 3 veces el precio de Kling. Solo para el anuncio final." },
@@ -21,13 +24,13 @@ import type { Cut } from "./crear";
 
 // Steps 3 and 4 of "Crear anuncio": direct the scenes, then generate every cut with the chosen model.
 
-interface Avatar extends Row { name: string; description: string | null; image_url: string | null; voice_name: string | null; voice_id?: string | null }
+interface Avatar extends Row { name: string; description: string | null; image_url: string | null; voice_name: string | null; voice_id?: string | null; notes?: string | null }
 interface Voice { id: string; name: string; category: string; preview?: string }
 interface Accent { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; preview?: string }[] }
 interface Product extends Row { name: string; description: string | null; image_url: string | null }
 interface Dir { setting?: string; framing?: string; action?: string; broll?: string; emotion?: string; movement?: string; es?: string }
 interface Scene { dir: Dir; prompt: string }
-interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean; talking?: boolean }
+interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean; talking?: boolean; actor?: boolean }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
 const FRAME_USD = 0.134;
@@ -56,8 +59,9 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const [copied, setCopied] = useState<number | "all" | null>(null);
 
   const [models, setModels] = useState<Model[]>([]);
-  // with a recorded voice, the talking avatar is the default (one step, no lip-sync pass)
-  const [model, setModel] = useState(v.voice && takesOwnVoice(format) ? "kling-avatar-2-pro" : "kling-3.0");
+  // with a recorded voice: «Persona IA» (the scene the customer asked for + the voice on the lips) by default;
+  // «Persona real» when the avatar has its own filmed video
+  const [model, setModel] = useState(v.voice && takesOwnVoice(format) ? "minimax-h3-max" : "kling-3.0");
   const [confirm, setConfirm] = useState(false);
   const [starting, setStarting] = useState<string>("");
   const { price, covers, info } = useCredits();
@@ -74,9 +78,16 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
 
   const avatar = avatars.rows?.find((a) => a.id === avatarId);
   const product = products.rows?.find((p) => p.id === productId);
+  const hasVideo = Boolean(f.av !== "none" && avatarVideo(avatar?.notes));
+  useEffect(() => {
+    if (hasVideo && v.voice && takesOwnVoice(format)) setModel("persona-real");
+    else setModel((cur) => (cur === "persona-real" ? (v.voice ? "minimax-h3-max" : "kling-3.0") : cur));
+  }, [hasVideo, v.voice, format]);
   const m = models.find((x) => x.id === model);
+  // «Persona IA» always gets the most natural mouth (sync-3): the scene comes from the drawing, the voice from «Voz»
+  const syncPro = (natural0: boolean) => natural0 || model === "minimax-h3-max";
   const takesRefs = model === "veo-3.1" || model === "veo-3.1-fast";
-  const needsFrame = !takesRefs && Boolean(avatar?.image_url || product?.image_url);
+  const needsFrame = !takesRefs && !m?.actor && Boolean(avatar?.image_url || product?.image_url);
   const talkSecs = (t: string) => Math.min(15, Math.max(3, Math.ceil(words(t) / 2.4 + 0.8)));
   // each cut lasts what the customer chose, else as long as its recorded voice, else the estimate from its words
   const chosenSecs = (i: number): number | undefined => {
@@ -86,7 +97,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     return dur ? Math.min(15, Math.max(2, Math.ceil(dur + 0.4))) : undefined;
   };
   const cutLen = (i: number) => chosenSecs(i) ?? clipSecs(cuts[i].texto);
-  const videoSecs = models.find((x) => x.id === model)?.talking ? cuts.reduce((a, c, i) => a + (takeOf(v, cuts, i)?.dur ? Math.ceil(takeOf(v, cuts, i)!.dur!) : talkSecs(c.texto)), 0) : cuts.reduce((a, c, i) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : cutLen(i) <= 4 ? 4 : cutLen(i) <= 6 ? 6 : 8) : cutLen(i)), 0);
+  const videoSecs = m?.talking || m?.actor ? cuts.reduce((a, c, i) => a + (takeOf(v, cuts, i)?.dur ? Math.ceil(takeOf(v, cuts, i)!.dur!) : talkSecs(c.texto)), 0) : cuts.reduce((a, c, i) => a + (model.startsWith("veo") ? (takesRefs && (avatar?.image_url || product?.image_url) ? 8 : cutLen(i) <= 4 ? 4 : cutLen(i) <= 6 ? 6 : 8) : cutLen(i)), 0);
   // Seedance refuses a real person's face as the starting image
   const faceRefused = (x: Model) => refusesFrame(x, format, { face: Boolean(f.av !== "none" && avatar?.image_url), product: Boolean(product?.image_url) });
   useEffect(() => { if (m && faceRefused(m)) setModel("kling-3.0"); }); // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,7 +105,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
   const voice = canVoice ? v.voice : "";
   const natural = v.natural;
   const allRecorded = voiceReady(v, cuts, format);
-  const voiceUsd = voice && m?.talking ? cuts.reduce((a, c) => a + c.texto.length * 0.00022, 0) : voice ? cuts.reduce((a, c) => a + (natural ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(c.texto), c.texto), 0) : 0;
+  const voiceUsd = voice && (m?.talking || m?.actor) ? cuts.reduce((a, c) => a + c.texto.length * 0.00022, 0) : voice ? cuts.reduce((a, c) => a + (syncPro(natural) ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(c.texto), c.texto), 0) : 0;
   const libVoice = accents.flatMap((a) => a.voices.map((x) => ({ ...x, accent: a.label }))).find((x) => x.ref === voice);
   const voiceName = libVoice ? `${libVoice.name} (${libVoice.accent})` : voices.find((x) => x.id === voice)?.name;
   const usd = m ? videoSecs * m.usdPerSecond + (needsFrame ? cuts.length * FRAME_USD : 0) + voiceUsd : 0;
@@ -157,7 +168,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({
         title, format, lang, niche, aspect: model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect, model, scriptId,
-        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice, lipsync: voice && natural ? "pro" : null, audios: voice ? cuts.map((_, i) => takeOf(v, cuts, i)?.url || null) : null,
+        avatarId: f.av === "none" ? null : avatarId || null, productId: productId || null, voiceId: voice, lipsync: voice && syncPro(natural) ? "pro" : null, audios: voice ? cuts.map((_, i) => takeOf(v, cuts, i)?.url || null) : null,
         clips: cuts.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: scenes[i].prompt, framePrompt: framePrompt(i), segundos: chosenSecs(i) })),
       }),
     }).catch(() => null);
@@ -315,7 +326,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
             <>
               {(() => {
                 // Veo 3.1 Lite (preview) fails on every ad for now: not offered
-                const usable = models.filter((x) => x.configured && (!x.needsImage || (x.talking && canVoice)) && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
+                const usable = models.filter((x) => x.configured && (!x.needsImage || ((x.talking || (x.actor && hasVideo)) && canVoice)) && !x.silent && !faceRefused(x) && x.id !== "veo-3.1-lite");
                 const other = models.filter((x) => !usable.includes(x));
                 // recommended first, then the cheapest and the best quality, then the rest by price
                 const order = (id: string) => (MODEL_TAGS[id] ? MODEL_TAGS[id].rank : 9);
@@ -328,15 +339,15 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                         const tag = MODEL_TAGS[x.id];
                         const on = x.id === model;
                         return (
-                          <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => (x.talking && !voice ? onVoiceStep() : setModel(x.id))}
-                            className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors ${on ? "border-accent bg-accent/10" : x.talking ? "border-accent/60 hover:border-accent" : "border-line hover:border-accent/50"}`}>
+                          <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => ((x.talking || x.actor) && !voice ? onVoiceStep() : setModel(x.id))}
+                            className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors ${on ? "border-accent bg-accent/10" : x.talking || x.actor || x.id === "minimax-h3-max" ? "border-accent/60 hover:border-accent" : "border-line hover:border-accent/50"}`}>
                             <span className="flex w-full flex-wrap items-center justify-between gap-2">
                               <b className="text-sm">{x.label}</b>
                               {tag && <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${tag.rank <= 0 && (tag.rank < 0 || !voice) ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"}`}>{tag.pill}</span>}
                             </span>
                             <span className="text-xs text-muted">{price(x.usdPerSecond * 8)} por corte de 8 s</span>
                             {tag?.note && <span className="text-xs text-muted">{tag.note}</span>}
-                            {x.talking && !voice && <span className="text-xs font-semibold text-warn">Primero graba la voz en el paso Voz (toca aquí para ir).</span>}
+                            {(x.talking || x.actor) && !voice && <span className="text-xs font-semibold text-warn">Primero graba la voz en el paso Voz (toca aquí para ir).</span>}
                           </button>
                         );
                       })}
@@ -345,7 +356,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                       <details className="text-xs text-muted">
                         <summary className="cursor-pointer">No sirven para este anuncio ({other.length})</summary>
                         <ul className="mt-1 flex flex-col gap-0.5 pl-4">
-                          {other.map((x) => <li key={x.id}>{x.label} · {!x.configured ? "no disponible por ahora" : x.needsImage || x.silent ? "no genera voz" : "no acepta personas reales (tu avatar o una persona con tu producto)"}</li>)}
+                          {other.map((x) => <li key={x.id}>{x.label} · {!x.configured ? "no disponible por ahora" : x.actor ? (canVoice ? "necesita el video de la persona: súbelo en Avatares" : "no sirve para este formato") : x.needsImage || x.silent ? "no genera voz" : "no acepta personas reales (tu avatar o una persona con tu producto)"}</li>)}
                         </ul>
                       </details>
                     )}
@@ -361,7 +372,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
               <p className="rounded-lg bg-surface-2 p-3 text-sm" data-tour="crear-precio">
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
                 {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}{voice ? ` · Voz: ${voiceName ?? "elegida"}${natural ? " · boca natural" : ""}` : ""}<br />
-                {takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
+                {m?.actor ? `Se usa el video que grabaste de ${avatar?.name ?? "la persona"}, con tu voz en los labios. ` : model === "minimax-h3-max" && needsFrame ? "Primero se dibuja a tu avatar en la escena de cada corte, después se anima y al final se le pone tu voz en los labios. " : takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
                 Precio estimado: <b>{price(usd)}</b>{info && !info.unlimited ? ` · te quedan ${fmtSeconds(secondsOf(info.balance ?? 0, info.rate))}` : ""}. Si un corte falla, sus segundos vuelven solos.
                 {model.startsWith("veo") && aspect !== "9:16" && aspect !== "16:9" ? " Veo no hace 4:5 ni 1:1: se genera en 9:16." : ""}
               </p>

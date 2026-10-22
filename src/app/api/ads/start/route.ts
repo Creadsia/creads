@@ -7,6 +7,7 @@ import { cleanNiche } from "@/lib/niches";
 import { defaultVoice, resolveVoice } from "@/lib/voices";
 import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
+import { avatarVideo } from "@/lib/avatar-video";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -36,7 +37,11 @@ export async function POST(req: Request) {
       voiceId = wanted === null ? await defaultVoice(s.user.workspace, avatar, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
       if (wanted && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
     }
-    // «Boca natural» (sync.so lipsync-2-pro) instead of the fast lip-sync: the most natural mouth, a bit more expensive
+    // «Persona real»: the avatar's own filmed video gets the voice on its lips; it needs both
+    const video = avatar ? avatarVideo(avatar.notes) : null;
+    if (model.actor && (!video || !ownsMedia(video, s.user.workspace))) return NextResponse.json({ error: "Este avatar no tiene su video. Súbelo en Avatares (Persona real) o elige otro modelo." }, { status: 400 });
+    if (model.actor && !voiceId) return NextResponse.json({ error: "Persona real necesita una voz: elígela y grábala en el paso Voz." }, { status: 400 });
+    // «Boca natural» (sync.so sync-3) instead of the fast lip-sync: the most natural mouth, a bit more expensive
     const lipsync = voiceId && b?.lipsync === "pro" ? "pro" : null;
     // the voice the customer already heard and approved, one recording per cut (the video is lip-synced to it)
     const audios = voiceId && Array.isArray(b?.audios) ? clips.map((_, i) => (ownsMedia(b.audios[i], s.user.workspace) ? String(b.audios[i]) : null)) : null;
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
       settings: {
         lang,
         niche: cleanNiche(b?.niche) || null,
-        avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id } : null,
+        avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id, ...(video ? { video } : {}) } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
         voiceId,
         lipsync,

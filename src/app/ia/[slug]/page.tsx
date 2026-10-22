@@ -33,7 +33,7 @@ function panelModels(kind: "video" | "imagen"): PanelModel[] {
   if (kind === "imagen") {
     return imageProviders.map((p) => ({ id: p.id, label: p.label, credits: `${creditsFor(p.usdPerImage).toLocaleString("es-CL")} créd.`, aspects: ["9:16", "4:5", "1:1", "16:9"] }));
   }
-  return videoProviders.map((p) => ({
+  return videoProviders.filter((p) => !p.actor).map((p) => ({
     id: p.id,
     label: p.label,
     credits: per8(p.usdPerSecond),

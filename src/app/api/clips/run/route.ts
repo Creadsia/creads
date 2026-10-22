@@ -13,19 +13,23 @@ import { type StorySettings, billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsy
 import { canUseVoice } from "@/lib/voices";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { refusesFrame } from "@/lib/formats";
+import { actorOffset } from "@/lib/avatar-video";
+import { download, ff, probe, workdir } from "@/lib/montage";
+import path from "node:path";
+import { readFile } from "node:fs/promises";
 
-export const maxDuration = 120;
+export const maxDuration = 300; // «Persona real» downloads and cuts the person's video first
 
 // Veo 3.1 and Veo 3.1 Fast take the face and product photos directly as references.
 const TAKES_REFS = new Set(["veo-3.1", "veo-3.1-fast"]);
 
 interface Settings {
   lang?: string;
-  avatar?: { image_url?: string | null } | null;
+  avatar?: { image_url?: string | null; video?: string | null } | null;
   product?: { image_url?: string | null } | null;
   frames?: string[];
   voiceId?: string | null; // ads: the person's lines are recorded with this voice and lip-synced
-  lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so lipsync-2-pro)
+  lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so sync-3)
   audios?: (string | null)[]; // ads: the approved recording of each cut (step «Voz»)
   secs?: (number | null)[]; // ads: seconds chosen per cut
 }
@@ -95,20 +99,25 @@ export async function POST(req: Request) {
     const talking = !story && Boolean(provider.talking);
     if (talking && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usó tu saldo.` }, { status: 400 }));
     if (talking && !face && !clip.image_url) return giveBack(NextResponse.json({ error: `${provider.label} necesita un avatar (la foto de quien habla). Elígelo en Escenas. No se usó tu saldo.` }, { status: 400 }));
+    // «Persona real»: the person's own filmed video with the approved voice on their lips (no generation)
+    const actor = !story && Boolean(provider.actor);
+    const actorVideo = actor ? String(st.avatar?.video ?? "") : "";
+    if (actor && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usó tu saldo.` }, { status: 400 }));
+    if (actor && !actorVideo) return giveBack(NextResponse.json({ error: "Este avatar no tiene su video. Súbelo en Avatares (Persona real) o elige otro modelo. No se usó tu saldo." }, { status: 400 }));
     const talkSecs = Math.min(15, Math.max(3, Math.ceil(line.split(/\s+/).filter(Boolean).length / 2.4 + 0.8)));
-    const chosen = !story && !talking ? st.secs?.[Number(clip.idx)] ?? null : null;
-    const asked = talking ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const chosen = !story && !talking && !actor ? st.secs?.[Number(clip.idx)] ?? null : null;
+    const asked = talking || actor ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
-    const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url && !(talking && Number(clip.idx) > 0);
+    const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url && !(talking && Number(clip.idx) > 0) && !actor;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
     // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
     const nb2 = findImage("nano-banana-2");
     const frameModel = nb2?.configured() ? nb2 : nanoBananaPro;
     const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? frameModel.usdPerImage : 0)
-      + (talking ? line.length * 0.00022 : ownVoice ? (!story && st.lipsync === "pro" ? lipsyncProUsd(videoSecs, line) : lipsyncUsd(videoSecs, line)) : 0);
+      + (talking || actor ? line.length * 0.00022 : ownVoice ? (!story && st.lipsync === "pro" ? lipsyncProUsd(videoSecs, line) : lipsyncUsd(videoSecs, line)) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
     await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
@@ -128,7 +137,7 @@ export async function POST(req: Request) {
     }
     if (TAKES_REFS.has(provider.id) && (face || prod)) {
       refs = [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])];
-    } else if ((face || prod) && !image) {
+    } else if ((face || prod) && !image && !actor) {
       // Models that animate a still: first draw the opening frame from the photos (Nano Banana 2; Pro if it fails).
       const framePrompt = st.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
       const frameReq = {
@@ -139,7 +148,24 @@ export async function POST(req: Request) {
       const ff = await frameModel.generate(frameReq).catch((e) => (frameModel === nanoBananaPro ? Promise.reject(e) : nanoBananaPro.generate(frameReq)));
       image = await saveMedia(ws, "frames", ff.bytes, ff.mime);
     }
-    if (image && !refs.length) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
+    if (image && !refs.length && !actor) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
+    if (actor) {
+      // the approved take (else record it now), and a piece of the person's video exactly that long, starting
+      // at a different moment for each cut so two cuts never open on the same frame
+      const approved = st.audios?.[Number(clip.idx)] ?? null;
+      const audio = approved ?? (await saveMedia(ws, "audio", (await elevenlabs.speak(ownVoice!, line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
+      const dir = await workdir(`actor-${id}`);
+      const vf = path.join(dir, "person.in"), af = path.join(dir, "voice.in"), out = path.join(dir, "part.mp4");
+      await Promise.all([download(await fetchableUrl(actorVideo, ws), vf), download(await fetchableUrl(audio, ws), af)]);
+      const [vd, ad2] = await Promise.all([probe(vf), probe(af)]);
+      if (!vd.dur) throw new Error("No se pudo leer el video de la persona. Súbelo de nuevo en Avatares (MP4 o MOV).");
+      const len = Math.min(15.5, Math.max(1.5, (ad2.dur || talkSecs) + 0.3));
+      const loop = vd.dur < len + 0.1; // a short video repeats instead of cutting the voice
+      await ff(["-y", "-v", "error", ...(loop ? ["-stream_loop", "-1"] : []), "-ss", String(loop ? 0 : actorOffset(Number(clip.idx), vd.dur, len)), "-i", vf, "-t", len.toFixed(2), "-an",
+        "-vf", "scale='if(gt(iw,ih),-2,720)':'if(gt(iw,ih),720,-2)',fps=30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out], 150_000);
+      const part = await saveMedia(ws, "videos", await readFile(out), "video/mp4");
+      refs = [{ url: await fetchableUrl(part, ws), role: "video" }, { url: await fetchableUrl(audio, ws), role: "audio" }];
+    }
     if (talking) {
       // the recording the customer approved in «Voz»; if there's none (API), record the line now
       const approved = st.audios?.[Number(clip.idx)] ?? null;
@@ -153,7 +179,7 @@ export async function POST(req: Request) {
     const usd = +(provider.usdPerSecond * (provider.id.startsWith("veo") ? (refs.some((r) => r.role !== "first_frame") ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds)).toFixed(3);
     // what was paid for travels with the clip: the lip-sync step reads it from here, not from the
     // story (which the customer may edit while the clip renders)
-    const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : talking ? { kind: "ad:talk" } : ownVoice ? { kind: `ad:${st.lipsync === "pro" ? "lsp" : "ls"}:${ownVoice}` } : {};
+    const extra = story ? { kind: ownVoice ? `shot:ls:${ownVoice}` : "shot", text: talks ? shotPlan!.dialogue!.line : clip.text } : talking ? { kind: "ad:talk" } : actor ? { kind: "ad:actor" } : ownVoice ? { kind: `ad:${st.lipsync === "pro" ? "lsp" : "ls"}:${ownVoice}` } : {};
     const row = await db.update("clips", id, { provider_job: job.jobId, status: "generating", image_url: image || null, error: null, url: null, usd, ...extra });
     // redoing a cut of a finished ad puts it back in «En producción» (its last final video stays in
     // «Anuncios terminados» until it's rebuilt)

@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
   const provider = findVideo(String(body?.model ?? ""));
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
+  if (provider.actor || provider.talking) return NextResponse.json({ error: "Ese modelo se usa en Crear anuncio (necesita la voz grabada)." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
   if (await isPaused(provider.id)) return NextResponse.json({ error: PAUSED_TEXT }, { status: 503 });
 

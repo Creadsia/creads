@@ -77,7 +77,8 @@ export default function ModelLab({ code }: { code: string }) {
     fetch("/api/models", { headers: { "x-creads-code": code } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.video?.length) setModels(d.video);
+        // talking avatar and «Persona real» need a recorded voice: they live in Crear anuncio
+        if (d?.video?.length) setModels(d.video.filter((m: { talking?: boolean; actor?: boolean }) => !m.talking && !m.actor));
         if (d?.image?.length) setImageModels(d.image);
       })
       .catch(() => {});

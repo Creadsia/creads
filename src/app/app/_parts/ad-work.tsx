@@ -18,7 +18,7 @@ import { refreshCredits, useCredits } from "./use-credits";
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
-interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null; talking?: boolean }
+interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null; talking?: boolean; actor?: boolean }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
 // One-tap corrections for a cut: the most common fixes, so nobody has to think of the words.
@@ -214,7 +214,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
   const failed = clips.filter((c) => c.status === "failed");
   const refused = (c: Clip) => c.status === "failed" && /no acepta fotos de personas reales|likeness/i.test(c.error ?? "");
   const faceRefused = failed.some(refused);
-  const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces));
+  const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces) && (!m.actor || Boolean((ad?.settings as { avatar?: { video?: string } | null } | null)?.avatar?.video)));
   async function retryFailed() {
     for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
   }
@@ -228,7 +228,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
     if (!m) return 0;
     const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
     // talking avatar: as long as the voice, from the picture already drawn
-    if (m.talking) return m.usdPerSecond * Math.min(15, Math.max(3, Math.ceil(words / 2.4 + 0.8)));
+    if (m.talking || m.actor) return m.usdPerSecond * Math.min(15, Math.max(3, Math.ceil(words / 2.4 + 0.8))) + String(c.text || "").length * 0.00022;
     const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     const veo = m.id.startsWith("veo");
     const takesRefs = (m.id === "veo-3.1" || m.id === "veo-3.1-fast") && hasRefs;
