@@ -43,7 +43,7 @@ ${hint?.notas ? `Brief from the advertiser (data about their brand, product and 
 ` : ""}Style: ${ESTILOS[hint?.estilo ?? ""] ?? ESTILOS.energico}.
 
 Rules for "golpes":
-- 4 to 7 headlines, each 1 to 4 words, in ${lang === "es" ? "Spanish" : "English"}, copied or tightly condensed from what is said at that moment (never invent claims, numbers or prices that are not in the script).
+- 4 to 7 headlines, each 1 to 4 words, in ${lang === "es" ? "Spanish" : "English"}, copied WORD FOR WORD from what is said at that moment: consecutive words exactly as spoken, never reworded, summarised or conjugated differently (the viewer reads and hears them at the same time). Never invent claims, numbers or prices.
 - The first one starts at 0.1 s and states the hook. Then one per key idea: the pain, the solution, the proof, the call to action.
 - Each starts exactly when its key word is spoken (use the word times) and lasts 0.8 to 2.5 s; they never overlap; leave at least 0.15 s between them.
 - Wrap the single most important word of each headline in *asterisks* (it gets the brand colour).

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { type FormatId, formatById, refusesFrame, takesOwnVoice } from "@/lib/formats";
 import { lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import { avatarVideo } from "@/lib/avatar-video";
+import { oneLocation } from "@/lib/director";
 import { fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { type VoiceChoice, takeOf, voiceReady } from "./voz";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
@@ -156,7 +157,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
 
   function framePrompt(i: number) {
     const d = scenes?.[i]?.dir ?? {};
-    return `Photorealistic ${aspect} still frame, the first frame of a real phone video clip (not a staged photo). ${avatar ? `The person from the first reference image (same face): ${avatar.description || avatar.name}.` : ""} Setting: ${d.setting || place || "a real home, natural light"}. Shot: ${d.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product ? ` The product is visible in the scene, exactly like the product reference image: ${product.description || product.name}.` : ""}${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
+    return `Photorealistic ${aspect} still frame, the first frame of a real phone video clip (not a staged photo). ${avatar ? `The person from the first reference image (${oneLocation({ avatar: { description: "", hasPhoto: true }, direction }) ? "same face, hair and clothes" : "same face"}): ${avatar.description || avatar.name}.` : ""} Setting: ${d.setting || place || "a real home, natural light"}. Shot: ${d.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product ? ` The product is visible in the scene, exactly like the product reference image: ${product.description || product.name}.` : ""}${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
   }
 
   async function generate() {
