@@ -54,6 +54,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
   {
     group: "Haz tu anuncio",
     items: [
+      { href: "/app/automatico", label: "Automático (conversando)", icon: I.spark },
       { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true, optional: true },
       { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
       { href: "/app/crear?paso=voz", label: "Grabar la voz", icon: I.mic, step: 3 },

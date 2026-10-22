@@ -1,5 +1,6 @@
 import { adsOf, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
+import { withVideo } from "./avatar-video";
 
 // The Creads connector (MCP, «Streamable HTTP» without sessions): Claude, ChatGPT or any MCP client calls
 // these tools with an API key of the user's account (from OAuth or «API para sistemas»). Each tool goes
@@ -141,6 +142,7 @@ export const TOOLS: Tool[] = [
       descripcion: { type: "string", maxLength: 400, description: "How the person looks, best in English (age, hair, clothes, place). Creads repeats it in every scene." },
       idioma: { type: "string", enum: ["es-CL", "es", "en"], default: "es-CL" },
       voz: { type: "string", maxLength: 60, description: "Optional: a voice id from creads_voces." },
+      video: { type: "string", maxLength: 600, description: "Optional («Persona real»): link of a video of this account where the real person talks to the camera for 30–60 s. Ads made with modelo «persona-real» use it with the new voice on the lips." },
       consentimiento: { type: "boolean", description: "true only if the person is invented by AI or the real person gave permission." },
     }, required: ["nombre", "imagen", "consentimiento"], additionalProperties: false },
     annotations: { title: "Crear avatar", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -156,9 +158,26 @@ export const TOOLS: Tool[] = [
       const d = await call<{ row: { id: string; name: string } }>("/api/data/avatars", {
         name: str(a.nombre, 60), image_url: mediaRef(str(a.imagen, 600)), description: str(a.descripcion, 400) || null,
         lang: ["es-CL", "es", "en"].includes(String(a.idioma)) ? a.idioma : "es-CL", consent: true,
+        ...(str(a.video, 600) ? { notes: withVideo(null, mediaRef(str(a.video, 600))) } : {}),
         ...(voz ? { voice_id: voz, voice_name } : {}),
       });
       return { text: `Avatar «${d.row.name}» creado (id ${d.row.id}). Úsalo como «avatar» en creads_crear_anuncio.`, data: { id: d.row.id, nombre: d.row.name } };
+    },
+  },
+  {
+    name: "creads_revisar_anuncio", title: "Revisar un anuncio terminado",
+    description: "Looks at and listens to a finished ad: returns a contact sheet of 8 frames across the video (check the same face, clothes and place, the person on camera, no deformed hands or faces, no text) and the transcript of the final audio compared with the script (every word said, nothing cut). Free. Use it on every ad before showing it to the user.",
+    inputSchema: { type: "object", properties: { id: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "The ad id (ad_…), already «listo»." } }, required: ["id"], additionalProperties: false },
+    annotations: { title: "Revisar un anuncio terminado", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (a, call) => {
+      const id = str(a.id, 30);
+      if (!/^ad_[a-z0-9]{6,20}$/.test(id)) throw new Error("El id debe ser como ad_xxxxxx.");
+      const d = await call<{ revision: { duracion: number; hoja: string; escuchado: string | null; parecido: number | null; observaciones: string[] } }>(`/api/v1/anuncios/${id}/revisar`);
+      const r = d.revision;
+      return {
+        text: `Duración: ${r.duracion} s. Audio: ${r.parecido ?? "?"}% del guion escuchado.${r.escuchado ? ` Se escucha: «${r.escuchado}».` : ""}${r.observaciones.length ? ` Observaciones: ${r.observaciones.join("; ")}.` : " Sin observaciones de audio."} La imagen adjunta son 8 cuadros del video en orden.`,
+        data: r as unknown as Json, images: [r.hoja],
+      };
     },
   },
   {
