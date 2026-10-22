@@ -48,8 +48,11 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
   const idioma = b.idioma === "en" ? "en" : "es-CL";
   let modelo: string | undefined;
   if (b.modelo !== undefined && b.modelo !== null && b.modelo !== "") {
-    const p = videoProviders.find((x) => x.id === b.modelo && x.configured() && !x.silent && (!x.needsImage || Boolean(x.talking)));
-    if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter((x) => x.configured() && !x.silent && (!x.needsImage || Boolean(x.talking))).map((x) => x.id).join(", ")}.`;
+    // «persona-real» (the avatar's own filmed video with the new voice on its lips) is allowed too: it needs
+    // no generated first frame (owner, 22 Oct 2026: Automático said it wasn't available)
+    const usable = (x: (typeof videoProviders)[number]) => x.configured() && !x.silent && (!x.needsImage || Boolean(x.talking) || Boolean(x.actor));
+    const p = videoProviders.find((x) => x.id === b.modelo && usable(x));
+    if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter(usable).map((x) => x.id).join(", ")}.`;
     modelo = p.id;
   }
   const titulo = (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);
@@ -64,6 +67,7 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
     if (!/^(lib:[A-Za-z0-9]{6,80}:[A-Za-z0-9]{10,40}|[A-Za-z0-9]{10,40})$/.test(b.voz.trim())) return "La voz no es válida: usa el id de una voz de creads_voces.";
     voz = b.voz.trim();
   }
+  if (modelo === "persona-real" && !avatarId) return "«persona-real» necesita un avatar con su video (creads_crear_avatar con «video»).";
   return { ...(voz ? { voz } : {}), guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(b.subtitulos === false ? { subtitulos: false } : {}), ...(typeof b.indicaciones === "string" && b.indicaciones.trim() ? { indicaciones: b.indicaciones.trim().slice(0, 600) } : {}),
     ...(typeof b.plantilla === "string" || typeof b.color === "string" ? { look: { plantilla: typeof b.plantilla === "string" ? b.plantilla.slice(0, 20) : undefined, c1: typeof b.color === "string" ? b.color.slice(0, 7) : undefined, c2: typeof b.color2 === "string" ? b.color2.slice(0, 7) : undefined } } : {}), ...(avatarId ? { avatarId } : {}) };
 }

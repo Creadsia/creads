@@ -63,3 +63,15 @@ test("an order can name an avatar of the account (same face in every cut)", () =
   assert.equal((ok as { avatarId: string }).avatarId, "11111111-1111-1111-1111-111111111111");
   assert.match(String(readOrder({ guion: "Mi perro tiene nueve años y la urgencia me costó caro.", avatar: "../otro" })), /avatar no es válido/);
 });
+
+test("readOrder: «persona-real» is accepted with an avatar (Automático used to be told it wasn't available)", () => {
+  const prev = process.env.FAL_KEY;
+  process.env.FAL_KEY = "test";
+  try {
+    const av = "0f60b13b-3e26-4d26-8148-82cf7709e0b9";
+    const ok = readOrder({ guion: "x".repeat(30), modelo: "persona-real", avatar: av });
+    assert.equal(typeof ok, "object");
+    assert.equal((ok as { modelo?: string }).modelo, "persona-real");
+    assert.match(String(readOrder({ guion: "x".repeat(30), modelo: "persona-real" })), /avatar/);
+  } finally { if (prev === undefined) delete process.env.FAL_KEY; else process.env.FAL_KEY = prev; }
+});
