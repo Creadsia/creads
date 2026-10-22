@@ -10,7 +10,7 @@ import { LOOKS } from "@/lib/edit-looks";
 const LOOK_CAPTIONS: Record<string, string> = { limpio: "resaltado", impacto: "impacto", elegante: "luxury", noticia: "noticia", neon: "creads" };
 import { billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
-import { btnCls, cardCls, ghostCls, inputCls, Working } from "./ui";
+import { btnCls, cardCls, ghostCls, inputCls, Working, dl } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
 // One ad in production: its clips (with live status), the automatic review, the free automatic redos,
@@ -472,7 +472,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
           <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_1fr]">
             <video src={ad.final_url} controls playsInline className={`w-full rounded-xl bg-black ${ratio}`} />
             <div className="flex flex-col gap-2 text-sm">
-              <a href={ad.final_url} download target="_blank" rel="noopener noreferrer" className={`${btnCls} self-start`}>Descargar video</a>
+              <a href={dl(ad.final_url)} download target="_blank" rel="noopener noreferrer" className={`${btnCls} self-start`}>Descargar video</a>
               {typeof ad.settings?.srt === "string" && <a href={ad.settings.srt} target="_blank" rel="noopener noreferrer" className="self-start text-accent-text underline">Descargar subtítulos (.srt)</a>}
               <p className="text-muted">Quedó guardado en <Link href="/app/biblioteca" className="underline">Anuncios terminados</Link>.</p>
               <p className="text-xs text-muted">Recuerda: Meta pide marcar los anuncios hechos con IA al publicarlos.</p>

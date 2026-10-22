@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
+import { cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
 
 // «Automático»: the customer talks with the Creads assistant (Claude + the Creads tools + the RECETA). The
 // page keeps the conversation (in this browser), shows the pictures it makes, follows each ad until it's
@@ -134,7 +134,7 @@ export default function Asistente() {
               <figure key={r} className="flex flex-col gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={r} alt="Imagen de Creads" className="max-h-80 rounded-xl border border-line object-cover" />
-                <a href={r} download className="w-fit text-xs font-semibold text-muted underline hover:text-ink">Descargar</a>
+                <a href={dl(r)} download target="_blank" rel="noopener noreferrer" className="w-fit text-xs font-semibold text-muted underline hover:text-ink">Descargar</a>
               </figure>
             ))}
           </div>,
@@ -167,7 +167,7 @@ export default function Asistente() {
             {a.estado === "listo" && a.video_url ? (
               <>
                 <video src={a.video_url} controls playsInline className="max-h-[70vh] w-full max-w-xs rounded-xl bg-black" />
-                <a href={a.video_url} download className={`${ghostCls} w-fit`}>Descargar</a>
+                <a href={dl(a.video_url)} download target="_blank" rel="noopener noreferrer" className={`${ghostCls} w-fit`}>Descargar</a>
               </>
             ) : a.estado !== "error" ? (
               <span className="text-xs text-muted">{a.paso ?? "En cola"} · tarda unos 6 a 8 minutos. Te aviso aquí mismo cuando esté y lo reviso antes de mostrártelo.</span>

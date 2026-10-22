@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DUB_LANGS, findTool, TOOLS, type ToolId } from "@/lib/tools";
-import { btnCls, cardCls, Field, ghostCls, inputCls, Spinner, uploadFile, useTable, Working, type Row } from "./ui";
+import { btnCls, cardCls, Field, ghostCls, inputCls, Spinner, uploadFile, useTable, Working, type Row, dl } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
 
 // One "Crear" tool: pick the inputs, see the price, run it, and get the result (kept in "Tus creaciones").
@@ -219,7 +219,7 @@ function Result({ job, output, extra }: { job: Job; output: "image" | "video" | 
       )}
       {extra?.(job.url)}
       <div className="flex flex-wrap items-center gap-2">
-        <a href={job.url} download className={btnCls}>Descargar</a>
+        <a href={dl(job.url)} download target="_blank" rel="noopener noreferrer" className={btnCls}>Descargar</a>
         {output === "video" && (
           <Link href={`/app/recrear?video=${encodeURIComponent(job.url)}`} className={ghostCls} title="Usa este video como base: cambia la persona, el producto o el lugar, o copia su movimiento con otro personaje">
             ↻ Recrear

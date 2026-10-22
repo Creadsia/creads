@@ -6,6 +6,9 @@ import { useCallback, useEffect, useState } from "react";
 
 // Small building blocks shared by the platform pages.
 
+/** A «Descargar» link: our own files come as a download (?descargar=1); anything else opens in a new tab. */
+export const dl = (u: string) => (u.includes("/api/media/") ? `${u}${u.includes("?") ? "&" : "?"}descargar=1` : u);
+
 export const inputCls = "min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink";
 export const btnCls = "rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
 export const ghostCls = "rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink";

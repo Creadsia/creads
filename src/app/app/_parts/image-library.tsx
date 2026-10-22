@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DeleteButton, Empty, btnCls, useTable } from "./ui";
+import { DeleteButton, Empty, btnCls, useTable, dl } from "./ui";
 import type { Img } from "./tool-run";
 
 // «Anuncios terminados» → Imágenes: every image the account made (studio, Automático, the connector),
@@ -28,7 +28,7 @@ export default function ImageLibrary() {
             {im.prompt && <p className="line-clamp-2 text-xs text-muted">{im.prompt}</p>}
             <span className="text-xs text-muted">{im.aspect ? `${im.aspect} · ` : ""}{new Date(im.created_at).toLocaleDateString("es-CL")}</span>
             <div className="mt-auto flex items-center justify-between pt-2">
-              <a href={im.url} download target="_blank" rel="noreferrer" className="text-xs font-semibold text-accent-text">Descargar</a>
+              <a href={dl(im.url)} download target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-accent-text">Descargar</a>
               <DeleteButton onDelete={() => t.remove(im.id)} />
             </div>
           </div>

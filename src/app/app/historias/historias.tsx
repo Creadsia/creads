@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LANGS, LENGTHS, MUSIC_MODES, SOUND_PRESETS, STORY_TEMPLATES, STYLES, type SoundSetup, type StoryLang, type StoryPlan, type StorySettings, type StyleId, billedSeconds, estimateStory, musicModeOf, needsNewTrack, presetOf, savedTrack, shotsFor, storyScript, storyShotUsd } from "@/lib/historias";
 import { NICHES } from "@/lib/niches";
-import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile } from "../_parts/ui";
+import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 
 // "Historias animadas": idea → story and shots → characters → shot images → animation → film.
@@ -809,7 +809,7 @@ function FinalFilm({ refUrl, aspect }: { refUrl: string; aspect: string }) {
     <div className="flex flex-col items-start gap-3">
       <video src={url} controls playsInline className={`max-h-[70vh] rounded-xl border border-line ${aspect === "16:9" ? "w-full" : "w-auto"}`} />
       <div className="flex flex-wrap gap-2">
-        <a href={url} download className={btnCls}>Descargar</a>
+        <a href={dl(url)} download target="_blank" rel="noopener noreferrer" className={btnCls}>Descargar</a>
         <Link href="/app/biblioteca" className={ghostCls}>Ver en Anuncios terminados</Link>
       </div>
     </div>
