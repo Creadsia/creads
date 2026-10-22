@@ -109,7 +109,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                     </button>
                   )}
                   {a.final_url && !story && (
-                    <button type="button" onClick={() => setSubs(a)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">✏️ Editar subtítulos</button>
+                    <button type="button" onClick={() => setSubs(a)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">✏️ Editar o mover subtítulos</button>
                   )}
                   <div className="mt-auto flex items-center justify-between pt-2">
                     <Link href={href} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
@@ -123,7 +123,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
       )}
       </>}
       {subs?.final_url && (
-        <SubtitleEditor adId={subs.id} video={subs.final_url} title={subs.title || "Sin título"} onClose={() => setSubs(null)}
+        <SubtitleEditor adId={subs.id} video={subs.final_url} title={subs.title || "Sin título"} aspect={subs.aspect ?? "9:16"} onClose={() => setSubs(null)}
           onDone={() => { t.reload(); }} />
       )}
     </>

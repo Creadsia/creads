@@ -3,6 +3,7 @@ import { session, SESSION_ENDED } from "@/lib/access";
 import { tooMany } from "@/lib/rate";
 import { type ApiAd, listAds, loadAd, saveAd, studioAs } from "@/lib/api-ads";
 import { type Correccion, cleanFixes } from "@/lib/montage";
+import { normalizeStyle } from "@/lib/caption-style";
 import { DemoInputError, runDemo } from "@/lib/demo-run";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { publicError } from "@/lib/public-error";
@@ -11,8 +12,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // «Editar subtítulos» from «Anuncios terminados», for any finished video ad (Manual, Automático or a demo).
-// GET → the subtitle lines to edit. POST {cambios: [{de, a}]} → the same video built again with the words on
-// screen corrected: free, 1–3 minutes, nothing generated again (same clips, voice, presenter and headlines).
+// GET → the subtitle lines, their style and a clean clip to preview them on. POST {cambios?: [{de, a}],
+// estilo?: CaptionStyle} → the same video built again with the words on screen corrected and/or the subtitles
+// moved or restyled: free, 1–3 minutes, nothing generated again (same clips, voice, presenter and headlines).
 
 type Settings = { srt?: string; captions?: unknown; pro?: unknown; look?: { plantilla?: string; c1?: string; sonidos?: boolean }; correcciones?: Correccion[]; demo?: boolean; api?: string };
 type AdRow = { id: string; final_url: string | null; status: string; format: string | null; settings: Settings | null };
@@ -44,7 +46,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   }
   // lines when the montage kept them; otherwise «word → word» (demos, older ads)
   const modo = srt ? "lineas" : st.demo || st.captions !== null ? "palabras" : "sin";
-  return NextResponse.json({ modo, srt, correcciones: st.correcciones ?? [] });
+  // the first clip has no subtitles burnt in: the style preview is drawn on top of it
+  const first = st.demo ? null : ((await s.db.list("clips", `ad_id=eq.${row.id}&order=idx.asc&limit=1`).catch(() => [])) as { url?: string | null }[])[0];
+  return NextResponse.json({ modo, srt, correcciones: st.correcciones ?? [], estilo: st.demo || st.captions === null ? null : normalizeStyle(st.captions), fondo: first?.url ?? null });
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -55,10 +59,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (limited) return limited;
   const ws = s.user.workspace;
   const st = row.settings ?? {};
-  const cambios = cleanFixes((await req.json().catch(() => null))?.cambios);
-  if (!cambios.length) return NextResponse.json({ error: "No hay cambios que guardar." }, { status: 400 });
+  const body = await req.json().catch(() => null);
+  const cambios = cleanFixes(body?.cambios);
+  const estilo = body?.estilo && typeof body.estilo === "object" ? normalizeStyle(body.estilo) : null;
+  if (!cambios.length && !estilo) return NextResponse.json({ error: "No hay cambios que guardar." }, { status: 400 });
   try {
     if (st.demo) {
+      if (!cambios.length) return NextResponse.json({ error: "En las demos con presentador por ahora solo se pueden corregir palabras." }, { status: 409 });
       const job = await jobOf(ws, row);
       if (!job?.demo) return NextResponse.json({ error: "Esta demo se armó antes de que existiera esta opción: pídele a Automático que la arme de nuevo y después corriges sus subtítulos." }, { status: 409 });
       const prev = job.demo.correcciones ?? [];
@@ -73,7 +80,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const prev = st.correcciones ?? job?.correcciones ?? [];
     const merged = [...prev.filter((c) => !cambios.some((x) => x.de.toLowerCase() === c.de.toLowerCase())), ...cambios].slice(-15);
     const look = st.look ? { plantilla: st.look.plantilla, c1: st.look.c1, sonidos: st.look.sonidos } : undefined;
-    const d = await studioAs(req)<{ url: string }>("/api/montage", { adId: row.id, captions: true, style: st.captions, pro: Boolean(st.pro), mismoPlan: true, ...(look ? { look } : {}), correcciones: merged }, 290_000);
+    const d = await studioAs(req)<{ url: string }>("/api/montage", { adId: row.id, captions: true, style: estilo ?? st.captions, pro: Boolean(st.pro), mismoPlan: true, ...(look ? { look } : {}), correcciones: merged }, 290_000);
     // Automático's copy of the same ad shows the corrected video too
     if (job && job.adId === row.id) await saveAd({ ...job, videoUrl: d.url, correcciones: merged, updatedAt: new Date().toISOString() }).catch(() => null);
     return NextResponse.json({ url: d.url, correcciones: merged });

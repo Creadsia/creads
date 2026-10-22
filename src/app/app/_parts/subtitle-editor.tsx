@@ -2,15 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { type Cue, cueFixes, parseSrt } from "@/lib/subtitle-diff";
+import type { CaptionStyle } from "@/lib/caption-style";
+import CaptionEditor from "./caption-editor";
 import { ghostCls, inputCls } from "./ui";
 
 // «Editar subtítulos» for a finished ad (owner, 22 Oct 2026): every subtitle line as text, the customer fixes
 // what's wrong and saves. Free: the same video is built again in 1–3 minutes with the words corrected (same
 // clips, voice, presenter and headlines). Ads without saved lines (demos, older ads) get «dice → debe decir».
+// «Mover y estilo»: drag the subtitles anywhere (off the face), change size, font and colours, same editor
+// as the studio's final assembly.
 
 type Fix = { de: string; a: string };
 
-export default function SubtitleEditor({ adId, video, title, onClose, onDone }: { adId: string; video: string; title: string; onClose: () => void; onDone: (url: string) => void }) {
+export default function SubtitleEditor({ adId, video, title, aspect = "9:16", onClose, onDone }: { adId: string; video: string; title: string; aspect?: string; onClose: () => void; onDone: (url: string) => void }) {
   const [modo, setModo] = useState<"cargando" | "lineas" | "palabras" | "sin">("cargando");
   const [cues, setCues] = useState<Cue[]>([]);
   const [edits, setEdits] = useState<Record<number, string>>({});
@@ -19,12 +23,18 @@ export default function SubtitleEditor({ adId, video, title, onClose, onDone }: 
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [url, setUrl] = useState(video);
+  const [tab, setTab] = useState<"texto" | "mover">("texto");
+  const [style0, setStyle0] = useState<CaptionStyle | null>(null); // as the video has it now
+  const [style, setStyle] = useState<CaptionStyle | null>(null); // as the customer leaves it
+  const [fondo, setFondo] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/ads/${adId}/subtitulos`).then((r) => r.json()).then((d) => {
       const list = d.srt ? parseSrt(d.srt) : [];
       setCues(list);
       setModo(list.length ? "lineas" : d.modo === "sin" ? "sin" : "palabras");
+      if (d.estilo) { setStyle0(d.estilo); setStyle(d.estilo); }
+      setFondo(d.fondo ?? null);
     }).catch(() => setModo("palabras"));
   }, [adId]);
   useEffect(() => {
@@ -48,17 +58,20 @@ export default function SubtitleEditor({ adId, video, title, onClose, onDone }: 
   }, [cues, edits]);
 
   const pending = modo === "lineas" ? plan.fixes : pairs.filter((p) => p.de.trim()).map((p) => ({ de: p.de.trim(), a: p.a.trim() }));
+  const moved = Boolean(style && style0 && JSON.stringify(style) !== JSON.stringify(style0));
+  const count = pending.length + (moved ? 1 : 0);
 
   async function save() {
-    if (!pending.length || busy || plan.bad.length) return;
+    if (!count || busy || plan.bad.length) return;
     setBusy(true); setErr(""); setMsg("");
-    const r = await fetch(`/api/ads/${adId}/subtitulos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cambios: pending.slice(0, 15) }) }).catch(() => null);
+    const r = await fetch(`/api/ads/${adId}/subtitulos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cambios: pending.slice(0, 15), ...(moved ? { estilo: style } : {}) }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (!r?.ok || !d.url) return setErr(d.error || "No se pudo guardar. Intenta de nuevo.");
     setUrl(d.url);
     onDone(d.url);
-    setMsg("Listo: tu video ya tiene los subtítulos corregidos.");
+    setMsg("Listo: tu video ya tiene los subtítulos como los dejaste.");
+    if (moved) setStyle0(style);
     // the new lines become the starting point for more changes
     setCues((list) => list.map((c) => (edits[c.n] !== undefined ? { ...c, texto: edits[c.n].trim() } : c)));
     setEdits({}); setPairs([{ de: "", a: "" }]);
@@ -75,14 +88,29 @@ export default function SubtitleEditor({ adId, video, title, onClose, onDone }: 
           <button type="button" onClick={onClose} disabled={busy} className={ghostCls}>Cerrar</button>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 md:grid-cols-[220px_1fr]">
-          <video key={url} src={url} controls playsInline className="mx-auto aspect-[9/16] w-32 rounded-xl bg-black object-cover md:w-full" />
+        <div className={`grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 ${tab === "mover" ? "" : "md:grid-cols-[220px_1fr]"}`}>
+          {tab === "texto" && <video key={url} src={url} controls playsInline className="mx-auto aspect-[9/16] w-32 rounded-xl bg-black object-cover md:w-full" />}
 
           <div className="flex min-w-0 flex-col gap-3">
             {modo === "cargando" && <p className="text-sm text-muted">Cargando los subtítulos…</p>}
             {modo === "sin" && <p className="text-sm text-muted">Este anuncio se armó sin subtítulos, así que no hay nada que editar.</p>}
 
-            {modo === "lineas" && (
+            {style && (modo === "lineas" || modo === "palabras") && (
+              <div role="tablist" aria-label="Qué editar" className="flex w-fit rounded-lg border border-line p-0.5 text-sm">
+                {([["texto", "Texto"], ["mover", "Mover y estilo"]] as const).map(([k, l]) => (
+                  <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`rounded-md px-4 py-1.5 font-semibold ${tab === k ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{l}</button>
+                ))}
+              </div>
+            )}
+
+            {tab === "mover" && style && (
+              <>
+                <p className="text-sm text-muted">Arrastra el texto donde quieras (por ejemplo, para que no tape la cara) o usa Arriba / Centro / Abajo. También puedes cambiar el tamaño, la letra y los colores.</p>
+                <CaptionEditor value={style} onChange={setStyle} aspect={aspect} sample={cues[0]?.texto || "Así se verán tus subtítulos"} video={fondo} />
+              </>
+            )}
+
+            {tab === "texto" && modo === "lineas" && (
               <>
                 <p className="text-sm text-muted">Corrige lo que está mal escrito directo en el texto. Se mantienen la voz, las escenas y los tiempos; solo cambian las palabras en pantalla. Es gratis.</p>
                 <ol className="flex flex-col gap-1.5">
@@ -104,7 +132,7 @@ export default function SubtitleEditor({ adId, video, title, onClose, onDone }: 
               </>
             )}
 
-            {modo === "palabras" && (
+            {tab === "texto" && modo === "palabras" && (
               <>
                 <p className="text-sm text-muted">Escribe la palabra como aparece en el video y cómo debería decir. Se cambia en todo el video. Es gratis.</p>
                 {pairs.map((p, i) => (
@@ -124,8 +152,8 @@ export default function SubtitleEditor({ adId, video, title, onClose, onDone }: 
 
         {(modo === "lineas" || modo === "palabras") && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
-            <span className="text-xs text-muted">{busy ? "Armando el video de nuevo… tarda 1 a 3 minutos, no cierres esta ventana." : pending.length ? `${pending.length} ${pending.length === 1 ? "cambio" : "cambios"} por guardar` : "Sin cambios todavía"}</span>
-            <button type="button" onClick={save} disabled={busy || !pending.length || plan.bad.length > 0} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-bg disabled:opacity-40">
+            <span className="text-xs text-muted">{busy ? "Armando el video de nuevo… tarda 1 a 3 minutos, no cierres esta ventana." : count ? `${count} ${count === 1 ? "cambio" : "cambios"} por guardar` : "Sin cambios todavía"}</span>
+            <button type="button" onClick={save} disabled={busy || !count || plan.bad.length > 0} className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-bg disabled:opacity-40">
               {busy ? "Guardando…" : "Guardar cambios"}
             </button>
           </div>
