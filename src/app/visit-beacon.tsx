@@ -14,6 +14,11 @@ const hasConsent = () => /(^|;\s*)creads_consent=1/.test(document.cookie);
 /** Saves the remembered channel as a cookie, if the person accepted cookies and none is saved yet. */
 export function saveSource() {
   try {
+    // the ad campaign that brought them (utm_campaign), kept the same way: first touch, only with consent
+    const camp = sessionStorage.getItem("creads-camp");
+    if (camp && hasConsent() && !/(^|;\s*)creads_camp=/.test(document.cookie)) {
+      document.cookie = `creads_camp=${encodeURIComponent(camp)}; Max-Age=${90 * 86400}; Path=/; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    }
     const src = sessionStorage.getItem(PENDING);
     if (!src || !hasConsent() || /(^|;\s*)creads_src=/.test(document.cookie)) return;
     document.cookie = `creads_src=${encodeURIComponent(src)}; Max-Age=${90 * 86400}; Path=/; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
@@ -54,6 +59,8 @@ export default function VisitBeacon() {
       if (sessionStorage.getItem("creads-visita")) return;
       sessionStorage.setItem("creads-visita", "1");
       const q = new URLSearchParams(window.location.search);
+      const camp = (q.get("utm_campaign") || "").trim().slice(0, 80);
+      if (camp) { sessionStorage.setItem("creads-camp", camp); saveSource(); }
       const body = JSON.stringify({ path, ref: document.referrer || "", utm: q.get("utm_source") || "", fbclid: q.has("fbclid"), gclid: q.has("gclid") });
       fetch("/api/visita", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true })
         .then((r) => (r.ok && r.status !== 204 ? r.json() : null))

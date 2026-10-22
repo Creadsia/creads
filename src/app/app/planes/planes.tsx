@@ -183,22 +183,22 @@ export default function Planes() {
       {!leaving && !item && err && <p className="text-sm text-bad" role="alert">{err}</p>}
       {pay?.subscription && leaving && (
         <section className={cardCls} aria-labelledby="leave">
-          <h2 id="leave" className="font-display text-lg font-bold">Antes de cancelar, ¿nos cuentas por qué?</h2>
+          <h2 id="leave" className="font-display text-lg font-bold">Antes de cancelar, ¿nos cuentas por qué? (opcional)</h2>
           <p className="text-sm text-muted">Tu plan sigue activo hasta la fecha pagada y tus anuncios quedan guardados. Tu respuesta nos ayuda a mejorar.</p>
           <div role="radiogroup" aria-label="Motivo" className="grid gap-2 sm:grid-cols-2">
-            {["Es muy caro", "No lo estoy usando", "La calidad no me convenció", "Me faltó una función", "Era solo para probar", "Otro"].map((m) => (
+            {["Precio demasiado elevado", "No uso suficientes segundos de video", "Los resultados de la IA no me convencieron", "Problemas técnicos", "Ya no necesito la herramienta", "Me cambiaré a otra plataforma", "Otro motivo"].map((m) => (
               <label key={m} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${reason === m ? "border-accent bg-accent/10" : "border-line"}`}>
                 <input type="radio" name="leave" value={m} checked={reason === m} onChange={() => setReason(m)} />{m}
               </label>
             ))}
           </div>
-          {reason === "Es muy caro" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Emprende</b>? Es el más económico y trae video para varios anuncios al mes.</p>}
-          {reason === "La calidad no me convenció" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos segundos.</p>}
-          {reason === "No lo estoy usando" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
+          {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Emprende</b>? Es el más económico y trae video para varios anuncios al mes.</p>}
+          {(reason === "Los resultados de la IA no me convencieron" || reason === "Problemas técnicos") && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos segundos.</p>}
+          {reason === "No uso suficientes segundos de video" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>
-            <button type="button" onClick={cancelSub} disabled={!reason || cancelBusy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{cancelBusy ? "Cancelando…" : "Cancelar la renovación"}</button>
+            <button type="button" onClick={cancelSub} disabled={cancelBusy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{cancelBusy ? "Cancelando…" : "Cancelar la renovación"}</button>
           </div>
           {err && <p className="text-sm text-bad" role="alert">{err}</p>}
         </section>

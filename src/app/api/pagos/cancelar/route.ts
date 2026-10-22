@@ -9,8 +9,19 @@ import { ownerAddress } from "@/lib/errlog";
 import { sendEmail } from "@/lib/providers/email";
 import { PLANS } from "@/lib/catalog";
 
-const LEAVE_REASONS = ["Es muy caro", "No lo estoy usando", "La calidad no me convenció", "Me faltó una función", "Era solo para probar", "Otro"];
-interface Leave { ws: string; at: string; reason: string; detail: string }
+// what the customer reads → the reason the Panel counts (lib/retention.ts REASONS); the old wording still works
+const LEAVE_REASONS: Record<string, string> = {
+  "Precio demasiado elevado": "Precio demasiado elevado",
+  "No uso suficientes segundos de video": "No utilizo suficientes créditos",
+  "Los resultados de la IA no me convencieron": "Resultados de IA insatisfactorios",
+  "Problemas técnicos": "Problemas técnicos",
+  "Ya no necesito la herramienta": "Ya no necesito la herramienta",
+  "Me cambiaré a otra plataforma": "Me cambiaré a otra plataforma",
+  "Otro motivo": "Otro motivo",
+  "Es muy caro": "Precio demasiado elevado", "No lo estoy usando": "No utilizo suficientes créditos", "La calidad no me convenció": "Resultados de IA insatisfactorios",
+  "Me faltó una función": "Otro motivo", "Era solo para probar": "Ya no necesito la herramienta", Otro: "Otro motivo",
+};
+interface Leave { ws: string; at: string; reason: string; detail: string; plan?: string | null }
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +31,7 @@ export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const b = await req.json().catch(() => null);
-  const reason = LEAVE_REASONS.includes(b?.reason) ? String(b.reason) : "Sin motivo";
+  const reason = LEAVE_REASONS[String(b?.reason ?? "")] ?? "Sin motivo";
   const detail = String(b?.detail ?? "").trim().slice(0, 500);
   const sub = (await ordersOf(s.user.workspace)).find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
   if (!sub?.mp) return NextResponse.json({ error: "No tienes una suscripción activa." }, { status: 404 });
@@ -28,7 +39,7 @@ export async function POST(req: Request) {
     await cancelSubscription(sub.mp.id);
     await setOrderMp(sub.id, { ...sub.mp, cancelled: true });
     try {
-      await updatePrivateJSON<Leave[]>("cancelaciones.json", (cur) => [...(cur ?? []), { ws: s.user.workspace, at: new Date().toISOString(), reason, detail }].slice(-500));
+      await updatePrivateJSON<Leave[]>("cancelaciones.json", (cur) => [...(cur ?? []), { ws: s.user.workspace, at: new Date().toISOString(), reason, detail, plan: sub.item }].slice(-500));
     } catch (e) {
       console.error("cancel reason", e instanceof Error ? e.message : e);
     }
