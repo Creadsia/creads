@@ -1,4 +1,5 @@
 import type { Email } from "./providers/email";
+import { fmtSeconds, secondsOf } from "./credit-math";
 
 // The emails Creads sends, in Chilean Spanish. Plain table layout so they look right in Gmail,
 // Outlook and phones; every email also has a plain-text version.
@@ -50,32 +51,86 @@ export function welcomeEmail(to: string, name: string | null): Email {
       title: "Tu cuenta está lista",
       paragraphs: [
         esc(hello(name)),
-        "Gracias por crear tu cuenta en Creads IA. Desde ahora puedes convertir un guion ganador en anuncios de video terminados: cortes, video con IA, voz, subtítulos y revisión de calidad automática.",
-        "<b>Tu primer anuncio en 3 pasos:</b><br>1. Entra a <b>Crear anuncio</b> y pega tu guion.<br>2. Elige el formato y el avatar.<br>3. Revisa los cortes y presiona <b>Generar</b>.",
+        "Gracias por crear tu cuenta en Creads IA. Desde ahora puedes tener anuncios en video con una persona hablando de tu negocio, sin grabar ni editar, más imágenes para tus anuncios.",
+        "<b>La forma más fácil:</b> entra a <b>Automático</b> y cuéntale a Creads qué vendes. Te hace las preguntas necesarias, te propone el guion, crea a la persona, hace el video, lo revisa y te lo entrega listo para publicar.",
       ],
-      cta: { label: "Entrar a Creads", href: link },
+      cta: { label: "Hacer mi primer anuncio", href: `${link}/automatico` },
       after: ["Para generar necesitas un plan activo. Si tienes cualquier duda, responde este correo y te ayudamos."],
     }),
-    text: plain([hello(name), "", "Tu cuenta en Creads IA está lista.", "", "Tu primer anuncio en 3 pasos:", "1. Entra a Crear anuncio y pega tu guion.", "2. Elige el formato y el avatar.", "3. Revisa los cortes y presiona Generar.", "", `Entrar: ${link}`]),
+    text: plain([hello(name), "", "Tu cuenta en Creads IA está lista.", "", "La forma más fácil: entra a Automático y cuéntale a Creads qué vendes. Te propone el guion, crea a la persona, hace el video, lo revisa y te lo entrega listo.", "", `Hacer mi primer anuncio: ${link}/automatico`]),
   };
 }
 
 export function receiptEmail(to: string, o: { label: string; credits: number; amount: number; currency: string; orderId: string; paymentId: string }): Email {
   const link = `${SITE}/app`;
   const amount = o.currency === "CLP" ? clp(o.amount) : `US$${o.amount.toFixed(2)}`;
-  const rows: [string, string][] = [["Compra", o.label], ["Créditos agregados", o.credits.toLocaleString("es-CL")], ["Total pagado", amount], ["N° de pedido", o.orderId]];
+  const secs = fmtSeconds(secondsOf(o.credits));
+  const rows: [string, string][] = [["Compra", o.label], ["Video agregado a tu saldo", secs], ["Total pagado", amount], ["N° de pedido", o.orderId]];
   return {
     to, tag: "pago",
-    subject: `Pago recibido · ${o.credits.toLocaleString("es-CL")} créditos en tu cuenta`,
+    subject: `Pago recibido · ${secs} de video en tu cuenta`,
     html: layout({
-      preview: `Recibimos tu pago de ${amount}. Tus créditos ya están disponibles.`,
+      preview: `Recibimos tu pago de ${amount}. Tu saldo ya está disponible.`,
       title: "Recibimos tu pago",
-      paragraphs: ["Hola,", "Tu pago se confirmó y los créditos ya están en tu cuenta. Puedes empezar a crear al tiro."],
+      paragraphs: ["Hola,", "Tu pago se confirmó y el saldo ya está en tu cuenta. Puedes empezar a crear al tiro."],
       rows,
-      cta: { label: "Crear un anuncio", href: `${link}/crear` },
+      cta: { label: "Hacer un anuncio", href: `${link}/automatico` },
       after: [`Este correo confirma tu pago (pago ${esc(o.paymentId)} en Mercado Pago); no reemplaza la boleta. Si necesitas ayuda con un cobro, responde este correo con el número de pedido.`],
     }),
-    text: plain(["Hola,", "", "Recibimos tu pago y los créditos ya están en tu cuenta.", "", ...rows.map(([k, v]) => `${k}: ${v}`), `Pago en Mercado Pago: ${o.paymentId}`, "", `Crear un anuncio: ${link}/crear`]),
+    text: plain(["Hola,", "", "Recibimos tu pago y el saldo ya está en tu cuenta.", "", ...rows.map(([k, v]) => `${k}: ${v}`), `Pago en Mercado Pago: ${o.paymentId}`, "", `Hacer un anuncio: ${link}/automatico`]),
+  };
+}
+
+/** The customer stopped the renewal: what happens now, in one look (no guilt, an easy way back). */
+export function cancelEmail(to: string, name: string | null, o: { plan: string | null; until: string | null }): Email {
+  const plan = o.plan ? `tu plan ${o.plan}` : "tu plan";
+  const until = o.until ? longDate(o.until) : null;
+  const line = until ? `Cancelaste la renovación de ${plan}. Lo sigues usando hasta el <b>${esc(until)}</b> y después no se te cobra nada más.` : `Cancelaste la renovación de ${plan}. No se te cobra nada más.`;
+  return {
+    to, tag: "cancelacion",
+    subject: "Cancelaste la renovación de tu plan",
+    html: layout({
+      preview: until ? `Sigues con tu plan hasta el ${until}.` : "No se te cobra nada más.",
+      title: "Listo, no se renueva",
+      paragraphs: [esc(hello(name)), line, "Tus anuncios, avatares y voces quedan guardados. Si cambias de idea, vuelves a activarlo con un clic."],
+      cta: { label: "Ver mi plan", href: `${SITE}/app/planes` },
+      after: ["¿Algo no funcionó como esperabas? Responde este correo: lo leemos nosotros y nos ayuda a mejorar."],
+    }),
+    text: plain([hello(name), "", line.replace(/<\/?b>/g, ""), "Tus anuncios, avatares y voces quedan guardados. Si cambias de idea, vuelves a activarlo con un clic.", "", `Ver mi plan: ${SITE}/app/planes`]),
+  };
+}
+
+/** Mercado Pago couldn't charge the monthly renewal: tell the customer before the plan lapses. */
+export function renewalFailedEmail(to: string, name: string | null, o: { plan: string | null }): Email {
+  const plan = o.plan ? `tu plan ${o.plan}` : "tu plan";
+  return {
+    to, tag: "renovacion-rechazada",
+    subject: "No pudimos renovar tu plan",
+    html: layout({
+      preview: "Revisa tu tarjeta en Mercado Pago para no perder tu saldo.",
+      title: "No pudimos renovar tu plan",
+      paragraphs: [esc(hello(name)), `Mercado Pago no pudo cobrar la renovación de ${esc(plan)}. Suele pasar por una tarjeta vencida, sin cupo o bloqueada para compras en línea.`, "Mercado Pago lo vuelve a intentar en los próximos días. Para que no se corte, revisa tu tarjeta en Mercado Pago o actualízala desde tu plan en Creads."],
+      cta: { label: "Revisar mi plan", href: `${SITE}/app/planes` },
+      after: ["¿Necesitas ayuda? Responde este correo."],
+    }),
+    text: plain([hello(name), "", `Mercado Pago no pudo cobrar la renovación de ${plan} (tarjeta vencida, sin cupo o bloqueada para compras en línea).`, "Lo vuelve a intentar en los próximos días. Revisa tu tarjeta o actualízala desde tu plan.", "", `Revisar mi plan: ${SITE}/app/planes`]),
+  };
+}
+
+/** The balance is about to run out (less than one ad left): a heads-up before a job is refused. */
+export function lowBalanceEmail(to: string, name: string | null, o: { seconds: number; until: string | null }): Email {
+  const left = fmtSeconds(Math.max(0, Math.floor(o.seconds)));
+  const renew = o.until ? ` Tu plan se renueva el ${longDate(o.until)} con saldo nuevo.` : "";
+  return {
+    to, tag: "saldo-bajo",
+    subject: `Te quedan ${left} de video`,
+    html: layout({
+      preview: "Te alcanza para menos de un anuncio.",
+      title: `Te quedan ${left} de video`,
+      paragraphs: [esc(hello(name)), `Te queda saldo para menos de un anuncio.${esc(renew)}`, "Si necesitas más antes, puedes cargar saldo extra o pasarte a un plan más grande."],
+      cta: { label: "Ver planes y saldo", href: `${SITE}/app/planes` },
+    }),
+    text: plain([hello(name), "", `Te quedan ${left} de video: menos de un anuncio.${renew}`, "Puedes cargar saldo extra o pasarte a un plan más grande.", "", `Ver planes: ${SITE}/app/planes`]),
   };
 }
 

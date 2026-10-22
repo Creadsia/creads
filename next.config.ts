@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // PostHog through our own domain (no outside script, and ad blockers don't break the measurement)
   skipTrailingSlashRedirect: true,
+  // what Creads no longer sells (owner and Benjamín, 21-22 Oct 2026: UGC ads and images for business owners)
+  // goes to the home page; temporary, so any of them can come back
+  async redirects() {
+    return ["/en", "/en/:path*", "/ia/:path*", "/curso", "/curso/:path*"].map((source) => ({ source, destination: "/", permanent: false }));
+  },
   async rewrites() {
     return [
       { source: "/ingest/static/:path*", destination: "https://us-assets.i.posthog.com/static/:path*" },

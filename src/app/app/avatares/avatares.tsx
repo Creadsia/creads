@@ -17,7 +17,7 @@ interface Avatar extends Row {
 }
 interface Voice { id: string; name: string; category: string }
 
-const blank = { name: "", description: "", image_url: "", voice_id: "", voice_name: "", lang: "en", consent: false, notes: "" };
+const blank = { name: "", description: "", image_url: "", voice_id: "", voice_name: "", lang: "es-CL", consent: false, notes: "" };
 const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 
 export default function Avatares() {

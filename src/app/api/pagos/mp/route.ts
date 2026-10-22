@@ -3,6 +3,10 @@ import { getOrder, setOrderMp } from "@/lib/billing";
 import { getAuthorizedPayment, getPayment, getPreapproval, signatureOk } from "@/lib/mercadopago";
 import { orderGrant, settleOrder } from "@/lib/settle";
 import { AlreadyDone, grant } from "@/lib/credits";
+import { once } from "@/lib/marketing";
+import { renewalFailedEmail } from "@/lib/emails";
+import { sendEmail } from "@/lib/providers/email";
+import { listUsers } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -45,7 +49,18 @@ export async function POST(req: Request) {
     }
     if (type === "subscription_authorized_payment") {
       const ap = await getAuthorizedPayment(id);
-      if (!ap.payment || ap.payment.status !== "approved") return NextResponse.json({ ok: true, status: ap.payment?.status ?? ap.status });
+      if (!ap.payment || ap.payment.status !== "approved") {
+        // the monthly charge was refused: the customer hears it from us before the plan lapses (once per attempt)
+        if (ap.payment?.status === "rejected" && (await once(`mp:renov-rechazada:${ap.id}`, 30 * 86400))) {
+          const pre = await getPreapproval(ap.preapproval_id).catch(() => null);
+          const o = pre?.external_reference ? await getOrder(pre.external_reference).catch(() => null) : null;
+          if (o?.email) {
+            const name = (await listUsers(o.ws).catch(() => [])).find((u) => u.email === o.email)?.name ?? null;
+            await sendEmail(renewalFailedEmail(o.email, name, { plan: o.quote?.label ?? null })).catch(() => false);
+          }
+        }
+        return NextResponse.json({ ok: true, status: ap.payment?.status ?? ap.status });
+      }
       const pre = await getPreapproval(ap.preapproval_id);
       if (!pre.external_reference) return NextResponse.json({ ok: true, ignored: "sin pedido" });
       // same payment id as the "payment" notification: whichever comes first counts, the other is ignored

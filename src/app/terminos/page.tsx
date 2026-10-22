@@ -5,11 +5,11 @@ export const metadata: Metadata = { title: "Términos y condiciones · Creads IA
 
 export default function Terminos() {
   return (
-    <Legal title="Términos y condiciones" updated="16 de octubre de 2026">
+    <Legal title="Términos y condiciones" updated="22 de octubre de 2026">
       <p>Estos términos regulan el uso de Creads IA («Creads»), disponible en creadsia.com. Al crear una cuenta o usar la plataforma aceptas estos términos y la <a href="/privacidad" className="underline">Política de privacidad</a>. Contacto: <b>hola@creadsia.com</b>.</p>
 
       <h2>1. El servicio</h2>
-      <p>Creads es un estudio que reúne distintos modelos de inteligencia artificial de terceros para crear anuncios, videos, imágenes, voces y otros contenidos a partir de tus instrucciones. Los modelos disponibles pueden cambiar con el tiempo.</p>
+      <p>Creads hace anuncios en video tipo UGC (una persona hablando a cámara) e imágenes para anuncios a partir de lo que le cuentas de tu negocio, usando modelos de inteligencia artificial de terceros para el video, los labios, la voz, las imágenes y los textos. Puedes hacerlo conversando con el asistente («Automático») o paso a paso («Manual»), y también por API. Los modelos que usamos pueden cambiar con el tiempo.</p>
 
       <h2>2. Tu cuenta</h2>
       <ul>
@@ -18,19 +18,19 @@ export default function Terminos() {
         <li>Podemos suspender cuentas que incumplan estos términos o pongan en riesgo la plataforma o a otras personas.</li>
       </ul>
 
-      <h2>3. Planes y créditos</h2>
+      <h2>3. Planes y saldo</h2>
       <ul>
-        <li>Cada trabajo (video, imagen, voz u otro) usa créditos según el modelo y su duración. Siempre ves el precio antes de generar.</li>
-        <li>Los planes entregan créditos para cada período pagado (un mes, o un año en el plan anual). Los créditos se usan dentro de ese período: los que no uses vencen cuando termina y no se acumulan para el siguiente. Las recargas se suman a tu saldo y vencen junto con tu plan.</li>
-        <li>Si un trabajo falla por un problema del proveedor o de la plataforma, sus créditos vuelven automáticamente a tu cuenta.</li>
-        <li>Los créditos no son dinero, no se pueden transferir a otras cuentas ni canjear por efectivo.</li>
+        <li>Tu saldo se muestra en segundos de video. Cada trabajo (video, imagen, voz u otro) descuenta saldo según lo que se genera; siempre ves cuánto usa antes de generar.</li>
+        <li>Los planes son mensuales y entregan saldo para cada mes pagado. El saldo se usa dentro de ese mes: lo que no uses vence cuando termina y no se acumula para el siguiente. Las recargas se suman a tu saldo y vencen junto con tu plan.</li>
+        <li>Si un trabajo falla por un problema del proveedor o de la plataforma, su saldo vuelve automáticamente a tu cuenta.</li>
+        <li>El saldo no es dinero, no se puede transferir a otras cuentas ni canjear por efectivo.</li>
       </ul>
 
       <h2>4. Pagos, renovación y cancelación</h2>
       <ul>
         <li>Los precios se muestran en dólares de EE. UU. (US$) e incluyen los impuestos que correspondan. Los pagos se procesan con Mercado Pago, que cobra el equivalente en pesos chilenos al tipo de cambio del día; antes de pagar ves el monto exacto en pesos.</li>
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
-        <li>Los planes anuales y las recargas se pagan una sola vez.</li>
+        <li>Las recargas se pagan una sola vez.</li>
         <li><b>Derecho a retracto:</b> conforme al artículo 3 bis de la Ley 19.496, te informamos antes de pagar que en la compra de planes y recargas no aplica el derecho a retracto, porque el servicio es digital y se entrega de inmediato: los créditos quedan disponibles apenas se confirma el pago. Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago.</li>
         <li>Si tienes un problema con un cobro, escríbenos a hola@creadsia.com antes de reclamar en Mercado Pago, y lo resolvemos. Si un pago se devuelve o se desconoce, descontamos los créditos que ese pago entregó. Esto no limita los derechos que te da la Ley 19.496 sobre protección de los derechos de los consumidores.</li>
       </ul>
@@ -39,6 +39,7 @@ export default function Terminos() {
       <ul>
         <li>El contenido que subes sigue siendo tuyo. Nos das permiso para procesarlo solo para darte el servicio.</li>
         <li>El contenido que generas en Creads es tuyo y puedes usarlo comercialmente, sujeto a estos términos y a las condiciones de los modelos que lo generaron.</li>
+        <li>Las personas que crea la IA no existen. Cuando un anuncio muestre a una persona creada con IA hablando como si fuera real, te recomendamos indicarlo (por ejemplo, «Hecho con IA») y cumplir las reglas de etiquetado de cada plataforma. Nunca la presentes como un cliente real que dio un testimonio.</li>
         <li>Guardamos tus videos, imágenes y audios mientras tengas tu cuenta. Si tu plan lleva más de 6 meses vencido, podemos borrar los archivos generados, avisándote por correo con al menos 15 días de anticipación para que descargues lo que quieras conservar.</li>
         <li>La IA puede equivocarse: revisa siempre el contenido antes de publicarlo. Eres responsable de lo que publicas y de cumplir las reglas de las plataformas donde lo publiques (por ejemplo, Meta y TikTok).</li>
       </ul>

@@ -11,8 +11,8 @@ import EnvBanner from "./env-banner";
 import VisitBeacon from "./visit-beacon";
 
 export const metadata: Metadata = {
-  title: "Creads IA · Every AI model, one studio",
-  description: "Create ads, reels, podcasts and product photos with the world's best AI models.",
+  title: "Creads IA · Anuncios en video que venden, sin grabar a nadie",
+  description: "Anuncios UGC en video e imágenes para tu negocio, hechos con IA: guion, persona, voz con acento latino, edición y revisión. Desde US$55 al mes.",
   metadataBase: new URL("https://www.creadsia.com"),
   openGraph: { siteName: "Creads", type: "website" },
   // installable app: home-screen icon and full screen on iPhone

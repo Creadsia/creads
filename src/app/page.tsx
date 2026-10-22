@@ -10,7 +10,7 @@ export const dynamic = "force-static"; // served from cache: fast for every visi
 export const metadata: Metadata = {
   title: es.meta.title,
   description: es.meta.description,
-  alternates: { canonical: "/", languages: { "es-CL": "/", en: "/en" } },
+  alternates: { canonical: "/" },
   openGraph: { title: es.meta.title, description: es.meta.description, url: "/", locale: "es_CL" },
 };
 

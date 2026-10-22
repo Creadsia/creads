@@ -23,7 +23,34 @@ export async function payFor(user: User, usd: number, note: string, svc: Service
     await refundJob(user.workspace, charge.ref, "Devuelto: el servicio no estaba disponible");
     throw err;
   }
+  later(() => lowBalanceCheck(user));
   return charge;
+}
+
+/** After the response: run `fn` without slowing the customer down (Next's after(), or in the background). */
+function later(fn: () => Promise<void>) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { after } = require("next/server") as typeof import("next/server");
+    after(() => fn().catch(() => {}));
+  } catch {
+    void fn().catch(() => {});
+  }
+}
+
+/** Less than one ad left (≈ 25 s) on an active plan: one heads-up per plan period. */
+async function lowBalanceCheck(user: User) {
+  if (user.workspace === "main" || user.viaKey) return;
+  const { creditStatus } = await import("./credits");
+  const st = await creditStatus(user.workspace);
+  if (st.unlimited || st.expired || st.balance == null) return;
+  const { secondsOf } = await import("./credit-math");
+  const secs = secondsOf(st.balance, st.rate);
+  if (secs >= 25) return;
+  const { once } = await import("./marketing");
+  if (!(await once(`saldo-bajo:${user.workspace}:${st.paidUntil ?? "sin-plan"}`, 40 * 86400))) return;
+  const [{ lowBalanceEmail }, { sendEmail }] = await Promise.all([import("./emails"), import("./providers/email")]);
+  await sendEmail(lowBalanceEmail(user.email, user.name ?? null, { seconds: secs, until: st.paidUntil ?? null }));
 }
 
 /** The message a failed job shows: credit problems as they are, provider problems explained. */

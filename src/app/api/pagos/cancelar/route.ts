@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { ordersOf, setOrderMp } from "@/lib/billing";
 import { cancelSubscription } from "@/lib/mercadopago";
-import { readPrivateJSON, writePrivateJSON } from "@/lib/supabase";
+import { updatePrivateJSON } from "@/lib/supabase";
+import { creditStatus } from "@/lib/credits";
+import { cancelEmail } from "@/lib/emails";
+import { sendEmail } from "@/lib/providers/email";
+import { PLANS } from "@/lib/catalog";
 
 const LEAVE_REASONS = ["Es muy caro", "No lo estoy usando", "La calidad no me convenció", "Me faltó una función", "Era solo para probar", "Otro"];
 interface Leave { ws: string; at: string; reason: string; detail: string }
@@ -23,11 +27,17 @@ export async function POST(req: Request) {
     await cancelSubscription(sub.mp.id);
     await setOrderMp(sub.id, { ...sub.mp, cancelled: true });
     try {
-      const list = (await readPrivateJSON<Leave[]>("cancelaciones.json")) ?? [];
-      list.push({ ws: s.user.workspace, at: new Date().toISOString(), reason, detail });
-      await writePrivateJSON("cancelaciones.json", list.slice(-500));
+      await updatePrivateJSON<Leave[]>("cancelaciones.json", (cur) => [...(cur ?? []), { ws: s.user.workspace, at: new Date().toISOString(), reason, detail }].slice(-500));
     } catch (e) {
       console.error("cancel reason", e instanceof Error ? e.message : e);
+    }
+    // a clear confirmation: until when the plan still works, and that nothing more is charged
+    try {
+      const st = await creditStatus(s.user.workspace);
+      const plan = PLANS.find((p) => p.id === st.plan)?.name ?? null;
+      await sendEmail(cancelEmail(s.user.email, s.user.name ?? null, { plan, until: st.paidUntil ?? null }));
+    } catch (e) {
+      console.error("cancel email", e instanceof Error ? e.message : e);
     }
     return NextResponse.json({ ok: true });
   } catch {

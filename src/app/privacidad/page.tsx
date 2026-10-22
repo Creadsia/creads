@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Política de privacidad · Creads IA
 
 export default function Privacidad() {
   return (
-    <Legal title="Política de privacidad" updated="16 de octubre de 2026">
+    <Legal title="Política de privacidad" updated="22 de octubre de 2026">
       <p>Creads IA («Creads», «nosotros») es una plataforma para crear anuncios, videos, imágenes y voces con inteligencia artificial, disponible en creadsia.com. Esta política explica qué datos personales usamos, para qué, con quién los compartimos y cómo puedes ejercer tus derechos, conforme a la ley chilena de protección de datos personales (Ley 19.628 y sus modificaciones, incluida la Ley 21.719).</p>
       <p>Responsable: Creads IA. Contacto para privacidad: <b>hola@creadsia.com</b>.</p>
 
@@ -37,9 +37,9 @@ export default function Privacidad() {
       <p>Solo con proveedores que necesitamos para darte el servicio, y solo lo necesario:</p>
       <ul>
         <li><b>Infraestructura:</b> Vercel (sitio y servidores) y Supabase (base de datos y archivos privados).</li>
-        <li><b>Modelos de IA:</b> Google (Veo, Gemini), fal.ai (Kling, Seedance y otros), ElevenLabs (voces) y Anthropic (Claude), que procesan tu contenido para generarlo. Para revisar internamente cómo funciona el servicio usamos además xAI (Grok), solo con resúmenes de los que quitamos correos, teléfonos y otros datos que te identifiquen.</li>
+        <li><b>Modelos de IA:</b> fal.ai (video con MiniMax y labios), Google (imágenes con Nano Banana), ElevenLabs (voces y transcripción) y Anthropic (Claude: guiones, el asistente y la revisión de cada anuncio), que procesan tu contenido para generarlo. Para la función «Espiar anuncios» consultamos la biblioteca pública de anuncios de Meta a través de Scrape Creators (no envía tus datos). Para revisar internamente cómo funciona el servicio usamos además xAI (Grok), solo con resúmenes de los que quitamos correos, teléfonos y otros datos que te identifiquen.</li>
         <li><b>Pagos:</b> Mercado Pago.</li>
-        <li><b>Correos:</b> Resend, que envía los correos de la cuenta (bienvenida, comprobantes de pago, cambio de clave y avisos de tu plan).</li>
+        <li><b>Correos:</b> Resend, que envía los correos de la cuenta (bienvenida, comprobantes de pago, cambio de clave, avisos de tu plan y de tu saldo).</li>
         <li><b>Medición:</b> Meta y PostHog (Estados Unidos), solo si aceptas las cookies de medición.</li>
       </ul>
       <p>Algunos de estos proveedores procesan datos fuera de Chile. Elegimos proveedores con medidas de seguridad adecuadas. No vendemos tus datos.</p>

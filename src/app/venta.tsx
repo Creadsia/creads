@@ -309,7 +309,6 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           <span className="flex flex-wrap gap-4">
             <a href="/terminos" className="hover:text-ink">Términos y condiciones</a>
             <a href="/privacidad" className="hover:text-ink">Política de privacidad</a>
-            <a href="/en" className="hover:text-ink">English</a>
           </span>
         </div>
       </footer>
