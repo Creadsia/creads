@@ -77,7 +77,7 @@ export async function needsCredits(user: User): Promise<string | null> {
   } catch {
     return "No pudimos revisar tus segundos de video. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (Starter a US$15 el primer mes).";
+  return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (Emprende desde US$55 al mes).";
 }
 
 /**
@@ -103,7 +103,7 @@ export async function chargeJob(user: User, usd: number, note: string, ref: stri
     });
     const r = rows[0];
     if (!r?.ok) {
-      throw new CreditError(`Te falta video: esto usa ${fmtSeconds(Math.max(1, Math.round((credits * rate) / SECOND_USD)))} y te quedan ${fmtSeconds(secondsOf(Number(r?.balance ?? 0), rate))}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes» (Starter a US$15 el primer mes)." : "Suma segundos en «Planes»."}`);
+      throw new CreditError(`Te falta video: esto usa ${fmtSeconds(Math.max(1, Math.round((credits * rate) / SECOND_USD)))} y te quedan ${fmtSeconds(secondsOf(Number(r?.balance ?? 0), rate))}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes» (Emprende desde US$55 al mes)." : "Suma segundos en «Planes»."}`);
     }
     return { credits, ref, free: false };
   } catch (err) {

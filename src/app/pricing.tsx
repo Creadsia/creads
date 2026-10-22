@@ -3,7 +3,7 @@
 import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
+import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 
@@ -14,7 +14,7 @@ const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFracti
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-export default function Pricing({ t, lang, renews = true }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean }) {
+export default function Pricing({ t, lang, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -39,8 +39,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
 
   return (
     <div ref={box} className="flex flex-col gap-5">
-      {/* the offer, impossible to miss */}
-      <div className="stage relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-line bg-black p-5 text-white sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-4">
+      {/* the offer, impossible to miss (only while there is one) */}
+      {HAS_OFFER && <div className="stage relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-line bg-black p-5 text-white sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-4">
         <span aria-hidden="true" className="pointer-events-none absolute -top-24 -left-10 h-64 w-64 rounded-full opacity-50 blur-[80px]" style={{ background: "var(--grad)" }} />
         <span className="chroma relative font-display text-5xl leading-none font-semibold sm:text-[3.4rem]">−{LAUNCH_PCT}%</span>
         <span className="relative flex min-w-0 flex-1 flex-col gap-1">
@@ -56,7 +56,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* plans: the cards on sale, everything about each plan from top to bottom, built to pick one and pay */}
       <div className="mx-auto grid w-full max-w-4xl gap-5 md:grid-cols-2 md:items-start">
@@ -180,7 +180,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
       </div>
 
       {/* top-ups and payment questions */}
-      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+      {!compact && <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-7">
           <div>
             <h3 className="text-xl font-extrabold">{t.topups.title}</h3>
@@ -211,7 +211,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
             </details>
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -24,7 +24,7 @@ LA PLATAFORMA (lo que hace hoy el estudio)
 - Espiar anuncios (busca anuncios activos en la biblioteca de Meta; por dentro usa Scrape Creators, nombre que el cliente nunca ve), Crear guion (desarma guiones ganadores, versiones, hooks, ángulos), Voces (clonación con permiso), Avatares (cara + voz con consentimiento), Imágenes, Historias animadas (personajes, música IA, canción, labios), Recrear video (cambiar persona, producto, ropa o lugar; copiar movimiento), biblioteca, equipo del cliente, asistente de ayuda y guías.
 
 PRECIOS (siempre en US$)
-- Mensual: Starter US$25 (300 créditos, sin Genjutsu), Plus US$55 (1.000), Ultra US$129 (3.000). Anual por mes: US$21, US$47, US$109. Recargas: US$25 (500), US$89 (2.000), US$209 (5.000). Oferta de lanzamiento (19 oct 2026): solo Starter a US$15 el primer mes (luego US$25); Plus y Studio a precio normal.
+- Desde el 21 oct 2026, dos planes mensuales sin descuentos: Emprende US$55 (1.540 créditos ≈ 135 s de video ≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99 (3.780 créditos ≈ 330 s ≈ 10 anuncios + 50 imágenes). Sin primer mes rebajado ni plan anual. Ultra (US$129) ya no se vende. Al cliente se le muestran segundos de video (1 s = US$0,22, un segundo de anuncio con Persona IA).
 - Costo interno aproximado: 1 crédito ≈ US$0,0193 de IA.
 - Hoy todos los planes ven todos los modelos (los caros gastan más créditos). Gastón quiere ordenar qué modelos van en cada plan según rentabilidad: eso lo analiza Finanzas y ventas y después Claude lo programa.
 

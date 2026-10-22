@@ -2,7 +2,7 @@
 
 import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, PACKS, hasLaunch, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
+import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
@@ -105,7 +105,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tu recarga" : "Tu plan"}</h1>
           </div>
 
-          {!isPack && (
+          {!isPack && ANNUAL && (
             <div role="radiogroup" aria-label="Forma de pago" className="grid grid-cols-2 gap-2">
               {(["mensual", "anual"] as const).map((p) => (
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
@@ -174,11 +174,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
               {renews ? (
-                <p>Los planes mensuales son una suscripción de Mercado Pago: el primer mes pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio del plan"}{plan && hasLaunch(plan.id) ? " (con la oferta de lanzamiento)" : ""} y desde el segundo mes {plan ? usd(plan.monthly) : "el precio normal"}. Puedes cancelar la renovación cuando quieras desde «Planes».</p>
+                <p>Los planes son una suscripción mensual de Mercado Pago: pagas {plan ? usd(plan.monthly) : "el precio del plan"} cada mes. Puedes cancelar la renovación cuando quieras desde «Planes».</p>
               ) : (
                 <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}
-              <p>El plan anual se paga una sola vez y sus segundos duran el año. Las recargas se compran después, desde «Planes», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
+              <p>Las recargas se compran después, desde «Planes», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
           </details>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
@@ -233,13 +233,13 @@ export default function Planes() {
       {tab === "planes" ? (
         <section className="flex flex-col gap-4" aria-label="Planes">
           <div className="flex flex-wrap items-center gap-3">
-            <div role="radiogroup" aria-label="Forma de pago del plan" className="inline-flex rounded-xl border border-line bg-surface p-1">
+            {ANNUAL && <div role="radiogroup" aria-label="Forma de pago del plan" className="inline-flex rounded-xl border border-line bg-surface p-1">
               {(["mensual", "anual"] as const).map((p) => (
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
                   className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${period === p ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{p === "mensual" ? "Mensual" : "Anual"}</button>
               ))}
-            </div>
-            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "15% menos" : pay?.firstPurchase ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
+            </div>}
+            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "15% menos" : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {PLANS.filter((p) => !p.hidden || currentPlan === p.name).map((p) => {
