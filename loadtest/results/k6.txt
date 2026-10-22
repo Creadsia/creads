@@ -1,0 +1,26 @@
+time="2026-10-22T16:29:40Z" level=warning msg="Request Failed" error="Get \"https://www.creadsia.com/api/v1/anuncios\": request timeout"
+
+     ✓ no 5xx
+
+   ✓ api_ms.........................: avg=121.48ms min=15.46ms med=98.83ms  max=1m0s     p(90)=199ms    p(95)=253.94ms
+     checks.........................: 100.00% 73029 out of 73029
+     data_received..................: 2.6 GB  8.3 MB/s
+     data_sent......................: 11 MB   34 kB/s
+     http_req_blocked...............: avg=286.07µs min=110ns   med=300ns    max=171.35ms p(90)=390ns    p(95)=450ns   
+     http_req_connecting............: avg=73.5µs   min=0s      med=0s       max=21.47ms  p(90)=0s       p(95)=0s      
+     http_req_duration..............: avg=70.19ms  min=5.11ms  med=45.32ms  max=1m0s     p(90)=136.98ms p(95)=184.39ms
+       { expected_response:true }...: avg=69.37ms  min=5.11ms  med=45.32ms  max=1.99s    p(90)=136.96ms p(95)=184.32ms
+     http_req_failed................: 0.00%   1 out of 73029
+     http_req_receiving.............: avg=2.64ms   min=0s      med=486.01µs max=175.58ms p(90)=7.46ms   p(95)=13.76ms 
+     http_req_sending...............: avg=43.96µs  min=12.92µs med=40.04µs  max=463.87µs p(90)=60.49µs  p(95)=71.05µs 
+     http_req_tls_handshaking.......: avg=210.74µs min=0s      med=0s       max=164.26ms p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=67.5ms   min=4.73ms  med=40.41ms  max=1m0s     p(90)=135.39ms p(95)=182.93ms
+     http_reqs......................: 73029   234.457554/s
+     iteration_duration.............: avg=9.59s    min=4.4s    med=9.6s     max=14.68s   p(90)=11.89s   p(95)=12.48s  
+     iterations.....................: 18494   59.374468/s
+   ✓ page_ms........................: avg=53.97ms  min=5.11ms  med=37.19ms  max=1.99s    p(90)=99.1ms   p(95)=133.57ms
+     rate_limited...................: 0.00%   0 out of 73029
+   ✓ server_errors..................: 0.00%   0 out of 73029
+     vus............................: 1       min=1              max=1000
+     vus_max........................: 1000    min=1000           max=1000
+
