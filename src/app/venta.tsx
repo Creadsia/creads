@@ -23,8 +23,6 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 const startHref = (plan: string) => `/empezar?plan=${plan}&periodo=mensual`;
 
 const emprende = SHOWN_PLANS.find((p) => p.id === "starter")!;
-// Negocio's seconds spent only on 20 s ads (≈ 25 s of plan each): about 10 ads → ≈ US$9.4 each (owner, 22 Oct 2026)
-const perAd = 9;
 
 const DEMOS = {
   cafe: { src: "/demos/cafeteria.mp4", poster: "/demos/cafeteria.jpg", label: "Cafetería" },
@@ -40,7 +38,7 @@ const DEMOS = {
 const STEPS = [
   { title: "Cuéntale tu negocio", text: "Qué vendes, a quién y qué quieres que hagan: comprar, agendar, escribirte.", why: "Así el anuncio habla de tu oferta real, no de algo genérico." },
   { title: "Aprueba el guion y la persona", text: "Creads te propone guiones con gancho y la persona que va a hablar, en tu tipo de local.", why: "No se gasta nada en video hasta que tú dices que sí." },
-  { title: "Creads hace el video y lo revisa", text: "Voz con acento latino, labios sincronizados, cortes y subtítulos. Luego escucha cada palabra y mira cada escena.", why: "Si encuentra un error grave, lo rehace antes de entregártelo." },
+  { title: "Creads hace el video y lo revisa", text: "Voz con acento latino, labios sincronizados, cortes y subtítulos. Luego escucha cada palabra y mira cada escena.", why: "Si encuentra un error, te marca qué escena rehacer y la regeneras con un clic." },
   { title: "Descárgalo y publícalo", text: "Vertical, listo para Reels, TikTok y Stories. Haz variaciones para probar cuál vende más.", why: "Un anuncio se cansa en semanas: siempre tienes uno nuevo." },
 ] as const;
 
@@ -49,7 +47,7 @@ const FAQ = [
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
   ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
   ["¿En qué idioma y con qué acento?", "En español con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés. También puedes usar tu propia voz."],
-  ["¿Qué pasa si un video falla?", "Si la IA no entrega el video, los segundos vuelven solos a tu saldo. Y antes de entregarte un anuncio, Creads lo revisa y rehace lo que salió mal."],
+  ["¿Qué pasa si un video falla?", "Si la IA no entrega el video, los segundos vuelven solos a tu saldo. Y antes de entregarte un anuncio, Creads lo revisa y te marca los posibles errores. Si quieres rehacer una escena, la regeneras con un clic: eso usa segundos de tu saldo, como una escena nueva."],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago, en pesos chilenos al cambio del día. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
   ["¿Puedo cancelar?", "Sí, cuando quieras, desde tu cuenta y con un clic. Sin permanencia: sigues usando tu plan hasta la fecha que pagaste."],
 ] as const;
@@ -134,7 +132,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["Listo en minutos, no en días", "Voz chilena, argentina, mexicana…", "Revisado antes de entregártelo", `Desde ${usd(perAd)} por anuncio`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
+                {["Listo en minutos, no en días", "Voz chilena, argentina, mexicana…", "Revisado antes de entregártelo", `Planes desde ${usd(emprende.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
               </ul>
             </div>
 
@@ -199,7 +197,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                   {[
                     ["Tiempo", "Medio día grabando y editando", "Días o semanas", "Minutos"],
                     ["Qué necesitas", "Cámara, luz y salir bien", "Brief, reuniones y correcciones", "Contar qué vendes"],
-                    ["Costo por video", "Tu tiempo", "Se cobra cada video", `Desde ${usd(perAd)}`],
+                    ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(emprende.monthly)} al mes`],
                     ["Versiones para probar", "Pocas", "Las que pagues aparte", "4 a 8 al mes"],
                   ].map(([k, a, b, c]) => (
                     <tr key={k}>
@@ -275,6 +273,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               ))}
             </div>
             <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact />
+            <p className="max-w-3xl text-sm text-muted">Un solo saldo para todo: videos, imágenes y voces descuentan del mismo saldo, así que puedes repartirlo como quieras. Las cantidades son un ejemplo con anuncios de 30 s y el modelo recomendado; algunos modelos usan más de 1 segundo de saldo por cada segundo de video, y antes de crear siempre ves cuánto cuesta. El saldo dura el mes que pagaste: lo que no uses vence al terminar y no se acumula.</p>
           </div>
         </section>
 

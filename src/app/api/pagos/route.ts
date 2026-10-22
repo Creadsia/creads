@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { addOrder, hasPaidBefore, ordersOf, setOrderMp, workspaceRow } from "@/lib/billing";
-import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, onSale, quote } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { createPreference, createSubscription, mpReady, oneTimeOnly } from "@/lib/mercadopago";
@@ -65,6 +65,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites." }, { status: 400 });
     }
     const discountPct = Number(w.discount ?? 0);
+    // retired plans (Ultra) and the annual payment can't be bought, even with an old link (audit 22 Oct 2026)
+    if (!onSale(String(b?.item ?? "") as ItemId, period)) return NextResponse.json({ error: "Ese plan ya no está a la venta. Elige Emprende o Negocio (pago mensual)." }, { status: 400 });
     const q = quote(String(b?.item ?? "") as ItemId, period, { discountPct, firstPurchase: !paid });
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });
     const visitor = visitorFrom(req);

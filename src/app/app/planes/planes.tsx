@@ -73,8 +73,8 @@ export default function Planes() {
     const want = sp.get("plan") as ItemId | null;
     if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
       if (PACKS.some((x) => x.id === want)) setTab("creditos");
-      if (sp.get("periodo") === "anual") setPeriod("anual");
-      if (PLANS.some((x) => x.id === want)) setItem(want); // a top-up is picked on the tab (it needs an active plan)
+      if (ANNUAL && sp.get("periodo") === "anual") setPeriod("anual");
+      if (PLANS.some((x) => x.id === want && !x.hidden)) setItem(want); // a top-up is picked on the tab (it needs an active plan)
       requestAnimationFrame(() => setTimeout(() => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 300));
       window.history.replaceState(null, "", "/app/planes");
     }
@@ -275,7 +275,7 @@ export default function Planes() {
         </section>
       ) : (
         <section className="flex flex-col gap-4" aria-label="Recargas de segundos">
-          <p className="text-sm text-muted">{hasPlan ? "Se suman a tu saldo al instante, encima de los segundos de tu plan, y vencen cuando termina tu período." : "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites."}</p>
+          <p className="text-sm text-muted">{hasPlan ? "Se suman a tu saldo apenas se aprueba el pago, encima de los segundos de tu plan, y vencen cuando termina tu período." : "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites."}</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {PACKS.map((k) => (
               <article key={k.id} className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 ${item === k.id ? "ring-2 ring-accent-text/60" : ""}`}>
@@ -303,7 +303,7 @@ export default function Planes() {
               </ul>
             </div>
             <ul className="flex flex-col gap-1.5 text-sm">
-              <li className="flex gap-2"><Check />Créditos cargados al instante, apenas se aprueba el pago.</li>
+              <li className="flex gap-2"><Check />Saldo cargado apenas se aprueba el pago.</li>
               <li className="flex gap-2"><Check />Cancelas la renovación con un clic, sin llamar a nadie.</li>
               <li className="flex gap-2"><Check />Comprobante de Mercado Pago a tu correo.</li>
             </ul>

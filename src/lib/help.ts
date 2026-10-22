@@ -72,14 +72,14 @@ export const HELP: HelpArticle[] = [
   {
     id: "vencen", cat: "creditos",
     q: "¿Los créditos vencen?",
-    a: "Sí: duran el período que pagaste (un mes, o un año en el plan anual). Los que no uses vencen cuando termina ese período. Te avisamos por correo antes de que venzan.",
+    a: "Sí: duran el mes que pagaste. Los que no uses vencen cuando termina ese período. Te avisamos por correo antes de que venzan.",
     link: { label: "Ver mi vencimiento", href: "/app/planes" },
     tags: "expiran vencimiento caducan acumulan",
   },
   {
     id: "recargas", cat: "creditos",
     q: "Me quedé sin créditos, ¿cómo recargo?",
-    a: "En «Planes y créditos» compras una recarga sin cambiar de plan: 500 créditos por US$25, 2.000 por US$89 o 5.000 por US$209. Necesitas un plan activo, y las recargas vencen junto con tu plan.",
+    a: "En «Planes y créditos» compras una recarga sin cambiar de plan: 500 créditos por US$29, 1.000 por US$55 o 3.000 por US$139. Necesitas un plan activo, y las recargas vencen junto con tu plan.",
     link: { label: "Recargar créditos", href: "/app/planes" },
     tags: "recarga pack comprar mas creditos saldo sin saldo",
   },

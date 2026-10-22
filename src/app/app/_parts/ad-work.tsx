@@ -249,7 +249,7 @@ export default function AdWork({ adId, view, onNext }: { adId: string; view?: Ad
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="font-display text-xl font-bold">{view === "correcciones" ? "6 · Correcciones" : view === "videos" ? "5 · Videos" : ad.title || "Anuncio"}</h2>
-            <p className="text-sm text-muted">{view === "correcciones" ? "Creads revisa cada corte: que diga el guion exacto y que se vea bien. Los errores graves se rehacen gratis; también puedes pedir un cambio en cualquier corte." : `${f.icon} ${f.name} · ${ad.aspect} · ${done} de ${clips.length} cortes listos`}</p>
+            <p className="text-sm text-muted">{view === "correcciones" ? "Creads revisa cada corte: que diga el guion exacto y que se vea bien. Si encuentra un error te lo marca, y puedes regenerar ese corte o pedir un cambio en cualquiera (usa segundos de tu saldo)." : `${f.icon} ${f.name} · ${ad.aspect} · ${done} de ${clips.length} cortes listos`}</p>
           </div>
           {busyClips && <Working label="Generando cortes…" className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text" />}
         </div>

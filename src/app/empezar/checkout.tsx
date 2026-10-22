@@ -118,7 +118,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           )}
 
           <div role="radiogroup" aria-label={isPack ? "Recarga" : "Plan"} className="flex flex-col gap-2">
-            {(isPack ? PACKS : PLANS.filter((p) => !p.hidden || p.id === item)).map((x) => {
+            {(isPack ? PACKS : PLANS.filter((p) => !p.hidden)).map((x) => {
               const on = x.id === item;
               const xq = quote(x.id, period, { firstPurchase: true })!;
               const isPlan = "monthly" in x;
@@ -149,7 +149,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5">
             <b>{plan ? `Lo que incluye ${plan.name}` : "Lo que incluye"}</b>
             <ul className="grid gap-2 text-sm sm:grid-cols-2">
-              {(plan ? plan.features : ["Se suman a tu saldo al instante", "Vencen junto con tu plan", "Sirven para todos los modelos", "Puedes sumar un plan cuando quieras"]).map((f) => (
+              {(plan ? plan.features : ["Se suman a tu saldo al aprobarse el pago", "Vencen junto con tu plan", "Sirven para todos los modelos", "Puedes sumar un plan cuando quieras"]).map((f) => (
                 <li key={f} className="flex gap-2"><Check />{f}</li>
               ))}
               <li className="flex gap-2"><Check />Revisión de calidad automática en cada anuncio</li>
@@ -159,7 +159,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
           <dl className="grid gap-3 sm:grid-cols-3">
             {[
-              ["Créditos al instante", "Apenas Mercado Pago aprueba, tu saldo se carga solo."],
+              ["Saldo al aprobarse el pago", "Apenas Mercado Pago aprueba, tu saldo se carga solo."],
               ["Cancelas con un clic", "Desde tu cuenta, sin llamar ni escribir a nadie."],
               ["Pago protegido", "Pagas en Mercado Pago. Creads nunca ve tu tarjeta."],
             ].map(([t, d]) => (

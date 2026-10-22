@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/admin";
-import { PLANS, type ItemId } from "@/lib/catalog";
+import { ANNUAL, SHOWN_PLANS, type ItemId } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import Checkout from "./checkout";
 import WhatsAppButton from "../whatsapp";
@@ -20,8 +20,9 @@ export default async function Empezar({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   const want = String(sp.plan ?? "plus") as ItemId;
   // new accounts start with a plan (top-ups are added to an active plan, from «Planes y créditos»)
-  const item: ItemId = PLANS.some((x) => x.id === want) ? want : "plus";
-  const period = sp.periodo === "anual" ? "anual" : "mensual";
+  // only plans on sale: an old link to Ultra or to the annual payment opens Negocio, monthly
+  const item: ItemId = SHOWN_PLANS.some((x) => x.id === want) ? want : "plus";
+  const period = ANNUAL && sp.periodo === "anual" ? "anual" : "mensual";
   const user = await currentUser().catch(() => null);
   if (user) redirect(`/app/planes?plan=${item}&periodo=${period}`);
   const rate = await usdClpRate().catch(() => 950);

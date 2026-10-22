@@ -54,6 +54,12 @@ export interface Quote {
 }
 
 /** The amount to pay for an item, in US$ (rounded to cents). */
+/** Whether an item can be bought now: retired plans (Ultra) and the annual payment are not on sale. */
+export function onSale(item: ItemId, period: Period) {
+  if (PACKS.some((p) => p.id === item)) return true;
+  return SHOWN_PLANS.some((p) => p.id === item) && (period === "mensual" || ANNUAL);
+}
+
 export function quote(item: ItemId, period: Period, opts: { discountPct?: number; firstPurchase?: boolean } = {}): Quote | null {
   const plan = PLANS.find((p) => p.id === item);
   const pack = PACKS.find((p) => p.id === item);

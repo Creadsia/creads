@@ -431,7 +431,7 @@ function Produccion({ d, patch }: { d: Data; patch: (body: unknown) => Promise<b
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex flex-col gap-1">
           <h3 id="h-prod" className="text-lg font-bold">Producción automática de videos</h3>
-          <p className="text-xs text-muted">Cuando apruebas un pedido de video (de Creativos o del Community manager), Creads lo hace solo: divide el guion, dirige las escenas, genera, revisa la calidad (rehace gratis lo grave), lo arma con subtítulos {a.sello ? "y el sello «Hecho con Creads IA»" : ""} y lo deja en el banco de contenido. Avanza cada 5 minutos; un video toma unos 15–30 minutos.</p>
+          <p className="text-xs text-muted">Cuando apruebas un pedido de video (de Creativos o del Community manager), Creads lo hace solo: divide el guion, dirige las escenas, genera, revisa la calidad, lo arma con subtítulos {a.sello ? "y el sello «Hecho con Creads IA»" : ""} y lo deja en el banco de contenido. Avanza cada 5 minutos; un video toma unos 15–30 minutos.</p>
         </div>
         <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={a.on} onChange={(e) => patch({ autoProd: { on: e.target.checked } })} className="h-4 w-4 accent-[var(--accent)]" />Encendida</label>
       </div>

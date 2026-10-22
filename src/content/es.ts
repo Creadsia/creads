@@ -168,7 +168,7 @@ export const es: Content = {
     firstMonth: "el primer mes",
     see: "Mira cómo funciona",
     alsoChat: "También lo pides desde Claude o ChatGPT",
-    trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Créditos al instante"],
+    trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Saldo disponible al aprobarse el pago"],
   },
   nudge: {
     bar: "Tus anuncios desde US$55 al mes",
@@ -463,14 +463,14 @@ export const es: Content = {
     perAd: "por anuncio",
     cancel: "cancelas cuando quieras",
     billedMonthly: "facturado cada mes",
-    cardNote: "Pago seguro · video al instante · sin permanencia",
+    cardNote: "Pago seguro · saldo disponible al aprobarse el pago · sin permanencia",
     includes: "Lo que incluye",
     credits: "de video / mes",
     cta: "Empezar con",
     ctaNote: "Creas tu cuenta y pagas en 1 minuto",
     clpNote: "Se cobra en pesos chilenos con Mercado Pago",
     trust: [
-      ["Segundos al instante", "Tu saldo se carga apenas se aprueba el pago."],
+      ["Saldo al aprobarse el pago", "Tu saldo se carga apenas Mercado Pago aprueba el pago."],
       ["Cancelas con un clic", "Desde tu cuenta, sin llamar ni escribir a nadie."],
       ["Pago protegido", "Pagas en Mercado Pago. Creads nunca ve tu tarjeta."],
       ["Calidad incluida", "Cada anuncio se revisa solo y te marca qué corte rehacer."],
@@ -522,7 +522,7 @@ export const es: Content = {
         credits: "1.540",
         for: "Para el dueño de negocio que quiere sus propios anuncios todos los meses, sin agencia.",
         features: [
-          "≈ 4 anuncios en video de 30 s + 20 imágenes al mes",
+          "Saldo para ≈ 4 anuncios en video de 30 s + 20 imágenes al mes",
           "Espiar los anuncios que le funcionan a tu competencia",
           "Guiones de venta con IA (3 versiones y 10 ganchos)",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
@@ -538,7 +538,7 @@ export const es: Content = {
         credits: "3.000",
         for: "Para negocios que publican todas las semanas y prueban varios anuncios a la vez.",
         features: [
-          "≈ 8 anuncios en video de 30 s + 40 imágenes al mes",
+          "Saldo para ≈ 8 anuncios en video de 30 s + 40 imágenes al mes",
           "Todo lo de Emprende",
           "3 avatares y 3 voces clonadas (la tuya incluida)",
           "Cola prioritaria: tus videos salen primero",

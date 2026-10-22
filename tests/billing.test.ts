@@ -135,3 +135,12 @@ describe("rate limits", () => {
     assert.equal(await hit(), false);
   });
 });
+
+test("onSale: Ultra and the annual payment can't be bought, even with an old link", async () => {
+  const { onSale } = await import("../src/lib/catalog");
+  assert.equal(onSale("studio", "mensual"), false);
+  assert.equal(onSale("plus", "anual"), false);
+  assert.equal(onSale("plus", "mensual"), true);
+  assert.equal(onSale("starter", "mensual"), true);
+  assert.equal(onSale("pack-500", "mensual"), true);
+});
