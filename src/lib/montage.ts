@@ -173,6 +173,9 @@ function selloStyles(W: number, H: number, bottom: boolean) {
   ];
 }
 
+/** «Creats», «Kreatz», «Creadz»… as heard by the transcription → «Creads» (never «creas», a real word). */
+export const fixBrand = (w: string) => w.replace(/^([¿¡"«(]*)[ck]rea(?:t|d|th|dz|tz)[sz]?([.,!?:;»")]*)$/i, (_, a, b) => `${a}Creads${b}`);
+
 /** The parts of [a, b] outside every window (Edición Pro: no subtitle while a headline says the same words). */
 export function outside(a: number, b: number, hide: { desde: number; hasta: number }[], min = 0.25): [number, number][] {
   let parts: [number, number][] = [[a, b]];
@@ -188,7 +191,8 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
   const st = normalizeStyle(style0);
   // join "34" + ",000" back into one token
   const words: Word[] = [];
-  for (const w of words0) {
+  for (const w0 of words0) {
+    const w = { ...w0, w: fixBrand(w0.w) };
     const last = words[words.length - 1];
     if (last && /^[,.]?\d{3}[.,]?$/.test(w.w) && /\d$/.test(last.w)) { last.w += w.w.startsWith(",") ? w.w : `,${w.w}`; last.e = w.e; continue; }
     words.push({ ...w });

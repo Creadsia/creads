@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { session, SESSION_ENDED } from "@/lib/access";
 import { tooMany } from "@/lib/rate";
 import { loadAd, publicAd, saveFinishedAd } from "@/lib/api-ads";
-import { download, probe, workdir } from "@/lib/montage";
+import { download, probe, respell, workdir } from "@/lib/montage";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { mediaRef } from "@/lib/mcp";
@@ -49,7 +49,9 @@ export async function POST(req: Request) {
     let productFile: string | null = null;
     if (product) { productFile = path.join(dir, `product${path.extname(product)}`); await download(await fetchableUrl(product, ws), productFile).catch(() => { productFile = null; }); }
     const dur = (await probe(hostFile)).dur;
-    const words = elevenlabs.configured() ? ((await elevenlabs.transcribe!(hostSrc, lang).catch(() => null))?.words ?? []) : [];
+    // the words as heard, spelled as in the script («Creats» → «Creads»)
+    const heard = elevenlabs.configured() ? ((await elevenlabs.transcribe!(hostSrc, lang).catch(() => null))?.words ?? []) : [];
+    const words = host!.guion ? respell(heard, host!.guion) : heard;
     const card = prompt ? await renderCard(dir, productFile, prompt) : null;
     const slots = planDemo(dur, ex.length, Boolean(card));
     const files: string[] = [];

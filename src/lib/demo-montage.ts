@@ -73,9 +73,9 @@ export async function renderSlot(dir: string, i: number, s: Slot, host: string, 
   } else if (s.kind === "card") {
     args = ["-loop", "1", "-t", len, "-i", card as string, ...hostIn, "-filter_complex", `[0:v]${cover(W, HALF)},fps=${FPS}[t];[1:v]${cover(W, H)},crop=${W}:${HALF}:0:${Math.round(H * 0.16)},fps=${FPS}[b];[t][b]vstack=inputs=2[v]`, "-map", "[v]"];
   } else {
-    // the clip full screen, the presenter in a small framed window at the bottom left
+    // the clip full screen, the presenter in a small framed window at the top left (words go in the lower third)
     const pw = 228, ph = 300;
-    args = [...exIn(), ...hostIn, "-filter_complex", `[0:v]${cover(W, H)},fps=${FPS}[bg];[1:v]${cover(W, H)},scale=${pw}:-2,crop=${pw}:${ph}:0:${Math.round(pw * 16 / 9 * 0.1)},pad=${pw + 8}:${ph + 8}:4:4:white,fps=${FPS}[p];[bg][p]overlay=28:${H - ph - 300}[v]`, "-map", "[v]"];
+    args = [...exIn(), ...hostIn, "-filter_complex", `[0:v]${cover(W, H)},fps=${FPS}[bg];[1:v]${cover(W, H)},scale=${pw}:-2,crop=${pw}:${ph}:0:${Math.round(pw * 16 / 9 * 0.1)},pad=${pw + 8}:${ph + 8}:4:4:white,fps=${FPS}[p];[bg][p]overlay=28:150[v]`, "-map", "[v]"];
   }
   await ff(["-y", "-v", "error", ...args, "-t", len, ...enc, out], 120_000);
   return out;
@@ -119,14 +119,26 @@ Dialogue: 1,0:00:00.00,0:01:00.00,Prompt,,0,0,0,,${prompt.replace(/[{}\\\n]/g, "
 
 /** The overlay of the whole ad: word-by-word captions on the seam, «Hecho con IA» on every clip, the closing card. */
 export function demoAss(words: Word[], slots: Slot[], dur: number, cierre: { titulo: string; linea: string }) {
-  const cap = captions(words, W, H, "9:16", { ...DEFAULT_STYLE, look: "palabra", case: "upper", size: 30, x: 50, y: 50, sello: false, script: false }, dur).ass;
+  // where the words sit depends on what's on screen: on the seam of a split screen, and in the lower third
+  // (under the face, above the app's buttons) when one person fills the screen — never over a face
+  const Y: Record<SlotKind, number> = { split: 50, card: 50, host: 72, pip: 72 };
+  const style = { ...DEFAULT_STYLE, look: "palabra" as const, case: "upper" as const, size: 30, x: 50, sello: false, script: false };
+  let head = "";
+  const lines: string[] = [];
+  for (const s of slots) {
+    const one = captions(words, W, H, "9:16", { ...style, y: Y[s.kind] }, dur, [{ desde: -1, hasta: s.a }, { desde: s.b, hasta: dur + 3600 }]).ass;
+    const at = one.indexOf("\nDialogue:");
+    if (!head) head = at >= 0 ? one.slice(0, at + 1) : one;
+    lines.push(...one.split("\n").filter((l) => l.startsWith("Dialogue:")));
+  }
+  const cap = `${head.trimEnd()}\n${lines.join("\n")}\n`;
   const t2 = (s: number) => {
     const m = Math.floor(s / 60), x = s % 60;
     return `0:${String(m).padStart(2, "0")}:${x.toFixed(2).padStart(5, "0")}`;
   };
   const extra: string[] = [];
   for (const s of slots) {
-    if (s.kind === "split" || s.kind === "pip") extra.push(`Dialogue: 2,${t2(s.a)},${t2(s.b)},DemoBadge,,0,0,0,,{\\an9\\pos(${W - 28},${s.kind === "split" ? 28 : 60})}Hecho con IA`);
+    if (s.kind === "split" || s.kind === "pip") extra.push(`Dialogue: 2,${t2(s.a)},${t2(s.b)},DemoBadge,,0,0,0,,{\\an9\\pos(${W - 28},${s.kind === "split" ? 28 : 150})}Hecho con IA`);
   }
   const a = dur + 0.25, b = dur + DEMO_END;
   extra.push(`Dialogue: 3,${t2(a)},${t2(b)},DemoFin,,0,0,0,,{\\pos(${W / 2},${Math.round(H * 0.44)})\\fad(250,0)}${cierre.titulo.replace(/[{}\\]/g, "")}`);

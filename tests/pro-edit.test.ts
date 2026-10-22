@@ -66,3 +66,10 @@ test("subtitles step aside while a Pro headline is on screen", () => {
   assert.deepEqual(outside(0, 1, [{ desde: 0.9, hasta: 2 }]), [[0, 0.9]]);
   assert.deepEqual(outside(0, 1, []), [[0, 1]]);
 });
+
+import { fixBrand } from "../src/lib/montage";
+test("brand spelling: Creats / Kreatz / Creadz → Creads, but «creas» stays", () => {
+  for (const w of ["Creats", "creats,", "Kreatz", "CREADZ.", "«Creats»"]) assert.match(fixBrand(w), /Creads/);
+  assert.equal(fixBrand("creas"), "creas");
+  assert.equal(fixBrand("crear"), "crear");
+});
