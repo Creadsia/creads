@@ -63,3 +63,11 @@ test("owner report: exact money block (sales, IVA, Mercado Pago, each provider, 
   for (const t of ["Vendido", "IVA", "Mercado Pago", "fal.ai", "Claude", "Campañas en Meta", "Resultado del día", "gastado US$41,30"]) assert.ok(e.text.includes(t) || e.subject.includes(t), t);
   assert.ok(!e.text.includes("Oficina de agentes"), "office line hidden when it's inside Claude's real cost");
 });
+
+test("ownerSaleEmail: says new sale vs renewal, with amount and customer", async () => {
+  const { ownerSaleEmail } = await import("../src/lib/emails");
+  const e = ownerSaleEmail("o@x.com", { label: "Plan Negocio · mensual", amount: 94000, currency: "CLP", customer: "c@x.com", account: "Café", renewal: false, orderId: "p1" });
+  assert.match(e.subject, /Nueva venta: Plan Negocio · mensual · \$94\.000/);
+  assert.match(e.text, /c@x\.com/);
+  assert.match(ownerSaleEmail("o@x.com", { label: "x", amount: 1, currency: "CLP", customer: "", account: "", renewal: true, orderId: "p" }).subject, /Renovación/);
+});

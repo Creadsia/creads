@@ -45,6 +45,8 @@ export function signature(area: string, message: string) {
 }
 
 let ownerEmail: { v: string | null; at: number } | null = null;
+/** The owner's email (Creadsia), cached for an hour. */
+export async function ownerAddress() { return owner(); }
 async function owner() {
   if (ownerEmail && Date.now() - ownerEmail.at < 3600_000) return ownerEmail.v;
   const rows = await sbRest<{ email: string }[]>("users?workspace=eq.main&role=eq.owner&active=eq.true&select=email&limit=1").catch(() => []);

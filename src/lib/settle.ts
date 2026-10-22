@@ -2,7 +2,8 @@ import { type Order, applyPayment, getOrder, recordIncome } from "./billing";
 import { PACKS, PLANS } from "./catalog";
 import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
-import { receiptEmail } from "./emails";
+import { ownerSaleEmail, receiptEmail } from "./emails";
+import { ownerAddress } from "./errlog";
 import { beforeNewPeriod } from "./expiry";
 import { getPayment, getPreapproval, setSubscriptionAmount, subscriptionPaymentIds } from "./mercadopago";
 
@@ -72,6 +73,12 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   if (order.email) {
     await sendEmail(receiptEmail(order.email, { label: order.quote.label, credits: g.credits, amount: pay.amount, currency: pay.currency, orderId: order.id, paymentId: `${pay.id}` }));
   }
+  // the owner hears about every sale right away (email to Creadsia's owner)
+  try {
+    const to = await ownerAddress();
+    const renewal = (order.payments ?? []).some((p) => p !== `${source}:${pay.id}`);
+    if (to) await sendEmail(ownerSaleEmail(to, { label: order.quote.label, amount: pay.amount, currency: pay.currency, customer: order.email ?? "", account: order.wsName ?? "", renewal, orderId: order.id }));
+  } catch (e) { console.error("owner sale email", order.id, e instanceof Error ? e.message : e); }
   if (order.visitor) {
     await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
   }

@@ -4,7 +4,8 @@ import { ordersOf, setOrderMp } from "@/lib/billing";
 import { cancelSubscription } from "@/lib/mercadopago";
 import { updatePrivateJSON } from "@/lib/supabase";
 import { creditStatus } from "@/lib/credits";
-import { cancelEmail } from "@/lib/emails";
+import { cancelEmail, ownerCancelEmail } from "@/lib/emails";
+import { ownerAddress } from "@/lib/errlog";
 import { sendEmail } from "@/lib/providers/email";
 import { PLANS } from "@/lib/catalog";
 
@@ -36,6 +37,8 @@ export async function POST(req: Request) {
       const st = await creditStatus(s.user.workspace);
       const plan = PLANS.find((p) => p.id === st.plan)?.name ?? null;
       await sendEmail(cancelEmail(s.user.email, s.user.name ?? null, { plan, until: st.paidUntil ?? null }));
+      const owner = await ownerAddress();
+      if (owner) await sendEmail(ownerCancelEmail(owner, { customer: s.user.email, plan, until: st.paidUntil ?? null, reason: detail ? `${reason}: ${detail}` : reason }));
     } catch (e) {
       console.error("cancel email", e instanceof Error ? e.message : e);
     }

@@ -61,6 +61,36 @@ export function welcomeEmail(to: string, name: string | null): Email {
   };
 }
 
+/** To the owner, on every approved payment (owner, 22 Oct 2026: «¿cómo me avisan cuando caiga un suscriptor?»). */
+export function ownerSaleEmail(to: string, o: { label: string; amount: number; currency: string; customer: string; account: string; renewal: boolean; orderId: string }): Email {
+  const amount = o.currency === "CLP" ? clp(o.amount) : `US$${o.amount.toFixed(2)}`;
+  const kind = o.renewal ? "Renovación" : "Nueva venta";
+  const rows: [string, string][] = [["Qué compró", o.label], ["Monto", amount], ["Cliente", o.customer || "—"], ["Cuenta", o.account || "—"], ["Pedido", o.orderId]];
+  return {
+    to, tag: "venta",
+    subject: `💰 ${kind}: ${o.label} · ${amount}`,
+    html: layout({
+      preview: `${o.customer || "Un cliente"} pagó ${amount}.`,
+      title: o.renewal ? "Se renovó un plan" : "¡Cayó una venta!",
+      paragraphs: [o.renewal ? "Mercado Pago cobró la renovación mensual de este cliente." : "Un cliente acaba de pagar. Su saldo ya está cargado y le llegó el comprobante."],
+      rows,
+      cta: { label: "Ver en el Panel", href: `${SITE}/admin` },
+    }),
+    text: plain([`${kind}`, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Panel: ${SITE}/admin`]),
+  };
+}
+
+/** To the owner, when a customer turns off their monthly renewal. */
+export function ownerCancelEmail(to: string, o: { customer: string; plan: string | null; until: string | null; reason?: string }): Email {
+  const rows: [string, string][] = [["Cliente", o.customer], ["Plan", o.plan ?? "—"], ["Sigue activo hasta", o.until ?? "—"], ...(o.reason ? [["Motivo", o.reason] as [string, string]] : [])];
+  return {
+    to, tag: "venta",
+    subject: `Un cliente canceló la renovación · ${o.plan ?? "plan"}`,
+    html: layout({ preview: `${o.customer} canceló la renovación.`, title: "Canceló la renovación", paragraphs: ["Este cliente apagó la renovación automática. Su plan sigue hasta la fecha pagada: es buen momento para escribirle."], rows, cta: { label: "Ver en el Panel", href: `${SITE}/admin` } }),
+    text: plain(["Canceló la renovación", "", ...rows.map(([k, v]) => `${k}: ${v}`)]),
+  };
+}
+
 export function receiptEmail(to: string, o: { label: string; credits: number; amount: number; currency: string; orderId: string; paymentId: string }): Email {
   const link = `${SITE}/app`;
   const amount = o.currency === "CLP" ? clp(o.amount) : `US$${o.amount.toFixed(2)}`;
