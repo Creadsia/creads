@@ -19,6 +19,7 @@ const TOOL_LABEL: Record<string, string> = {
   creads_crear_avatar: "Guardando a la persona",
   creads_crear_anuncio: "Haciendo el anuncio",
   creads_revisar_anuncio: "Revisando el video: escucho cada palabra y miro cada escena",
+  creads_montar_demo: "Armando el video final con todos los clips",
   creads_saldo: "Mirando tu saldo",
   creads_avatares: "Mirando tus avatares",
   creads_voces: "Mirando las voces",

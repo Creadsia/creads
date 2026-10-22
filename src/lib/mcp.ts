@@ -51,10 +51,12 @@ export const TOOLS: Tool[] = [
     inputSchema: { type: "object", properties: {
       descripcion: { type: "string", minLength: 10, maxLength: 4000, description: "What the image shows, in detail (any language)." },
       formato: { type: "string", enum: ["9:16", "1:1", "4:5", "16:9"], default: "4:5", description: "Aspect ratio: 4:5 feed, 9:16 stories/reels, 1:1 square, 16:9 wide." },
+      producto: { type: "string", maxLength: 600, description: "Optional: link of a product photo of this account (from creads_crear_imagen or an upload). The new image shows that exact product (same shape, colours and label)." },
     }, required: ["descripcion"], additionalProperties: false },
     annotations: { title: "Crear imagen", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call, origin, ctx) => {
-      const d = await call<{ url: string }>("/api/generate/image", { prompt: str(a.descripcion), aspect: str(a.formato, 5) || "4:5" });
+      const producto = str(a.producto, 600);
+      const d = await call<{ url: string }>("/api/generate/image", { prompt: str(a.descripcion), aspect: str(a.formato, 5) || "4:5", ...(producto ? { refs: [{ url: mediaRef(producto), role: "product" }] } : {}) });
       const url = abs(origin, d.url);
       const descarga = await ctx.link(d.url).catch(() => null);
       return { text: `Imagen lista: ${url}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}`, data: { url, ...(descarga ? { descarga } : {}) }, images: [d.url] };
@@ -178,6 +180,25 @@ export const TOOLS: Tool[] = [
         text: `Duración: ${r.duracion} s. Audio: ${r.parecido ?? "?"}% del guion escuchado.${r.escuchado ? ` Se escucha: «${r.escuchado}».` : ""}${r.observaciones.length ? ` Observaciones: ${r.observaciones.join("; ")}.` : " Sin observaciones de audio."} La imagen adjunta son 8 cuadros del video en orden.`,
         data: r as unknown as Json, images: [r.hoja],
       };
+    },
+  },
+  {
+    name: "creads_montar_demo", title: "Armar demo con presentador",
+    description: "Puts together a «demo con presentador» ad from ads that are already «listo»: the presenter's ad (a person explaining, made with edicion simple and subtitulos false) with 2 to 6 example ads (short UGC clips of different people, also simple and without subtitles) shown in split screen or full screen with the presenter in a corner, a «producto + prompt» card, word-by-word captions, a «Hecho con IA» label on every example and a closing card. Free (the ads were already paid). Takes 1 to 3 minutes. Returns a new ad, already «listo».",
+    inputSchema: { type: "object", properties: {
+      presentador: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "Id of the presenter's ad." },
+      ejemplos: { type: "array", minItems: 2, maxItems: 6, items: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$" }, description: "Ids of the example ads, in the order they should appear." },
+      producto: { type: "string", maxLength: 600, description: "Optional: link of the product photo for the card." },
+      prompt: { type: "string", maxLength: 160, description: "Optional: the short request shown on the card as if typed in Creads (e.g. «Una chica fitness en un parque mostrando su bebida VOLTA»). Without it there is no card." },
+      titulo: { type: "string", maxLength: 80 },
+      cierre: { type: "string", maxLength: 28, description: "Closing card title (default creadsia.com)." },
+      linea: { type: "string", maxLength: 48, description: "Closing card call to action." },
+    }, required: ["presentador", "ejemplos"], additionalProperties: false },
+    annotations: { title: "Armar demo con presentador", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    run: async (a, call) => {
+      const ejemplos = Array.isArray(a.ejemplos) ? (a.ejemplos as unknown[]).map((x) => str(x, 30)).filter((x) => /^ad_[a-z0-9]{6,20}$/.test(x)) : [];
+      const d = await call<{ anuncio: Json; segundos: number }>("/api/v1/montajes", { presentador: str(a.presentador, 30), ejemplos, ...(str(a.producto, 600) ? { producto: str(a.producto, 600) } : {}), ...(str(a.prompt, 160) ? { prompt: str(a.prompt, 160) } : {}), ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.cierre, 28) ? { cierre: str(a.cierre, 28) } : {}), ...(str(a.linea, 48) ? { linea: str(a.linea, 48) } : {}) });
+      return { text: `Demo armado (id ${d.anuncio.id}, ${d.segundos} s): ${d.anuncio.video_url}. Revísalo con creads_revisar_anuncio antes de entregarlo.`, data: d.anuncio };
     },
   },
   {

@@ -16,8 +16,8 @@ export const maxDuration = 300;
 // old signed links never expire inside the history.
 
 const MODEL = process.env.CLAUDE_ASISTENTE_MODEL || "claude-opus-5-5";
-const MAX_STEPS = 8;
-const USE = new Set(["creads_saldo", "creads_crear_imagen", "creads_crear_avatar", "creads_crear_anuncio", "creads_revisar_anuncio", "creads_avatares", "creads_ver_imagen", "creads_voces"]);
+const MAX_STEPS = 12; // a demo orders up to 7 ads in one turn
+const USE = new Set(["creads_saldo", "creads_crear_imagen", "creads_crear_avatar", "creads_crear_anuncio", "creads_revisar_anuncio", "creads_avatares", "creads_ver_imagen", "creads_voces", "creads_montar_demo"]);
 
 type Block = Record<string, unknown> & { type: string };
 type Msg = { role: "user" | "assistant"; content: string | Block[] };
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
           const r = await tool.run((u.input ?? {}) as Record<string, unknown>, call, origin, ctx);
           const imgs = (r.images ?? []).slice(0, 3);
           ui.images.push(...imgs);
-          if (u.name === "creads_crear_anuncio" && typeof r.data?.id === "string") ui.ads.push(r.data.id);
+          if ((u.name === "creads_crear_anuncio" || u.name === "creads_montar_demo") && typeof r.data?.id === "string") ui.ads.push(r.data.id);
           const seen = (await Promise.all(imgs.map((i) => ctx.picture(i).catch(() => null)))).filter((p): p is { data: string; mimeType: string } => Boolean(p));
           const text = `${r.text}${imgs.length ? `\n(Imagen: ${imgs.join(", ")})` : ""}`;
           results.push({ type: "tool_result", tool_use_id: u.id, content: [{ type: "text", text }, ...seen.map((p) => ({ type: "image", source: { type: "base64", media_type: p.mimeType, data: p.data } }))] });

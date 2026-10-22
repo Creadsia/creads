@@ -92,3 +92,13 @@ export const publicAd = (j: ApiAd) => ({
   video_url: j.videoUrl ? (j.videoUrl.startsWith("http") ? j.videoUrl : `${SITE}${j.videoUrl}`) : null,
   error: j.error ?? null, creado: j.createdAt, actualizado: j.updatedAt,
 });
+
+/** A finished ad made outside the pipeline (the «Demo con presentador» montage): saved already «listo». */
+export async function saveFinishedAd(ws: string, userId: string, o: { titulo: string; guion: string; idioma: "es-CL" | "en"; videoUrl: string; formato: string }): Promise<ApiAd> {
+  const now = new Date().toISOString();
+  const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "listo", paso: "Video terminado", sello: false, edicion: "simple", ...o };
+  await writePrivateJSON(file(ws, job.id), job);
+  const idx = ((await readPrivateJSON<string[]>(indexFile(ws)).catch(() => null)) ?? []).filter((x) => x !== job.id);
+  await writePrivateJSON(indexFile(ws), [job.id, ...idx].slice(0, 100));
+  return job;
+}

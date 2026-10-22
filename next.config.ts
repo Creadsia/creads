@@ -62,6 +62,8 @@ const nextConfig: NextConfig = {
     // the assistant's review (frame sheet) and «Persona real» (cuts a piece of the person's video)
     "/api/v1/anuncios/[id]/revisar": ["./node_modules/ffmpeg-static/ffmpeg"],
     "/api/clips/run": ["./node_modules/ffmpeg-static/ffmpeg"],
+    // «Demo con presentador»: split screen, the prompt card and the captions (needs the fonts too)
+    "/api/v1/montajes": ffmpegFiles,
     "/api/inspiracion": ["./node_modules/ffmpeg-static/ffmpeg"],
     "/api/historias/montar": ffmpegFiles,
     "/api/historias/dialogos": ["./node_modules/ffmpeg-static/ffmpeg"],
