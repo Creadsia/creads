@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { NICHES, cleanNiche, nicheKey } from "@/lib/niches";
 import { formatById } from "@/lib/formats";
 import { DeleteButton, Empty, PageHead, type Row, SetupNotice, btnCls, useTable } from "./ui";
+import ImageLibrary from "./image-library";
 
 interface Ad extends Row { title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; favorite: boolean; settings: Record<string, unknown> | null }
 
@@ -21,6 +22,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
   const [fav, setFav] = useState(false);
   const [niche, setNiche] = useState<string | null>(null); // nicheKey, or null = all
   const [editing, setEditing] = useState<string | null>(null);
+  const [kind, setKind] = useState<"videos" | "imagenes">("videos"); // «Anuncios terminados»: videos or images
   const nicheOf = (a: Ad) => cleanNiche(a.settings?.niche);
   // an ad being redone shows in both: in production, and finished (its last final video) until rebuilt
   const mine = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" || Boolean(a.final_url) : a.status !== "done"));
@@ -51,6 +53,14 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
         </div>
       </PageHead>
       {t.missing && <SetupNotice />}
+      {mode === "done" && (
+        <div role="tablist" aria-label="Tipo" className="flex w-fit rounded-lg border border-line p-0.5 text-sm">
+          {([["videos", "Videos"], ["imagenes", "Imágenes"]] as const).map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={kind === k} onClick={() => setKind(k)} className={`rounded-md px-4 py-1.5 font-semibold ${kind === k ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{l}</button>
+          ))}
+        </div>
+      )}
+      {mode === "done" && kind === "imagenes" ? <ImageLibrary /> : <>
       {niches.length > 1 && (
         <div role="group" aria-label="Filtrar por nicho" className="flex flex-wrap gap-1.5">
           <button type="button" onClick={() => setNiche(null)} aria-pressed={!niche} className={`rounded-full border px-3 py-1 text-sm font-semibold ${!niche ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>Todos · {mine.length}</button>
@@ -106,6 +116,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
           })}
         </ul>
       )}
+      </>}
     </>
   );
 }

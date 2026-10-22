@@ -57,6 +57,8 @@ export async function POST(req: Request) {
     const cierre = { titulo: typeof b.cierre === "string" && b.cierre.trim() ? b.cierre.trim().slice(0, 28) : "creadsia.com", linea: typeof b.linea === "string" ? b.linea.trim().slice(0, 48) : "" };
     const r = await finishDemo(dir, files, hostFile, dur, demoAss(words, slots, dur, cierre));
     const url = await saveMedia(ws, "finals", await readFile(r.file), "video/mp4");
+    // also in the studio's «Anuncios terminados» (a missing table never loses the video)
+    await s.db.insert("ads", { title: (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : `Demo · ${host!.titulo}`).slice(0, 120), format: "ugc", aspect: "9:16", status: "done", final_url: url, settings: { demo: true } }).catch((e: unknown) => console.error("montajes ads row", e instanceof Error ? e.message : e));
     const job = await saveFinishedAd(ws, s.user.id, {
       titulo: (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : `Demo · ${host!.titulo}`).slice(0, 80),
       guion: host!.guion, idioma: host!.idioma, videoUrl: url, formato: "demo",
