@@ -117,7 +117,7 @@ export async function GET(req: Request) {
         const audio = voice.approved ?? (await saveMedia(ws, "historias", (await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
         const media = { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) };
         const job = voice.pro
-          ? await falSubmit(LIPSYNC_PRO, { ...media, sync_mode: "cut_off" }, "Sincronizar labios")
+          ? await falSubmit(LIPSYNC_PRO, { ...media, sync_mode: "bounce" }, "Sincronizar labios") /* a voice slightly longer than the video never gets cut */
           : await falSubmit(LIPSYNC, media, "Sincronizar labios");
         const row = await db.update("clips", id, { status: "generating", provider_job: `ls:${job}` });
         return NextResponse.json({ clip: row });
