@@ -22,7 +22,15 @@ export interface AdJob {
   look?: { plantilla?: string; c1?: string; c2?: string };
   /** false = no subtitles at all (the cuts only, or the Pro edit without captions). */
   subtitulos?: boolean;
+  /** The customer's corrections to the subtitles («CREATZIA.COM» → «creadsia.com»). */
+  correcciones?: { de: string; a: string }[];
 }
+
+/** What the montage gets for an API ad (also used to build it again with subtitle corrections). */
+export const montageBody = (j: AdJob, sello: boolean) => ({
+  adId: j.adId, captions: j.subtitulos !== false, style: { ...DEFAULT_STYLE, sello, ...(j.look?.c1 ? { accent: j.look.c1 } : {}) }, pro: j.edicion !== "simple",
+  ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}), ...(j.correcciones?.length ? { correcciones: j.correcciones } : {}),
+});
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
 const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string, avatar = false) =>
@@ -76,7 +84,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       return todo.length ? { estado: "generando", revisado: true, paso: `Rehaciendo ${todo.length} corte(s) que la revisión encontró con errores` } : { estado: "armando", revisado: true, paso: "Revisión de calidad aprobada" };
     }
     if (j.estado === "armando") {
-      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: j.subtitulos !== false, style: { ...DEFAULT_STYLE, sello, ...(j.look?.c1 ? { accent: j.look.c1 } : {}) }, pro: j.edicion !== "simple", ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}) }, 290_000);
+      const d = await studio<{ url: string }>("/api/montage", montageBody(j, sello), 290_000);
       return { estado: "listo", paso: "Video terminado", videoUrl: d.url };
     }
     return {};

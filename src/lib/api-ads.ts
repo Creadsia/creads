@@ -12,7 +12,11 @@ import { createServiceSession, endSession } from "./auth";
 // file; it advances one step every time its status is asked (GET /api/v1/anuncios/{id}), so the caller's
 // polling drives it and no other process is needed.
 
-export interface ApiAd extends AdJob { id: string; ws: string; userId: string; createdAt: string; sello: boolean; checkedAt?: string }
+export interface ApiAd extends AdJob {
+  id: string; ws: string; userId: string; createdAt: string; sello: boolean; checkedAt?: string;
+  /** A «Demo con presentador»: what it was built from, so it can be built again (subtitle corrections). */
+  demo?: import("./demo-run").DemoParams;
+}
 
 const file = (ws: string, id: string) => `api/anuncios/${ws}/${id}.json`;
 const indexFile = (ws: string) => `api/anuncios/${ws}/index.json`;
@@ -145,10 +149,13 @@ export const publicAd = (j: ApiAd) => ({
 });
 
 /** A finished ad made outside the pipeline (the «Demo con presentador» montage): saved already «listo». */
-export async function saveFinishedAd(ws: string, userId: string, o: { titulo: string; guion: string; idioma: "es-CL" | "en"; videoUrl: string; formato: string }): Promise<ApiAd> {
+export async function saveFinishedAd(ws: string, userId: string, o: { titulo: string; guion: string; idioma: "es-CL" | "en"; videoUrl: string; formato: string; demo?: ApiAd["demo"] }): Promise<ApiAd> {
   const now = new Date().toISOString();
   const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "listo", paso: "Video terminado", sello: false, edicion: "simple", ...o };
   await writePrivateJSON(file(ws, job.id), job);
   await addToIndex(ws, job.id);
   return job;
 }
+
+/** Saves a job as it is (after it was changed outside the pipeline, e.g. built again with corrected subtitles). */
+export const saveAd = (job: ApiAd) => writePrivateJSON(file(job.ws, job.id), job);

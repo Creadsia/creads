@@ -21,7 +21,7 @@ export const maxDuration = 300;
 
 const MODEL = process.env.CLAUDE_ASISTENTE_MODEL || "claude-opus-5-5";
 const MAX_STEPS = 12; // a demo orders up to 7 ads in one turn
-const USE = new Set(["creads_saldo", "creads_crear_imagen", "creads_crear_avatar", "creads_crear_anuncio", "creads_revisar_anuncio", "creads_avatares", "creads_ver_imagen", "creads_voces", "creads_montar_demo"]);
+const USE = new Set(["creads_saldo", "creads_crear_imagen", "creads_crear_avatar", "creads_crear_anuncio", "creads_revisar_anuncio", "creads_avatares", "creads_ver_imagen", "creads_voces", "creads_montar_demo", "creads_corregir_subtitulos"]);
 
 type Block = Record<string, unknown> & { type: string };
 type Msg = { role: "user" | "assistant"; content: string | Block[] };
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
           const r = await tool.run((u.input ?? {}) as Record<string, unknown>, call, origin, ctx);
           const imgs = (r.images ?? []).slice(0, 3);
           ui.images.push(...imgs);
-          if ((u.name === "creads_crear_anuncio" || u.name === "creads_montar_demo") && typeof r.data?.id === "string") ui.ads.push(r.data.id);
+          if ((u.name === "creads_crear_anuncio" || u.name === "creads_montar_demo" || u.name === "creads_corregir_subtitulos") && typeof r.data?.id === "string") ui.ads.push(r.data.id);
           const seen = (await Promise.all(imgs.map((i) => look(i).catch(() => null)))).filter(Boolean);
           const text = `${r.text}${imgs.length ? `\n(Imagen: ${imgs.join(", ")})` : ""}`;
           results.push({ type: "tool_result", tool_use_id: u.id, content: [{ type: "text", text }, ...seen] as Block[] });

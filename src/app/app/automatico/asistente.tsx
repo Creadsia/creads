@@ -20,6 +20,7 @@ const TOOL_LABEL: Record<string, string> = {
   creads_crear_anuncio: "Haciendo el anuncio",
   creads_revisar_anuncio: "Revisando el video: escucho cada palabra y miro cada escena",
   creads_montar_demo: "Armando el video final con todos los clips",
+  creads_corregir_subtitulos: "Corrigiendo los subtítulos y armando el video de nuevo",
   creads_saldo: "Mirando tu saldo",
   creads_avatares: "Mirando tus avatares",
   creads_voces: "Mirando las voces",
@@ -166,8 +167,9 @@ export default function Asistente() {
             <span className="text-sm font-semibold">{a.estado === "listo" ? "✓ Tu anuncio" : a.estado === "error" ? "No se pudo terminar" : "Haciendo tu anuncio…"}</span>
             {a.estado === "listo" && a.video_url ? (
               <>
-                <video src={a.video_url} controls playsInline className="max-h-[70vh] w-full max-w-xs rounded-xl bg-black" />
+                <video key={a.video_url} src={a.video_url} controls playsInline className="max-h-[70vh] w-full max-w-xs rounded-xl bg-black" />
                 <a href={dl(a.video_url)} download target="_blank" rel="noopener noreferrer" className={`${ghostCls} w-fit`}>Descargar</a>
+                <FixSubtitles id={a.id} onDone={(url) => setAds((all) => all.map((x) => (x.id === a.id ? { ...x, video_url: url } : x)))} />
               </>
             ) : a.estado !== "error" ? (
               <span className="text-xs text-muted">{a.paso ?? "En cola"} · tarda unos 6 a 8 minutos. Te aviso aquí mismo cuando esté y lo reviso antes de mostrártelo.</span>
@@ -192,5 +194,34 @@ export default function Asistente() {
       </form>
       {!empty && <button type="button" onClick={restart} disabled={busy} className="w-fit text-xs text-muted underline">Empezar un anuncio nuevo</button>}
     </div>
+  );
+}
+
+/** «¿Una palabra mal escrita en los subtítulos?»: fix it on a finished ad (free; the video is built again in 1–3 min). */
+function FixSubtitles({ id, onDone }: { id: string; onDone: (url: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [de, setDe] = useState("");
+  const [a, setA] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  async function go(e: React.FormEvent) {
+    e.preventDefault();
+    if (!de.trim() || busy) return;
+    setBusy(true); setMsg("");
+    const r = await fetch(`/api/v1/anuncios/${id}/subtitulos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cambios: [{ de: de.trim(), a: a.trim() }] }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (r?.ok && d.anuncio?.video_url) { onDone(d.anuncio.video_url); setMsg("Listo: el video ya tiene los subtítulos corregidos."); setDe(""); setA(""); }
+    else setMsg(d.error || "No se pudo corregir. Intenta de nuevo.");
+  }
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="w-fit text-xs text-muted underline hover:text-ink">¿Una palabra mal escrita en los subtítulos?</button>;
+  return (
+    <form onSubmit={go} className="flex max-w-xs flex-col gap-2 rounded-xl border border-line p-2.5 text-sm">
+      <span className="text-xs text-muted">Escribe la palabra como aparece y cómo debería decir. Es gratis: se arma de nuevo el mismo video en 1 a 3 minutos.</span>
+      <input value={de} onChange={(e) => setDe(e.target.value)} placeholder="Dice: CREATZIA.COM" className={inputCls} aria-label="Cómo aparece" />
+      <input value={a} onChange={(e) => setA(e.target.value)} placeholder="Debe decir: creadsia.com" className={inputCls} aria-label="Cómo debería decir" />
+      <button type="submit" disabled={busy || !de.trim()} className="rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg disabled:opacity-50">{busy ? "Corrigiendo… (1 a 3 min)" : "Corregir subtítulos"}</button>
+      {msg && <span className="text-xs text-muted">{msg}</span>}
+    </form>
   );
 }

@@ -173,6 +173,37 @@ function selloStyles(W: number, H: number, bottom: boolean) {
   ];
 }
 
+export interface Correccion { de: string; a: string }
+/** Cleans what a customer asked to correct: up to 15 pairs, short texts, «de» not empty. */
+export function cleanFixes(v: unknown): Correccion[] {
+  return (Array.isArray(v) ? v : []).map((x) => ({ de: String((x as Correccion)?.de ?? "").trim().slice(0, 80), a: String((x as Correccion)?.a ?? "").trim().slice(0, 80) })).filter((x) => x.de).slice(0, 15);
+}
+
+/**
+ * The customer's corrections to the subtitles («CREATZIA.COM» → «creadsia.com»): wherever one to four heard
+ * words spell the wrong text (ignoring case, accents and punctuation), they become the right text, with the
+ * same timing. Nothing is generated again: only the words on screen change.
+ */
+export function applyFixes(words: Word[], fixes: Correccion[]): Word[] {
+  let out = words.map((w) => ({ ...w }));
+  for (const f of fixes) {
+    const target = bare(f.de);
+    if (!target) continue;
+    const next: Word[] = [];
+    for (let i = 0; i < out.length; i++) {
+      let hit = 0;
+      for (let k = 1; k <= 4 && i + k <= out.length; k++) if (out.slice(i, i + k).map((w) => bare(w.w)).join("") === target) { hit = k; break; }
+      if (!hit) { next.push(out[i]); continue; }
+      const last = out[i + hit - 1];
+      const tail = (last.w.match(/[.,!?:;»")]+$/) ?? [""])[0];
+      if (f.a) next.push({ ...out[i], w: `${f.a}${/[.,!?:;]$/.test(f.a) ? "" : tail}`, e: last.e });
+      i += hit - 1;
+    }
+    out = next;
+  }
+  return out;
+}
+
 /** «Creats», «Kreatz», «Creadz»… as heard by the transcription → «Creads» (never «creas», a real word). */
 export const fixBrand = (w: string) => w.replace(/^([¿¡"«(]*)[ck]rea(?:t|d|th|dz|tz)[sz]?([.,!?:;»")]*)$/i, (_, a, b) => `${a}Creads${b}`);
 

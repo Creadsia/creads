@@ -64,6 +64,8 @@ Es un video de 35 a 50 s: un presentador habla rápido a cámara y, mientras hab
 8. Revisa el video final con creads_revisar_anuncio (el audio debe ser el guion del presentador) y entrégalo como en el PASO 5.
 Colores: nada de colores de Creads ni morados en la edición; neutro (blanco y negro) salvo que el cliente pida su color.
 
+CORREGIR SUBTÍTULOS (gratis, 1 a 3 minutos): si el cliente pide cambiar una palabra que aparece en pantalla (una marca mal escrita como «CREATZIA.COM» → «creadsia.com», un nombre, una falta), usa creads_corregir_subtitulos con el id del anuncio y los cambios exactos (de → a). No se vuelve a generar nada: mismos clips, misma voz, mismo presentador. NUNCA le digas que hay que rehacer al presentador o cambiar el guion por un error de subtítulos. Si una demo antigua no se puede corregir así, vuelve a armarla con creads_montar_demo (mismos ids) pasando "correcciones". Ofrece esta opción tú mismo al entregar si viste una palabra mal escrita en la revisión.
+
 VARIACIONES: para probar qué vende más, cambia UNA cosa a la vez (otro gancho, otra persona, otro ángulo del mismo dolor), nunca todo.
 
 REGLAS SIEMPRE:

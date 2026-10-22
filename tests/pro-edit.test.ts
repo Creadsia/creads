@@ -73,3 +73,15 @@ test("brand spelling: Creats / Kreatz / Creadz → Creads, but «creas» stays",
   assert.equal(fixBrand("creas"), "creas");
   assert.equal(fixBrand("crear"), "crear");
 });
+
+import { applyFixes } from "../src/lib/montage";
+test("subtitle corrections: one or several heard words become the right text, same timing", () => {
+  const w = (x: string, s: number) => ({ w: x, s, e: s + 0.4 });
+  const words = [w("Entra", 0), w("a", 0.5), w("CREATZIA.COM", 1), w("y", 1.5), w("Cre", 2), w("ads,", 2.3), w("hoy.", 3)];
+  const r = applyFixes(words, [{ de: "CREATZIA.COM", a: "creadsia.com" }, { de: "Cre ads", a: "Creads" }]);
+  assert.deepEqual(r.map((x) => x.w), ["Entra", "a", "creadsia.com", "y", "Creads,", "hoy."]);
+  assert.equal(r[4].s, 2);
+  assert.equal(r[4].e, 2.7);
+  // an empty «a» removes the word
+  assert.deepEqual(applyFixes([w("eh", 0), w("hola", 1)], [{ de: "eh", a: "" }]).map((x) => x.w), ["hola"]);
+});

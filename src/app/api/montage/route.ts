@@ -4,7 +4,7 @@ import path from "node:path";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
 import { normalizeStyle } from "@/lib/caption-style";
-import { type BuildClip, build, captions, ff, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
+import { type BuildClip, applyFixes, build, captions, cleanFixes, ff, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { publicError } from "@/lib/public-error";
@@ -73,6 +73,9 @@ export async function POST(req: Request) {
       for (const w of p.words) if (w.s >= p.clip.a - 0.05 && w.e <= p.clip.b + 0.3) timeline.push({ w: w.w, s: Math.max(0, w.s - p.clip.a) + offset, e: Math.max(0, Math.min(w.e, p.clip.b) - p.clip.a) + offset });
       offset += segLen(p.clip);
     }
+    // the customer's corrections to the subtitles (and the Pro headlines, which copy the same words)
+    const fixes = cleanFixes(b?.correcciones);
+    if (fixes.length) timeline.splice(0, timeline.length, ...applyFixes(timeline, fixes));
     const [W, H] = frameSize(aspect);
     // Edición Pro: the headlines are planned first, so the subtitles step aside while one is on screen
     // (the owner's first Automático ad showed both at once: two texts saying the same words)

@@ -193,12 +193,28 @@ export const TOOLS: Tool[] = [
       titulo: { type: "string", maxLength: 80 },
       cierre: { type: "string", maxLength: 28, description: "Closing card title (default creadsia.com)." },
       linea: { type: "string", maxLength: 48, description: "Closing card call to action." },
+      correcciones: { type: "array", maxItems: 15, items: { type: "object", properties: { de: { type: "string", maxLength: 80 }, a: { type: "string", maxLength: 80 } }, required: ["de", "a"], additionalProperties: false }, description: "Optional: words to fix in the subtitles, e.g. [{de: «CREATZIA.COM», a: «creadsia.com»}]." },
     }, required: ["presentador", "ejemplos"], additionalProperties: false },
     annotations: { title: "Armar demo con presentador", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     run: async (a, call) => {
       const ejemplos = Array.isArray(a.ejemplos) ? (a.ejemplos as unknown[]).map((x) => str(x, 30)).filter((x) => /^ad_[a-z0-9]{6,20}$/.test(x)) : [];
-      const d = await call<{ anuncio: Json; segundos: number }>("/api/v1/montajes", { presentador: str(a.presentador, 30), ejemplos, ...(str(a.producto, 600) ? { producto: str(a.producto, 600) } : {}), ...(str(a.prompt, 160) ? { prompt: str(a.prompt, 160) } : {}), ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.cierre, 28) ? { cierre: str(a.cierre, 28) } : {}), ...(str(a.linea, 48) ? { linea: str(a.linea, 48) } : {}) });
+      const d = await call<{ anuncio: Json; segundos: number }>("/api/v1/montajes", { presentador: str(a.presentador, 30), ejemplos, ...(str(a.producto, 600) ? { producto: str(a.producto, 600) } : {}), ...(str(a.prompt, 160) ? { prompt: str(a.prompt, 160) } : {}), ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.cierre, 28) ? { cierre: str(a.cierre, 28) } : {}), ...(str(a.linea, 48) ? { linea: str(a.linea, 48) } : {}), ...(Array.isArray(a.correcciones) ? { correcciones: a.correcciones } : {}) });
       return { text: `Demo armado (id ${d.anuncio.id}, ${d.segundos} s): ${d.anuncio.video_url}. Revísalo con creads_revisar_anuncio antes de entregarlo.`, data: d.anuncio };
+    },
+  },
+  {
+    name: "creads_corregir_subtitulos", title: "Corregir subtítulos",
+    description: "Fixes words in the subtitles of a finished ad (a normal ad or a demo with presenter) and builds the video again: free, 1 to 3 minutes, nothing is generated again (same clips, voice and presenter). Use it whenever the user asks to change a word on screen (a misspelled brand like «CREATZIA.COM» → «creadsia.com», a name, a typo). Earlier corrections are kept. Returns the same ad with its new video.",
+    inputSchema: { type: "object", properties: {
+      id: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "The ad id (ad_…), already «listo»." },
+      cambios: { type: "array", minItems: 1, maxItems: 15, items: { type: "object", properties: { de: { type: "string", maxLength: 80, description: "The wrong text as it appears on screen (1 to 4 words)." }, a: { type: "string", maxLength: 80, description: "The right text (empty removes it)." } }, required: ["de", "a"], additionalProperties: false } },
+    }, required: ["id", "cambios"], additionalProperties: false },
+    annotations: { title: "Corregir subtítulos", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (a, call) => {
+      const id = str(a.id, 30);
+      if (!/^ad_[a-z0-9]{6,20}$/.test(id)) throw new Error("El id debe ser como ad_xxxxxx.");
+      const d = await call<{ anuncio: Json; correcciones: { de: string; a: string }[] }>(`/api/v1/anuncios/${id}/subtitulos`, { cambios: a.cambios });
+      return { text: `Subtítulos corregidos (${d.correcciones.map((c) => `«${c.de}» → «${c.a}»`).join(", ")}). Video nuevo: ${d.anuncio.video_url}. Revísalo con creads_revisar_anuncio antes de entregarlo.`, data: d.anuncio };
     },
   },
   {
