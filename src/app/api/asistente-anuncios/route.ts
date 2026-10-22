@@ -83,6 +83,19 @@ export async function POST(req: Request) {
   }
 
   const tools = TOOLS.filter((t) => USE.has(t.name)).map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema }));
+  // Prompt caching (owner, 22 Oct 2026): the recipe, the tools and the conversation so far are sent again on
+  // every call; marked as cache they cost ~10% the second time. Same answers, same quality, much cheaper.
+  const ephemeral = { type: "ephemeral" } as const;
+  const cachedTools = tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: ephemeral } : t));
+  const system = [{ type: "text", text: RECETA, cache_control: ephemeral }];
+  /** The conversation with a cache mark on its last block (only the newest message carries one). */
+  const withCache = (list: { role: string; content: unknown }[]) => list.map((m, i) => {
+    if (i !== list.length - 1) return m;
+    const blocks = typeof m.content === "string" ? [{ type: "text", text: m.content }] : [...(m.content as Block[])];
+    if (!blocks.length) return m;
+    blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], cache_control: ephemeral };
+    return { role: m.role, content: blocks };
+  });
   const added: Msg[] = []; // what the page appends to its history (pictures as notes)
   const ui = { images: [] as string[], ads: [] as string[] };
 
@@ -91,7 +104,7 @@ export async function POST(req: Request) {
       const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({ model: MODEL, max_tokens: 2500, system: RECETA, tools, messages: msgs }),
+        body: JSON.stringify({ model: MODEL, max_tokens: 2500, system, tools: cachedTools, messages: withCache(msgs) }),
         signal: AbortSignal.timeout(120_000),
       });
       const data = await res.json().catch(() => null);

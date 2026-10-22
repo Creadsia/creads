@@ -52,7 +52,8 @@ async function call({ system, prompt, images, json, maxTokens }: Parameters<Text
       body: JSON.stringify({
         model,
         max_tokens: Math.min(32000, Math.max(1000, maxTokens ?? 8000)),
-        ...(system ? { system } : {}),
+        // a long system prompt (a recipe, a guide) is sent again on every call: cached, it costs ~10% after the first
+        ...(system ? { system: system.length > 4000 ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }] : system } : {}),
         messages: [{ role: "user", content }],
       }),
     });
