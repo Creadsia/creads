@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Starter US$30/mes (300 créditos; el primer mes US$19,99), Plus US$55/mes (1.000 créditos) y Ultra US$129/mes (3.000 créditos). «Máxima calidad» (Genjutsu) está desde Plus. Pagando anual tienes 15% menos: US$25, US$47 y US$109 al mes.",
+    a: "Emprende US$49/mes (≈ 4 anuncios de 30 s + 20 imágenes; el primer mes US$29) y Negocio US$99/mes (≈ 10 anuncios de 30 s + 50 imágenes). Tu saldo se ve en segundos de video. Pagando anual tienes 15% menos: US$42 y US$84 al mes.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },

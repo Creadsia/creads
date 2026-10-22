@@ -23,7 +23,7 @@ const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQ
 const img = (id: string) => `${CDN}${id}.png`;
 
 // Scenes generated for the site; w/h = real pixel size (9:16 or 4:5).
-const SCENES = {
+export const SCENES = {
   ugc: { src: img("0c908a12-e315-4bc9-b0b9-f2e30ce41a32"), w: 1536, h: 2752 },
   podcast: { src: img("6dd2acd7-4699-4665-b27b-a4f1cdc87267"), w: 1856, h: 2304 },
   serum: { src: img("648442ce-d231-4608-9ee3-6e421dc462e7"), w: 1856, h: 2304 },
@@ -40,7 +40,7 @@ type SceneKey = keyof typeof SCENES;
 // Short silent loops animated from the stills (Kling 3.0 Turbo, 5 s), re-encoded to ~200 KB each.
 // TODO(phase 1): move to our own storage.
 const CLIP = "https://d2ol7oe51mr4n9.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/";
-const VIDEOS: Partial<Record<SceneKey, string>> = {
+export const VIDEOS: Partial<Record<SceneKey, string>> = {
   valpo: `${CLIP}9b933c53-6d3c-4306-9eff-5d0bd4bd58b0.mp4`,
   serum: `${CLIP}dbfb983f-a3d8-4a46-bb53-e86fc64f91d6.mp4`,
   podcast: `${CLIP}dbf87bbe-75ec-407e-8dfb-b8a48c570644.mp4`,
@@ -63,7 +63,7 @@ const RECREATE: RecreateMedia = {
   voices: { llama: H("20261017_140356", "c56fb9ce-9eed-44db-98c3-fe789cc411db"), llamaEn: H("20261017_141028", "d08ddd05-eb7b-4a4d-a895-1b04640595a8"), cat: H("20261017_141030", "6bd5aa9a-673e-49cf-be26-7ce48bd86404"), viking: H("20261017_141029", "66e7e42e-add7-44cc-a3a2-fe3198ef8972") },
 };
 
-const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=640&q=70`;
+export const poster = (src: string) => `/_next/image?url=${encodeURIComponent(src)}&w=640&q=70`;
 // Every picture and clip appears once on the page: the hero wall uses the clips, "Featured" the four
 // animated scenes, the tool grid the remaining stills and the studio preview the UGC still.
 

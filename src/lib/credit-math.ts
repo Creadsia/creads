@@ -24,10 +24,11 @@ export const fmtCredits = (n: number) => `${n.toLocaleString("es-CL")} crédito$
 
 // ---------- seconds of video (what customers see) ----------
 // Customers see their balance and every price in SECONDS OF VIDEO, not credits (owner, 21 Oct 2026). One
-// second = what one second of a talking-avatar ad really costs us (Kling Avatar 2 Pro + voice + its share
-// of the opening picture). Pricier models simply use more seconds per second of video, so a plan's cost to
-// Creads is the same whatever model the customer picks. Credits stay underneath (charging, refunds, Panel).
-export const SECOND_USD = 0.12;
+// second = what one second of a «Persona IA» ad really costs us (MiniMax H3 Max US$0.08 + sync-3 lips
+// US$0.133 + its share of the scene picture and the voice). «Persona real» uses fewer seconds (no video is
+// generated), pricier models use more, so a plan's cost to Creads is the same whatever the customer picks.
+// Credits stay underneath (charging, refunds, Panel).
+export const SECOND_USD = 0.22;
 
 /** Seconds of video a balance of `credits` buys. */
 export const secondsOf = (credits: number, usdPerCredit = DEFAULT_USD_PER_CREDIT) =>
