@@ -40,7 +40,7 @@ export default function EnVivo() {
               ))}
             </ul>
           )}
-          <p className="mt-3 text-xs text-muted">Pestañas abiertas en el último minuto (incluye la tuya si tienes el estudio abierto). Se actualiza cada 15 segundos. Para ver qué hace cada persona, usa las grabaciones de PostHog.</p>
+          <p className="mt-3 text-xs text-muted">Pestañas abiertas en el último minuto. Las tuyas y las de tu equipo no cuentan cuando tienen la sesión iniciada. Se actualiza cada 15 segundos. Para ver qué hace cada persona, usa las grabaciones de PostHog.</p>
         </div>
       )}
     </div>

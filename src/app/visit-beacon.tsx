@@ -38,6 +38,7 @@ export default function VisitBeacon() {
     if (!id) return;
     const send = () => {
       if (document.visibilityState !== "visible") return;
+      try { if (sessionStorage.getItem("creads-interno")) return; } catch {}
       fetch("/api/presencia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, path: location.pathname }), keepalive: true }).catch(() => {});
     };
     send();

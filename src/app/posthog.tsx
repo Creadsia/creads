@@ -51,7 +51,11 @@ function start() {
 
 /** Rendered by the studio layout with the signed-in account. */
 export function PostHogIdentify(w: Who) {
-  useEffect(() => { identifyVisitor(w); }, [w.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    identifyVisitor(w);
+    // the team's own tabs don't count in «personas mirando» (see visit-beacon.tsx)
+    try { if (w.interno) sessionStorage.setItem("creads-interno", "1"); else sessionStorage.removeItem("creads-interno"); } catch {}
+  }, [w.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
