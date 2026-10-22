@@ -12,8 +12,9 @@ import type { Cut } from "./crear";
 
 interface Avatar extends Row { name: string; image_url: string | null; description?: string | null; voice_id?: string | null; voice_name?: string | null }
 interface Voice { id: string; name: string; category: string; preview?: string }
-interface AccentVoice { ref: string; name: string; gender: string; age: string; preview?: string; mine?: boolean }
+interface AccentVoice { ref: string; name: string; gender: string; age: string; preview?: string; mine?: boolean; tono?: string }
 interface Accent { locale: string; label: string; voices: AccentVoice[] }
+const TONO: Record<string, string> = { casual: "casual", confident: "segura", upbeat: "alegre", warm: "cálida", friendly: "amable", pleasant: "agradable", energetic: "con energía", natural: "natural", professional: "profesional", crisp: "clara", calm: "tranquila", deep: "grave", soft: "suave", formal: "formal", serious: "seria" };
 export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean; dur?: number }
 export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string; accent?: string; gender?: "male" | "female"; manual?: boolean }
 
@@ -82,8 +83,16 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
 
   useEffect(() => {
     fetch("/api/voices").then((r) => r.json()).then((d) => setVoices(d.voices ?? [])).catch(() => {});
-    fetch("/api/voices/acentos").then((r) => r.json()).then((d) => setAccents(d.accents ?? [])).catch(() => {});
+    fetch("/api/voices/acentos").then((r) => r.json()).then((d) => { setAccents(d.accents ?? []); setCurar(Boolean(d.curar)); }).catch(() => {});
   }, []);
+  // owner only: hide a library voice that sounds bad, for every account
+  const [curar, setCurar] = useState(false);
+  async function hide(ref: string) {
+    const r = await fetch("/api/voices/acentos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ref, ocultar: true }) }).catch(() => null);
+    if (!r?.ok) return setErr("No se pudo ocultar la voz.");
+    setAccents((list) => list.map((a) => ({ ...a, voices: a.voices.filter((v) => v.ref !== ref) })));
+    if (value.voice === ref) set({ voice: "", manual: false });
+  }
 
   if (!cuts.length) {
     return (
@@ -211,7 +220,9 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
                   <span><b>{v.mine ? "★ " : ""}{v.name}</b>{v.age ? <span className="text-xs text-muted"> · {v.age.replace("_", " ")}</span> : null}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${value.voice === v.ref ? "bg-accent text-accent-ink" : "bg-surface-2 text-muted"}`}>{value.voice === v.ref ? "Elegida" : "Elegir"}</span>
                 </button>
+                {v.tono && <span className="text-[11px] text-muted">{TONO[v.tono] ?? v.tono.replace("_", " ")}</span>}
                 {v.preview && <audio src={v.preview} controls preload="none" className="h-8 w-full" aria-label={`Escuchar ${v.name}`} />}
+                {curar && !v.mine && <button type="button" onClick={() => hide(v.ref)} className="self-start text-[11px] text-muted hover:text-bad">Ocultar para todos (suena mal)</button>}
               </li>
             ))}
           </ul>

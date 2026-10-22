@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import VoiceFromAudios from "./voice-upload";
 import { useCredits } from "./use-credits";
-import { Working } from "./ui";
+import { DeleteButton, Working } from "./ui";
 
 // Voice bench: pick or clone a voice, then have it read a line. Uses ElevenLabs characters from our plan.
 
@@ -54,6 +54,15 @@ export default function VoiceLab({ code }: { code: string }) {
     finally { setBusy(false); }
   }
 
+  async function remove(id: string) {
+    setErr("");
+    const res = await fetch(`/api/voices?id=${encodeURIComponent(id)}`, { method: "DELETE", headers: { "x-creads-code": code } });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return setErr(d.error || "No se pudo borrar la voz.");
+    setVoiceId((v) => (v === id ? "" : v));
+    load();
+  }
+
   const own = voices.filter((v) => v.category === "cloned");
   const lib = voices.filter((v) => v.category !== "cloned");
   const selected = voices.find((v) => v.id === voiceId);
@@ -75,6 +84,24 @@ export default function VoiceLab({ code }: { code: string }) {
             {loadErr && <p className="text-sm text-bad">{loadErr}</p>}
 
       <VoiceFromAudios code={code} onCreated={async (id: string) => { await load(); setVoiceId(id); }} />
+
+      {own.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
+          <h3 className="font-semibold">Tus voces</h3>
+          <ul className="flex flex-col divide-y divide-line">
+            {own.map((v) => (
+              <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <b>{v.name}</b>
+                <span className="flex items-center gap-3">
+                  {v.preview && <audio src={v.preview} controls preload="none" className="h-8 w-48" aria-label={`Escuchar ${v.name}`} />}
+                  <DeleteButton onDelete={() => remove(v.id)} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted">Borrar una voz la elimina para siempre. Los anuncios que ya hiciste con ella no cambian.</p>
+        </div>
+      )}
 
       <div className="grid gap-4">
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">

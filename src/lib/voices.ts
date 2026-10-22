@@ -1,6 +1,6 @@
 import type { Voice } from "./providers/types";
-import { type SharedVoice, addSharedVoice, elevenlabs, sharedVoices } from "./providers/elevenlabs";
-import { sbHeaders } from "./supabase";
+import { type SharedVoice, addSharedVoice, elevenlabs, removeVoice, sharedVoices } from "./providers/elevenlabs";
+import { readPrivateJSON, sbHeaders, updatePrivateJSON } from "./supabase";
 
 // Every cloned voice of every customer lives in Creads' single ElevenLabs account, so the app decides
 // who may see and use each one: library voices are for everybody; a cloned (or designed) voice only
@@ -45,6 +45,26 @@ export async function canUseVoice(ws: string, voiceId: string) {
   return (await voicesFor(ws)).some((v) => v.id === voiceId);
 }
 
+/**
+ * Deletes one of the workspace's own cloned voices (the «Borrar» in Voces). Library voices can't be deleted,
+ * and nobody can delete another customer's clone.
+ */
+export async function deleteOwnVoice(ws: string, voiceId: string): Promise<boolean> {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) return false;
+  const [all, reg] = await Promise.all([elevenlabs.voices(), registry()]);
+  if (!reg) throw new Error("Falta la base de datos.");
+  const v = all.find((x) => x.id === voiceId);
+  if (!v || !isPrivate(v) || !allowed(v, ws, reg)) return false;
+  await removeVoice(voiceId);
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key && reg.has(voiceId)) {
+    await fetch(`${url}/rest/v1/voices?voice_id=eq.${voiceId}&owner=eq.${encodeURIComponent(ws)}`, { method: "DELETE", headers: sbHeaders(key) })
+      .catch((e) => console.error("voices row delete", e instanceof Error ? e.message : e));
+  }
+  return true;
+}
+
 /** Spanish accents offered in the studio, each with real men's and women's voices. */
 export const ACCENTS = [
   { locale: "es-CL", label: "Chilena", accent: "chilean", words: /chilen|chile\b/i },
@@ -58,30 +78,64 @@ export const ACCENTS = [
 let accentCache: { at: number; list: SharedVoice[] } | null = null;
 
 const STEM: Record<string, string> = { "es-CL": "chile", "es-AR": "argentin", "es-VE": "venezuel", "es-CO": "colombi", "es-MX": "mexic" };
-const PER_GENDER = 4;
+/** Voices per gender in each country: more where campaigns start (Chile, Argentina, Venezuela). */
+const PER_GENDER: Record<string, number> = { "es-CL": 8, "es-AR": 8, "es-VE": 6, "es-CO": 5, "es-MX": 5 };
+
+/** Voices the owner hid for everybody (they sounded bad). Library voice ids. */
+const HIDDEN = "voces/ocultas.json";
+export async function hiddenVoices(): Promise<string[]> {
+  const got = await readPrivateJSON<{ ids?: string[] }>(HIDDEN).catch(() => null);
+  return Array.isArray(got?.ids) ? got.ids.filter((x) => typeof x === "string") : [];
+}
+export async function setHidden(id: string, hide: boolean) {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) throw new Error("Voz inválida.");
+  await updatePrivateJSON<{ ids?: string[] }>(HIDDEN, (cur) => {
+    const ids = new Set(cur?.ids ?? []);
+    if (hide) ids.add(id); else ids.delete(id);
+    return { ids: [...ids] };
+  });
+  accentCache = null;
+}
 
 /**
- * The same preset voices for every account: per country, up to 4 men and 4 women, real people from the
- * ElevenLabs library whose Spanish is verified for that country (Professional Voice Clones first, then
- * the most used). Nobody's cloned voice is ever here: those only show in their own account's list.
- * Refreshed hourly.
+ * How good a library voice is for ads: made for ads / social / conversation, young or middle-aged,
+ * a Professional Voice Clone, and used by many people. Old, whispering or audiobook narrators sink.
+ */
+export function adScore(v: SharedVoice): number {
+  const use = (v.useCase ?? "").toLowerCase();
+  const desc = (v.descriptive ?? "").toLowerCase();
+  let s = Math.log10(1 + (v.clones ?? 0));
+  if (/advert|social|conversational|informative|characters_animation/.test(use)) s += 2;
+  if (/narrative|story|audiobook|meditation|asmr/.test(use)) s -= 1.5;
+  if (/^(young|middle_aged)$/.test(v.age)) s += 1; else if (v.age === "old") s -= 2;
+  if (/casual|confident|upbeat|warm|friendly|pleasant|energetic|natural|professional|crisp/.test(desc)) s += 0.8;
+  if (/whisper|raspy|gravelly|sad|deep_old|robotic|nasal/.test(desc)) s -= 1.5;
+  if (v.pro) s += 1;
+  return s;
+}
+
+/**
+ * The same preset voices for every account: per country, men and women from the ElevenLabs library whose
+ * Spanish is really from that country (verified in that locale or tagged with that accent), ranked for ads
+ * (see adScore). Nobody's cloned voice is ever here: those only show in their own account's list.
+ * Voices the owner hid are skipped. Refreshed hourly.
  */
 export async function accentVoices(): Promise<SharedVoice[]> {
   if (accentCache && Date.now() - accentCache.at < 3_600_000) return accentCache.list;
+  const hidden = new Set(await hiddenVoices());
   const lists = await Promise.all(ACCENTS.map(async (a) => {
     const stem = STEM[a.locale];
+    const want = PER_GENDER[a.locale] ?? 4;
     const byGender = await Promise.all((["male", "female"] as const).map(async (gender) => {
-      const picked: SharedVoice[] = [];
       const tries = [
         { locale: a.locale, gender, professional: true }, { locale: a.locale, gender },
+        { locale: a.locale, gender, sort: "trending" as const },
         { locale: a.locale, accent: a.accent, gender, professional: true }, { locale: a.locale, accent: a.accent, gender },
       ];
-      for (const t of tries) {
-        if (picked.length >= PER_GENDER) break;
-        const got = await sharedVoices({ ...t, size: 12, stem }).catch(() => [] as SharedVoice[]);
-        for (const g of got) if (g.real && picked.length < PER_GENDER && !picked.some((x) => x.id === g.id)) picked.push({ ...g, gender });
-      }
-      return picked;
+      const got = (await Promise.all(tries.map((t) => sharedVoices({ ...t, size: 40, stem }).catch(() => [] as SharedVoice[])))).flat();
+      const seen = new Set<string>();
+      const pool = got.filter((g) => g.real && !hidden.has(g.id) && !seen.has(g.id) && seen.add(g.id) && (!g.gender || g.gender === gender));
+      return pool.sort((x, y) => adScore(y) - adScore(x)).slice(0, want).map((g) => ({ ...g, gender }));
     }));
     return byGender.flat();
   }));
@@ -114,8 +168,13 @@ export async function resolveVoice(ws: string, choice: string): Promise<string |
   if (!choice) return null;
   if (!choice.startsWith("lib:")) return (await canUseVoice(ws, choice)) ? choice : null;
   const pick = (await accentVoices()).find((v) => v.ref === choice);
-  if (!pick) return null;
   const mine = await elevenlabs.voices();
+  if (!pick) {
+    // a library voice chosen earlier that is no longer in the top list (the ranking moved): still fine
+    // once it's in Creads' account as a library voice
+    const id = choice.split(":")[2] ?? "";
+    return mine.some((v) => v.id === id && !isPrivate(v)) ? id : null;
+  }
   if (mine.some((v) => v.id === pick.id)) return pick.id;
   const label = ACCENTS.find((a) => a.locale === pick.accent)?.label ?? "Español";
   return addSharedVoice(pick.owner, pick.id, `${pick.name} (${label})`);

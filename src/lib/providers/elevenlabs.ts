@@ -129,15 +129,15 @@ export const elevenlabs: VoiceProvider = {
 
 /** Starts a dub of a hosted video/audio into `target` (ISO 639-1). Returns ElevenLabs' dubbing id. */
 /** One voice of ElevenLabs' public library (real people who share their voice), for the accent picker. */
-export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string; mine?: boolean; real?: boolean }
+export interface SharedVoice { ref: string; id: string; owner: string; name: string; gender: string; age: string; accent: string; preview?: string; mine?: boolean; real?: boolean; useCase?: string; descriptive?: string; clones?: number; pro?: boolean }
 
 /**
  * Public library voices for one Spanish accent: by locale (es-CL…) or accent name, one gender, and
  * optionally only Professional Voice Clones (studio recordings of real people: the most natural).
  * The sample played is the one recorded in Spanish for that accent when the library has it.
  */
-export async function sharedVoices(o: { locale: string; accent?: string; gender?: "male" | "female"; professional?: boolean; size?: number; stem?: string }): Promise<SharedVoice[]> {
-  const q = new URLSearchParams({ language: "es", page_size: String(o.size ?? 4), sort: "cloned_by_count" });
+export async function sharedVoices(o: { locale: string; accent?: string; gender?: "male" | "female"; professional?: boolean; size?: number; stem?: string; sort?: "cloned_by_count" | "trending" | "usage_character_count_1y" }): Promise<SharedVoice[]> {
+  const q = new URLSearchParams({ language: "es", page_size: String(o.size ?? 4), sort: o.sort ?? "cloned_by_count" });
   if (o.accent) q.set("accent", o.accent); else q.set("locale", o.locale);
   if (o.gender) q.set("gender", o.gender);
   if (o.professional) q.set("category", "professional");
@@ -158,8 +158,17 @@ export async function sharedVoices(o: { locale: string; accent?: string; gender?
         ref: `lib:${v.public_owner_id}:${v.voice_id}`, id: String(v.voice_id), owner: String(v.public_owner_id),
         name: String(v.name ?? "Voz"), gender: String(v.gender ?? o.gender ?? ""), age: String(v.age ?? ""), accent: o.locale,
         preview: es?.preview_url ?? (typeof v.preview_url === "string" ? v.preview_url : undefined),
+        useCase: String(v.use_case ?? ""), descriptive: String(v.descriptive ?? ""), clones: Number(v.cloned_by_count ?? 0) || 0,
+        pro: v.category === "professional",
       };
     });
+}
+
+/** Deletes one of our own (cloned) voices from the ElevenLabs account. The caller checks it belongs to the customer. */
+export async function removeVoice(voiceId: string): Promise<void> {
+  if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) throw new Error("Voz inválida.");
+  const res = await fetch(`${API}/v1/voices/${voiceId}`, { method: "DELETE", headers: { "xi-api-key": key() } });
+  if (!res.ok && res.status !== 404) return fail(res, "ElevenLabs (borrar voz)");
 }
 
 /** Adds a public library voice to Creads' account so it can read lines; returns its voice id. */
