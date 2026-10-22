@@ -1,4 +1,4 @@
-name: Prueba de carga (staging)
+name: Prueba de carga
 on:
   push:
     branches: [loadtest]
@@ -10,13 +10,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BASE: https://creads-la32e95gj-creadsia.vercel.app
+      BASE: https://www.creadsia.com
     steps:
       - uses: actions/checkout@v4
-      - name: Probe
+      - name: k6
+        run: |
+          curl -sSL https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz | tar xz
+          sudo mv k6-v0.54.0-linux-amd64/k6 /usr/local/bin/k6 && k6 version
+      - name: Cuenta de prueba (una, sin saldo)
         run: |
           mkdir -p loadtest/results
-          { for p in / /app /terminos /api/credits /api/models; do printf "%s " $p; curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "$BASE$p"; done; } | tee loadtest/results/probe.txt
+          N=$(date +%s)
+          curl -s -c jar.txt -o loadtest/results/signup.txt -w "%{http_code}\n" -H "content-type: application/json" \
+            -d "{\"name\":\"Prueba de carga\",\"company\":\"Prueba de carga\",\"email\":\"hola+carga$N@creadsia.com\",\"password\":\"Carga-$N-Creads!x\"}" \
+            "$BASE/api/auth/signup" | tee -a loadtest/results/signup.txt
+          echo "COOKIE=creads_session=$(grep creads_session jar.txt | awk '{print $7}')" >> "$GITHUB_ENV"
+      - name: Prueba (hasta 1.000 a la vez)
+        run: |
+          k6 run --quiet --summary-export loadtest/results/summary.json loadtest/k6.js 2>&1 | tail -80 > loadtest/results/k6.txt || true
+          tail -60 loadtest/results/k6.txt
       - name: Save
         if: always()
         run: |

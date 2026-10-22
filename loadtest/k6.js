@@ -1,4 +1,4 @@
-// Load test for Creads (staging): visitors browse the site and signed-in customers use the studio, without
+// Load test for Creads: visitors browse the site and signed-in customers use the studio, without
 // generating anything (no provider is called, nothing is spent). Ramps to 500 and spikes to 1.000 at once.
 import http from "k6/http";
 import { check, sleep } from "k6";
