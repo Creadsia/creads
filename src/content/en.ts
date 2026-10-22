@@ -482,8 +482,8 @@ export const en = {
         {
           title: "What you make each month",
           rows: [
-            ["30 s video ads", "≈ 4", "≈ 10"],
-            ["Ad images", "20", "50"],
+            ["30 s video ads", "≈ 4", "≈ 8"],
+            ["Ad images", "20", "40"],
             ["Spy on competitors' ads", "yes", "yes"],
             ["AI sales scripts", "yes", "yes"],
           ],
@@ -534,10 +534,10 @@ export const en = {
         name: "Business",
         price: 99,
         yearly: 99,
-        credits: "3,780",
+        credits: "3,000",
         for: "For businesses that post every week and test several ads at once.",
         features: [
-          "≈ 10 video ads of 30 s + 50 images a month",
+          "≈ 8 video ads of 30 s + 40 images a month",
           "Everything in Grow",
           "3 avatars and 3 cloned voices (yours included)",
           "Priority queue: your videos come out first",

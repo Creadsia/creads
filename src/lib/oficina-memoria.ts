@@ -25,7 +25,7 @@ LO QUE HACE LA PLATAFORMA HOY
 - Panel interno del dueño: Lanzamiento, Estadísticas (estilo Shopify), Oficina de agentes, errores y alarmas, saldos de proveedores, clientes, planes, finanzas.
 
 PRECIOS (siempre en US$)
-- Desde el 21 oct 2026: Emprende US$55/mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99/mes (≈ 10 anuncios + 50 imágenes). Sin descuentos, sin plan anual. Ultra ya no se vende. Recargas: 500 US$29, 1.000 US$55, 3.000 US$139. Genjutsu solo desde Plus, cobrado como cualquier modelo.
+- Desde el 21 oct 2026: Emprende US$55/mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99/mes (≈ 8 anuncios + 40 imágenes). Sin descuentos, sin plan anual. Ultra ya no se vende. Recargas: 500 US$29, 1.000 US$55, 3.000 US$139. Genjutsu solo desde Plus, cobrado como cualquier modelo.
 - Recargas de créditos: US$25, US$89 y US$209.
 - Los créditos vencen al terminar el período pagado; las recargas se compran sobre un plan activo y vencen con él.
 

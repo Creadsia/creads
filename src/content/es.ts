@@ -483,8 +483,8 @@ export const es: Content = {
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Anuncios en video de 30 s", "≈ 4", "≈ 10"],
-            ["Imágenes para anuncios", "20", "50"],
+            ["Anuncios en video de 30 s", "≈ 4", "≈ 8"],
+            ["Imágenes para anuncios", "20", "40"],
             ["Espiar anuncios de la competencia", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes"],
           ],
@@ -535,10 +535,10 @@ export const es: Content = {
         name: "Negocio",
         price: 99,
         yearly: 99,
-        credits: "3.780",
+        credits: "3.000",
         for: "Para negocios que publican todas las semanas y prueban varios anuncios a la vez.",
         features: [
-          "≈ 10 anuncios en video de 30 s + 50 imágenes al mes",
+          "≈ 8 anuncios en video de 30 s + 40 imágenes al mes",
           "Todo lo de Emprende",
           "3 avatares y 3 voces clonadas (la tuya incluida)",
           "Cola prioritaria: tus videos salen primero",

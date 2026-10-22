@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Emprende US$55 al mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99 al mes (≈ 10 anuncios de 30 s + 50 imágenes). Tu saldo se ve en segundos de video. Sin permanencia: cancelas cuando quieras.",
+    a: "Emprende US$55 al mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99 al mes (≈ 8 anuncios de 30 s + 40 imágenes). Tu saldo se ve en segundos de video. Sin permanencia: cancelas cuando quieras.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },

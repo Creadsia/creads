@@ -193,8 +193,8 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["4 a 10", "anuncios en video de 30 s", "Verticales, con voz, subtítulos y tu estilo."],
-                ["20 a 50", "imágenes para anuncios", "4:5 para el feed, con tu producto o tu avatar."],
+                ["4 a 8", "anuncios en video de 30 s", "Verticales, con voz, subtítulos y tu estilo."],
+                ["20 a 40", "imágenes para anuncios", "4:5 para el feed, con tu producto o tu avatar."],
                 ["Incluido", "espiar y crear guiones", "No descuenta segundos de tu plan."],
               ].map(([n, k, d]) => (
                 <div key={k} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4">
