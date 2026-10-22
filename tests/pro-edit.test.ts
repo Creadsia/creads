@@ -81,7 +81,7 @@ test("subtitle corrections: one or several heard words become the right text, sa
   const r = applyFixes(words, [{ de: "CREATZIA.COM", a: "creadsia.com" }, { de: "Cre ads", a: "Creads" }]);
   assert.deepEqual(r.map((x) => x.w), ["Entra", "a", "creadsia.com", "y", "Creads,", "hoy."]);
   assert.equal(r[4].s, 2);
-  assert.equal(r[4].e, 2.7);
+  assert.ok(Math.abs(r[4].e - 2.7) < 1e-9);
   // an empty «a» removes the word
   assert.deepEqual(applyFixes([w("eh", 0), w("hola", 1)], [{ de: "eh", a: "" }]).map((x) => x.w), ["hola"]);
 });
