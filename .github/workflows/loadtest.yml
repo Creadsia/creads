@@ -1,0 +1,15 @@
+name: Prueba de carga (staging)
+on:
+  push:
+    branches: [loadtest]
+jobs:
+  carga:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: https://creads-la32e95gj-creadsia.vercel.app
+    steps:
+      - uses: actions/checkout@v4
+      - name: ¿Se puede entrar a staging?
+        run: |
+          for p in / /app /api/credits; do printf "%s " $p; curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "$BASE$p"; done
