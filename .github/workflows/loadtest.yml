@@ -2,14 +2,23 @@ name: Prueba de carga (staging)
 on:
   push:
     branches: [loadtest]
+    paths: [".github/workflows/loadtest.yml", "loadtest/k6.js", "loadtest/run.txt"]
+permissions:
+  contents: write
 jobs:
   carga:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       BASE: https://creads-la32e95gj-creadsia.vercel.app
     steps:
       - uses: actions/checkout@v4
-      - name: ¿Se puede entrar a staging?
+      - name: Probe
         run: |
-          for p in / /app /api/credits; do printf "%s " $p; curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "$BASE$p"; done
+          mkdir -p loadtest/results
+          { for p in / /app /terminos /api/credits /api/models; do printf "%s " $p; curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "$BASE$p"; done; } | tee loadtest/results/probe.txt
+      - name: Save
+        if: always()
+        run: |
+          git config user.name "creads-loadtest"; git config user.email "loadtest@creadsia.com"
+          git add loadtest/results; git commit -m "Load test results [skip ci]" || true; git push || true
