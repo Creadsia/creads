@@ -21,6 +21,9 @@ const file = (d: string, browser = false) => `errores/${d}${browser ? "-navegado
 const CAP = { server: 3000, browser: 1000 };
 const ALARMS = "errores/alarmas.json";
 const RESOLVED = "errores/resueltos.json";
+// «Empezar de cero» (owner, 22 Oct 2026): the Panel only counts errors and generations after this moment.
+// Nothing is deleted: the old days stay in the bucket.
+const SINCE = "errores/desde.json";
 const SIX_HOURS = 6 * 3600_000;
 
 /** Removes what must never be stored: link signatures, tokens, keys, emails. */
@@ -125,13 +128,24 @@ export async function logError(e: { area: ErrArea; message: string; ref?: string
 }
 
 /** The last `days` days of errors, newest first. */
-export async function recentErrors(days = 7): Promise<ErrEntry[]> {
+/** When the owner last reset the count (ISO), or null. */
+export async function countingSince(): Promise<string | null> {
+  const r = await readPrivateJSON<{ at?: string }>(SINCE).catch(() => null);
+  return typeof r?.at === "string" ? r.at : null;
+}
+export async function resetCounting() {
+  const at = new Date().toISOString();
+  await writePrivateJSON(SINCE, { at });
+  return at;
+}
+
+export async function recentErrors(days = 7, since: string | null = null): Promise<ErrEntry[]> {
   const out: ErrEntry[] = [];
   for (let i = 0; i < days; i++) {
     const d = day(new Date(Date.now() - i * 86400_000));
     for (const browser of [false, true]) {
       const list = (await readPrivateJSON<ErrEntry[]>(file(d, browser)).catch(() => null)) ?? [];
-      if (Array.isArray(list)) out.push(...list);
+      if (Array.isArray(list)) out.push(...(since ? list.filter((e) => e.at >= since) : list));
     }
   }
   return out.sort((a, b) => b.at.localeCompare(a.at));

@@ -23,7 +23,6 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 const startHref = (plan: string) => `/empezar?plan=${plan}&periodo=mensual`;
 
 const emprende = SHOWN_PLANS.find((p) => p.id === "starter")!;
-const negocio = SHOWN_PLANS.find((p) => p.id === "plus")!;
 // Negocio's seconds spent only on 20 s ads (≈ 25 s of plan each): about 10 ads → ≈ US$9.4 each (owner, 22 Oct 2026)
 const perAd = 9;
 
