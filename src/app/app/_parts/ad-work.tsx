@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatById } from "@/lib/formats";
-import { type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
-import { billedSeconds } from "@/lib/historias";
+import { CAPTION_PRESETS, type CaptionStyle, DEFAULT_STYLE, normalizeStyle } from "@/lib/caption-style";
+import { LOOKS } from "@/lib/edit-looks";
+
+// each edit look comes with subtitles that match it (the customer can still change them)
+const LOOK_CAPTIONS: Record<string, string> = { limpio: "resaltado", impacto: "impacto", elegante: "luxury", noticia: "noticia", neon: "creads" };
+import { billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import CaptionEditor from "./caption-editor";
 import { btnCls, cardCls, ghostCls, inputCls, Working } from "./ui";
 import { refreshCredits, useCredits } from "./use-credits";
@@ -14,14 +18,21 @@ import { refreshCredits, useCredits } from "./use-credits";
 
 interface Clip { id: string; idx: number; text: string; status: string; url: string | null; image_url: string | null; error: string | null; model: string }
 interface Ad { id: string; title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; settings: Record<string, unknown> | null }
-interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null }
+interface VideoModel { id: string; label: string; configured: boolean; silent?: boolean; noFaces?: boolean; usdPerSecond: number; durations?: number[] | null; talking?: boolean; actor?: boolean }
 interface ReviewRow { clipId: string; idx: number; sim: number; issues: string[]; severe: boolean; look?: string; freeRedo?: boolean; url?: string }
 
 // One-tap corrections for a cut: the most common fixes, so nobody has to think of the words.
 const QUICK_FIXES = ["Otra toma", "Más natural", "Que mire a la cámara", "Misma persona que en los otros cortes", "Mejor luz", "Sin texto en pantalla", "Que hable más lento", "Que no se corte la frase"];
 
 
-export default function AdWork({ adId }: { adId: string }) {
+/**
+ * In «Crear anuncio» the same ad is shown one stage at a time: «videos» (the cuts being made), «correcciones»
+ * (the automatic review and redoing a cut) and «edicion» (Edición Pro, captions, the final video). Without
+ * a view (Videos → an ad) everything shows on one page.
+ */
+export type AdView = "videos" | "correcciones" | "edicion";
+
+export default function AdWork({ adId, view, onNext }: { adId: string; view?: AdView; onNext?: () => void }) {
   const [ad, setAd] = useState<Ad | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
   const [err, setErr] = useState("");
@@ -35,6 +46,15 @@ export default function AdWork({ adId }: { adId: string }) {
   const [cierre, setCierre] = useState({ titulo: "", linea: "" });
   const [indicaciones, setIndicaciones] = useState("");
   const [estilo, setEstilo] = useState("energico");
+  // the look of the edit: template, the advertiser's brand colour (optional) and sounds
+  const [plantilla, setPlantilla] = useState("limpio");
+  const [marca, setMarca] = useState("");
+  const [sonidos, setSonidos] = useState(true);
+  function pickLook(id: string) {
+    setPlantilla(id);
+    const cap = CAPTION_PRESETS.find((p) => p.id === LOOK_CAPTIONS[id]);
+    if (cap) setCapStyle((c) => normalizeStyle({ ...c, ...cap.style, x: undefined, y: undefined }));
+  }
   // start from the style used last time (per browser)
   useEffect(() => { try { const v = localStorage.getItem("creads-captions"); if (v) setCapStyle(normalizeStyle(JSON.parse(v))); } catch {} }, []);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -45,7 +65,7 @@ export default function AdWork({ adId }: { adId: string }) {
   const say = (id: string, text: string) => setClipMsg((m) => ({ ...m, [id]: text }));
   // paid actions ask first, inline: one clip (its id) or all failed clips ("all")
   const [ask, setAsk] = useState<string | null>(null);
-  const [retryModel, setRetryModel] = useState("veo-3.1-fast");
+  const [retryModel, setRetryModel] = useState("kling-3.0");
   useEffect(() => { fetch("/api/models").then((r) => r.json()).then((d) => d.video && setModels(d.video)).catch(() => {}); }, []);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   // when the cuts being redone finish, the ad is (re)assembled by itself: no extra clicks
@@ -112,7 +132,7 @@ export default function AdWork({ adId }: { adId: string }) {
       if (!res || !res.ok) {
         // don't spend on a redo without the correction the customer asked for
         if (before) setClips((cs) => cs.map((c) => (c.id === id ? before : c)));
-        return say(id, "No pudimos aplicar tu corrección. No se usaron créditos; intenta de nuevo.");
+        return say(id, "No pudimos aplicar tu corrección. No se usó tu saldo; intenta de nuevo.");
       }
     }
     await run(id, undefined, free, before);
@@ -155,7 +175,7 @@ export default function AdWork({ adId }: { adId: string }) {
   async function doBuild() {
     setAutoBuild(false);
     setPhase("build"); setErr("");
-    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre, indicaciones, estilo }) }).catch(() => null);
+    const res = await fetch("/api/montage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ adId, captions: captionsOn, style: capStyle, pro, cierre, indicaciones, estilo, look: { plantilla, ...(marca ? { c1: marca } : {}), sonidos } }) }).catch(() => null);
     try { localStorage.setItem("creads-captions", JSON.stringify(capStyle)); } catch {}
     const d = res ? await res.json().catch(() => ({})) : {};
     setPhase("");
@@ -175,6 +195,13 @@ export default function AdWork({ adId }: { adId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoBuild, ready, running, phase]);
 
+  // opening «Correcciones» with every cut ready and no review yet: review right away (free)
+  const autoReviewed = useRef(false);
+  useEffect(() => {
+    if (view === "correcciones" && ready && !running && !review && !phase && !autoReviewed.current) { autoReviewed.current = true; doReview(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, ready, running, review, phase]);
+
   if (!ad) return <div className={cardCls}><p className="text-muted">{err || "Cargando…"}</p></div>;
   const f = formatById(ad.format ?? "ugc");
   const done = clips.filter((c) => c.status === "done").length;
@@ -187,7 +214,7 @@ export default function AdWork({ adId }: { adId: string }) {
   const failed = clips.filter((c) => c.status === "failed");
   const refused = (c: Clip) => c.status === "failed" && /no acepta fotos de personas reales|likeness/i.test(c.error ?? "");
   const faceRefused = failed.some(refused);
-  const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces));
+  const usable = models.filter((m) => m.configured && !m.silent && !(faceRefused && m.noFaces) && (!m.actor || Boolean((ad?.settings as { avatar?: { video?: string } | null } | null)?.avatar?.video)));
   async function retryFailed() {
     for (let i = 0; i < failed.length; i += 2) await Promise.all(failed.slice(i, i + 2).map((c) => run(c.id, retryModel)));
   }
@@ -200,25 +227,29 @@ export default function AdWork({ adId }: { adId: string }) {
     const m = models.find((x) => x.id === modelId);
     if (!m) return 0;
     const words = String(c.text || "").split(/\s+/).filter(Boolean).length;
+    // talking avatar: as long as the voice, from the picture already drawn
+    if (m.talking || m.actor) return m.usdPerSecond * Math.min(15, Math.max(3, Math.ceil(words / 2.4 + 0.8))) + String(c.text || "").length * 0.00022;
     const asked = Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     const veo = m.id.startsWith("veo");
     const takesRefs = m.id === "veo-3.1" && hasRefs;
     const secs = veo ? (takesRefs ? 8 : asked <= 4 ? 4 : asked <= 6 ? 6 : 8) : billedSeconds(asked, m.durations ?? undefined);
     const frame = !takesRefs && hasRefs && !c.image_url ? 0.134 : 0; // Nano Banana Pro opening frame
-    return m.usdPerSecond * secs + frame;
+    const vs = ad.settings as { voiceId?: string | null; lipsync?: string | null } | null;
+    const voice = vs?.voiceId ? (vs.lipsync === "pro" ? lipsyncProUsd : lipsyncUsd)(lipsyncSeconds(String(c.text || "")), String(c.text || "")) : 0;
+    return m.usdPerSecond * secs + frame + voice;
   };
-  const cost = (usd: number) => (usd > 0 ? price(usd) : "créditos según el modelo");
+  const cost = (usd: number) => (usd > 0 ? price(usd) : "segundos según el modelo");
   const retryAllUsd = failed.reduce((t, c) => t + clipUsd(c, retryModel), 0);
   const waitingUsd = waiting.reduce((t, c) => t + clipUsd(c), 0);
   const ratio = ad.aspect === "16:9" ? "aspect-video" : ad.aspect === "1:1" ? "aspect-square" : ad.aspect === "4:5" ? "aspect-[4/5]" : "aspect-[9/16]";
 
   return (
     <div className="flex flex-col gap-4">
-      <section className={cardCls}>
+      {view !== "edicion" && <section className={cardCls}>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="font-display text-xl font-bold">{ad.title || "Anuncio"}</h2>
-            <p className="text-sm text-muted">{f.icon} {f.name} · {ad.aspect} · {done} de {clips.length} cortes listos</p>
+            <h2 className="font-display text-xl font-bold">{view === "correcciones" ? "6 · Correcciones" : view === "videos" ? "5 · Videos" : ad.title || "Anuncio"}</h2>
+            <p className="text-sm text-muted">{view === "correcciones" ? "Creads revisa cada corte: que diga el guion exacto y que se vea bien. Los errores graves se rehacen gratis; también puedes pedir un cambio en cualquier corte." : `${f.icon} ${f.name} · ${ad.aspect} · ${done} de ${clips.length} cortes listos`}</p>
           </div>
           {busyClips && <Working label="Generando cortes…" className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent-text" />}
         </div>
@@ -243,7 +274,7 @@ export default function AdWork({ adId }: { adId: string }) {
             </label>
             {ask === "all" ? (
               <div className="flex basis-full flex-wrap items-center gap-2 rounded-lg bg-surface p-2">
-                <span>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length} cortes`} usa ≈ {cost(retryAllUsd)}. Si alguno vuelve a fallar, esos créditos se devuelven solos.</span>
+                <span>Reintentar {failed.length === 1 ? "el corte" : `los ${failed.length} cortes`} usa ≈ {cost(retryAllUsd)}. Si alguno vuelve a fallar, esos segundos se devuelven solos.</span>
                 <button type="button" onClick={() => { setAsk(null); retryFailed(); }} className={btnCls}>Sí, reintentar</button>
                 <button type="button" onClick={() => setAsk(null)} className={ghostCls}>Cancelar</button>
               </div>
@@ -252,6 +283,15 @@ export default function AdWork({ adId }: { adId: string }) {
             )}
           </div>
         )}
+        {view === "correcciones" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={doReview} disabled={!!phase || running || !all} className={ghostCls}>
+              {phase === "review" ? "Revisando cada corte… (≈ 1 min)" : phase === "redo" ? "Rehaciendo cortes…" : review ? "Revisar de nuevo" : "Revisar"}
+            </button>
+            {review && <span className="text-sm text-muted">{review.filter((r) => r.issues.length).length === 0 ? "Todos los cortes dicen el guion y se ven bien ✓" : `${review.filter((r) => r.issues.length).length} corte(s) con observaciones: revísalos abajo.`}</span>}
+          </div>
+        )}
+        {view === "correcciones" && note && <p className="rounded-lg bg-accent/10 p-3 text-sm">{note}</p>}
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
           {clips.map((c) => {
             const rv = reviewOf(c.id);
@@ -274,7 +314,7 @@ export default function AdWork({ adId }: { adId: string }) {
                   <p className="line-clamp-3 text-xs">“{c.text}”</p>
                   {(rv?.issues.length ? rv.issues.join(" · ") : c.error) && <p className="text-xs text-bad">{rv?.issues.length ? rv.issues.join(" · ") : c.error}</p>}
                   {clipMsg[c.id] && <p role="status" className="text-xs text-warn">{clipMsg[c.id]}</p>}
-                  {(c.status === "done" || c.status === "failed") && (
+                  {(c.status === "failed" || (c.status === "done" && view !== "videos")) && (
                     <div className="mt-auto flex flex-col gap-1">
                       <input aria-label={`Qué corregir en el corte ${c.idx + 1}`} value={notes[c.id] ?? ""} onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
                         placeholder="¿Qué corregir? (opcional)" className={`${inputCls} py-1 text-xs`} />
@@ -293,7 +333,7 @@ export default function AdWork({ adId }: { adId: string }) {
                       )}
                       {ask === c.id ? (
                         <div className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-2 text-xs">
-                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los créditos vuelven solos.{ad.final_url ? " Cuando esté listo, rearmamos tu anuncio solos." : ""}</span>
+                          <span>{c.status === "failed" ? "Reintentar" : "Rehacer"} el corte {c.idx + 1}{refused(c) ? ` con ${models.find((m) => m.id === retryModel)?.label ?? "otro modelo"}` : ""} usa ≈ {cost(refused(c) ? clipUsd(c, retryModel) : clipUsd(c))}. Si falla, los segundos vuelven solos.{ad.final_url ? " Cuando esté listo, rearmamos tu anuncio solos." : ""}</span>
                           <div className="flex gap-2">
                             {/* a model that refused the face would refuse again: retry with the one chosen above */}
                             <button type="button" onClick={() => { setAsk(null); if (refused(c)) run(c.id, retryModel); else redo(c.id, notes[c.id] ?? ""); }} className="font-semibold text-accent-text">Sí, {c.status === "failed" ? "reintentar" : "rehacer"}</button>
@@ -312,10 +352,16 @@ export default function AdWork({ adId }: { adId: string }) {
             );
           })}
         </ul>
-      </section>
+        {view && onNext && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" onClick={onNext} disabled={!all || running || !!phase} className={btnCls}>{view === "videos" ? "Siguiente: correcciones →" : "Siguiente: edición final →"}</button>
+            {!all && <span className="text-sm text-muted">{busyClips ? "Espera a que terminen los cortes." : "Faltan cortes por terminar."}</span>}
+          </div>
+        )}
+      </section>}
 
-      <section className={cardCls}>
-        <h2 className="font-display text-xl font-bold">Revisar y armar el anuncio</h2>
+      {(!view || view === "edicion") && <section className={cardCls}>
+        <h2 className="font-display text-xl font-bold">{view ? "7 · Edición final" : "Revisar y armar el anuncio"}</h2>
         {!all ? (
           <p className="text-sm text-muted">Cuando todos los cortes estén listos, Creads los revisa (que digan el guion exacto y que sea la misma persona en todos) y arma el anuncio final con subtítulos.</p>
         ) : (
@@ -339,6 +385,40 @@ export default function AdWork({ adId }: { adId: string }) {
                   <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">NUEVO</span>
                 </label>
                 <p className="text-xs text-muted">La IA edita tu anuncio como una agencia: títulos animados en las palabras clave, zoom y destello en cada corte, efectos de sonido y una placa final con tu marca. Sin costo extra.</p>
+                {pro && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold">Look de la edición</span>
+                    <div className="grid grid-cols-2 gap-2 lg:grid-cols-3" role="radiogroup" aria-label="Look de la edición">
+                      {Object.values(LOOKS).map((l) => {
+                        const c1 = marca || l.c1;
+                        return (
+                          <button key={l.id} type="button" role="radio" aria-checked={plantilla === l.id} onClick={() => pickLook(l.id)}
+                            className={`flex flex-col items-start gap-1 rounded-xl border p-2.5 text-left ${plantilla === l.id ? "border-accent bg-accent/10" : "border-line bg-bg hover:border-accent/50"}`}>
+                            <span className="w-full rounded-md px-2 py-2 text-center leading-none" style={{ background: l.endBg }}>
+                              {l.box ? (
+                                <span className="inline-block px-1.5 py-0.5 text-lg" style={{ background: c1, color: l.text, fontFamily: "CapBebas" }}>{l.upper ? "OFERTA HOY" : "Oferta hoy"}</span>
+                              ) : (
+                                <span className="text-lg" style={{ color: l.text, fontFamily: l.font === "Anton" ? "CapAnton" : l.font === "Poppins ExtraBold" ? "CapPoppins" : l.font === "Archivo Black" ? "CapArchivo" : "CapMontserrat", textShadow: l.glow ? `0 0 10px ${c1}` : l.outline ? "0 0 2px #000, 0 2px 0 #000" : "none" }}>
+                                  {l.upper ? "OFERTA " : "Oferta "}<span style={{ color: c1 }}>{l.upper ? "HOY" : "hoy"}</span>
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-sm font-semibold">{l.name}</span>
+                            <span className="text-xs text-muted">{l.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <label className="flex items-center gap-2">
+                        Color de tu marca
+                        <input type="color" value={marca || LOOKS[plantilla]?.c1 || "#FFD400"} onChange={(e) => setMarca(e.target.value)} className="h-8 w-12 cursor-pointer rounded border border-line bg-bg" aria-label="Color de tu marca" />
+                      </label>
+                      {marca && <button type="button" onClick={() => setMarca("")} className="text-xs text-muted underline">usar el del look</button>}
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={sonidos} onChange={(e) => setSonidos(e.target.checked)} /> Efectos de sonido</label>
+                    </div>
+                  </div>
+                )}
                 {pro && (
                   <div className="grid gap-2 sm:grid-cols-2">
                     <label className="flex flex-col gap-1 text-xs font-semibold sm:col-span-2">
@@ -384,9 +464,9 @@ export default function AdWork({ adId }: { adId: string }) {
           </>
         )}
         {err && <p className="text-sm text-bad">{err}</p>}
-      </section>
+      </section>}
 
-      {ad.final_url && (
+      {ad.final_url && (!view || view === "edicion") && (
         <section className={cardCls}>
           <h2 className="font-display text-xl font-bold">Tu anuncio está listo 🎬</h2>
           <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_1fr]">

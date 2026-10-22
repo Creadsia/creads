@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (!textAI.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
 
   const b = await req.json().catch(() => null);
-  const cuts: CutIn[] = Array.isArray(b?.cuts) ? b.cuts.filter((c: CutIn) => typeof c?.texto === "string" && c.texto.trim()).slice(0, 8) : [];
+  const cuts: CutIn[] = Array.isArray(b?.cuts) ? b.cuts.filter((c: CutIn) => typeof c?.texto === "string" && c.texto.trim()).slice(0, 12) : [];
   if (!cuts.length) return NextResponse.json({ error: "Faltan los cortes." }, { status: 400 });
   const format = (FORMATS.some((f) => f.id === b?.format) ? b.format : "ugc") as FormatId;
 

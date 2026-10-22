@@ -1,5 +1,6 @@
 "use client";
 
+import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
 import { LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
@@ -60,7 +61,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
         {t.plans.map((p) => {
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
-          const ads = Math.max(1, Math.round(credits / 250)); // a finished 30 s ad with Kling 3.0 ≈ 250 credits (images + video)
+          const secs = secondsOf(credits); // shown in seconds of video (talking avatar), credits stay underneath
+          const ads = adsOf(secs);
           const promo = !yearly && hasLaunch(p.id);
           const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
           const perAd = Math.round((monthNow / ads) * 100) / 100;
@@ -102,8 +104,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
                 {/* what the money turns into */}
                 <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
                   <div className="flex flex-col gap-0.5 p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{p.credits}</b>
-                    <span className="text-xs text-muted">{t.credits}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">{fmtSeconds(secs)}</b>
+                    <span className="text-xs text-muted">{es ? "de video al mes" : "of video a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
                     <b className="font-display text-xl font-semibold tabular-nums">≈ {ads}</b>
@@ -188,7 +190,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
               const price = Number(p.replace(/[^\d.]/g, ""));
               return (
                 <div key={c} className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
-                  <span className="font-semibold">{c}</span>
+                  <span className="font-semibold">+{fmtSeconds(secondsOf(credits))} {es ? "de video" : "of video"}</span>
                   <span className="font-display text-2xl font-semibold">{money(price)}</span>
                   <a href={`/app/planes?plan=pack-${credits}`} className="mt-auto rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm font-semibold hover:border-accent-text">{t.topups.buy}</a>
                 </div>

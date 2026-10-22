@@ -63,7 +63,7 @@ export default function VoiceLab({ code }: { code: string }) {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold">Voces</h2>
-          <p className="text-sm text-muted">Crea una voz con tus audios o elige una de la biblioteca, y escucha cómo lee tu texto. Cada lectura usa créditos según su largo.</p>
+          <p className="text-sm text-muted">Crea una voz con tus audios o elige una de la biblioteca, y escucha cómo lee tu texto. Cada lectura descuenta segundos según su largo.</p>
         </div>
         {usage && usage.limit > 0 && (
           <span className="rounded-full bg-surface-2 px-3 py-1 text-xs font-semibold text-muted">

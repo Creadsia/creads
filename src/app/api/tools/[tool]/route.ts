@@ -192,9 +192,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ tool: string }>
       // the start died before the job was handed over (server timeout): fail it and give the credits back
       const since = String(row.created_at ?? "");
       if (Date.now() - Date.parse(since) > 10 * 60_000) {
-        const gone = await db.claim("clips", id, { notIn: ["done", "failed"] }, { status: "failed", error: "Se cortó antes de empezar. Te devolvimos los créditos; vuelve a intentarlo." });
+        const gone = await db.claim("clips", id, { notIn: ["done", "failed"] }, { status: "failed", error: "Se cortó antes de empezar. Te devolvimos los segundos; vuelve a intentarlo." });
         if (gone && (await chargedSince(s.user.workspace, id, new Date(Date.parse(since) - 60_000).toISOString()).catch(() => false))) await refundJob(s.user.workspace, id);
-        return NextResponse.json({ state: "failed", error: "Se cortó antes de empezar. Te devolvimos los créditos; vuelve a intentarlo." });
+        return NextResponse.json({ state: "failed", error: "Se cortó antes de empezar. Te devolvimos los segundos; vuelve a intentarlo." });
       }
       return NextResponse.json({ state: "queued" });
     }

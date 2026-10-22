@@ -87,11 +87,16 @@ export async function tokenFor(userId: string, client: Client): Promise<string> 
 }
 
 /** Where everything lives, from the request's own address (so staging answers for staging). */
+// Only our own hosts are trusted from the forwarded headers (creadsia.com, its Vercel previews, local
+// development); anything else falls back to the site address, so a forged header can't point the
+// connector or the sign-in documents somewhere else.
+const OWN_HOST = /^(?:[a-z0-9-]+\.)*creadsia\.com$|^creads-[a-z0-9-]+-creadsia\.vercel\.app$|^localhost(?::\d+)?$|^127\.0\.0\.1(?::\d+)?$/i;
 export const originOf = (req: Request) => {
   const u = new URL(req.url);
-  const host = req.headers.get("x-forwarded-host") ?? u.host;
-  const proto = req.headers.get("x-forwarded-proto") ?? u.protocol.replace(":", "");
-  return `${proto}://${host}`;
+  const host = (req.headers.get("x-forwarded-host") ?? u.host).split(",")[0].trim();
+  const proto = (req.headers.get("x-forwarded-proto") ?? u.protocol.replace(":", "")).split(",")[0].trim();
+  if (!OWN_HOST.test(host) || (proto !== "https" && proto !== "http")) return (process.env.SITE_URL || "https://www.creadsia.com").replace(/\/$/, "");
+  return `${/^localhost|^127\./.test(host) ? proto : "https"}://${host}`;
 };
 export const CORS = { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "authorization, content-type, mcp-protocol-version, mcp-session-id", "access-control-expose-headers": "www-authenticate, mcp-session-id" };
 

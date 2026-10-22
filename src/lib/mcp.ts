@@ -1,3 +1,4 @@
+import { adsOf, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
 
 // The Creads connector (MCP, «Streamable HTTP» without sessions): Claude, ChatGPT or any MCP client calls
@@ -32,14 +33,15 @@ export const mediaRef = (u: string) => {
 
 export const TOOLS: Tool[] = [
   {
-    name: "creads_saldo", title: "Ver créditos",
-    description: "Shows how many Creads credits the user's account has left (credits pay for images and videos).",
+    name: "creads_saldo", title: "Ver saldo de video",
+    description: "Shows how many seconds of video the user's Creads account has left (one second of a talking-avatar ad uses one second; pricier models use more; images use about one second each).",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    annotations: { title: "Ver créditos", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: { title: "Ver saldo de video", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     run: async (_a, call) => {
-      const d = await call<{ unlimited?: boolean; balance?: number | null; plan?: string | null }>("/api/credits");
-      if (d.unlimited) return { text: "La cuenta no tiene límite de créditos.", data: { ilimitado: true } };
-      return { text: `La cuenta tiene ${d.balance ?? 0} créditos${d.plan ? ` (plan ${d.plan})` : ""}.`, data: { creditos: d.balance ?? 0, plan: d.plan ?? null } };
+      const d = await call<{ unlimited?: boolean; balance?: number | null; plan?: string | null; rate?: number }>("/api/credits");
+      if (d.unlimited) return { text: "La cuenta no tiene límite.", data: { ilimitado: true } };
+      const s = secondsOf(d.balance ?? 0, d.rate);
+      return { text: `La cuenta tiene ${fmtSeconds(s)} de video (≈ ${adsOf(s)} anuncios de 30 s con avatar que habla)${d.plan ? `, plan ${d.plan}` : ""}.`, data: { segundos: s, plan: d.plan ?? null } };
     },
   },
   {
@@ -67,12 +69,14 @@ export const TOOLS: Tool[] = [
       titulo: { type: "string", maxLength: 80, description: "Short name to find it later." },
       avatar: { type: "string", description: "Optional: id of one of the account's avatars (from creads_avatares), so the same person appears in every cut." },
       edicion: { type: "string", enum: ["pro", "simple"], default: "pro", description: "pro (default): the ad comes out edited like an agency would: animated headlines on the key words, zooms and flashes on every cut, sound effects and a closing card. simple: only cuts and subtitles." },
+      plantilla: { type: "string", enum: ["limpio", "impacto", "elegante", "noticia", "neon"], default: "limpio", description: "Look of the Pro edit: limpio (white + one accent, fits any brand), impacto (huge TikTok captions, yellow key word), elegante (sober, soft), noticia (headlines in a colour box), neon (glow and flashes, Creads' own style)." },
+      color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "Optional brand colour (#RRGGBB) for key words, bar and closing card." },
       indicaciones: { type: "string", maxLength: 600, description: "Optional but recommended with edicion pro: a short brief for the editor — brand and product name (exact spelling), audience, what to highlight (offer, price, benefit), what to avoid, and the closing call to action. Example: «Marca: Café Lumbre. Destacar: envío gratis en Santiago. Evitar: precios. Cierre: cafelumbre.cl»." },
       modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = Creads picks the most economical one that works." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
-      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}) });
+      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}) });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
   },

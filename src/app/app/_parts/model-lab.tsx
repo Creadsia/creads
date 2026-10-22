@@ -77,7 +77,8 @@ export default function ModelLab({ code }: { code: string }) {
     fetch("/api/models", { headers: { "x-creads-code": code } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.video?.length) setModels(d.video);
+        // talking avatar and «Persona real» need a recorded voice: they live in Crear anuncio
+        if (d?.video?.length) setModels(d.video.filter((m: { talking?: boolean; actor?: boolean }) => !m.talking && !m.actor));
         if (d?.image?.length) setImageModels(d.image);
       })
       .catch(() => {});
@@ -155,7 +156,7 @@ export default function ModelLab({ code }: { code: string }) {
       if (!res.ok) throw new Error(data.error || "No se pudo revisar el video.");
       if (data.state === "done") return setVideo({ s: "done", url: data.url });
       if (data.state === "failed") throw new Error(data.error || "El video falló.");
-      if (tries > 60) throw new Error("Está tardando más de lo normal. Cuando termine aparece en «Tus creaciones»; si falla, los créditos vuelven solos.");
+      if (tries > 60) throw new Error("Está tardando más de lo normal. Cuando termine aparece en «Tus creaciones»; si falla, los segundos vuelven solos.");
       poll.current = setTimeout(() => check(id, job, tries + 1), 10000);
     } catch (e) {
       setVideo({ s: "error", msg: e instanceof Error ? e.message : "El video falló." });
@@ -189,7 +190,7 @@ export default function ModelLab({ code }: { code: string }) {
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-semibold">Generar</h2>
         <p className="text-sm text-muted">
-          Cada botón genera de verdad y usa créditos. El precio aparece en el botón antes de apretarlo.
+          Cada botón genera de verdad y descuenta segundos. El precio aparece en el botón antes de apretarlo.
         </p>
       </div>
 

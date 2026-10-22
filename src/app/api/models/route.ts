@@ -30,6 +30,8 @@ export async function GET(req: Request) {
         needsImage: Boolean(p.needsImage),
         silent: Boolean(p.silent),
         noFaces: Boolean(p.noFaces),
+        talking: Boolean(p.talking),
+        actor: Boolean(p.actor),
       };
     }),
     image: imageProviders.map((p) => ({ id: p.id, label: p.label, configured: p.configured(), usd: p.usdPerImage })),

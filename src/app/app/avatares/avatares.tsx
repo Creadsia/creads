@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CreadsAvatars from "../_parts/creads-avatars";
+import { avatarVideo, withVideo } from "@/lib/avatar-video";
 import { DeleteButton, Empty, Field, NextStep, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, uploadFile, useTable } from "../_parts/ui";
 
 interface Avatar extends Row {
@@ -12,10 +13,12 @@ interface Avatar extends Row {
   voice_name: string | null;
   lang: string | null;
   consent: boolean;
+  notes: string | null;
 }
 interface Voice { id: string; name: string; category: string }
 
-const blank = { name: "", description: "", image_url: "", voice_id: "", voice_name: "", lang: "en", consent: false };
+const blank = { name: "", description: "", image_url: "", voice_id: "", voice_name: "", lang: "en", consent: false, notes: "" };
+const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 
 export default function Avatares() {
   const t = useTable<Avatar>("avatars");
@@ -32,13 +35,24 @@ export default function Avatares() {
   function open(a?: Avatar) {
     setMsg("");
     setEditing(a?.id ?? null);
-    setForm(a ? { name: a.name, description: a.description ?? "", image_url: a.image_url ?? "", voice_id: a.voice_id ?? "", voice_name: a.voice_name ?? "", lang: a.lang ?? "en", consent: a.consent } : { ...blank });
+    setForm(a ? { name: a.name, description: a.description ?? "", image_url: a.image_url ?? "", voice_id: a.voice_id ?? "", voice_name: a.voice_name ?? "", lang: a.lang ?? "en", consent: a.consent, notes: a.notes ?? "" } : { ...blank });
   }
 
   async function onPhoto(file: File | undefined) {
     if (!file || !form) return;
     setBusy(true); setMsg("Subiendo foto…");
     try { const url = await uploadFile(file); setForm({ ...form, image_url: url }); setMsg(""); }
+    catch (e) { setMsg(e instanceof Error ? e.message : "No se pudo subir."); }
+    finally { setBusy(false); }
+  }
+
+  // «Persona real»: a video of the real person talking to the camera; the voice goes on their lips
+  async function onVideo(file: File | undefined) {
+    if (!file || !form) return;
+    if (!VIDEO_TYPES.includes(file.type)) { setMsg("El video tiene que ser MP4 o MOV."); return; }
+    if (file.size > 50 * 1024 * 1024) { setMsg("El video pesa más de 50 MB. Grábalo en 1080p (no 4K) o más corto (30 a 60 s)."); return; }
+    setBusy(true); setMsg("Subiendo video…");
+    try { const url = await uploadFile(file); setForm({ ...form, notes: withVideo(form.notes, url) }); setMsg(""); }
     catch (e) { setMsg(e instanceof Error ? e.message : "No se pudo subir."); }
     finally { setBusy(false); }
   }
@@ -123,9 +137,30 @@ export default function Avatares() {
                   </select>
                 </Field>
               </div>
+              <div className="mt-2 flex flex-col gap-2 border-t border-line pt-4">
+                <h3 className="text-sm font-bold">Video de la persona (opcional · Persona real)</h3>
+                <p className="text-xs text-muted">Si es una persona real, súbele un video de 30 a 60 s hablándole al celular, natural, con buena luz y la cara siempre visible. En cada anuncio usamos ese video con tu voz grabada en sus labios: es lo más real que hay. MP4 o MOV, hasta 50 MB (1080p, no 4K).</p>
+                {avatarVideo(form.notes) ? (
+                  <div className="flex flex-wrap items-start gap-3">
+                    <video src={avatarVideo(form.notes)!} controls muted playsInline className="h-48 rounded-xl bg-surface-2" />
+                    <div className="flex flex-col gap-2">
+                      <label className={`${ghostCls} cursor-pointer text-center`}>
+                        Cambiar video
+                        <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
+                      </label>
+                      <button type="button" onClick={() => setForm({ ...form, notes: withVideo(form.notes, null) })} className="text-xs text-muted hover:text-bad">Quitar video</button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className={`${ghostCls} w-fit cursor-pointer text-center`}>
+                    Subir video
+                    <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
+                  </label>
+                )}
+              </div>
               <label className="flex items-start gap-2 text-sm" data-tour="avatar-permiso">
                 <input type="checkbox" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} className="mt-1" required />
-                <span>Tengo el permiso de esta persona para usar su cara y su voz en anuncios.</span>
+                <span>Tengo el permiso de esta persona para usar su cara, su voz y su video en anuncios.</span>
               </label>
             </div>
           </div>
@@ -159,6 +194,8 @@ export default function Avatares() {
                   <dd className={a.image_url ? "" : "text-warn"}>{a.image_url ? "Con foto" : "Falta la foto"}</dd>
                   <dt className="font-semibold text-muted">Voz</dt>
                   <dd>{a.voice_name || "La del modelo de video"} · {a.lang === "es-CL" ? "Español (Chile)" : a.lang === "es" ? "Español" : "Inglés"}</dd>
+                  <dt className="font-semibold text-muted">Video</dt>
+                  <dd>{avatarVideo(a.notes) ? "Persona real ✓" : "Sin video (Persona IA)"}</dd>
                 </dl>
                 {a.description && <p className="line-clamp-2 text-xs text-muted">{a.description}</p>}
                 <div className="mt-auto flex items-center justify-between pt-2">

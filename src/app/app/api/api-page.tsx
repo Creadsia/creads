@@ -58,7 +58,7 @@ export default function ApiPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHead title="API y conector" lead="Usa Creads desde Claude o ChatGPT, o conecta otro sistema (tu propia herramienta o la de una agencia) para pedir anuncios, imágenes y videos por código. Usa los créditos de esta cuenta y pasa por la misma revisión de calidad que el estudio." />
+      <PageHead title="API y conector" lead="Usa Creads desde Claude o ChatGPT, o conecta otro sistema (tu propia herramienta o la de una agencia) para pedir anuncios, imágenes y videos por código. Usa los segundos de esta cuenta y pasa por la misma revisión de calidad que el estudio." />
 
       <section className={cardCls} aria-labelledby="h-mcp">
         <h2 id="h-mcp" className="font-semibold">Conectar Creads a Claude o ChatGPT</h2>

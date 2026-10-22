@@ -4,8 +4,10 @@ import { DbError } from "@/lib/db";
 import { findVideo } from "@/lib/providers";
 import { UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { cleanNiche } from "@/lib/niches";
-import { resolveVoice } from "@/lib/voices";
+import { defaultVoice, resolveVoice } from "@/lib/voices";
+import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
+import { avatarVideo } from "@/lib/avatar-video";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const { db } = s;
   const b = await req.json().catch(() => null);
-  const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 8) : [];
+  const clips: { tipo: string; texto: string; prompt: string; framePrompt?: string; segundos?: number }[] = Array.isArray(b?.clips) ? b.clips.slice(0, 12) : [];
   const model = findVideo(String(b?.model ?? ""));
   if (!clips.length || clips.some((c) => !c?.prompt || !c?.texto)) return NextResponse.json({ error: "Faltan las escenas." }, { status: 400 });
   if (!model) return NextResponse.json({ error: "Elige un modelo de video." }, { status: 400 });
@@ -28,11 +30,21 @@ export async function POST(req: Request) {
     // video model makes up (which stumbles on Spanish words and brand names). The studio sends the choice
     // ("" = the model's voice); the API and connectors default to the avatar's own voice.
     const format = String(b?.format ?? "ugc");
-    const wanted = typeof b?.voiceId === "string" ? b.voiceId : typeof avatar?.voice_id === "string" ? avatar.voice_id : "";
-    const voiceId = wanted && takesOwnVoice(format) ? await resolveVoice(s.user.workspace, wanted) : null;
-    if (wanted && takesOwnVoice(format) && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
-    // «Boca natural» (sync.so lipsync-2-pro) instead of the fast lip-sync: the most natural mouth, a bit more expensive
+    const lang = b?.lang === "es-CL" ? "es-CL" : "en";
+    const wanted = typeof b?.voiceId === "string" ? b.voiceId : null; // null = not chosen (API): the avatar's or a matching accent voice
+    let voiceId: string | null = null;
+    if (takesOwnVoice(format)) {
+      voiceId = wanted === null ? await defaultVoice(s.user.workspace, avatar, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
+      if (wanted && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
+    }
+    // «Persona real»: the avatar's own filmed video gets the voice on its lips; it needs both
+    const video = avatar ? avatarVideo(avatar.notes) : null;
+    if (model.actor && (!video || !ownsMedia(video, s.user.workspace))) return NextResponse.json({ error: "Este avatar no tiene su video. Súbelo en Avatares (Persona real) o elige otro modelo." }, { status: 400 });
+    if (model.actor && !voiceId) return NextResponse.json({ error: "Persona real necesita una voz: elígela y grábala en el paso Voz." }, { status: 400 });
+    // «Boca natural» (sync.so sync-3) instead of the fast lip-sync: the most natural mouth, a bit more expensive
     const lipsync = voiceId && b?.lipsync === "pro" ? "pro" : null;
+    // the voice the customer already heard and approved, one recording per cut (the video is lip-synced to it)
+    const audios = voiceId && Array.isArray(b?.audios) ? clips.map((_, i) => (ownsMedia(b.audios[i], s.user.workspace) ? String(b.audios[i]) : null)) : null;
     const ad = await db.insert("ads", {
       title: String(b?.title ?? "Anuncio").slice(0, 120),
       script_id: b?.scriptId || null,
@@ -41,12 +53,15 @@ export async function POST(req: Request) {
       model: model.id,
       status: "generating",
       settings: {
-        lang: b?.lang === "es-CL" ? "es-CL" : "en",
+        lang,
         niche: cleanNiche(b?.niche) || null,
-        avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id } : null,
+        avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id, ...(video ? { video } : {}) } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
         voiceId,
         lipsync,
+        audios,
+        // seconds the customer chose per cut (or the length of its recorded voice): no filler the AI makes up
+        secs: clips.map((c) => (Number.isFinite(Number(c.segundos)) && Number(c.segundos) > 0 ? Math.min(15, Math.max(2, Math.round(Number(c.segundos)))) : null)),
       },
     });
     const rows = [];

@@ -6,7 +6,7 @@ export type AspectRatio = "9:16" | "1:1" | "4:5" | "16:9";
 /** A reference passed to a generator: a face, a product, a voice sample. */
 export interface MediaRef {
   url: string;
-  role: "face" | "product" | "first_frame" | "audio";
+  role: "face" | "product" | "first_frame" | "audio" | "video";
 }
 
 /** A long-running generation. Video and image providers answer with a job, then we poll it. */
@@ -46,6 +46,10 @@ export interface VideoProvider {
   silent?: boolean;
   /** True when the model refuses starting images with a real person's face (Seedance). */
   noFaces?: boolean;
+  /** «Avatar que habla»: animates the presenter's picture from a recorded voice (image + audio → video, one step). */
+  talking?: boolean;
+  /** «Persona real»: a filmed person's own video gets the recorded voice on its lips (video + audio → video). */
+  actor?: boolean;
   /** For providers whose result links need our key (Veo): fetch the finished file so we can re-host it. */
   download?(url: string): Promise<ArrayBuffer>;
 }

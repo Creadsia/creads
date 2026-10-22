@@ -14,7 +14,7 @@ import { customerText, publicError } from "@/lib/public-error";
 import { canUseVoice } from "@/lib/voices";
 
 const LIPSYNC = "fal-ai/kling-video/lipsync/audio-to-video";
-const LIPSYNC_PRO = "fal-ai/sync-lipsync/v2"; // with model "lipsync-2-pro": the most natural mouth
+const LIPSYNC_PRO = "fal-ai/sync-lipsync/v3"; // sync-3: the most natural mouth (replaced lipsync-2-pro, 21 Oct 2026)
 
 /** Story shots whose speaker has their own voice: after the animation, the line is recorded with that
  * voice and lip-synced onto the clip (a second job, "ls:<fal job>"). */
@@ -31,7 +31,8 @@ async function voiceFor(db: { get: (t: "ads", id: string) => Promise<Record<stri
   if (!line || !(await canUseVoice(ws, voiceId))) return null;
   const ad = clip.ad_id ? await db.get("ads", String(clip.ad_id)) : null;
   const st = ad?.settings as StorySettings | null;
-  return { line, voiceId, pro, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
+  const approved = (ad?.settings as { audios?: (string | null)[] } | null)?.audios?.[Number(clip.idx)] ?? null;
+  return { line, voiceId, pro, approved, lang: voiceLang(st?.lang ?? "es-CL") as "es" | "en" };
 }
 
 const STALE_MS = 5 * 60_000;
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
     // after 5 minutes it fails, and the credits go back if they were taken for it.
     if ((clip.status === "starting" || clip.status === "syncing") && Date.now() - Date.parse(String(clip.updated_at ?? clip.created_at)) > STALE_MS) {
       const since = new Date(Date.parse(String(clip.updated_at ?? clip.created_at)) - (clip.status === "syncing" ? 20 * 60_000 : 60_000)).toISOString();
-      const row = await db.claim("clips", id, { in: [String(clip.status)] }, { status: "failed", error: "Se cortó a medio camino. Te devolvimos los créditos; vuelve a intentarlo." });
+      const row = await db.claim("clips", id, { in: [String(clip.status)] }, { status: "failed", error: "Se cortó a medio camino. Te devolvimos los segundos; vuelve a intentarlo." });
       if (row && (await chargedSince(ws, id, since).catch(() => false))) await refundJob(ws, id);
       return NextResponse.json({ clip: row ?? (await db.get("clips", id)) });
     }
@@ -111,11 +112,12 @@ export async function GET(req: Request) {
       const mine = await db.claim("clips", id, { in: ["generating"] }, { status: "syncing", url });
       if (!mine) return NextResponse.json({ clip: await db.get("clips", id) });
       try {
-        const { bytes } = await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2", lang: voice.lang });
-        const audio = await saveMedia(ws, "historias", bytes, "audio/mpeg");
+        // the recording the customer approved before the video; otherwise record the line now
+        // (multilingual_v2 detects the language itself: a forced language_code is rejected)
+        const audio = voice.approved ?? (await saveMedia(ws, "historias", (await elevenlabs.speak(voice.voiceId, voice.line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
         const media = { video_url: await fetchableUrl(url, ws), audio_url: await fetchableUrl(audio, ws) };
         const job = voice.pro
-          ? await falSubmit(LIPSYNC_PRO, { ...media, model: "lipsync-2-pro", sync_mode: "cut_off" }, "Sincronizar labios")
+          ? await falSubmit(LIPSYNC_PRO, { ...media, sync_mode: "cut_off" }, "Sincronizar labios")
           : await falSubmit(LIPSYNC, media, "Sincronizar labios");
         const row = await db.update("clips", id, { status: "generating", provider_job: `ls:${job}` });
         return NextResponse.json({ clip: row });

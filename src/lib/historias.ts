@@ -103,8 +103,8 @@ export function storyShotUsd(shot: StoryShot | undefined, model: { id: string; u
 
 /** Recording the line with the character's voice (ElevenLabs) + lip-syncing it (Kling Lipsync). */
 export const lipsyncUsd = (seconds: number, line: string) => +(0.014 * Math.max(5, Math.ceil(seconds / 5) * 5) + line.length * 0.00022).toFixed(3);
-/** «Boca natural»: sync.so lipsync-2-pro on fal (US$5 per minute of video) plus the recorded line. */
-export const lipsyncProUsd = (seconds: number, line: string) => +((5 / 60) * Math.max(1, seconds) + line.length * 0.00022).toFixed(3);
+/** «Boca natural»: sync.so sync-3 on fal (US$8 per minute of video) plus the recorded line. */
+export const lipsyncProUsd = (seconds: number, line: string) => +((8 / 60) * Math.max(1, seconds) + line.length * 0.00022).toFixed(3);
 /** Seconds of video a lip-synced line needs (the recorded line must fit inside the clip). */
 export const lipsyncSeconds = (line: string) => Math.min(10, Math.max(4, Math.ceil(line.trim().split(/\s+/).filter(Boolean).length / 2.2 + 1.5)));
 /** Seconds a spoken line needs (≈ 2.4 words per second, plus a breath). */

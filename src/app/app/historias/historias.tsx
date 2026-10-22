@@ -608,7 +608,7 @@ function Story({ id, onBack }: { id: string; onBack: () => void }) {
           )}
           {ask === "reanim" && talkingDone.length > 0 && (
             <div className="flex basis-full flex-wrap items-center gap-2 rounded-xl bg-surface-2 p-3 text-sm">
-              <span>Se vuelven a animar {talkingDone.length} tomas con diálogo (con las mismas imágenes) para que hablen. Usa ≈ {price(talkingDone.reduce((a, c) => a + shotUsd(c.idx), 0))}; si alguna falla, sus créditos vuelven solos.</span>
+              <span>Se vuelven a animar {talkingDone.length} tomas con diálogo (con las mismas imágenes) para que hablen. Usa ≈ {price(talkingDone.reduce((a, c) => a + shotUsd(c.idx), 0))}; si alguna falla, sus segundos vuelven solos.</span>
               <button type="button" className={btnCls} onClick={() => { setAsk(""); many(talkingDone.map((c) => c.idx), (i) => post("/api/clips/run", { id: clips.find((c) => c.idx === i)!.id }), "reanim"); }}>Sí, re-animar</button>
               <button type="button" className={ghostCls} onClick={() => setAsk("")}>Cancelar</button>
             </div>

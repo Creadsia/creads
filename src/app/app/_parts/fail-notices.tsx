@@ -35,7 +35,7 @@ export default function FailNotices() {
     <div role="status" className="flex flex-col gap-3 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p>
         <b>{many ? `${items.length} trabajos no se pudieron completar` : `No se pudo completar ${first.what}`}.</b>{" "}
-        Ya devolvimos {many ? "esos créditos" : "los créditos"} a tu saldo{many ? "" : "; puedes reintentarlo ahora"}.
+        Ya devolvimos {many ? "esos segundos" : "los segundos"} a tu saldo{many ? "" : "; puedes reintentarlo ahora"}.
       </p>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Link href={first.href} onClick={dismiss} className="rounded-lg bg-accent px-3 py-1.5 font-semibold text-accent-ink">Reintentar</Link>

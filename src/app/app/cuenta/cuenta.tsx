@@ -1,5 +1,7 @@
 "use client";
 
+import { DEFAULT_USD_PER_CREDIT, SECOND_USD, fmtSeconds, secondsOf } from "@/lib/credit-math";
+
 import { useEffect, useState } from "react";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls } from "../_parts/ui";
 
@@ -50,7 +52,9 @@ export default function Cuenta() {
 }
 
 interface Move { id: number; delta: number; kind: string; note: string | null; created_at: string }
-interface CreditsData { unlimited: boolean; balance: number | null; paidUntil: string | null; expired: boolean; plan: string | null; history: Move[] }
+interface CreditsData { unlimited: boolean; balance: number | null; paidUntil: string | null; expired: boolean; plan: string | null; history: Move[]; rate?: number }
+// shown in seconds of video (credits stay underneath)
+const secsOfDelta = (delta: number, rate?: number) => { const s = Math.round((Math.abs(delta) * (rate || DEFAULT_USD_PER_CREDIT)) / SECOND_USD); return delta < 0 ? -s : s; };
 
 const KIND: Record<string, string> = { plan: "Plan", topup: "Créditos agregados", charge: "Usado", refund: "Devuelto", adjust: "Ajuste" };
 
@@ -58,27 +62,27 @@ function Credits() {
   const [d, setD] = useState<CreditsData | null>(null);
   useEffect(() => { fetch("/api/credits?history=1").then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => {}); }, []);
   if (!d) return null;
-  if (d.unlimited) return <section className={cardCls}><h2 className="font-display text-lg font-bold">Créditos</h2><p className="text-sm text-muted">Cuenta del dueño: sin límite. Lo que gastas lo ves en Panel interno → Saldos y alertas.</p></section>;
+  if (d.unlimited) return <section className={cardCls}><h2 className="font-display text-lg font-bold">Segundos de video</h2><p className="text-sm text-muted">Cuenta del dueño: sin límite. Lo que gastas lo ves en Panel interno → Saldos y alertas.</p></section>;
   const until = d.paidUntil ? new Date(`${d.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" }) : null;
   return (
     <section className={cardCls} aria-labelledby="cr">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="cr" className="font-display text-lg font-bold">Créditos</h2>
-          <p className="text-sm text-muted">{d.plan ? `Plan ${d.plan}. ` : ""}{until ? (d.expired ? `Tu plan venció el ${until}.` : `Pagado hasta el ${until}.`) : ""} Si algo falla, te devolvemos los créditos automáticamente.</p>
+          <h2 id="cr" className="font-display text-lg font-bold">Segundos de video</h2>
+          <p className="text-sm text-muted">{d.plan ? `Plan ${d.plan}. ` : ""}{until ? (d.expired ? `Tu plan venció el ${until}.` : `Pagado hasta el ${until}.`) : ""} Si algo falla, te devolvemos los segundos automáticamente.</p>
         </div>
-        <p className="font-mono text-3xl font-bold tabular-nums">{(d.balance ?? 0).toLocaleString("es-CL")}</p>
+        <p className="font-mono text-3xl font-bold tabular-nums">{fmtSeconds(secondsOf(d.balance ?? 0, d.rate))}</p>
       </div>
       {d.history.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-line text-left text-xs text-muted"><th className="py-2 pr-3 font-semibold">Fecha</th><th className="py-2 pr-3 font-semibold">Qué</th><th className="py-2 text-right font-semibold">Créditos</th></tr></thead>
+            <thead><tr className="border-b border-line text-left text-xs text-muted"><th className="py-2 pr-3 font-semibold">Fecha</th><th className="py-2 pr-3 font-semibold">Qué</th><th className="py-2 text-right font-semibold">Segundos</th></tr></thead>
             <tbody>
               {d.history.map((m) => (
                 <tr key={m.id} className="border-b border-line last:border-0">
                   <td className="py-2 pr-3 whitespace-nowrap text-muted">{new Date(m.created_at).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
                   <td className="py-2 pr-3">{KIND[m.kind] ?? m.kind}{m.note ? ` · ${m.note}` : ""}</td>
-                  <td className={`py-2 text-right font-mono tabular-nums ${m.delta > 0 ? "text-good" : m.delta < 0 ? "" : "text-muted"}`}>{m.delta > 0 ? "+" : ""}{m.delta.toLocaleString("es-CL")}</td>
+                  <td className={`py-2 text-right font-mono tabular-nums ${m.delta > 0 ? "text-good" : m.delta < 0 ? "" : "text-muted"}`}>{m.delta > 0 ? "+" : ""}{secsOfDelta(m.delta, d.rate)} s</td>
                 </tr>
               ))}
             </tbody>

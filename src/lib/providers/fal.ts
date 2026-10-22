@@ -46,6 +46,10 @@ interface FalVideo {
   noFaces?: boolean;
   /** fal's live price list only works for flat per-second prices; tiered models keep our static 720p price. */
   livePrice?: boolean;
+  /** Image + recorded voice → talking video (the clip lasts as long as the voice). */
+  talking?: boolean;
+  /** Video of a real person + recorded voice → the same video with the voice on its lips (no generation). */
+  actor?: boolean;
   build: Build;
 }
 
@@ -98,6 +102,32 @@ const wan: Build = (req, image) => ({
   audio: req.withAudio,
   enable_prompt_expansion: false, // keep the director's prompt as written
   ...(image ? { start_image_url: image } : {}),
+});
+
+// Kling AI Avatar 2 (Pro): the presenter's picture talks with the recorded voice, in one step (no second
+// lip-sync pass). The prompt only guides delivery; the words come from the audio.
+const klingAvatar: Build = (req, image) => ({
+  image_url: image,
+  audio_url: req.refs?.find((r) => r.role === "audio")?.url,
+  prompt: "A real person talking to their phone camera in a casual UGC video: natural, relaxed delivery, subtle facial expressions, small natural head movements and occasional hand gestures in rhythm with the speech, natural blinking. Not exaggerated, not theatrical.",
+});
+
+// MiniMax H3 Max (fal, 2026-10): 5–15 s, 768p, follows the starting image's aspect. The prompt is used as
+// written (no expansion): the director already wrote it, and the scene comes from the opening frame.
+const minimax: Build = (req, image) => ({
+  prompt: req.prompt,
+  prompt_expansion_mode: "disabled",
+  duration: nearest(req.seconds, range(5, 15)),
+  resolution: "768P",
+  ...(image ? { image_url: image } : { aspect_ratio: req.aspect === "4:5" ? "3:4" : req.aspect }),
+});
+
+// sync-3 (sync.so, on fal): the person's own filmed video with the approved voice on their lips. The video
+// part we send is already cut to the voice's length, so nothing gets cut off.
+const actorSync: Build = (req) => ({
+  video_url: req.refs?.find((r) => r.role === "video")?.url,
+  audio_url: req.refs?.find((r) => r.role === "audio")?.url,
+  sync_mode: "cut_off",
 });
 
 // Grok Imagine Video 1.5 (xAI): 1–15 s.
@@ -202,6 +232,50 @@ export const FAL_VIDEO: FalVideo[] = [
     build: wan,
   },
   {
+    // Seedance 2.0 Mini (fal, 2026-10): $0.1547/s at 720p ($0.0721 at 480p). Scenes without real faces only.
+    id: "seedance-2.0-mini",
+    noFaces: true, // tested 2026-10-21: refused the avatar's real face twice (like the other Seedance)
+    label: "Seedance 2.0 Mini",
+    usdPerSecond: 0.1547,
+    i2v: "bytedance/seedance-2.0/mini/image-to-video",
+    t2v: "bytedance/seedance-2.0/mini/text-to-video",
+    durations: range(4, 15),
+    livePrice: false,
+    build: seedance,
+  },
+  {
+    id: "kling-avatar-2-pro",
+    label: "Kling Avatar 2 Pro · avatar que habla",
+    usdPerSecond: 0.115, // fal 2026-10-21: $0.115 per second of video
+    i2v: "fal-ai/kling-video/ai-avatar/v2/pro",
+    durations: range(3, 15),
+    talking: true,
+    build: klingAvatar,
+  },
+  {
+    // «Persona IA»: the scene comes from the opening frame (the avatar where the customer asked: a mall,
+    // their kitchen…); the approved voice is lip-synced on top afterwards (sync-3).
+    id: "minimax-h3-max",
+    label: "MiniMax H3 Max · persona IA",
+    usdPerSecond: 0.08, // fal 2026-10: $0.08/s at 768p ($0.05 at 480p, $0.16 at 1080p)
+    i2v: "minimax/h3-max/image-to-video",
+    t2v: "minimax/h3-max/text-to-video",
+    durations: range(5, 15),
+    livePrice: false,
+    build: minimax,
+  },
+  {
+    // «Persona real»: no video is generated; sync-3 puts the voice on the filmed person's lips.
+    id: "persona-real",
+    label: "Persona real · tu video",
+    usdPerSecond: 0.1334, // fal 2026-10: sync-3 $8 per minute
+    i2v: "fal-ai/sync-lipsync/v3",
+    durations: range(3, 15),
+    livePrice: false,
+    actor: true,
+    build: actorSync,
+  },
+  {
     id: "grok-video-1.5",
     label: "Grok Imagine Video 1.5",
     usdPerSecond: 0.14, // 720p ($0.08 at 480p, $0.25 at 1080p)
@@ -260,11 +334,18 @@ function falVideo(m: FalVideo): VideoProvider {
     needsImage: !m.t2v,
     silent: Boolean(m.silent),
     noFaces: Boolean(m.noFaces),
+    talking: Boolean(m.talking),
+    actor: Boolean(m.actor),
 
     async submit(req) {
+      if (m.actor) {
+        if (!req.refs?.some((r) => r.role === "video") || !req.refs?.some((r) => r.role === "audio")) throw new Error(`${m.label} necesita el video de la persona y la voz grabada.`);
+        return { provider: m.id, jobId: await falSubmit(m.i2v, m.build(req), m.label) };
+      }
       const image = req.refs?.find((r) => r.role === "first_frame")?.url;
       const endpoint = image ? m.i2v : m.t2v;
       if (!endpoint) throw new Error(`${m.label} necesita una imagen de partida.`);
+      if (m.talking && !req.refs?.some((r) => r.role === "audio")) throw new Error(`${m.label} necesita la voz grabada.`);
       const go = async (prompt: string) => ({ provider: m.id, jobId: await falSubmit(endpoint, m.build({ ...req, prompt }, image), m.label) });
       try {
         return await go(m.maxPrompt ? await fitPrompt(req.prompt, m.maxPrompt) : req.prompt);

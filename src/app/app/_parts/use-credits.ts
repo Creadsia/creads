@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { creditsFor, fmtCredits } from "@/lib/credit-math";
+import { creditsFor, fmtSeconds, jobSeconds, secondsOf } from "@/lib/credit-math";
 
 // What the signed-in account has and how prices read for it: always in credits (the owner too; real
 // costs in US$ are in the Panel).
@@ -44,14 +44,14 @@ export function useCredits() {
     return () => { alive = false; window.removeEventListener("creads-credits", on); };
   }, []);
 
-  /** Price label for a job that costs `usd`. */
+  /** Price label for a job that costs `usd`, in seconds of video (customers never see credits or dollars). */
   const price = (usd: number) => {
     if (!info) return "…";
-    const n = creditsFor(usd, info.rate, info.discount);
-    if (info.unlimited) return fmtCredits(creditsFor(usd, info.rate)); // the owner sees what customers see (costs live in the Panel)
-    return fmtCredits(n);
+    return fmtSeconds(jobSeconds(usd, info.rate, info.unlimited ? 0 : info.discount)); // the owner sees what customers see
   };
+  /** The account's balance in seconds of video (null: unlimited or unknown). */
+  const seconds = info && !info.unlimited ? secondsOf(info.balance ?? 0, info.rate) : null;
   const credits = (usd: number) => (info ? creditsFor(usd, info.rate, info.unlimited ? 0 : info.discount) : 0);
   const covers = (usd: number) => !info || info.unlimited || (info.balance ?? 0) >= credits(usd);
-  return { info, price, credits, covers };
+  return { info, price, credits, covers, seconds };
 }

@@ -15,6 +15,7 @@ const BUCKETS = {
   gen: [10 * 60, 60], // paid generations per person in 10 min
   heavy: [10 * 60, 15], // montage and voice cloning per person in 10 min
   upload: [10 * 60, 120],
+  mcp: [10 * 60, 300], // connector and API calls per person in 10 min (status checks included)
   signup: [60 * 60, 5], // new accounts per connection per hour
   recoverAll: [60 * 60, 15], // owner recovery attempts from anywhere
   forgotIp: [60 * 60, 6], // "forgot my password" emails asked from one connection per hour
@@ -75,6 +76,7 @@ const MSG: Record<Bucket, string> = {
   gen: "Vas muy rápido: espera unos minutos y sigue.",
   heavy: "Vas muy rápido: espera unos minutos y sigue.",
   upload: "Demasiadas subidas seguidas: espera unos minutos.",
+  mcp: "Demasiadas consultas seguidas: espera unos minutos y sigue.",
   signup: "Ya se crearon varias cuentas desde esta conexión. Espera una hora o escríbenos a hola@creadsia.com.",
   forgotIp: "Ya pediste varios enlaces. Revisa tu correo (también spam) o espera una hora.",
   forgotEmail: "Ya te enviamos un enlace a ese correo. Revisa también la carpeta de spam, o espera una hora para pedir otro.",
