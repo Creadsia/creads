@@ -233,7 +233,7 @@ function AddExample({ onAdded }: { onAdded: () => void }) {
       <div className="flex flex-wrap items-center gap-2">
         <label className={`${ghostCls} cursor-pointer`}>
           {busy && !video ? "Subiendo…" : video ? "Cambiar video" : "Subir video"}
-          <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" onChange={(e) => up(e.target.files?.[0])} />
+          <input type="file" accept="video/*" className="sr-only" onChange={(e) => up(e.target.files?.[0])} />
         </label>
         {video && <video src={video} muted playsInline controls className="max-h-40 rounded-lg bg-black" />}
       </div>

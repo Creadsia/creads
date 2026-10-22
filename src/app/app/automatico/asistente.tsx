@@ -185,7 +185,7 @@ export default function Asistente() {
       <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="sticky bottom-3 flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-lg">
         <label className={`${ghostCls} cursor-pointer`} title="Subir una foto o un video">
           {uploading ? "Subiendo…" : "📎"}
-          <input type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime" className="sr-only" disabled={uploading || busy} onChange={(e) => onFile(e.target.files?.[0])} />
+          <input type="file" accept="image/png,image/jpeg,image/webp,video/*" className="sr-only" disabled={uploading || busy} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={empty ? "Ej: Tengo una cafetería en Ñuñoa y quiero más clientes" : "Escribe tu respuesta…"}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}

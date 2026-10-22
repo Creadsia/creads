@@ -146,7 +146,7 @@ export default function Avatares() {
                     <div className="flex flex-col gap-2">
                       <label className={`${ghostCls} cursor-pointer text-center`}>
                         Cambiar video
-                        <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
+                        <input type="file" accept="video/*" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
                       </label>
                       <button type="button" onClick={() => setForm({ ...form, notes: withVideo(form.notes, null) })} className="text-xs text-muted hover:text-bad">Quitar video</button>
                     </div>
@@ -154,7 +154,7 @@ export default function Avatares() {
                 ) : (
                   <label className={`${ghostCls} w-fit cursor-pointer text-center`}>
                     Subir video
-                    <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
+                    <input type="file" accept="video/*" className="sr-only" onChange={(e) => onVideo(e.target.files?.[0])} />
                   </label>
                 )}
               </div>
