@@ -24,7 +24,8 @@ const startHref = (plan: string) => `/empezar?plan=${plan}&periodo=mensual`;
 
 const emprende = SHOWN_PLANS.find((p) => p.id === "starter")!;
 const negocio = SHOWN_PLANS.find((p) => p.id === "plus")!;
-const perAd = Math.floor(negocio.monthly / 8); // Negocio: 8 ads a month (images on top)
+// Negocio's seconds spent only on 20 s ads (≈ 25 s of plan each): about 10 ads → ≈ US$9.4 each (owner, 22 Oct 2026)
+const perAd = 9;
 
 const DEMOS = {
   cafe: { src: "/demos/cafeteria.mp4", poster: "/demos/cafeteria.jpg", label: "Cafetería" },
