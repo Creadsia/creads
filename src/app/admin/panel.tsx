@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Estadisticas from "./estadisticas";
 import Campanas from "./campanas";
+import EnVivo from "./en-vivo";
 import Calidad from "./calidad";
 import Contactar from "./contactar";
 import { AREAS, type PanelTab, areaOfTab } from "@/lib/areas";
@@ -152,6 +153,7 @@ export default function AdminPanel() {
               <Field label="Colchón de cambio (%)"><Num id="colchon" value={data.config.cambioColchon ?? 2} step={0.5} max={10} onChange={(v) => setCfg((c) => { c.cambioColchon = v; })} /></Field>
             </>
           )}
+          <EnVivo />
           <button type="button" onClick={logout} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink">Salir</button>
         </div>
       </div>

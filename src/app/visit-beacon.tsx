@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 // Counts this visit once per browser tab (anonymous, aggregated: see /api/visita). The channel the person
@@ -19,7 +20,32 @@ export function saveSource() {
   } catch {}
 }
 
+/** A random id for this browser tab (anonymous: only to count each open tab once in «Mirando ahora»). */
+function tabId() {
+  try {
+    let id = sessionStorage.getItem("creads-tab");
+    if (!id) { id = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); sessionStorage.setItem("creads-tab", id); }
+    return id;
+  } catch { return ""; }
+}
+
 export default function VisitBeacon() {
+  const path = usePathname() ?? "/";
+  // «Mirando ahora» in the Panel: a beat every 20 s while the tab is visible (never from the Panel itself)
+  useEffect(() => {
+    if (/^\/(admin|api)(\/|$)/.test(path)) return;
+    const id = tabId();
+    if (!id) return;
+    const send = () => {
+      if (document.visibilityState !== "visible") return;
+      fetch("/api/presencia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, path: location.pathname }), keepalive: true }).catch(() => {});
+    };
+    send();
+    const t = setInterval(send, 20_000);
+    document.addEventListener("visibilitychange", send);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", send); };
+  }, [path]);
+
   useEffect(() => {
     try {
       const path = window.location.pathname;
