@@ -130,8 +130,13 @@ export default function Asistente() {
         const imgs = (b.content.match(REF) ?? []).filter((r) => /\.(png|jpe?g|webp)$/i.test(r));
         if (imgs.length) rows.push(
           <div key={key} className="flex flex-wrap gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {imgs.map((r) => <img key={r} src={r} alt="Imagen de Creads" className="max-h-80 rounded-xl border border-line object-cover" />)}
+            {imgs.map((r) => (
+              <figure key={r} className="flex flex-col gap-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={r} alt="Imagen de Creads" className="max-h-80 rounded-xl border border-line object-cover" />
+                <a href={r} download className="w-fit text-xs font-semibold text-muted underline hover:text-ink">Descargar</a>
+              </figure>
+            ))}
           </div>,
         );
       }

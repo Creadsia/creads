@@ -267,8 +267,11 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
           </button>
           {imgErr && <p className="text-sm text-bad">{imgErr}</p>}
           {image && !batch.length && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="Imagen generada" className="max-h-[420px] w-full rounded-lg object-contain" />
+            <div className="flex flex-col gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt="Imagen generada" className="max-h-[420px] w-full rounded-lg object-contain" />
+              <a href={image} download className="w-fit rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Descargar imagen</a>
+            </div>
           )}
           {batch.length > 0 && (
             <ul className="grid grid-cols-2 gap-2">
@@ -283,6 +286,7 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
                       : <span className="absolute inset-0 grid place-items-center p-2 text-center text-xs text-muted">{b.state === "error" ? b.err : b.state === "running" ? "Generando…" : "En cola"}</span>}
                   </div>
                   {b.nota && <span className="text-xs text-warn">⚠ {b.nota}</span>}
+                  {b.url && <a href={b.url} download className="text-xs font-semibold text-accent-text">Descargar</a>}
                   {b.url && !imagesOnly && <button type="button" onClick={() => setFrame(b.url!)} className="text-left text-xs font-semibold text-accent-text">{frame === b.url ? "✓ Imagen de partida del video" : "Usar para el video"}</button>}
                 </li>
               ))}
