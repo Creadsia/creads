@@ -153,11 +153,21 @@ export function genderOfText(t: string): "male" | "female" | "" {
 
 /** The voice an ad gets when nobody chose one (API, connectors): the avatar's own, else a matching Chilean voice. */
 export async function defaultVoice(ws: string, avatar: { voice_id?: unknown; description?: unknown; name?: unknown } | null, lang: string): Promise<string | null> {
-  if (typeof avatar?.voice_id === "string" && avatar.voice_id && (await canUseVoice(ws, avatar.voice_id))) return avatar.voice_id;
+  if (typeof avatar?.voice_id === "string" && avatar.voice_id) {
+    // a library voice saved on the avatar (from Automático) is added to the account the first time
+    if (avatar.voice_id.startsWith("lib:")) { const id = await resolveVoice(ws, avatar.voice_id).catch(() => null); if (id) return id; }
+    else if (await canUseVoice(ws, avatar.voice_id)) return avatar.voice_id;
+  }
   if (lang !== "es-CL") return null;
   const g = genderOfText(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`);
   const cl = (await accentVoices()).filter((v) => v.accent === "es-CL" && (!g || v.gender === g));
-  return cl.length ? resolveVoice(ws, cl[0].ref) : null;
+  if (!cl.length) return null;
+  // not always the same voice (owner, 22 Oct 2026: «ocupa todo el rato lo de Cornejo»): each presenter gets
+  // its own Chilean voice, the same one every time for that presenter
+  const seed = String(avatar?.name ?? avatar?.description ?? Math.random());
+  let h = 0;
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return resolveVoice(ws, cl[h % cl.length].ref);
 }
 
 /**

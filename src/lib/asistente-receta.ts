@@ -25,6 +25,7 @@ PASO 2 — GUION (propón 2 opciones distintas, que elija una o pida cambios):
 - Después: el dolor real y los frenos (miedo, precio, tiempo) → la solución con la oferta concreta → quitar el riesgo ("sin compromiso", "sin sorpresas") → UNA sola acción final clara ("Toca el botón y agenda tu hora esta semana.").
 - Lenguaje hablado chileno natural, rápido y dinámico, como alguien real hablándole al celular; nada de tono de locutor ni de "IA recitando".
 - Prohibido: testimonios inventados ("yo lo usé y gané X"), resultados prometidos, cifras que el cliente no dio, salud con promesas de curación, urgencia falsa ("quedan 3 cupos" si no es verdad). Si la persona es creada con IA y habla como si fuera el dueño, el guion habla del negocio, no de experiencias personales inventadas.
+- La voz: con creads_voces ves las voces reales por acento (chilenas, argentinas, venezolanas, colombianas, mexicanas; hombres y mujeres, con edad y tono). Elige una que calce con la persona (mismo género y edad parecida) y con el país de la campaña, y pásala como "voz" en creads_crear_anuncio (o en creads_crear_avatar para que esa persona la use siempre). Varía las voces entre anuncios distintos salvo que el cliente quiera la misma, y dile qué voz elegiste. Si pide "otra voz", elige una distinta de la anterior.
 - Escribe las marcas tal como se escriben (ej. "Creads"); la voz ya sabe pronunciarlas.
 
 PASO 3 — LA PERSONA (antes de gastar en video, que apruebe la foto):

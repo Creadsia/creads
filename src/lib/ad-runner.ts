@@ -12,6 +12,8 @@ export interface AdJob {
   titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; modelo?: string;
   /** An avatar of the account: the same person (face) in every cut. */
   avatarId?: string;
+  /** The voice chosen for this ad (account voice id or «lib:owner:voice»); otherwise the avatar's or a matching accent voice. */
+  voz?: string;
   cortes?: { tipo: string; texto: string }[]; adId?: string; clipIds?: string[]; reintentos?: Record<string, number>; revisado?: boolean;
   videoUrl?: string; error?: string;
   /** «pro» (default): headlines, zooms, flashes, sounds and a closing card. «simple»: cuts + subtitles only. */
@@ -50,7 +52,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       if (sc.scenes?.length !== cortes.length) throw new Error("No se pudieron dirigir las escenas.");
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
-        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}),
+        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}), ...(j.voz ? { voiceId: j.voz } : {}),
         lipsync: "pro", // the most natural mouth (sync-3) on the voice Creads records, like the studio
         clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });

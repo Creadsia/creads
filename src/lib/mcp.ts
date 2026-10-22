@@ -71,6 +71,7 @@ export const TOOLS: Tool[] = [
       idioma: { type: "string", enum: ["es-CL", "en"], default: "es-CL", description: "Spoken language: Chilean Spanish or English." },
       titulo: { type: "string", maxLength: 80, description: "Short name to find it later." },
       avatar: { type: "string", description: "Optional: id of one of the account's avatars (from creads_avatares), so the same person appears in every cut." },
+      voz: { type: "string", maxLength: 140, description: "Optional: the voice for this ad, an id from creads_voces (e.g. a Chilean «lib:…» voice). Without it: the avatar's voice, or a Chilean voice that matches the person." },
       edicion: { type: "string", enum: ["pro", "simple"], default: "pro", description: "pro (default): the ad comes out edited like an agency would: animated headlines on the key words, zooms and flashes on every cut, sound effects and a closing card. simple: only cuts and subtitles." },
       plantilla: { type: "string", enum: ["limpio", "impacto", "elegante", "noticia", "neon"], default: "limpio", description: "Look of the Pro edit: limpio (white + one accent, fits any brand), impacto (huge TikTok captions, yellow key word), elegante (sober, soft), noticia (headlines in a colour box), neon (glow and flashes, Creads' own style)." },
       color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "Optional brand colour (#RRGGBB) for key words, bar and closing card." },
@@ -80,7 +81,7 @@ export const TOOLS: Tool[] = [
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
-      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(a.subtitulos === false ? { subtitulos: false } : {}), ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}) });
+      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.voz, 140) ? { voz: str(a.voz, 140) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(a.subtitulos === false ? { subtitulos: false } : {}), ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}) });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
   },
@@ -124,15 +125,23 @@ export const TOOLS: Tool[] = [
   },
   {
     name: "creads_voces", title: "Ver voces",
-    description: "Lists the voices the account can use (its own cloned voices first, then the library), with their ids for creads_crear_avatar. Free.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "Lists the voices the account can use, with their ids: its own cloned voices, then real Latin American voices by accent (Chilean, Argentine, Venezuelan, Colombian, Mexican; men and women), then other library voices. Use an id as «voz» in creads_crear_anuncio or creads_crear_avatar. Vary the voice between ads unless the user wants the same one. Free.",
+    inputSchema: { type: "object", properties: { acento: { type: "string", enum: ["es-CL", "es-AR", "es-VE", "es-CO", "es-MX"], description: "Optional: only this accent." } }, additionalProperties: false },
     annotations: { title: "Ver voces", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    run: async (_a, call) => {
-      const d = await call<{ voices: { id: string; name: string; category?: string; labels?: Record<string, string> }[] }>("/api/voices");
+    run: async (a, call) => {
+      const [d, ac] = await Promise.all([
+        call<{ voices: { id: string; name: string; category?: string; labels?: Record<string, string> }[] }>("/api/voices"),
+        call<{ accents: { locale: string; label: string; voices: { ref: string; name: string; gender: string; age: string; tono?: string }[] }[] }>("/api/voices/acentos").catch(() => ({ accents: [] })),
+      ]);
       const own = (v: { category?: string }) => ["cloned", "generated", "professional_owned"].includes(v.category ?? "");
-      const list = [...d.voices.filter(own), ...d.voices.filter((v) => !own(v))].slice(0, 60).map((v) => ({ id: v.id, nombre: v.name, propia: own(v), ...(v.labels ? { rasgos: Object.values(v.labels).join(", ") } : {}) }));
+      const mine = d.voices.filter(own).map((v) => ({ id: v.id, nombre: v.name, propia: true, acento: null as string | null, genero: "", edad: "", tono: "" }));
+      const want = typeof a.acento === "string" ? a.acento : "";
+      const accent = ac.accents.filter((x) => !want || x.locale === want).flatMap((x) => x.voices.map((v) => ({ id: v.ref, nombre: v.name, propia: false, acento: x.label, genero: v.gender === "male" ? "hombre" : v.gender === "female" ? "mujer" : "", edad: (v.age || "").replace("_", " "), tono: v.tono ?? "" })));
+      const other = want ? [] : d.voices.filter((v) => !own(v)).slice(0, 15).map((v) => ({ id: v.id, nombre: v.name, propia: false, acento: "otra (biblioteca)", genero: v.labels?.gender ?? "", edad: v.labels?.age ?? "", tono: "" }));
+      const list = [...mine, ...accent, ...other];
       if (!list.length) return { text: "No hay voces disponibles.", data: { voces: [] } };
-      return { text: list.map((v) => `• ${v.nombre}${v.propia ? " (tuya)" : ""} (${v.id})${v.rasgos ? `: ${v.rasgos}` : ""}`).join("\n"), data: { voces: list } };
+      const line = (v: (typeof list)[number]) => `• ${v.nombre}${v.propia ? " (tuya)" : ""}${v.acento ? ` · ${v.acento}` : ""}${v.genero ? ` · ${v.genero}` : ""}${v.edad ? ` · ${v.edad}` : ""}${v.tono ? ` · ${v.tono}` : ""} → ${v.id}`;
+      return { text: list.map(line).join("\n"), data: { voces: list } };
     },
   },
   {
@@ -143,16 +152,21 @@ export const TOOLS: Tool[] = [
       imagen: { type: "string", maxLength: 600, description: "Image link of this account (from creads_crear_imagen): a clear face, looking at the camera." },
       descripcion: { type: "string", maxLength: 400, description: "How the person looks, best in English (age, hair, clothes, place). Creads repeats it in every scene." },
       idioma: { type: "string", enum: ["es-CL", "es", "en"], default: "es-CL" },
-      voz: { type: "string", maxLength: 60, description: "Optional: a voice id from creads_voces." },
+      voz: { type: "string", maxLength: 140, description: "Optional: a voice id from creads_voces (also «lib:…» accent voices). Every ad with this avatar uses it." },
       video: { type: "string", maxLength: 600, description: "Optional («Persona real»): link of a video of this account where the real person talks to the camera for 30–60 s. Ads made with modelo «persona-real» use it with the new voice on the lips." },
       consentimiento: { type: "boolean", description: "true only if the person is invented by AI or the real person gave permission." },
     }, required: ["nombre", "imagen", "consentimiento"], additionalProperties: false },
     annotations: { title: "Crear avatar", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     run: async (a, call) => {
       if (a.consentimiento !== true) throw new Error("Para crear un avatar, la persona tiene que ser inventada o haber dado su permiso.");
-      const voz = str(a.voz, 60);
+      const voz = str(a.voz, 140);
       let voice_name: string | undefined;
-      if (voz) {
+      if (voz.startsWith("lib:")) {
+        const ac = await call<{ accents: { label: string; voices: { ref: string; name: string }[] }[] }>("/api/voices/acentos");
+        const hit = ac.accents.flatMap((x) => x.voices.map((v) => ({ ...v, label: x.label }))).find((v) => v.ref === voz);
+        if (!hit) throw new Error("Esa voz ya no está en la lista. Revisa creads_voces.");
+        voice_name = `${hit.name} (${hit.label})`;
+      } else if (voz) {
         const v = await call<{ voices: { id: string; name: string }[] }>("/api/voices");
         voice_name = v.voices.find((x) => x.id === voz)?.name;
         if (!voice_name) throw new Error("Esa voz no está en tu cuenta. Revisa creads_voces.");
