@@ -182,6 +182,44 @@ export async function campaigns() {
   });
   return { connected: true as const, rows, currency: acc.currency };
 }
+/** One Meta result type, counted once (Meta reports the same purchase as omni_, plain and pixel types). */
+export function metaAction(list: { action_type: string; value: string }[] | undefined, kind: "complete_registration" | "initiate_checkout" | "purchase" | "lead") {
+  const by = new Map((list ?? []).map((a) => [a.action_type, Number(a.value) || 0]));
+  return by.get(`omni_${kind}`) ?? by.get(kind) ?? by.get(`offsite_conversion.fb_pixel_${kind}`) ?? 0;
+}
+export interface MetaRow { spend: number; impressions: number; clicks: number; regs: number; checkouts: number; buys: number; buyValue: number }
+interface RangeInsight extends Insight { date_start?: string; campaign_id?: string; campaign_name?: string; action_values?: { action_type: string; value: string }[] }
+
+/**
+ * Panel → Campañas: what Meta says for a date range (Chile days), in US$: per day for the account, and per
+ * campaign. Registrations, checkouts and purchases are the ones Meta attributes to its ads (our pixel + CAPI).
+ */
+export async function metaRange(from: string, to: string) {
+  const acc = await account();
+  if (!acc) return { connected: false as const };
+  const usd = (n: number) => (acc.currency === "USD" ? n : n / acc.rate);
+  const fields = "spend,impressions,clicks,actions,action_values";
+  const row = (i: RangeInsight): MetaRow => ({
+    spend: +usd(Number(i.spend ?? 0)).toFixed(2), impressions: Number(i.impressions ?? 0), clicks: Number(i.clicks ?? 0),
+    regs: metaAction(i.actions, "complete_registration"), checkouts: metaAction(i.actions, "initiate_checkout"), buys: metaAction(i.actions, "purchase"),
+    buyValue: +usd(metaAction(i.action_values, "purchase")).toFixed(2),
+  });
+  const [daily, camps, info] = await Promise.all([
+    graph<{ data: RangeInsight[] }>(`${acc.cfg.account}/insights`, { params: { fields, level: "account", time_increment: 1, time_range: { since: from, until: to }, limit: 400 } }),
+    graph<{ data: RangeInsight[] }>(`${acc.cfg.account}/insights`, { params: { fields: `campaign_id,campaign_name,${fields}`, level: "campaign", time_range: { since: from, until: to }, limit: 100 } }),
+    graph<{ data: { id: string; effective_status: string; daily_budget?: string }[] }>(`${acc.cfg.account}/campaigns`, { params: { fields: "id,effective_status,daily_budget", limit: 100 } }).catch(() => ({ data: [] })),
+  ]);
+  const status = new Map(info.data.map((c) => [c.id, c]));
+  return {
+    connected: true as const, currency: acc.currency,
+    days: (daily.data ?? []).map((i) => ({ day: i.date_start ?? "", ...row(i) })),
+    campaigns: (camps.data ?? []).map((i) => {
+      const c = status.get(i.campaign_id ?? "");
+      return { id: i.campaign_id ?? "", nombre: i.campaign_name ?? "Campaña", estado: c?.effective_status ?? "", presupuestoUsd: c?.daily_budget ? +unitsToUsd(Number(c.daily_budget), acc.currency, acc.rate).toFixed(2) : null, ...row(i) };
+    }).sort((a, b) => b.spend - a.spend),
+  };
+}
+
 export interface CampaignView { id: string; nombre: string; estado: string; objetivo: string; presupuestoUsd: number | null; gasto7d: number; impresiones: number; clics: number; ctr: number; frecuencia: number; leads: number; compras: number; costoPorLead: number | null }
 
 type Acc = NonNullable<Awaited<ReturnType<typeof account>>>;
