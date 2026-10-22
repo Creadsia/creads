@@ -1,4 +1,5 @@
 import type { ImageProvider, Job, JobStatus, MediaRef, VideoProvider } from "./types";
+import { fetchRetry } from "./retry";
 
 // Google Gemini API: Veo 3.1 (video) and Nano Banana Pro (images). Server-only.
 // Docs: ai.google.dev/gemini-api/docs/veo and /image-generation (checked 2026-10-15).
@@ -46,7 +47,7 @@ export const nanoBananaPro: ImageProvider = {
     }
     parts.push({ text: prompt });
 
-    const res = await fetch(`${BASE}/models/gemini-3-pro-image-preview:generateContent`, {
+    const res = await fetchRetry(`${BASE}/models/gemini-3-pro-image-preview:generateContent`, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify({
@@ -108,7 +109,7 @@ function veo(id: string, model: string, label: string, usdPerSecond: number): Vi
       // Reference images and 1080p only work with 8-second clips.
       const dur = assets.length || resolution === "1080p" ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8;
 
-      const res = await fetch(`${BASE}/models/${model}:predictLongRunning`, {
+      const res = await fetchRetry(`${BASE}/models/${model}:predictLongRunning`, {
         method: "POST",
         headers: headers(),
         body: JSON.stringify({
@@ -129,7 +130,7 @@ function veo(id: string, model: string, label: string, usdPerSecond: number): Vi
 
     async status(job: Job): Promise<JobStatus> {
       if (!OPERATION.test(job.jobId)) return { state: "failed", error: "Trabajo inválido." };
-      const res = await fetch(`${BASE}/${job.jobId}`, { headers: headers() });
+      const res = await fetchRetry(`${BASE}/${job.jobId}`, { headers: headers() }, { maxWaitMs: 15_000 });
       if (!res.ok) return fail(res, label);
       const op = await res.json();
       if (!op.done) return { state: "running" };

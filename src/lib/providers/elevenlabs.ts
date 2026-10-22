@@ -1,4 +1,5 @@
 import type { Voice, VoiceProvider } from "./types";
+import { fetchRetry } from "./retry";
 
 // ElevenLabs: voice library, instant voice cloning and text-to-speech. Server-only.
 // Endpoints checked against api.elevenlabs.io/openapi.json on 2026-10-15.
@@ -75,7 +76,7 @@ export const elevenlabs: VoiceProvider = {
   async speak(voiceId, text0, opts) {
     if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) throw new Error("Voz inválida.");
     const text = sayBrand(text0);
-    const res = await fetch(`${API}/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
+    const res = await fetchRetry(`${API}/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": key(), "content-type": "application/json", accept: "audio/mpeg" },
       body: JSON.stringify({
@@ -98,7 +99,7 @@ export const elevenlabs: VoiceProvider = {
       form.append("timestamps_granularity", "word");
       form.append("tag_audio_events", "false");
       form.append("language_code", lang === "es" ? "spa" : "eng");
-      return fetch(`${API}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
+      return fetchRetry(`${API}/v1/speech-to-text`, { method: "POST", headers: { "xi-api-key": key() }, body: form });
     };
     let res = await send();
     // if the link isn't accepted, send the file itself (clips are small)

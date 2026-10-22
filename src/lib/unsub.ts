@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { readPrivateJSON, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, updatePrivateJSON } from "./supabase";
 
 // "No more tips" for the activation emails: a signed link per address (nothing to guess), and the list
 // of addresses that opted out. Account emails (payments, password, plan ending) are always sent.
@@ -28,7 +28,6 @@ export async function optedOut(): Promise<Set<string>> {
 }
 
 export async function optOut(email: string) {
-  const set = await optedOut();
-  set.add(email.trim().toLowerCase());
-  await writePrivateJSON(FILE, [...set]);
+  const e = email.trim().toLowerCase();
+  await updatePrivateJSON<string[]>(FILE, (cur) => { const set = new Set((cur ?? []).map((x) => x.toLowerCase())); set.add(e); return [...set]; });
 }

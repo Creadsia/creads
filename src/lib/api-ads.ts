@@ -1,4 +1,4 @@
-import { readPrivateJSON, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, updatePrivateJSON, writePrivateJSON } from "./supabase";
 import { SITE } from "./emails";
 import { FORMATS, SOLD_FORMATS } from "./formats";
 import { videoProviders } from "./providers";
@@ -23,13 +23,14 @@ const OPEN = "api/anuncios/abiertos.json";
 type OpenRef = { ws: string; id: string; at: string };
 async function openList() { return (await readPrivateJSON<OpenRef[]>(OPEN).catch(() => null)) ?? []; }
 async function markOpen(ws: string, id: string) {
-  const l = (await openList()).filter((x) => !(x.ws === ws && x.id === id));
-  await writePrivateJSON(OPEN, [...l, { ws, id, at: new Date().toISOString() }].slice(-300)).catch(() => {});
+  await updatePrivateJSON<OpenRef[]>(OPEN, (cur) => [...(cur ?? []).filter((x) => !(x.ws === ws && x.id === id)), { ws, id, at: new Date().toISOString() }].slice(-300)).catch(() => {});
 }
 async function markClosed(ws: string, id: string) {
-  const l = await openList();
-  if (l.some((x) => x.ws === ws && x.id === id)) await writePrivateJSON(OPEN, l.filter((x) => !(x.ws === ws && x.id === id))).catch(() => {});
+  if (!(await openList()).some((x) => x.ws === ws && x.id === id)) return;
+  await updatePrivateJSON<OpenRef[]>(OPEN, (cur) => (cur ?? []).filter((x) => !(x.ws === ws && x.id === id))).catch(() => {});
 }
+/** The account's list of ads, newest first (under a lock: a demo orders several ads at once). */
+const addToIndex = (ws: string, id: string) => updatePrivateJSON<string[]>(indexFile(ws), (cur) => [id, ...(cur ?? []).filter((x) => x !== id)].slice(0, 100));
 
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr && SOLD_FORMATS.includes(f.id)).map((f) => f.id);
@@ -61,8 +62,7 @@ export async function createAd(ws: string, userId: string, o: Exclude<ReturnType
   const now = new Date().toISOString();
   const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "cola", paso: "En cola", ...o };
   await writePrivateJSON(file(ws, job.id), job);
-  const idx = ((await readPrivateJSON<string[]>(indexFile(ws)).catch(() => null)) ?? []).filter((x) => x !== job.id);
-  await writePrivateJSON(indexFile(ws), [job.id, ...idx].slice(0, 100));
+  await addToIndex(ws, job.id);
   await markOpen(ws, job.id);
   return job;
 }
@@ -149,7 +149,6 @@ export async function saveFinishedAd(ws: string, userId: string, o: { titulo: st
   const now = new Date().toISOString();
   const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "listo", paso: "Video terminado", sello: false, edicion: "simple", ...o };
   await writePrivateJSON(file(ws, job.id), job);
-  const idx = ((await readPrivateJSON<string[]>(indexFile(ws)).catch(() => null)) ?? []).filter((x) => x !== job.id);
-  await writePrivateJSON(indexFile(ws), [job.id, ...idx].slice(0, 100));
+  await addToIndex(ws, job.id);
   return job;
 }

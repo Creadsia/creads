@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readPrivateJSON, writePrivateJSON } from "@/lib/supabase";
+import { updatePrivateJSON } from "@/lib/supabase";
 import { tooMany, clientIp } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +10,7 @@ export async function POST(req: Request) {
   if (limited) return NextResponse.json({ ok: false });
   const day = new Date().toISOString().slice(0, 10);
   try {
-    const counts = (await readPrivateJSON<Record<string, number>>("instalaciones.json")) ?? {};
-    counts[day] = (counts[day] ?? 0) + 1;
-    await writePrivateJSON("instalaciones.json", counts);
+    await updatePrivateJSON<Record<string, number>>("instalaciones.json", (cur) => ({ ...(cur ?? {}), [day]: ((cur ?? {})[day] ?? 0) + 1 }));
   } catch (e) {
     console.error("install count", e instanceof Error ? e.message : e);
   }

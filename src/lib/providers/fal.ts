@@ -1,5 +1,6 @@
 import { fitPrompt, promptLimitFrom } from "../fit-prompt";
 import type { AspectRatio, ImageProvider, ImageRequest, Job, JobStatus, VideoProvider, VideoRequest } from "./types";
+import { fetchRetry } from "./retry";
 
 // fal.ai queue API: one account gives us Kling, Seedance and many more. Server-only.
 // Schemas checked with fal's OpenAPI on 2026-10-15. Prices: fal model pages (audio on, 720p) — the
@@ -291,7 +292,7 @@ const RESULT = /^https:\/\/queue\.fal\.run\/[\w./-]+\/requests\/[\w-]+$/;
 
 /** Starts any fal job on the queue; returns the job's result link, which we use as the job id. */
 export async function falSubmit(endpoint: string, body: Record<string, unknown>, what: string): Promise<string> {
-  const res = await fetch(`${QUEUE}/${endpoint}`, {
+  const res = await fetchRetry(`${QUEUE}/${endpoint}`, {
     method: "POST",
     headers: { ...auth(), "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -308,12 +309,12 @@ export async function falPoll(
   what: string,
 ): Promise<{ state: "queued" | "running" } | { state: "failed"; error: string } | { state: "done"; out: Record<string, unknown> }> {
   if (!RESULT.test(jobUrl)) return { state: "failed", error: "Trabajo inválido." };
-  const st = await fetch(`${jobUrl}/status`, { headers: auth() });
+  const st = await fetchRetry(`${jobUrl}/status`, { headers: auth() }, { maxWaitMs: 15_000 });
   if (!st.ok) return fail(st, what);
   const s = await st.json();
   if (s.status === "IN_QUEUE") return { state: "queued" };
   if (s.status !== "COMPLETED") return { state: "running" };
-  const res = await fetch(jobUrl, { headers: auth() });
+  const res = await fetchRetry(jobUrl, { headers: auth() }, { maxWaitMs: 15_000 });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const d = body?.detail;
@@ -474,7 +475,7 @@ function falImage(m: FalImage): ImageProvider {
     configured: () => Boolean(process.env.FAL_KEY),
     async generate(req) {
       const r = falImageRequest(m.id, req)!;
-      const res = await fetch(`${SYNC}/${r.endpoint}`, {
+      const res = await fetchRetry(`${SYNC}/${r.endpoint}`, {
         method: "POST",
         headers: { ...auth(), "content-type": "application/json" },
         body: JSON.stringify(r.body),

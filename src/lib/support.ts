@@ -1,4 +1,4 @@
-import { readPrivateJSON, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, updatePrivateJSON } from "./supabase";
 
 // What the in-app assistant handled, one small file per day in the private bucket
 // (soporte/<YYYY-MM-DD>.json): the topic, whether it was solved, and the question (shortened).
@@ -14,10 +14,12 @@ const today = () => new Date().toISOString().slice(0, 10);
 export async function logChat(entry: Omit<ChatLog, "at">) {
   try {
     const day = today();
-    const list = (await readPrivateJSON<ChatLog[]>(file(day))) ?? [];
-    if (list.length >= 3000) return;
-    list.push({ ...entry, q: entry.q.slice(0, 240), at: new Date().toISOString() });
-    await writePrivateJSON(file(day), list);
+    await updatePrivateJSON<ChatLog[]>(file(day), (cur) => {
+      const list = cur ?? [];
+      if (list.length >= 3000) return undefined;
+      list.push({ ...entry, q: entry.q.slice(0, 240), at: new Date().toISOString() });
+      return list;
+    });
   } catch (err) {
     console.error("support log", err instanceof Error ? err.message : err);
   }

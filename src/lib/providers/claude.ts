@@ -1,5 +1,6 @@
 import type { TextAI } from "./types";
 import { noteOutage } from "../balances";
+import { fetchRetry } from "./retry";
 
 // Claude through the Anthropic Messages API, called only from the server.
 // Main model for scripts, scenes and the quality review; a faster, cheaper one for the support chat.
@@ -41,7 +42,7 @@ async function call({ system, prompt, images, json, maxTokens }: Parameters<Text
       { type: "text", text: json ? `${prompt}\n\nRespond with JSON only, no text before or after.` : prompt },
     ];
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": key,

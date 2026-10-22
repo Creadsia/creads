@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, updatePrivateJSON, writePrivateJSON } from "./supabase";
 import { alarmEmail } from "./emails";
 import { sendEmail } from "./providers/email";
 
@@ -100,12 +100,14 @@ export async function logError(e: { area: ErrArea; message: string; ref?: string
     const n = 1 + (mem?.skipped ?? 0);
     const entry: ErrEntry = { at: new Date().toISOString(), area: e.area, sig, message, ...(e.ref ? { ref: redact(e.ref).slice(0, 80) } : {}), ...(path ? { path } : {}), ...(e.ws ? { ws: e.ws } : {}), ...(n > 1 ? { n } : {}) };
     const f = file(day(), browser);
-    const list = (await readPrivateJSON<ErrEntry[]>(f)) ?? [];
-    const firstToday = !list.some((x) => x.sig === sig);
-    if (list.length < (browser ? CAP.browser : CAP.server)) {
-      list.push(entry);
-      await writePrivateJSON(f, list);
-    }
+    let firstToday = false;
+    const list = (await updatePrivateJSON<ErrEntry[]>(f, (cur) => {
+      const l = cur ?? [];
+      firstToday = !l.some((x) => x.sig === sig);
+      if (l.length >= (browser ? CAP.browser : CAP.server)) return undefined;
+      l.push(entry);
+      return l;
+    })) ?? (await readPrivateJSON<ErrEntry[]>(f)) ?? [];
     if (browser) {
       // Anyone can report a browser error, so its text never goes into an email. Only a real wave of
       // them (many reports today) sends one fixed-text alarm; the details are in the Panel.

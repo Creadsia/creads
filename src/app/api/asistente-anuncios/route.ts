@@ -6,6 +6,7 @@ import { studioAs } from "@/lib/api-ads";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { RECETA } from "@/lib/asistente-receta";
 import { publicError } from "@/lib/public-error";
+import { fetchRetry } from "@/lib/providers/retry";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
 
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
         body: JSON.stringify({ model: MODEL, max_tokens: 2500, system: RECETA, tools, messages: msgs }),
