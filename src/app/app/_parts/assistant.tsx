@@ -103,7 +103,8 @@ export default function Assistant() {
 
   return (
     <>
-      {!open && (
+      {/* Automático is already a chat: the help bubble would sit on top of its «Enviar» button */}
+      {!open && !path.startsWith("/app/automatico") && (
         <button ref={launcher} type="button" onClick={() => setOpen(true)} aria-label="Abrir el Asistente Creads"
           className="fixed right-4 bottom-4 z-[55] flex items-center gap-2 rounded-full bg-[image:var(--grad)] p-3.5 font-semibold text-white shadow-[0_12px_32px_-10px_rgba(124,58,237,0.7)] transition-transform hover:-translate-y-0.5 sm:px-5 sm:py-3 print:hidden">
           <Icon d={CHAT} />
