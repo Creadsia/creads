@@ -13,7 +13,9 @@ export interface Golpe { texto: string; desde: number; hasta: number }
 export interface Cierre { titulo: string; linea: string }
 export interface ProPlan { golpes: Golpe[]; cierre: Cierre }
 
-export const END_SECS = 2.2;
+export const END_SECS = 2.6;
+/** How long the closing card takes to fade in over the last frame. */
+const END_FADE = 0.45;
 
 import { type ProLook, LOOKS } from "./edit-looks";
 export { LOOKS, resolveLook, type ProLook } from "./edit-looks";
@@ -128,9 +130,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ev.push(`Dialogue: 1,${t2(g.desde)},${t2(g.hasta)},Golpe,,0,0,0,,{${anim}}${txt}`);
   });
   // closing card (the background is drawn by FFmpeg): title, a two-colour underline, the line
-  const a = T, b = T + END_SECS;
+  const a = T + END_FADE * 0.6, b = T + END_SECS;
   const cx = Math.round(W / 2), cy = Math.round(H * 0.42);
-  ev.push(`Dialogue: 2,${t2(a)},${t2(b)},Fin,,0,0,0,,{\\pos(${cx},${cy})${look.pop ? "\\fscx40\\fscy40\\t(0,220,\\fscx100\\fscy100)" : "\\fad(250,0)"}}${escAss(plan.cierre.titulo)}`);
+  ev.push(`Dialogue: 2,${t2(a)},${t2(b)},Fin,,0,0,0,,{\\pos(${cx},${cy})${look.pop ? "\\fad(120,0)\\fscx60\\fscy60\\t(0,260,\\fscx100\\fscy100)" : "\\fad(300,0)"}}${escAss(plan.cierre.titulo)}`);
   const bw = Math.round(W * 0.3), bh = Math.max(4, Math.round(8 * s)), by = cy + Math.round(endBig * 0.75);
   ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx - bw},${by})\\c${ass(look.c1)}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
   ev.push(`Dialogue: 2,${t2(a + 0.12)},${t2(b)},Fin,,0,0,0,,{\\an7\\pos(${cx},${by})\\c${ass(look.c2)}\\p1}m 0 0 l ${bw} 0 l ${bw} ${bh} l 0 ${bh}{\\p0}`);
@@ -166,9 +168,10 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
     `drawbox=x=0:y=0:w=iw:h=ih:color=white@0.55:t=fill:enable='between(t,${c},${(c + 0.04).toFixed(3)})'`,
     `drawbox=x=0:y=0:w=iw:h=ih:color=${ffc(look.c1)}@0.2:t=fill:enable='between(t,${(c + 0.04).toFixed(3)},${(c + 0.12).toFixed(3)})'`,
   ].join(",")).join(",") : "";
-  const endBg = `drawbox=x=0:y=0:w=iw:h=ih:color=${ffc(look.endBg)}@1:t=fill:enable='gte(t,${T.toFixed(3)})'`;
   const bar = look.bar ? `drawbox=x=0:y=0:w='max(1,iw*min(t,${T.toFixed(3)})/${T.toFixed(3)})':h=${Math.max(4, Math.round(H / 240))}:color=${ffc(look.c1)}:t=fill:enable='lt(t,${T.toFixed(3)})'` : "";
-  const vf = [`tpad=stop_mode=clone:stop_duration=${END_SECS}`, zoom, flashes, endBg, bar, `ass=filename='${esc(path.join(dir, "pro.ass"))}':fontsdir='${esc(FONTS)}'`].filter(Boolean).join(",");
+  const vf = [`tpad=stop_mode=clone:stop_duration=${END_SECS}`, zoom, flashes, bar].filter(Boolean).join(",");
+  // the closing card fades in over the last frame (it used to snap in: the owner found it abrupt)
+  const endBg = `color=c=${ffc(look.endBg)}:s=${W}x${H}:r=30:d=${total.toFixed(3)},format=yuva420p,fade=t=in:st=${T.toFixed(3)}:d=${END_FADE}:alpha=1`;
 
   // sounds: impact at the start, a whoosh on every cut, a pop on every headline, a riser into the closing card
   // as loud as the look: «fuerte» (all of it), «suave» (soft whooshes and the riser only), «ninguno»
@@ -181,7 +184,7 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
   ];
   const args = ["-y", "-v", "error", "-i", input];
   sounds.forEach((x) => args.push("-i", path.join(SFX, x.file)));
-  const parts = [`[0:v]${vf}[vo]`, `[0:a]aresample=44100,aformat=channel_layouts=stereo,apad=whole_dur=${total.toFixed(3)}[a0]`];
+  const parts = [`[0:v]${vf}[v1]`, `${endBg}[eb]`, `[v1][eb]overlay=shortest=1,ass=filename='${esc(path.join(dir, "pro.ass"))}':fontsdir='${esc(FONTS)}'[vo]`, `[0:a]aresample=44100,aformat=channel_layouts=stereo,apad=whole_dur=${total.toFixed(3)}[a0]`];
   sounds.forEach((x, i) => {
     const ms = Math.round(x.at * 1000);
     parts.push(`[${i + 1}:a]aresample=44100,aformat=channel_layouts=stereo,volume=${x.vol},adelay=${ms}|${ms}[s${i}]`);

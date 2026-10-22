@@ -173,8 +173,18 @@ function selloStyles(W: number, H: number, bottom: boolean) {
   ];
 }
 
-/** Builds the .ass captions (and an .srt) from word timings on the final timeline. */
-export function captions(words0: Word[], W: number, H: number, aspect: string, style0: CaptionStyle, totalSec = 0) {
+/** The parts of [a, b] outside every window (Edición Pro: no subtitle while a headline says the same words). */
+export function outside(a: number, b: number, hide: { desde: number; hasta: number }[], min = 0.25): [number, number][] {
+  let parts: [number, number][] = [[a, b]];
+  for (const h of hide) {
+    parts = parts.flatMap(([x, y]) => (h.hasta <= x || h.desde >= y ? [[x, y] as [number, number]] : ([[x, h.desde], [h.hasta, y]] as [number, number][]).filter(([p, q]) => q - p > 0)));
+  }
+  return parts.filter(([x, y]) => y - x >= min);
+}
+
+/** Builds the .ass captions (and an .srt) from word timings on the final timeline. `hide`: moments with a
+ * Pro headline on screen, where the subtitle steps aside so the viewer never reads two texts at once. */
+export function captions(words0: Word[], W: number, H: number, aspect: string, style0: CaptionStyle, totalSec = 0, hide: { desde: number; hasta: number }[] = []) {
   const st = normalizeStyle(style0);
   // join "34" + ",000" back into one token
   const words: Word[] = [];
@@ -252,7 +262,7 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
         const e0 = j + 1 < c.length ? c[j + 1].s : b;
         if (e0 <= s0) return;
         const line = disp.map((t, q) => (q === j ? `{\\c${accent}${big}}${t}{\\c${base}${back}}` : t)).join(" ");
-        ass.push(`Dialogue: 0,${ts(s0)},${ts(e0)},Cap,,0,0,0,,${open(j === 0)}${line}`);
+        for (const [x, y] of outside(s0, e0, hide, 0.15)) ass.push(`Dialogue: 0,${ts(x)},${ts(y)},Cap,,0,0,0,,${open(j === 0 && x === s0)}${line}`);
       });
     } else if (look === "karaoke") {
       // each word fills with the accent colour while it is said (\kf, in hundredths of a second)
@@ -261,12 +271,14 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
         const cs = Math.max(1, Math.round((until - (j === 0 ? a : w.s)) * 100));
         return `{\\kf${cs}}${disp[j]}`;
       }).join(" ");
-      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}${line}`);
+      const vis = outside(a, b, hide, 0);
+      if (vis.length === 1 && vis[0][0] === a && vis[0][1] === b) ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}${line}`);
+      else for (const [x, y] of outside(a, b, hide)) ass.push(`Dialogue: 0,${ts(x)},${ts(y)},Cap,,0,0,0,,${open(x === a)}${disp.join(" ")}`);
     } else if (look === "palabra") {
       // one word, a quick "pop" as it appears
-      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}{\\fscx80\\fscy80\\t(0,90,\\fscx108\\fscy108)\\t(90,160,\\fscx100\\fscy100)}${disp.join(" ")}`);
+      for (const [x, y] of outside(a, b, hide, 0.1)) ass.push(`Dialogue: 0,${ts(x)},${ts(y)},Cap,,0,0,0,,${open(true)}{\\fscx80\\fscy80\\t(0,90,\\fscx108\\fscy108)\\t(90,160,\\fscx100\\fscy100)}${disp.join(" ")}`);
     } else {
-      ass.push(`Dialogue: 0,${ts(a)},${ts(b)},Cap,,0,0,0,,${open(true)}${disp.join(" ")}`);
+      for (const [x, y] of outside(a, b, hide)) ass.push(`Dialogue: 0,${ts(x)},${ts(y)},Cap,,0,0,0,,${open(x === a)}${disp.join(" ")}`);
     }
     srt.push(`${k + 1}\n${srtTs(a)} --> ${srtTs(b)}\n${toks.map((t) => shapeWord(t, { case: "normal", punct: true })).join(" ")}\n`);
   });

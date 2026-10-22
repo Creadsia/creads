@@ -74,10 +74,8 @@ export async function POST(req: Request) {
       offset += segLen(p.clip);
     }
     const [W, H] = frameSize(aspect);
-    // captions, and/or the «Hecho con Creads IA» badge (also without captions)
-    const cap = (withCaptions && timeline.length) || style.sello ? captions(withCaptions ? timeline : [], W, H, aspect, style, offset) : null;
-    let bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
-    let duration = offset;
+    // Edición Pro: the headlines are planned first, so the subtitles step aside while one is on screen
+    // (the owner's first Automático ad showed both at once: two texts saying the same words)
     let proPlan: ProPlan | null = null;
     if (pro) {
       const script = clips.map((c) => c.text ?? "").join(" ").trim();
@@ -90,10 +88,22 @@ export async function POST(req: Request) {
       proPlan = cleanPlan(raw, offset, fallback);
       if (cierreHint.titulo) proPlan.cierre.titulo = cierreHint.titulo;
       if (cierreHint.linea) proPlan.cierre.linea = cierreHint.linea;
-      // a failed Pro pass never loses the ad: the plain montage (cuts + captions) is delivered instead
+    }
+    // captions, and/or the «Hecho con Creads IA» badge (also without captions)
+    const makeCap = (hide: { desde: number; hasta: number }[]) =>
+      (withCaptions && timeline.length) || style.sello ? captions(withCaptions ? timeline : [], W, H, aspect, style, offset, hide) : null;
+    let cap = makeCap(proPlan?.golpes ?? []);
+    let bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null);
+    let duration = offset;
+    if (proPlan) {
+      // a failed Pro pass never loses the ad: the plain montage (cuts + full captions) is delivered instead
       const r = await proPass(ff, dir, path.join(dir, "final.mp4"), W, H, offset, cutTimes(prepared.map((p) => segLen(p.clip))), proPlan, look)
         .catch((e) => { console.error("montage pro", e instanceof Error ? e.message : e); return null; });
-      if (r) { bytes = r.bytes; duration = r.seconds; } else proPlan = null;
+      if (r) { bytes = r.bytes; duration = r.seconds; }
+      else {
+        proPlan = null;
+        if (cap) { cap = makeCap([]); bytes = await build(dir, prepared.map((p) => p.clip), aspect, cap?.ass ?? null); }
+      }
     }
 
     const stamp = Date.now();
