@@ -5,6 +5,7 @@ import { TOOLS, type Call, type Ctx } from "@/lib/mcp";
 import { studioAs } from "@/lib/api-ads";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { RECETA } from "@/lib/asistente-receta";
+import { repair } from "@/lib/asistente-history";
 import { publicError } from "@/lib/public-error";
 import { explainFailure, outOfFundsService } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return NextResponse.json({ error: "El asistente no está disponible en este momento." }, { status: 503 });
   const b = await req.json().catch(() => null);
-  const history = (Array.isArray(b?.messages) ? b.messages : []).map(clean).filter((m: Msg | null): m is Msg => Boolean(m)).slice(-40);
+  const history = repair((Array.isArray(b?.messages) ? b.messages : []).map(clean).filter((m: Msg | null): m is Msg => Boolean(m)).slice(-40));
   if (!history.length || history[history.length - 1].role !== "user") return NextResponse.json({ error: "Escribe tu mensaje." }, { status: 400 });
 
   const ws = s.user.workspace;
@@ -75,11 +76,13 @@ export async function POST(req: Request) {
   const last = history[history.length - 1];
   const lastText = typeof last.content === "string" ? last.content : last.content.filter((x: Block) => x.type === "text").map((x: Block) => String(x.text)).join("\n");
   const shown = [...new Set<string>(lastText.match(REF) ?? [])].slice(0, 3);
-  const pics = (await Promise.all(shown.map((r) => ctx.picture(r).catch(() => null)))).filter((p): p is { data: string; mimeType: string } => Boolean(p));
+  // pictures go as a link Claude downloads itself (base64 copies made requests too big: Benjamín's story-format batch)
+  const look = async (ref: string) => (ownsMedia(ref, ws) && /\.(png|jpe?g|webp)$/i.test(ref) ? { type: "image", source: { type: "url", url: await fetchableUrl(ref, ws, 3600) } } : null);
+  const pics = (await Promise.all(shown.map((r) => look(r).catch(() => null)))).filter(Boolean);
   const msgs: { role: string; content: unknown }[] = history.map((m: Msg) => ({ role: m.role, content: m.content }));
   if (pics.length) {
     const base = typeof last.content === "string" ? [{ type: "text", text: last.content }] : last.content;
-    msgs[msgs.length - 1] = { role: "user", content: [...pics.map((p) => ({ type: "image", source: { type: "base64", media_type: p.mimeType, data: p.data } })), ...base] };
+    msgs[msgs.length - 1] = { role: "user", content: [...pics, ...base] };
   }
 
   const tools = TOOLS.filter((t) => USE.has(t.name)).map((t) => ({ name: t.name, description: t.description, input_schema: t.inputSchema }));
@@ -98,22 +101,31 @@ export async function POST(req: Request) {
   });
   const added: Msg[] = []; // what the page appends to its history (pictures as notes)
   const ui = { images: [] as string[], ads: [] as string[] };
+  let pendingNote = false;
 
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
       const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-        body: JSON.stringify({ model: MODEL, max_tokens: 2500, system, tools: cachedTools, messages: withCache(msgs) }),
+        body: JSON.stringify({ model: MODEL, max_tokens: 8000, system, tools: cachedTools, messages: withCache(msgs) }),
         signal: AbortSignal.timeout(120_000),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(`asistente ${res.status}: ${data?.error?.message ?? ""}`);
-      const content = (data?.content ?? []) as Block[];
+      const raw = (data?.content ?? []) as Block[];
+      const finished = data?.stop_reason === "tool_use";
+      // tool calls only count when the reply finished asking for them (a reply cut at the token limit is dropped)
+      const content = raw.filter((x) => x.type === "text" ? String(x.text ?? "").trim() : x.type !== "tool_use" || finished);
+      if (!content.length) { added.push({ role: "assistant", content: [{ type: "text", text: "Se me cortó la respuesta. Escribe «continúa» y sigo donde quedé." }] }); break; }
       msgs.push({ role: "assistant", content });
       added.push({ role: "assistant", content: content.filter((x) => x.type === "text" || x.type === "tool_use") });
       const uses = content.filter((x) => x.type === "tool_use");
-      if (data?.stop_reason !== "tool_use" || !uses.length) break;
+      if (!finished || !uses.length) {
+        if (data?.stop_reason === "max_tokens") added.push({ role: "assistant", content: [{ type: "text", text: "Se me cortó la respuesta. Escribe «continúa» y sigo donde quedé." }] });
+        break;
+      }
+      if (step === MAX_STEPS - 1) pendingNote = true;
 
       const results: Block[] = [];
       const notes: Block[] = [];
@@ -125,9 +137,9 @@ export async function POST(req: Request) {
           const imgs = (r.images ?? []).slice(0, 3);
           ui.images.push(...imgs);
           if ((u.name === "creads_crear_anuncio" || u.name === "creads_montar_demo") && typeof r.data?.id === "string") ui.ads.push(r.data.id);
-          const seen = (await Promise.all(imgs.map((i) => ctx.picture(i).catch(() => null)))).filter((p): p is { data: string; mimeType: string } => Boolean(p));
+          const seen = (await Promise.all(imgs.map((i) => look(i).catch(() => null)))).filter(Boolean);
           const text = `${r.text}${imgs.length ? `\n(Imagen: ${imgs.join(", ")})` : ""}`;
-          results.push({ type: "tool_result", tool_use_id: u.id, content: [{ type: "text", text }, ...seen.map((p) => ({ type: "image", source: { type: "base64", media_type: p.mimeType, data: p.data } }))] });
+          results.push({ type: "tool_result", tool_use_id: u.id, content: [{ type: "text", text }, ...seen] as Block[] });
           notes.push({ type: "tool_result", tool_use_id: u.id, content: text });
         } catch (e) {
           const msg = (e instanceof Error ? e.message : String(e)).slice(0, 300);
@@ -138,12 +150,13 @@ export async function POST(req: Request) {
       msgs.push({ role: "user", content: results });
       added.push({ role: "user", content: notes });
     }
+    if (pendingNote) added.push({ role: "assistant", content: [{ type: "text", text: "Voy avanzando, pero es harto trabajo de una vez. Escribe «continúa» y sigo." }] });
     return NextResponse.json({ messages: added, ui });
   } catch (err) {
     console.error("asistente-anuncios", err instanceof Error ? err.message : err);
     // Claude without balance: the owner is told exactly that (and it shows in Saldos); a customer sees a calm message
     const svc = outOfFundsService(err, "claude");
-    const error = svc ? (isOwner(s.user) ? await explainFailure(err, true, "claude") : "El asistente no está disponible en este momento. Vuelve a intentar en unos minutos.") : publicError(err, "El asistente no pudo responder. Intenta de nuevo.");
+    const error = svc ? (isOwner(s.user) ? await explainFailure(err, true, "claude") : "El asistente no está disponible en este momento. Vuelve a intentar en unos minutos.") : (isOwner(s.user) ? `El asistente falló: ${(err instanceof Error ? err.message : String(err)).slice(0, 300)}` : publicError(err, "El asistente no pudo responder. Intenta de nuevo."));
     return NextResponse.json({ error, messages: added, ui }, { status: 502 });
   }
 }
