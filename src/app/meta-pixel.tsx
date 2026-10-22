@@ -28,6 +28,20 @@ function loadPixel() {
   fetch("/api/meta/pixel").then((r) => r.json()).then((d: { id?: string }) => start(/^\d{8,20}$/.test(d.id ?? "") ? d.id! : PIXEL_ID)).catch(() => start(PIXEL_ID));
 }
 
+// RedTrack's universal script (campaign tracking), also only with consent. Its click id comes back to our
+// server in a cookie; a ?rtkcid= in the link is kept too, in case the script is blocked.
+const RTK_SRC = process.env.NEXT_PUBLIC_REDTRACK_SCRIPT || "";
+function loadRedtrack() {
+  try {
+    const id = new URLSearchParams(location.search).get("rtkcid");
+    if (id && /^[A-Za-z0-9_-]{10,64}$/.test(id)) document.cookie = `creads_rtk=${id}; Max-Age=${90 * 86400}; Path=/; SameSite=Lax; Secure`;
+  } catch {}
+  if (!/^https:\/\/[\w.-]+\//.test(RTK_SRC) || document.querySelector("script[data-rtk]")) return;
+  const s = document.createElement("script");
+  s.async = true; s.src = RTK_SRC; s.dataset.rtk = "1";
+  document.body.appendChild(s);
+}
+
 const readChoice = () => {
   try { const m = document.cookie.match(/(?:^|;\s*)creads_consent=([01])/); return m ? m[1] : null; } catch { return null; }
 };
@@ -46,6 +60,7 @@ export default function MetaPixel() {
     if (choice !== "1") return;
     if (path.startsWith("/clave")) return; // the password-reset link carries a secret: never sent to Meta
     loadPixel();
+    loadRedtrack();
     const w = window as unknown as { fbq: Fbq; __creadsQ?: unknown[][] };
     w.fbq("track", "PageView");
     // events a page fired before the pixel was ready (e.g. the checkout's ViewContent)
@@ -59,8 +74,8 @@ export default function MetaPixel() {
       className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-2xl backdrop-blur sm:flex-nowrap">
       <p className="min-w-0 flex-1 basis-full text-muted sm:basis-auto">
         {es
-          ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta) y cómo se usa el sitio para mejorarlo (PostHog). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
-          : <>We use cookies to measure which ads bring visitors (Meta) and how the site is used so we can improve it (PostHog). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
+          ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta y RedTrack) y cómo se usa el sitio para mejorarlo (PostHog). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
+          : <>We use cookies to measure which ads bring visitors (Meta and RedTrack) and how the site is used so we can improve it (PostHog). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
       </p>
       <span className="flex shrink-0 gap-2">
         <button type="button" onClick={() => { saveChoice("0"); setChoice("0"); }} className="rounded-lg border border-line px-3 py-2 font-semibold text-muted hover:text-ink">{es ? "Solo necesarias" : "Essential only"}</button>

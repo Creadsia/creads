@@ -1,3 +1,4 @@
+import { rtkFrom, sendRedtrack } from "./redtrack";
 import { createHash, randomUUID } from "node:crypto";
 import { metaConn } from "./meta-conexiones";
 
@@ -11,7 +12,7 @@ const API = "https://graph.facebook.com/v21.0";
 const sha = (v: string) => createHash("sha256").update(v.trim().toLowerCase()).digest("hex");
 
 /** What we know about the visitor from the request (consent, Meta cookies, IP, browser). */
-export interface Visitor { consent: boolean; fbp?: string; fbc?: string; ip?: string; ua?: string; url?: string; src?: string }
+export interface Visitor { consent: boolean; fbp?: string; fbc?: string; ip?: string; ua?: string; url?: string; src?: string; rtk?: string }
 
 export function visitorFrom(req: Request): Visitor {
   const cookies = Object.fromEntries((req.headers.get("cookie") ?? "").split(/;\s*/).map((c) => {
@@ -22,6 +23,7 @@ export function visitorFrom(req: Request): Visitor {
     consent: cookies.creads_consent === "1",
     fbp: cookies._fbp,
     fbc: cookies._fbc,
+    rtk: cookies.creads_consent === "1" ? rtkFrom(cookies) : undefined,
     ip: (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "").trim() || undefined,
     // the channel the person first came from (instagram, google…), for "Ventas por fuente"
     src: cookies.creads_consent === "1" && /^[a-z0-9._-]{2,40}$/.test(cookies.creads_src ?? "") ? cookies.creads_src : undefined,
@@ -43,6 +45,8 @@ export interface MetaEvent {
 /** Sends one event. Never throws (measurement must not break the product). */
 export async function sendMeta(ev: MetaEvent, v: Visitor) {
   if (!v.consent) return false;
+  // the same step goes to RedTrack (when it's set up and the visitor came through it)
+  if (v.rtk) await sendRedtrack(ev.name, v.rtk, ev.value, ev.currency ?? "USD");
   const conn = await metaConn().catch(() => null);
   const token = conn?.capiToken;
   if (!token || !conn) return false;
