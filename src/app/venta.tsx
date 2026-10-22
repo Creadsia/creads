@@ -31,6 +31,10 @@ const DEMOS = {
   dent: { src: "/demos/dentista.mp4", poster: "/demos/dentista.jpg", label: "Clínica dental" },
   doc: { src: "/demos/doctora.mp4", poster: "/demos/doctora.jpg", label: "Consulta médica" },
   creads: { src: "/demos/creads.mp4", poster: "/demos/creads.jpg", label: "Marca online" },
+  rubia: { src: "/demos/rubia.mp4", poster: "/demos/rubia.jpg", label: "Bebida energética" },
+  gym: { src: "/demos/gym.mp4", poster: "/demos/gym.jpg", label: "Gimnasio" },
+  bano: { src: "/demos/bano.mp4", poster: "/demos/bano.jpg", label: "Cosmética" },
+  cocina: { src: "/demos/cocina.mp4", poster: "/demos/cocina.jpg", label: "Vida sana" },
 };
 
 const STEPS = [
@@ -43,7 +47,7 @@ const STEPS = [
 const FAQ = [
   ["¿Qué diferencia hay entre Automático y Manual?", "En Automático conversas con Creads como con una agencia: te pregunta, propone, hace el video, lo revisa y te lo entrega. En Manual haces cada paso tú (guion, voz, escenas, edición) y decides cada detalle. Puedes usar los dos con el mismo plan."],
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
-  ["¿Se ve real?", "Mira los ejemplos de arriba con sonido: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
+  ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
   ["¿En qué idioma y con qué acento?", "En español con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés. También puedes usar tu propia voz."],
   ["¿Qué pasa si un video falla?", "Si la IA no entrega el video, los segundos vuelven solos a tu saldo. Y antes de entregarte un anuncio, Creads lo revisa y rehace lo que salió mal."],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago, en pesos chilenos al cambio del día. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
@@ -136,12 +140,14 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
 
             <div className="flex flex-col items-center gap-4">
               <div className="flex w-full items-end justify-center">
-                <DemoPhone {...DEMOS.dent} className="relative z-0 -mr-5 w-[29vw] max-w-[165px] shrink-0 -rotate-6 sm:-mr-8" />
+                <DemoPhone {...DEMOS.rubia} className="relative z-0 -mr-10 hidden w-[120px] shrink-0 -rotate-12 sm:block lg:w-[135px]" />
+                <DemoPhone {...DEMOS.dent} className="relative z-[1] -mr-5 w-[29vw] max-w-[165px] shrink-0 -rotate-6 sm:-mr-8" />
                 <DemoPhone {...DEMOS.cafe} big className="relative z-10 w-[40vw] max-w-[235px] shrink-0" />
-                <DemoPhone {...DEMOS.doc} className="relative z-0 -ml-5 w-[29vw] max-w-[165px] shrink-0 rotate-6 sm:-ml-8" />
+                <DemoPhone {...DEMOS.doc} className="relative z-[1] -ml-5 w-[29vw] max-w-[165px] shrink-0 rotate-6 sm:-ml-8" />
+                <DemoPhone {...DEMOS.gym} className="relative z-0 -ml-10 hidden w-[120px] shrink-0 rotate-12 sm:block lg:w-[135px]" />
               </div>
               <p className="rounded-full border border-line bg-surface/80 px-4 py-1.5 text-center text-sm font-semibold backdrop-blur">
-                Ninguna de estas personas existe. <span className="text-muted">Toca para escucharlas.</span>
+                Ninguna de estas personas existe. <span className="text-muted">Las hizo Creads.</span>
               </p>
             </div>
           </div>
@@ -296,8 +302,10 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Empieza con {emprende.name} por {usd(emprende.monthly)} al mes. Si no te sirve, cancelas con un clic.</p>
               <Cta>Hacer mi primer anuncio</Cta>
             </div>
-            <div className="relative mx-auto w-40 sm:w-48">
-              <DemoPhone {...DEMOS.creads} />
+            <div className="relative mx-auto flex items-end">
+              <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-32 -rotate-6 sm:w-36" />
+              <DemoPhone {...DEMOS.creads} className="relative z-10 w-40 sm:w-44" />
+              <DemoPhone {...DEMOS.cocina} className="relative z-0 -ml-6 w-32 rotate-6 sm:w-36" />
             </div>
           </div>
         </section>
