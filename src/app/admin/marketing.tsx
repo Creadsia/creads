@@ -30,6 +30,14 @@ const CONN_FIELDS: { k: ConnKey; label: string; secret?: boolean; hint: string }
   { k: "testEventCode", label: "Código de eventos de prueba (opcional)", hint: "Solo para probar: Administrador de eventos → Probar eventos. Bórralo cuando termines." },
 ];
 
+// same list as EVENTOS in lib/marketing (that module is server-only)
+const EVENTO_OPTS: [string, string, string][] = [
+  ["registro", "Cuenta creada (CompleteRegistration)", "Se envía cada vez que alguien crea su cuenta: mucho volumen, Meta aprende rápido."],
+  ["inicio_pago", "Inicio de pago (InitiateCheckout)", "Se envía cuando alguien va a pagar un plan."],
+  ["compra", "Compra (Purchase)", "Se envía cuando se aprueba un pago: lo más valioso, pero Meta necesita ~50 a la semana para aprender bien."],
+  ["lead", "Lead", "Ojo: hoy casi no se envía (solo la lista de espera, que no está en la página)."],
+];
+
 const card = "flex min-w-0 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:p-5";
 const btn = "rounded-lg border border-line px-3 py-1.5 text-sm font-semibold disabled:opacity-50";
 const input = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm";
@@ -93,6 +101,13 @@ export default function Marketing() {
           <input id="mk-cap" inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} className="w-24 rounded-lg border border-line bg-surface px-2 py-1.5 font-mono" />
           <button className={btn}>Guardar</button>
         </form>
+        <label className="mt-1 flex flex-wrap items-center gap-2 text-sm" htmlFor="mk-evento">
+          <span>Evento que buscan las campañas de conversión</span>
+          <select id="mk-evento" value={s.evento ?? "registro"} onChange={(e) => call("PATCH", { evento: e.target.value })} className="rounded-lg border border-line bg-surface px-2 py-1.5">
+            {EVENTO_OPTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </label>
+        <p className="text-xs text-muted">{EVENTO_OPTS.find(([k]) => k === (s.evento ?? "registro"))?.[2]} Una campaña puede pedir otro evento; si no dice nada, usa este.</p>
         <p className="text-xs text-muted">Ningún agente puede activar una campaña ni subir un presupuesto si la suma de presupuestos diarios pasa este tope. Las campañas nuevas siempre se suben en pausa. Ojo: Meta puede gastar hasta ~1,75 veces el presupuesto un día puntual, pero en la semana respeta el promedio.</p>
       </section>
 

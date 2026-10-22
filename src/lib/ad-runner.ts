@@ -20,11 +20,13 @@ export interface AdJob {
   indicaciones?: string;
   /** The Pro edit's look: template and brand colours. */
   look?: { plantilla?: string; c1?: string; c2?: string };
+  /** false = no subtitles at all (the cuts only, or the Pro edit without captions). */
+  subtitulos?: boolean;
 }
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
 const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string, avatar = false) =>
-  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${avatar ? " The person from the first reference image (same face, hair and look)." : ""} Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
+  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${avatar ? " The person from the first reference image (same face, hair and clothes)." : ""} Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
 
 /** Runs one step and returns what changed (never throws: an error stops the job with a plain message). */
 export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise<string>, sello: boolean): Promise<Partial<AdJob>> {
@@ -41,6 +43,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
         title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}),
+        lipsync: "pro", // the most natural mouth (sync-3) on the voice Creads records, like the studio
         clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });
       const ids = ad.clips.map((c) => c.id);
@@ -73,7 +76,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       return todo.length ? { estado: "generando", revisado: true, paso: `Rehaciendo ${todo.length} corte(s) que la revisión encontró con errores` } : { estado: "armando", revisado: true, paso: "Revisión de calidad aprobada" };
     }
     if (j.estado === "armando") {
-      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: true, style: { ...DEFAULT_STYLE, sello }, pro: j.edicion !== "simple", ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}) }, 290_000);
+      const d = await studio<{ url: string }>("/api/montage", { adId: j.adId, captions: j.subtitulos !== false, style: { ...DEFAULT_STYLE, sello, ...(j.look?.c1 ? { accent: j.look.c1 } : {}) }, pro: j.edicion !== "simple", ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}) }, 290_000);
       return { estado: "listo", paso: "Video terminado", videoUrl: d.url };
     }
     return {};

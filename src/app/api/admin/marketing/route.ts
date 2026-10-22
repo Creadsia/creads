@@ -3,7 +3,7 @@ import { currentUser, isAdmin } from "@/lib/admin";
 import { addIdea, campaigns, commitMarketing, finishedAds, loadMarketing, repliesToday } from "@/lib/marketing";
 import { metaAds, metaToken, probarMeta } from "@/lib/meta-graph";
 import { videoProviders } from "@/lib/providers";
-import { DEFAULT_AUTOPROD } from "@/lib/marketing";
+import { DEFAULT_AUTOPROD, isEvento } from "@/lib/marketing";
 import { metaConnView, saveMetaConn } from "@/lib/meta-conexiones";
 import { DEFAULT_PAUSA, decidirReel, kickPiloto, pilotoOf } from "@/lib/piloto";
 import { sbRest } from "@/lib/supabase";
@@ -105,7 +105,9 @@ export async function PATCH(req: Request) {
   }
   if (b?.capUsd !== undefined && !(Number(b.capUsd) >= 0 && Number(b.capUsd) <= 5000)) return bad("El tope diario debe ser entre US$0 y US$5.000.");
   if (b?.cuenta && (!/^\d{5,30}$/.test(String(b.cuenta.igUserId ?? "")) || String(b.cuenta.nombre ?? "").trim().length < 2)) return bad("La cuenta necesita un nombre y su número de Instagram (solo dígitos).");
+  if (b?.evento !== undefined && !isEvento(b.evento)) return bad("Ese evento no existe.");
   await commitMarketing((s) => {
+    if (isEvento(b?.evento)) s.evento = b.evento;
     if (b?.capUsd !== undefined) s.capUsd = Math.round(Number(b.capUsd) * 100) / 100;
     if (b?.cuenta) {
       const c = { id: `ig-${String(b.cuenta.igUserId)}`, nombre: String(b.cuenta.nombre).trim().slice(0, 60), igUserId: String(b.cuenta.igUserId), pageId: /^\d{5,30}$/.test(String(b.cuenta.pageId ?? "")) ? String(b.cuenta.pageId) : undefined };

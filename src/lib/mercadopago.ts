@@ -68,7 +68,7 @@ export async function createSubscription(o: { orderId: string; title: string; fi
   return { id: r.id, url: testMode() && r.sandbox_init_point ? r.sandbox_init_point : r.init_point };
 }
 
-export interface MpPayment { id: number; status: string; transaction_amount: number; currency_id: string; external_reference?: string | null; metadata?: Record<string, unknown>; payer?: { email?: string } }
+export interface MpPayment { id: number; status: string; transaction_amount: number; currency_id: string; fee_details?: { amount: number; type?: string }[]; transaction_details?: { net_received_amount?: number }; external_reference?: string | null; metadata?: Record<string, unknown>; payer?: { email?: string } }
 export const getPayment = (id: string) => mp<MpPayment>(`/v1/payments/${encodeURIComponent(id)}`);
 
 export interface MpPreapproval { id: string; status: string; external_reference?: string | null; payer_email?: string; auto_recurring?: { transaction_amount?: number } }

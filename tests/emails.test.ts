@@ -43,7 +43,23 @@ test("activation tips carry an opt-out and adapt to the customer", async () => {
   assert.ok(unsubOk("ana@x.cl", t) && !unsubOk("otra@x.cl", t));
   const none = activationEmail("a@x.cl", "Ana", { step: 3, hasPlan: false, ads: 0, unsub: link });
   assert.match(none.subject, /Te ayudo/);
-  assert.ok(none.html.includes("No quiero recibir más consejos") && none.html.includes("US$29 el primer mes"));
+  assert.ok(none.html.includes("No quiero recibir más consejos") && none.html.includes("US$55 al mes"));
   assert.match(activationEmail("a@x.cl", null, { step: 3, hasPlan: true, ads: 2, unsub: link }).subject, /3 formas/);
   assert.ok(!activationEmail("a@x.cl", null, { step: 1, hasPlan: true, ads: 0, unsub: link }).html.includes("US$19,99"));
+});
+
+test("owner report: exact money block (sales, IVA, Mercado Pago, each provider, result, month)", async () => {
+  const { ownerReportEmail } = await import("../src/lib/emails");
+  const money = {
+    day: "2026-10-22",
+    ventas: { count: 2, clp: 104_500, usd: 110, iva: 17.56, mp: 4.5, mpReal: true, neto: 87.94 },
+    gastos: {
+      fal: { usd: 9.8, real: true }, claude: { usd: 1.2, real: true }, google: { usd: 0.3, real: false, note: "estimado por imagen" },
+      eleven: { usd: 0, real: true }, oficina: { usd: null, real: false, note: "incluido en Claude" }, meta: { usd: 25, real: true }, fijos: { usd: 5, real: false, note: "costos fijos ÷ 30" },
+    },
+    gastoTotal: 41.3, resultado: 46.64,
+  };
+  const e = ownerReportEmail("o@x.cl", { day: "2026-10-22", salesCount: 2, salesUsd: 110, salesClp: 104_500, signups: 1, aiUsd: 11, expired: 0, ending: 0, alerts: [], money, month: { from: "2026-10-22", vendido: 110, neto: 87.94, gastado: 41.3, resultado: 46.64, dias: 1 } });
+  for (const t of ["Vendido", "IVA", "Mercado Pago", "fal.ai", "Claude", "Campañas en Meta", "Resultado del día", "gastado US$41,30"]) assert.ok(e.text.includes(t) || e.subject.includes(t), t);
+  assert.ok(!e.text.includes("Oficina de agentes"), "office line hidden when it's inside Claude's real cost");
 });

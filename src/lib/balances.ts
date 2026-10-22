@@ -43,7 +43,8 @@ export interface Umbrales {
   eleven: number; // % of the month's plan left
   diario: number; // US$: most Creads may spend in one day, all customers together (0 = no limit)
 }
-export const DEFAULT_UMBRALES: Umbrales = { fal: 10, google: 10, eleven: 15, diario: 60 };
+// diario: US$500 (owner, 22 Oct 2026, for the launch). A cap still saved at the old default (US$60) counts as 500.
+export const DEFAULT_UMBRALES: Umbrales = { fal: 10, google: 10, eleven: 15, diario: 500 };
 
 interface Incident { at: string; msg: string }
 interface SaldosFile { umbrales?: Partial<Umbrales>; fallas?: Partial<Record<Service, Incident>> }
@@ -60,7 +61,7 @@ export async function getUmbrales(): Promise<Umbrales> {
     fal: pick(u.fal, DEFAULT_UMBRALES.fal, 100000),
     google: pick(u.google, DEFAULT_UMBRALES.google, 100000),
     eleven: pick(u.eleven, DEFAULT_UMBRALES.eleven, 100),
-    diario: pick(u.diario, DEFAULT_UMBRALES.diario, 100000),
+    diario: u.diario === 60 ? DEFAULT_UMBRALES.diario : pick(u.diario, DEFAULT_UMBRALES.diario, 100000),
   };
 }
 

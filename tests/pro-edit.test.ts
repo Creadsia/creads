@@ -58,3 +58,11 @@ test("the brand is read «Cre ads» and captioned «Creads»", async () => {
   assert.deepEqual(out.map((x) => x.w), ["creamos", "Creads", "IA"]);
   assert.equal(out[1].e, 0.8);
 });
+
+import { outside } from "../src/lib/montage";
+test("subtitles step aside while a Pro headline is on screen", () => {
+  assert.deepEqual(outside(0, 4, [{ desde: 1, hasta: 2 }]), [[0, 1], [2, 4]]);
+  assert.deepEqual(outside(1.2, 1.8, [{ desde: 1, hasta: 2 }]), []);
+  assert.deepEqual(outside(0, 1, [{ desde: 0.9, hasta: 2 }]), [[0, 0.9]]);
+  assert.deepEqual(outside(0, 1, []), [[0, 1]]);
+});

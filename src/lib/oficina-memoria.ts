@@ -17,17 +17,14 @@ LOS 4 PILARES
 LO QUE HACE LA PLATAFORMA HOY
 - Espiar anuncios: busca anuncios activos de la competencia en la biblioteca de Meta y desarma sus guiones.
 - Crear guion: desarma un guion ganador, escribe versiones propias, hooks y ángulos.
-- Crear anuncio: guion → cortes (máx. 8) → escenas → videos, con formatos UGC, podcast, entrevista, ronda, noticiero, comentario y drive-thru. Voz, subtítulos y armado automático.
+- Automático (conversando) y Manual (espiar → guion → voz → escenas → video → edición). Formatos que se venden: UGC (y comentario); Demo con presentador en Automático.
 - Voces (clonación con permiso), avatares (cara + voz, con consentimiento), imágenes 4:5 para el feed.
-- Historias animadas: guion, personajes, imágenes, animación, música IA, canción con letra, música propia o sin música, personajes que hablan con sus labios o narrador.
-- Recrear video: cambiar persona, producto, ropa o lugar de un video, o copiar el movimiento.
+- Escondido desde el 21 oct 2026 (no ofrecer): Historias animadas, Recrear video, Influencer IA, herramientas sueltas.
 - Asistente de ayuda dentro de la plataforma, guías paso a paso y videos de ayuda.
 - Panel interno del dueño: Lanzamiento, Estadísticas (estilo Shopify), Oficina de agentes, errores y alarmas, saldos de proveedores, clientes, planes, finanzas.
 
 PRECIOS (siempre en US$)
-- Planes mensuales: Starter US$30 (primer mes US$19,99), Plus US$55, Ultra US$129. Oferta de lanzamiento (19 oct 2026): solo Starter a US$19,99 el primer mes (luego US$30); Plus y Studio a precio normal.
-- Anual (por mes): Starter US$21, Plus US$47, Ultra US$109. Recargas: 500 US$29, 1.000 US$55, 3.000 US$139. Genjutsu solo desde Plus, cobrado como cualquier modelo.
-- Recargas de créditos: US$25, US$89 y US$209.
+- Desde el 21 oct 2026: Emprende US$55/mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99/mes (≈ 8 anuncios + 40 imágenes). Sin descuentos, sin plan anual. Ultra ya no se vende. Recargas: 500 créditos US$29, 1.000 US$55, 3.000 US$139.
 - Los créditos vencen al terminar el período pagado; las recargas se compran sobre un plan activo y vencen con él.
 
 REGLAS DE LA MARCA
@@ -39,8 +36,8 @@ REGLAS DE LA MARCA
 ESTADO DEL LANZAMIENTO
 - Todavía no está lanzado al público. Se lanza primero en Chile, pensando en ir a todo el mundo (versión en inglés en /en).
 - Hecho: cobros con Mercado Pago, correos automáticos, resumen diario del dueño, alarmas de errores, límites antifraude, estadísticas, guías de ayuda, revisión independiente del código.
-- Cobros: decidido (17 oct) abrir una LLC en EE.UU. y cobrar en US$ con Stripe (planes con renovación automática, recibos en US$).
-- Falta (lo principal): la LLC y Stripe conectado, ambiente de pruebas, Vercel Pro y Supabase Pro, verificación en dos pasos en todas las cuentas, topes de gasto en proveedores, abogado (términos, privacidad, uso de caras y voces), contador (IVA, boletas), cuota de Veo con Google, beta cerrada con 5 a 10 clientes reales y el «Día 1».
+- Cobros: Mercado Pago en pesos chilenos, suscripción mensual automática (22 oct 2026). LLC + Stripe quedó para más adelante.
+- Falta para lanzar: boletas (contador), compra de prueba real, Meta listo para pagar, recargas automáticas y topes en proveedores, verificación en dos pasos.
 - Trabajo técnico pendiente: fila de generación por proveedor, prueba de carga, pruebas automáticas del recorrido completo, gasto real por proveedor en el Panel.
 
 EQUIPO

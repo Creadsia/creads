@@ -1,4 +1,4 @@
-import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, updatePrivateJSON, writePrivateJSON } from "./supabase";
 import { refundedJobs } from "./credits";
 import { findTool } from "./tools";
 import { careEmail } from "./emails";
@@ -32,9 +32,8 @@ export function describe(r: { kind: string | null; ad_id: string | null }): { wh
 
 export const casos = async () => (await readPrivateJSON<Caso[]>(CASOS).catch(() => null)) ?? [];
 export async function guardarCaso(c: Caso) {
-  const list = (await casos()).filter((x) => x.id !== c.id);
   const cut = Date.now() - 30 * 86400_000;
-  await writePrivateJSON(CASOS, [c, ...list].filter((x) => Date.parse(x.at) >= cut).slice(0, 400));
+  await updatePrivateJSON<Caso[]>(CASOS, (cur) => [c, ...(cur ?? []).filter((x) => x.id !== c.id)].filter((x) => Date.parse(x.at) >= cut).slice(0, 400));
 }
 export async function marcarCaso(id: string, estado: Caso["estado"], nota?: string) {
   const list = await casos();

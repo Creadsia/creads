@@ -311,11 +311,12 @@ const AREA: Record<string, string> = { servidor: "Servidor", navegador: "Navegad
 const when = (iso: string) => new Date(iso).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function Errores() {
-  const [d, setD] = useState<{ groups: ErrGroupV[]; g24: GenV; g7: GenV; alarms: { email: string | null; ready: boolean } } | null>(null);
+  const [d, setD] = useState<{ groups: ErrGroupV[]; g24: GenV; g7: GenV; gD: GenV | null; desde: string | null; alarms: { email: string | null; ready: boolean } } | null>(null);
+  const [sure, setSure] = useState(false);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const [showResolved, setShowResolved] = useState(false);
-  const [range, setRange] = useState<"g24" | "g7">("g24");
+  const [range, setRange] = useState<"g24" | "g7" | "gD">("gD");
   const load = () => fetch("/api/admin/errores").then(async (r) => { const j = await r.json(); if (!r.ok) throw new Error(j.error); setD(j); }).catch((e) => setErr(e.message || "No se pudo cargar."));
   useEffect(() => { load(); }, []);
   async function act(body: Record<string, string>) {
@@ -327,7 +328,7 @@ function Errores() {
   }
   if (err) return <div className={card}><p className="text-bad">{err}</p></div>;
   if (!d) return <div className={card}><p className="text-muted">Cargando…</p></div>;
-  const g = d[range];
+  const g = (range === "gD" ? d.gD : d[range]) ?? d.g24;
   const open = d.groups.filter((x) => !x.resolved);
   const shown = showResolved ? d.groups : open;
   const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -348,9 +349,21 @@ function Errores() {
 
       <section className={card}>
         <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-bold">Contar desde cero</h2>
+            <p className="text-sm text-muted">{d.desde ? <>Contando errores y generaciones desde el <b>{when(d.desde)}</b>. Lo anterior no se borra, solo deja de contarse.</> : "Hoy se cuenta todo lo de los últimos 7 días. Reinicia para medir solo desde ahora (no se borra nada)."}</p>
+          </div>
+          {sure
+            ? <span className="flex gap-2"><button type="button" onClick={() => { setSure(false); act({ action: "reiniciar" }); }} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-bg">Sí, empezar de cero</button><button type="button" onClick={() => setSure(false)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold">Cancelar</button></span>
+            : <button type="button" onClick={() => setSure(true)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-surface-2">Empezar a contar de cero</button>}
+        </div>
+      </section>
+
+      <section className={card}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-display text-xl font-bold">Generaciones</h2>
           <div className="flex rounded-lg border border-line p-0.5 text-sm">
-            {([["g24", "Últimas 24 h"], ["g7", "7 días"]] as const).map(([k, l]) => (
+            {([...(d.gD ? [["gD", "Desde el reinicio"]] : []), ["g24", "Últimas 24 h"], ["g7", "7 días"]] as ["g24" | "g7" | "gD", string][]).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setRange(k)} className={`rounded-md px-3 py-1 font-semibold ${range === k ? "bg-ink text-bg" : "text-muted"}`}>{l}</button>
             ))}
           </div>

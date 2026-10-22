@@ -56,6 +56,28 @@ export default function Home({ full = true }: { full?: boolean }) {
     <>
       <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Sigue estos pasos en orden. Los primeros se hacen una sola vez; después, cada anuncio es guion → anuncio." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
       {missing && <SetupNotice />}
+      {/* the two ways to make an ad, first thing on the page */}
+      <section aria-label="Crea tu anuncio" className="grid gap-3 md:grid-cols-2">
+        <Link href="/app/automatico" className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] transition-transform hover:-translate-y-0.5">
+          <span className="flex items-center justify-between gap-2">
+            <b className="font-display text-2xl font-semibold">Automático</b>
+            <span className="rounded-full bg-[image:var(--grad)] px-2.5 py-0.5 text-xs font-bold text-white">Recomendado</span>
+          </span>
+          <p className="text-[15px] text-muted">Conversas con Creads: te pregunta lo necesario, escribe el guion, crea a la persona en tu negocio, hace el video, lo revisa palabra por palabra y te lo entrega listo.</p>
+          <ol className="flex flex-wrap gap-1.5 text-xs font-semibold">
+            {["Preguntas", "Guion", "Persona", "Video", "Revisión", "Listo"].map((x, i) => <li key={x} className="rounded-full bg-surface-2 px-2.5 py-1">{i + 1}. {x}</li>)}
+          </ol>
+          <span className="mt-auto w-fit rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-sm font-semibold text-white">Hacer mi anuncio conversando →</span>
+        </Link>
+        <Link href="/app/crear" className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-muted">
+          <b className="font-display text-2xl font-semibold">Manual</b>
+          <p className="text-[15px] text-muted">Tú controlas cada paso: espiar, guion, voz, escenas, videos, correcciones y edición. Para quien quiere decidir cada detalle.</p>
+          <ol className="flex flex-wrap gap-1.5 text-xs font-semibold text-muted">
+            {["Espiar", "Guion", "Voz", "Escenas", "Videos", "Edición"].map((x, i) => <li key={x} className="rounded-full border border-line px-2.5 py-1">{i + 1}. {x}</li>)}
+          </ol>
+          <span className="mt-auto w-fit rounded-xl border border-line px-4 py-2.5 text-sm font-semibold">Hacerlo paso a paso →</span>
+        </Link>
+      </section>
       {working.length > 0 && (
         <section aria-label="Anuncios en producción" className="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

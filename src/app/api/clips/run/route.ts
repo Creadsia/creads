@@ -9,7 +9,7 @@ import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
 import { refundJob } from "@/lib/credits";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
-import { type StorySettings, billedSeconds, lipsyncProUsd, lipsyncSeconds, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
+import { type StorySettings, billedSeconds, lipsyncProUsd, lipsyncSecondsTight, lipsyncUsd, storyClipSeconds } from "@/lib/historias";
 import { canUseVoice } from "@/lib/voices";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { refusesFrame } from "@/lib/formats";
@@ -88,9 +88,6 @@ export async function POST(req: Request) {
     if (!story && st.voiceId && String(clip.text ?? "").trim()) ownVoice = st.voiceId;
     if (ownVoice && !(await canUseVoice(ws, ownVoice))) ownVoice = null;
     const line = story ? shotPlan?.dialogue?.line ?? "" : String(clip.text ?? "").trim();
-    // the recorded line must fit inside the clip the lip-sync works on (10 s at most; Veo makes 8 s)
-    // a long line (older ads, the API) is never refused: the video is made as long as the line needs
-    const longLine = ownVoice && !story ? Math.min(15, Math.ceil(line.trim().split(/\s+/).length / 2.2 + 1.5)) : 0;
     if (talks && !ownVoice && provider.silent) return giveBack(NextResponse.json({ error: `${provider.label} no genera voz. Para las tomas con diálogo elige Kling 3.0, Seedance o Veo.` }, { status: 400 }));
     // Seedance refuses real faces: say so now instead of charging and failing
     if (!story && refusesFrame(provider, String(ad.format ?? "ugc"), { face: Boolean(face), product: Boolean(prod) })) {
@@ -105,9 +102,13 @@ export async function POST(req: Request) {
     const actorVideo = actor ? String(st.avatar?.video ?? "") : "";
     if (actor && !ownVoice) return giveBack(NextResponse.json({ error: `${provider.label} necesita una voz: elígela y grábala en el paso Voz. No se usó tu saldo.` }, { status: 400 }));
     if (actor && !actorVideo) return giveBack(NextResponse.json({ error: "Este avatar no tiene su video. Súbelo en Avatares (Persona real) o elige otro modelo. No se usó tu saldo." }, { status: 400 }));
+    // an ad cut with a recorded voice and no seconds chosen (API, connector): as long as the voice will be
+    // (~2.7 words a second in Chilean Spanish), not a generous guess that pays for seconds that get cut off;
+    // the lip-sync stretches the video if the voice runs a little longer (sync_mode "bounce")
+    const voiceSecs = lipsyncSecondsTight(line);
     const talkSecs = Math.min(15, Math.max(3, Math.ceil(line.split(/\s+/).filter(Boolean).length / 2.4 + 0.8)));
     const chosen = !story && !talking && !actor ? st.secs?.[Number(clip.idx)] ?? null : null;
-    const asked = talking || actor ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? Math.max(lipsyncSeconds(line), longLine) : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
+    const asked = talking || actor ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? voiceSecs : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
     // Charge before spending anything (the opening frame below already costs).

@@ -156,3 +156,36 @@ export async function sbAll<T>(q: string, order = "created_at.asc", maxPages = 5
   }
   throw new Error(`Demasiadas filas (más de ${maxPages * 1000}).`);
 }
+
+// ---------- shared files that many requests update at once ----------
+// Private JSON files (logs, lists) are read, changed and written back. Two requests doing that at the same
+// moment would lose one change, so the update holds a short lock first: a row in rate_limits (the same atomic
+// counter as the rate limits), released right after; if a request dies holding it, it frees itself in 15 s.
+
+const sleepMs = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Runs `fn` while holding the lock `name` (waits up to `waitMs` for it; after that runs anyway, best effort). */
+export async function withLock<T>(name: string, fn: () => Promise<T>, waitMs = 8000): Promise<T> {
+  const key = `lock:${name}`.slice(0, 200);
+  const t0 = Date.now();
+  let held = false;
+  while (!held) {
+    held = await sbRpc<boolean>("hit_rate", { p_key: key, p_window: 15, p_max: 1 }).then(Boolean).catch(() => true);
+    if (held || Date.now() - t0 > waitMs) break;
+    await sleepMs(120 + Math.random() * 180);
+  }
+  try {
+    return await fn();
+  } finally {
+    if (held) await sbRest(`rate_limits?key=eq.${encodeURIComponent(key)}`, { method: "DELETE", headers: { prefer: "return=minimal" } }).catch(() => {});
+  }
+}
+
+/** Read → change → write a private JSON file without losing a change made by another request at the same time. */
+export async function updatePrivateJSON<T>(path: string, change: (current: T | null) => T | undefined): Promise<T | undefined> {
+  return withLock(`file:${path}`, async () => {
+    const next = change(await readPrivateJSON<T>(path));
+    if (next !== undefined) await writePrivateJSON(path, next);
+    return next;
+  });
+}

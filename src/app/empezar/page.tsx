@@ -9,7 +9,7 @@ import { oneTimeOnly } from "@/lib/mercadopago";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
-  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Emprende a US$29 el primer mes.",
+  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Emprende US$55 al mes, Negocio US$99.",
   robots: { index: false, follow: true },
 };
 export const dynamic = "force-dynamic";

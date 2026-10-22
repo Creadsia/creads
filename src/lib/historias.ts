@@ -106,6 +106,8 @@ export const lipsyncUsd = (seconds: number, line: string) => +(0.014 * Math.max(
 /** «Boca natural»: sync.so sync-3 on fal (US$8 per minute of video) plus the recorded line. */
 export const lipsyncProUsd = (seconds: number, line: string) => +((8 / 60) * Math.max(1, seconds) + line.length * 0.00022).toFixed(3);
 /** Seconds of video a lip-synced line needs (the recorded line must fit inside the clip). */
+/** Ad cuts: about as long as the recorded line (2.7 words a second plus a breath), 3 to 15 s. */
+export const lipsyncSecondsTight = (line: string) => Math.min(15, Math.max(3, Math.ceil(line.trim().split(/\s+/).filter(Boolean).length / 2.7 + 0.8)));
 export const lipsyncSeconds = (line: string) => Math.min(10, Math.max(4, Math.ceil(line.trim().split(/\s+/).filter(Boolean).length / 2.2 + 1.5)));
 /** Seconds a spoken line needs (≈ 2.4 words per second, plus a breath). */
 export const lineSeconds = (line: string) => Math.ceil((line.trim().split(/\s+/).filter(Boolean).length / 2.4 + 0.8) * 2) / 2;

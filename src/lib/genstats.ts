@@ -44,8 +44,10 @@ async function allRows<T>(q: string, maxPages = 50): Promise<T[]> {
   return out;
 }
 
-export async function genStats(hours: number): Promise<GenStats> {
-  const since = new Date(Date.now() - hours * 3600_000).toISOString();
+/** Generations of the last `hours`, never before `from` (the owner's «Empezar de cero»). */
+export async function genStats(hours: number, from: string | null = null): Promise<GenStats> {
+  const ago = new Date(Date.now() - hours * 3600_000).toISOString();
+  const since = from && from > ago ? from : ago;
   const [clips, refunds] = await Promise.all([
     allRows<{ status: string; kind: string | null; model: string | null; usd: number | null; ad_id: string | null }>(`clips?created_at=gte.${since}&select=status,kind,model,usd,ad_id`),
     allRows<{ delta: number }>(`credits?kind=eq.refund&created_at=gte.${since}&select=delta`),

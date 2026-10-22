@@ -125,11 +125,20 @@ function cast(ctx: SceneContext, avatar: string) {
   return `Presenter: ${avatar}`;
 }
 
+/** One place and one outfit for the whole video: there is an avatar and the producer didn't ask to move around. */
+export function oneLocation(ctx: Pick<SceneContext, "avatar" | "direction">): boolean {
+  if (!ctx.avatar) return false;
+  return !/distint[oa]s? lugar|diferentes? lugar|otro lugar|varios lugares|recorr|camin|cambi\w* de lugar|different (places|locations)|move around|walk/i.test(ctx.direction ?? "");
+}
+
 /** Step 1: the prompt that asks Claude to direct every cut. */
 export function directorPrompt(ctx: SceneContext, cuts: CutIn[]): string {
   const f = formatById(ctx.format);
   const avatar = ctx.avatar?.description?.trim() || (f.av === "req" ? "a friendly American homeowner in their 40s, casual clothes" : "");
   const dir = (ctx.direction ?? "").trim().slice(0, 1200);
+  // With an avatar the video happens in ONE place with the same clothes (owner, 21 Oct 2026: a cut that moved
+  // to another table and changed the outfit broke the ad), unless the producer asks for different places.
+  const onePlace = oneLocation(ctx);
   const list = cuts
     .map((c, i) => {
       const n = i + 1;
@@ -146,7 +155,7 @@ export function directorPrompt(ctx: SceneContext, cuts: CutIn[]): string {
     .join("\n");
   // the customer reads the scene in their own language; the model gets the English prompt
   const es = ctx.lang === "es-CL" ? `,"es":"1 o 2 frases en español natural (Chile) para el cliente: dónde está, cómo es la toma y qué hace en este corte"` : "";
-  const shape = `Reply ONLY JSON array: [{"label":"1","framing":"shot type (different from the previous cut)","movement":"camera and subject movement","setting":"exact location","action":"what happens, synced to specific words: 'On \\"...\\" ...'","broll":"optional cutaway or empty","emotion":"tone","style":""${es}}]`;
+  const shape = `Reply ONLY JSON array: [{"label":"1","framing":"shot type (different from the previous cut)","movement":"camera and subject movement","setting":"${onePlace ? "the SAME exact location in every cut" : "exact location"}","action":"what happens, synced to specific words: 'On \\"...\\" ...'","broll":"${onePlace ? "always empty" : "optional cutaway or empty"}","emotion":"tone","style":""${es}}]`;
   const producer = dir ? `THE PRODUCER'S DIRECTION FOR THE WHOLE VIDEO (written in Spanish — follow it in every cut where it applies; top priority after the locked words): "${dir}"` : "";
   const product = ctx.product ? `PRODUCT the presenter shows in the video: ${ctx.product.description || ctx.product.name}. Show it clearly whenever the words talk about it.` : "";
   const chile = ctx.lang === "es-CL" ? "The video is in Chilean Spanish and happens in Chile: Chilean homes, streets and details." : "";
@@ -183,9 +192,13 @@ ${ctx.script.slice(0, 6000)}
 """
 Cuts (the spoken words are LOCKED and must not change):
 ${list}
-Read the whole script first and understand the story. Then, for EACH cut, decide WHERE the person is and WHAT happens, based on what is being said in that cut, so the video tells the story like a real person documenting it on their phone. Do NOT keep every cut in the same place: move through the locations the story implies. A cut may stay in the same place as the previous one when the story has not moved.
+${onePlace
+    ? `Read the whole script first and understand it. The WHOLE video happens in ONE place: ${ctx.place || "the place in the presenter's description (where the video starts)"}. Same spot, same light and the SAME clothes as described for the presenter in EVERY cut — never another room, table or street, never a change of outfit.
+ALWAYS selfie UGC: the person holds the phone and talks to the front camera, and is ON CAMERA in EVERY cut. No cutaways to objects, screens or other people, no flipping to the rear camera.
+MAKE IT DYNAMIC inside that place, like a real person talking to their phone with energy: every cut a slightly different selfie framing from the previous one, always the phone at arm's length and the same distance range (tight face close-up · chest-up talking · a slight angle as she shifts her weight · leaning in toward the camera for the key line). Never jump to a wide, high or third-person shot, never sit down at a table or move to another spot between cuts: the change from one cut to the next must feel like the same continuous selfie. Natural gestures and small real movement; it must look human and spontaneous, never like an AI presenter reciting.`
+    : `Read the whole script first and understand the story. Then, for EACH cut, decide WHERE the person is and WHAT happens, based on what is being said in that cut, so the video tells the story like a real person documenting it on their phone. Do NOT keep every cut in the same place: move through the locations the story implies. A cut may stay in the same place as the previous one when the story has not moved.
 ALWAYS selfie UGC: the person holds the phone and talks to the front camera. To show something (a crack, the contractors, the quote, a screen), they point at it behind them, angle the phone, or briefly flip to the rear camera while the voice keeps going. Never a cinematic third-person shot, never a professional camera.
-MAKE IT DYNAMIC, like a real person excitedly documenting a discovery they want to share: every cut needs a DIFFERENT shot from the previous one. Rotate framings (tight face close-up · chest-up talking · walking selfie with the background moving · low angle with the phone held down · over-the-shoulder flip to the rear camera · holding a paper or phone screen up to the lens · leaning in toward the camera for the key line). Add real movement in most cuts. Never two consecutive cuts with the same framing AND the same place. When the words reveal something (a price, the site, the problem, the result), SHOW it on camera at that exact moment.
+MAKE IT DYNAMIC, like a real person excitedly documenting a discovery they want to share: every cut needs a DIFFERENT shot from the previous one. Rotate framings (tight face close-up · chest-up talking · walking selfie with the background moving · low angle with the phone held down · over-the-shoulder flip to the rear camera · holding a paper or phone screen up to the lens · leaning in toward the camera for the key line). Add real movement in most cuts. Never two consecutive cuts with the same framing AND the same place. When the words reveal something (a price, the site, the problem, the result), SHOW it on camera at that exact moment.`}
 THE WORDS ARE SACRED: the action must illustrate exactly what is being said in that cut and nothing else. Do not invent extra dialogue, do not add a greeting or a closing line, and do not stage something that contradicts the words.${dir ? ' Apply the producer\'s direction above to every cut where it fits, and in each cut put in "style" a short English instruction with the part of that direction that applies to that cut (or empty).' : ""} Same person, wardrobe and voice in every cut. Refer to the presenter with the right pronoun for the described person. Keep it believable: real home, real phone, no actors posing. No readable text, prices or logos on screen.
 ${shape}`;
 }
@@ -194,7 +207,11 @@ ${shape}`;
 export function scenePrompt(ctx: SceneContext, c: CutIn, d: Direction, index: number): string {
   const f = formatById(ctx.format);
   const desc = ctx.avatar?.description?.trim() || (f.av === "req" ? "a friendly American homeowner in their 40s, casual clothes" : "");
-  const ref = ctx.avatar?.hasPhoto ? "the person in the reference image (use it only for the face / identity; ignore its framing, clothes and background)" : "";
+  const ref = ctx.avatar?.hasPhoto
+    ? oneLocation(ctx)
+      ? "the person in the reference image (same face, hair and clothes as in the image; ignore only its framing)"
+      : "the person in the reference image (use it only for the face / identity; ignore its framing, clothes and background)"
+    : "";
   const orient = ctx.aspect === "1:1" ? "Square 1:1" : ctx.aspect === "16:9" ? "Horizontal 16:9" : ctx.aspect === "4:5" ? "Vertical 4:5" : "Vertical 9:16";
   const tail = `Realism: real footage, natural light, real textures, no beauty filter, mild compression, believable, not a glossy commercial.
 No music. No subtitles, no captions, no on-screen text, no readable numbers, no logos, no watermark.`;
@@ -319,7 +336,7 @@ export function firstFramePrompt(ctx: SceneContext, c: CutIn, d: Direction): str
     ? "No presenter: a documentary shot of the scene."
     : ctx.format === "ronda"
       ? `On-camera person: ${c.persona || "an ordinary local person"}.`
-      : `${ctx.avatar?.hasPhoto ? "The person from the first reference image (same face). " : ""}${ctx.avatar?.description || "a friendly American homeowner in their 40s"}.`;
+      : `${ctx.avatar?.hasPhoto ? (oneLocation(ctx) ? "The person from the first reference image (same face, hair and clothes). " : "The person from the first reference image (same face). ") : ""}${ctx.avatar?.description || "a friendly American homeowner in their 40s"}.`;
   return `Photorealistic ${orient} still frame, the first frame of a ${f.en} video clip, looks like a real phone video frame (not a staged photo).
 ${who}
 Setting: ${d.setting || ctx.place || "a real home, natural daylight"}.

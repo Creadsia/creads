@@ -28,12 +28,18 @@ export const PACKS = [
   { id: "pack-3000" as ItemId, credits: 3000, usd: 139, note: "Para los meses fuertes" },
 ];
 
-/** Launch offer: the first month of the monthly Emprende plan costs US$29 (then US$49). Provisional (owner,
- * 21 Oct 2026: prices get tuned once the margins are measured). */
-export const LAUNCH_PRICE = 29;
-/** The same offer as a % (for badges). */
-export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / (PLANS.find((p) => p.id === "starter")?.monthly ?? 49)) * 100);
-export const LAUNCH_ITEMS: ItemId[] = ["starter"];
+/**
+ * No discounts (owner, 21 Oct 2026): Emprende US$55 and Negocio US$99 a month, no cheaper first month and no
+ * yearly discount. The launch-offer machinery stays (empty) so an offer can come back by listing a plan here.
+ */
+export const LAUNCH_ITEMS: ItemId[] = [];
+/** The cheapest way in: Emprende's monthly price. */
+export const LAUNCH_PRICE = PLANS.find((p) => p.id === "starter")?.monthly ?? 55;
+export const LAUNCH_PCT = 0;
+/** Yearly plans are not offered while there is no yearly discount. */
+export const ANNUAL = false;
+/** Any offer to show (a cheaper first month or a yearly discount). */
+export const HAS_OFFER = LAUNCH_ITEMS.length > 0 || ANNUAL;
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
 export interface Quote {

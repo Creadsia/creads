@@ -1,5 +1,6 @@
 import { adsOf, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
+import { withVideo } from "./avatar-video";
 
 // The Creads connector (MCP, «Streamable HTTP» without sessions): Claude, ChatGPT or any MCP client calls
 // these tools with an API key of the user's account (from OAuth or «API para sistemas»). Each tool goes
@@ -50,10 +51,12 @@ export const TOOLS: Tool[] = [
     inputSchema: { type: "object", properties: {
       descripcion: { type: "string", minLength: 10, maxLength: 4000, description: "What the image shows, in detail (any language)." },
       formato: { type: "string", enum: ["9:16", "1:1", "4:5", "16:9"], default: "4:5", description: "Aspect ratio: 4:5 feed, 9:16 stories/reels, 1:1 square, 16:9 wide." },
+      producto: { type: "string", maxLength: 600, description: "Optional: link of a product photo of this account (from creads_crear_imagen or an upload). The new image shows that exact product (same shape, colours and label)." },
     }, required: ["descripcion"], additionalProperties: false },
     annotations: { title: "Crear imagen", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call, origin, ctx) => {
-      const d = await call<{ url: string }>("/api/generate/image", { prompt: str(a.descripcion), aspect: str(a.formato, 5) || "4:5" });
+      const producto = str(a.producto, 600);
+      const d = await call<{ url: string }>("/api/generate/image", { prompt: str(a.descripcion), aspect: str(a.formato, 5) || "4:5", ...(producto ? { refs: [{ url: mediaRef(producto), role: "product" }] } : {}) });
       const url = abs(origin, d.url);
       const descarga = await ctx.link(d.url).catch(() => null);
       return { text: `Imagen lista: ${url}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}`, data: { url, ...(descarga ? { descarga } : {}) }, images: [d.url] };
@@ -71,12 +74,13 @@ export const TOOLS: Tool[] = [
       edicion: { type: "string", enum: ["pro", "simple"], default: "pro", description: "pro (default): the ad comes out edited like an agency would: animated headlines on the key words, zooms and flashes on every cut, sound effects and a closing card. simple: only cuts and subtitles." },
       plantilla: { type: "string", enum: ["limpio", "impacto", "elegante", "noticia", "neon"], default: "limpio", description: "Look of the Pro edit: limpio (white + one accent, fits any brand), impacto (huge TikTok captions, yellow key word), elegante (sober, soft), noticia (headlines in a colour box), neon (glow and flashes, Creads' own style)." },
       color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "Optional brand colour (#RRGGBB) for key words, bar and closing card." },
+      subtitulos: { type: "boolean", default: true, description: "false = the ad comes out without subtitles (with edicion simple: just the cuts, no text on screen at all)." },
       indicaciones: { type: "string", maxLength: 600, description: "Optional but recommended with edicion pro: a short brief for the editor — brand and product name (exact spelling), audience, what to highlight (offer, price, benefit), what to avoid, and the closing call to action. Example: «Marca: Café Lumbre. Destacar: envío gratis en Santiago. Evitar: precios. Cierre: cafelumbre.cl»." },
       modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = Creads picks the most economical one that works." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
-      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}) });
+      const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(a.subtitulos === false ? { subtitulos: false } : {}), ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}) });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
   },
@@ -140,6 +144,7 @@ export const TOOLS: Tool[] = [
       descripcion: { type: "string", maxLength: 400, description: "How the person looks, best in English (age, hair, clothes, place). Creads repeats it in every scene." },
       idioma: { type: "string", enum: ["es-CL", "es", "en"], default: "es-CL" },
       voz: { type: "string", maxLength: 60, description: "Optional: a voice id from creads_voces." },
+      video: { type: "string", maxLength: 600, description: "Optional («Persona real»): link of a video of this account where the real person talks to the camera for 30–60 s. Ads made with modelo «persona-real» use it with the new voice on the lips." },
       consentimiento: { type: "boolean", description: "true only if the person is invented by AI or the real person gave permission." },
     }, required: ["nombre", "imagen", "consentimiento"], additionalProperties: false },
     annotations: { title: "Crear avatar", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
@@ -155,9 +160,45 @@ export const TOOLS: Tool[] = [
       const d = await call<{ row: { id: string; name: string } }>("/api/data/avatars", {
         name: str(a.nombre, 60), image_url: mediaRef(str(a.imagen, 600)), description: str(a.descripcion, 400) || null,
         lang: ["es-CL", "es", "en"].includes(String(a.idioma)) ? a.idioma : "es-CL", consent: true,
+        ...(str(a.video, 600) ? { notes: withVideo(null, mediaRef(str(a.video, 600))) } : {}),
         ...(voz ? { voice_id: voz, voice_name } : {}),
       });
       return { text: `Avatar «${d.row.name}» creado (id ${d.row.id}). Úsalo como «avatar» en creads_crear_anuncio.`, data: { id: d.row.id, nombre: d.row.name } };
+    },
+  },
+  {
+    name: "creads_revisar_anuncio", title: "Revisar un anuncio terminado",
+    description: "Looks at and listens to a finished ad: returns a contact sheet of 8 frames across the video (check the same face, clothes and place, the person on camera, no deformed hands or faces, no text) and the transcript of the final audio compared with the script (every word said, nothing cut). Free. Use it on every ad before showing it to the user.",
+    inputSchema: { type: "object", properties: { id: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "The ad id (ad_…), already «listo»." } }, required: ["id"], additionalProperties: false },
+    annotations: { title: "Revisar un anuncio terminado", readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    run: async (a, call) => {
+      const id = str(a.id, 30);
+      if (!/^ad_[a-z0-9]{6,20}$/.test(id)) throw new Error("El id debe ser como ad_xxxxxx.");
+      const d = await call<{ revision: { duracion: number; hoja: string; escuchado: string | null; parecido: number | null; observaciones: string[] } }>(`/api/v1/anuncios/${id}/revisar`);
+      const r = d.revision;
+      return {
+        text: `Duración: ${r.duracion} s. Audio: ${r.parecido ?? "?"}% del guion escuchado.${r.escuchado ? ` Se escucha: «${r.escuchado}».` : ""}${r.observaciones.length ? ` Observaciones: ${r.observaciones.join("; ")}.` : " Sin observaciones de audio."} La imagen adjunta son 8 cuadros del video en orden.`,
+        data: r as unknown as Json, images: [r.hoja],
+      };
+    },
+  },
+  {
+    name: "creads_montar_demo", title: "Armar demo con presentador",
+    description: "Puts together a «demo con presentador» ad from ads that are already «listo»: the presenter's ad (a person explaining, made with edicion simple and subtitulos false) with 2 to 6 example ads (short UGC clips of different people, also simple and without subtitles) shown in split screen or full screen with the presenter in a corner, a «producto + prompt» card, word-by-word captions, a «Hecho con IA» label on every example and a closing card. Free (the ads were already paid). Takes 1 to 3 minutes. Returns a new ad, already «listo».",
+    inputSchema: { type: "object", properties: {
+      presentador: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$", description: "Id of the presenter's ad." },
+      ejemplos: { type: "array", minItems: 2, maxItems: 6, items: { type: "string", pattern: "^ad_[a-z0-9]{6,20}$" }, description: "Ids of the example ads, in the order they should appear." },
+      producto: { type: "string", maxLength: 600, description: "Optional: link of the product photo for the card." },
+      prompt: { type: "string", maxLength: 160, description: "Optional: the short request shown on the card as if typed in Creads (e.g. «Una chica fitness en un parque mostrando su bebida VOLTA»). Without it there is no card." },
+      titulo: { type: "string", maxLength: 80 },
+      cierre: { type: "string", maxLength: 28, description: "Closing card title (default creadsia.com)." },
+      linea: { type: "string", maxLength: 48, description: "Closing card call to action." },
+    }, required: ["presentador", "ejemplos"], additionalProperties: false },
+    annotations: { title: "Armar demo con presentador", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    run: async (a, call) => {
+      const ejemplos = Array.isArray(a.ejemplos) ? (a.ejemplos as unknown[]).map((x) => str(x, 30)).filter((x) => /^ad_[a-z0-9]{6,20}$/.test(x)) : [];
+      const d = await call<{ anuncio: Json; segundos: number }>("/api/v1/montajes", { presentador: str(a.presentador, 30), ejemplos, ...(str(a.producto, 600) ? { producto: str(a.producto, 600) } : {}), ...(str(a.prompt, 160) ? { prompt: str(a.prompt, 160) } : {}), ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.cierre, 28) ? { cierre: str(a.cierre, 28) } : {}), ...(str(a.linea, 48) ? { linea: str(a.linea, 48) } : {}) });
+      return { text: `Demo armado (id ${d.anuncio.id}, ${d.segundos} s): ${d.anuncio.video_url}. Revísalo con creads_revisar_anuncio antes de entregarlo.`, data: d.anuncio };
     },
   },
   {

@@ -15,10 +15,10 @@ test("peso prices end in 990 and follow the dollar rate", () => {
 
 test("quotes: launch offer only on the first monthly payment, customer discount on top", () => {
   const first = quote("starter", "mensual", { firstPurchase: true })!;
-  assert.equal(first.total, 29, "Emprende: US$29 the first month (then US$49)");
-  assert.equal(quote("plus", "mensual", { firstPurchase: true })!.launch, 0, "only Emprende has the launch offer");
+  assert.equal(first.total, 55, "Emprende: US$55, no launch discount since 21 Oct 2026");
+  assert.equal(quote("plus", "mensual", { firstPurchase: true })!.launch, 0, "no plan has a launch offer");
   const later = quote("starter", "mensual", { firstPurchase: false, discountPct: 10 })!;
-  assert.equal(later.total, 44.1); // US$49 − 10%
+  assert.equal(later.total, 49.5); // US$55 − 10%
   assert.equal(quote("starter", "anual", { firstPurchase: true })!.launch, 0);
   assert.equal(quote("nope" as never, "mensual"), null);
 });

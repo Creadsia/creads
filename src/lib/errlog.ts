@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { readPrivateJSON, sbRest, updatePrivateJSON, writePrivateJSON } from "./supabase";
 import { alarmEmail } from "./emails";
 import { sendEmail } from "./providers/email";
 
@@ -21,6 +21,9 @@ const file = (d: string, browser = false) => `errores/${d}${browser ? "-navegado
 const CAP = { server: 3000, browser: 1000 };
 const ALARMS = "errores/alarmas.json";
 const RESOLVED = "errores/resueltos.json";
+// «Empezar de cero» (owner, 22 Oct 2026): the Panel only counts errors and generations after this moment.
+// Nothing is deleted: the old days stay in the bucket.
+const SINCE = "errores/desde.json";
 const SIX_HOURS = 6 * 3600_000;
 
 /** Removes what must never be stored: link signatures, tokens, keys, emails. */
@@ -97,12 +100,14 @@ export async function logError(e: { area: ErrArea; message: string; ref?: string
     const n = 1 + (mem?.skipped ?? 0);
     const entry: ErrEntry = { at: new Date().toISOString(), area: e.area, sig, message, ...(e.ref ? { ref: redact(e.ref).slice(0, 80) } : {}), ...(path ? { path } : {}), ...(e.ws ? { ws: e.ws } : {}), ...(n > 1 ? { n } : {}) };
     const f = file(day(), browser);
-    const list = (await readPrivateJSON<ErrEntry[]>(f)) ?? [];
-    const firstToday = !list.some((x) => x.sig === sig);
-    if (list.length < (browser ? CAP.browser : CAP.server)) {
-      list.push(entry);
-      await writePrivateJSON(f, list);
-    }
+    let firstToday = false;
+    const list = (await updatePrivateJSON<ErrEntry[]>(f, (cur) => {
+      const l = cur ?? [];
+      firstToday = !l.some((x) => x.sig === sig);
+      if (l.length >= (browser ? CAP.browser : CAP.server)) return undefined;
+      l.push(entry);
+      return l;
+    })) ?? (await readPrivateJSON<ErrEntry[]>(f)) ?? [];
     if (browser) {
       // Anyone can report a browser error, so its text never goes into an email. Only a real wave of
       // them (many reports today) sends one fixed-text alarm; the details are in the Panel.
@@ -125,13 +130,24 @@ export async function logError(e: { area: ErrArea; message: string; ref?: string
 }
 
 /** The last `days` days of errors, newest first. */
-export async function recentErrors(days = 7): Promise<ErrEntry[]> {
+/** When the owner last reset the count (ISO), or null. */
+export async function countingSince(): Promise<string | null> {
+  const r = await readPrivateJSON<{ at?: string }>(SINCE).catch(() => null);
+  return typeof r?.at === "string" ? r.at : null;
+}
+export async function resetCounting() {
+  const at = new Date().toISOString();
+  await writePrivateJSON(SINCE, { at });
+  return at;
+}
+
+export async function recentErrors(days = 7, since: string | null = null): Promise<ErrEntry[]> {
   const out: ErrEntry[] = [];
   for (let i = 0; i < days; i++) {
     const d = day(new Date(Date.now() - i * 86400_000));
     for (const browser of [false, true]) {
       const list = (await readPrivateJSON<ErrEntry[]>(file(d, browser)).catch(() => null)) ?? [];
-      if (Array.isArray(list)) out.push(...list);
+      if (Array.isArray(list)) out.push(...(since ? list.filter((e) => e.at >= since) : list));
     }
   }
   return out.sort((a, b) => b.at.localeCompare(a.at));
