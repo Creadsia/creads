@@ -215,7 +215,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Para generar videos activa tu plan: Starter cuesta US$19,99 el primer mes.";
+  const plan = o.hasPlan ? "" : " Para generar videos activa tu plan: Emprende cuesta US$29 el primer mes.";
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",

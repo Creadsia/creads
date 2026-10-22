@@ -24,6 +24,8 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
   // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
   const perMonthOfYear = (usdYear: number) => dollars(Math.round((usdYear / 12) * 100) / 100);
   // without automatic renewal (temporary payment setup) the FAQ must not promise it
+  // plans on sale (Ultra is kept for anyone who has it, not sold)
+  const shown = t.plans.filter((p) => !("hidden" in p && p.hidden));
   const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes y créditos» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans and credits\" with one click. There are no automatic charges." } : f));
 
   // Meta "ViewContent": the visitor saw the plans (once per visit)
@@ -56,12 +58,12 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
         </div>
       </div>
 
-      {/* plans: three cards, everything about each plan from top to bottom, built to pick one and pay */}
-      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
-        {t.plans.map((p) => {
+      {/* plans: the cards on sale, everything about each plan from top to bottom, built to pick one and pay */}
+      <div className="mx-auto grid w-full max-w-4xl gap-5 md:grid-cols-2 md:items-start">
+        {shown.map((p) => {
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
-          const secs = secondsOf(credits); // shown in seconds of video (talking avatar), credits stay underneath
+          const secs = secondsOf(credits); // shown in seconds of video (Persona IA), credits stay underneath
           const ads = adsOf(secs);
           const promo = !yearly && hasLaunch(p.id);
           const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
@@ -137,7 +139,7 @@ export default function Pricing({ t, lang, renews = true }: { t: Content["pricin
                     <span className="text-xs font-semibold text-muted">{g.title}</span>
                     <ul className="flex flex-col gap-2 text-sm">
                       {g.rows.map(([row, ...vals]) => {
-                        const v = vals[t.plans.indexOf(p)];
+                        const v = vals[shown.indexOf(p)];
                         const off = v === "no";
                         return (
                           <li key={row} className={`flex items-center justify-between gap-3 ${off ? "text-muted/60" : ""}`}>

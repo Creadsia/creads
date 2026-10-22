@@ -1,4 +1,5 @@
 import { es } from "@/content/es";
+import { fmtSeconds, secondsOf } from "./credit-math";
 
 // What customers can buy: the plans shown on the website and credit top-ups. Shared by the studio
 // (to show prices) and the server (to compute the amount of an order), so both always agree.
@@ -14,7 +15,11 @@ export const PLANS = es.pricing.plans.map((p) => ({
   credits: Number(String(p.credits).replace(/\D/g, "")),
   for: p.for,
   features: p.features,
+  /** Kept for customers who already have it, not sold any more (Ultra since 21 Oct 2026). */
+  hidden: Boolean((p as { hidden?: boolean }).hidden),
 }));
+/** The plans on sale (shown on the website and in «Planes»). */
+export const SHOWN_PLANS = PLANS.filter((p) => !p.hidden);
 
 // Same packs and prices as the website (content/*.ts → pricing.topups).
 export const PACKS = [
@@ -23,10 +28,11 @@ export const PACKS = [
   { id: "pack-3000" as ItemId, credits: 3000, usd: 139, note: "Para los meses fuertes" },
 ];
 
-/** Launch offer (owner, 20 Oct 2026): the first month of the monthly Starter plan costs US$19.99 (then US$30). */
-export const LAUNCH_PRICE = 19.99;
-/** The same offer as a % (for badges): 33%. */
-export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / 30) * 100);
+/** Launch offer: the first month of the monthly Emprende plan costs US$29 (then US$49). Provisional (owner,
+ * 21 Oct 2026: prices get tuned once the margins are measured). */
+export const LAUNCH_PRICE = 29;
+/** The same offer as a % (for badges). */
+export const LAUNCH_PCT = Math.round((1 - LAUNCH_PRICE / (PLANS.find((p) => p.id === "starter")?.monthly ?? 49)) * 100);
 export const LAUNCH_ITEMS: ItemId[] = ["starter"];
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
 
@@ -49,7 +55,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   const r = (n: number) => Math.round(n * 100) / 100;
   if (pack) {
     const discount = r((pack.usd * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
-    return { item, label: `${pack.credits.toLocaleString("es-CL")} créditos extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
+    return { item, label: `${fmtSeconds(secondsOf(pack.credits))} de video extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
   }
   const p = plan!;
   const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;

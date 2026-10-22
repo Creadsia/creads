@@ -121,3 +121,10 @@ REGLAS:
 6) "persona": descripción visual COMPLETA EN INGLÉS de quién sale en ese corte (repítela entera si es la misma persona del corte anterior, nunca escribas "same guy") y lo que lo hace parte del lugar (edad aprox., género, ropa, lo que tiene al lado), sin nombres de marcas de ropa.
 Responde SOLO JSON: {"titulo":"nombre corto en español","cortes":[{"tipo":"Hook|Prueba|Dolor|Oferta|CTA","persona":"in English","mostrar":"qué se ve, en español","lineas":[{"speaker":"voice|person","text":"inglés","es":"traducción al español"}]}]}`;
 }
+
+/**
+ * The formats Creads sells (owner and Benjamín, 21 Oct 2026: back to simple, UGC ads and images). The others
+ * stay in the code, hidden, so they can come back without rebuilding them.
+ */
+export const SOLD_FORMATS: FormatId[] = ["ugc", "comentario"];
+export const SHOWN_FORMATS = FORMATS.filter((f) => SOLD_FORMATS.includes(f.id));

@@ -111,14 +111,14 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left ${period === p ? "border-accent-text bg-surface" : "border-line text-muted"}`}>
                   <b className="text-sm text-ink">{p === "mensual" ? "Mensual" : "Anual"}</b>
-                  <span className="text-xs">{p === "mensual" ? `Starter −${LAUNCH_PCT}% el primer mes` : "15% menos"}</span>
+                  <span className="text-xs">{p === "mensual" ? `Emprende −${LAUNCH_PCT}% el primer mes` : "15% menos"}</span>
                 </button>
               ))}
             </div>
           )}
 
           <div role="radiogroup" aria-label={isPack ? "Recarga" : "Plan"} className="flex flex-col gap-2">
-            {(isPack ? PACKS : PLANS).map((x) => {
+            {(isPack ? PACKS : PLANS.filter((p) => !p.hidden || p.id === item)).map((x) => {
               const on = x.id === item;
               const xq = quote(x.id, period, { firstPurchase: true })!;
               const isPlan = "monthly" in x;

@@ -24,7 +24,7 @@ test("missed notice: the approved charge is looked up and applied with its own p
   }) as typeof fetch;
   assert.equal(await reconcileSubscription("CR-F4422837"), 1);
   assert.equal(rpc[0].p_payment, "mp:555");
-  assert.equal(rpc[0].p_credits, 300, "Starter gives 300 credits a month");
+  assert.equal(rpc[0].p_credits, 1540, "Emprende gives 1,540 credits a month (≈ 135 s of video)");
   assert.equal(rpc[0].p_months, 1);
   assert.equal(await reconcileSubscription("CR-F4422837"), 0, "already applied: nothing again");
 });

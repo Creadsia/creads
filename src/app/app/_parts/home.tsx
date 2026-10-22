@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { TOOLS } from "@/lib/tools";
 import { PageHead, SetupNotice, cardCls } from "./ui";
 import { useCredits } from "./use-credits";
 import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
@@ -101,7 +100,7 @@ export default function Home({ full = true }: { full?: boolean }) {
               );
             })}
           </ol>
-          {full && <p className="text-xs text-muted">¿Buscas <Link href="/app/historias" className="font-semibold text-accent-text underline">Historias animadas</Link>, <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Video e imagen IA</Link> o las <Link href="/app/herramientas" className="font-semibold text-accent-text underline">Herramientas IA</Link>? Las Historias están en «Crear anuncio», junto a UGC y Podcast; las otras, en «Herramientas» del menú.</p>}
+          {full && <p className="text-xs text-muted">¿Necesitas imágenes para tus anuncios? Créalas en <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Imágenes para anuncios</Link>.</p>}
         </section>
       ) : (
         c && <Dashboard c={c} clips={clips} working={working.length} full={full} balance={info?.unlimited ? null : info?.balance ?? null} plan={info?.plan ?? null} paidUntil={info?.paidUntil ?? null} unlimited={!!info?.unlimited} rate={info?.rate} />
@@ -109,17 +108,9 @@ export default function Home({ full = true }: { full?: boolean }) {
 
       {full && !starting && c && (
         <section className={cardCls} aria-labelledby="quick">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="quick" className="font-display text-lg font-bold">Más formas de crear</h2>
-            <Link href="/app/herramientas" className="text-sm text-accent-text">Ver todas →</Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/app/historias" className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Historias animadas</Link>
-            <Link href="/app/laboratorio" className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Video e imagen IA</Link>
-            {TOOLS.slice(0, 6).map((t) => (
-              <Link key={t.id} href={`/app/herramientas/${t.id}`} className="rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">{t.name}</Link>
-            ))}
-          </div>
+          <h2 id="quick" className="font-display text-lg font-bold">Imágenes para tus anuncios</h2>
+          <p className="text-sm text-muted">Con la misma idea de tu video, crea varias imágenes para el feed (4:5) con tu avatar o tu producto.</p>
+          <Link href="/app/laboratorio" className="w-fit rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Crear imágenes</Link>
         </section>
       )}
     </>

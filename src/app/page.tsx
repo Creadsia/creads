@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { es } from "@/content/es";
-import Landing from "./landing";
+import Venta from "./venta";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const revalidate = 3600; // rebuilt hourly (the approximate pesos follow the dollar)
@@ -15,5 +15,6 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  return <Landing t={es} rate={await usdClpRate().catch(() => 950)} renews={process.env.MP_ONE_TIME !== "1"} />;
+  // the sales page for people who arrive from ads (the broad landing stays for the English site)
+  return <Venta t={es} rate={await usdClpRate().catch(() => 950)} renews={process.env.MP_ONE_TIME !== "1"} />;
 }

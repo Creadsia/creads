@@ -18,7 +18,7 @@ export const HELP_CATS = [
   { id: "creditos", label: "Créditos y planes" },
   { id: "crear", label: "Crear anuncios" },
   { id: "marca", label: "Voces, avatares y productos" },
-  { id: "herramientas", label: "Herramientas IA" },
+  { id: "herramientas", label: "Imágenes" },
   { id: "problemas", label: "Si algo falla" },
   { id: "cuenta", label: "Tu cuenta" },
 ] as const;
@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Starter US$30/mes (300 créditos; el primer mes US$19,99), Plus US$55/mes (1.000 créditos) y Ultra US$129/mes (3.000 créditos). «Máxima calidad» (Genjutsu) está desde Plus. Pagando anual tienes 15% menos: US$25, US$47 y US$109 al mes.",
+    a: "Emprende US$49/mes (≈ 4 anuncios de 30 s + 20 imágenes; el primer mes US$29) y Negocio US$99/mes (≈ 10 anuncios de 30 s + 50 imágenes). Tu saldo se ve en segundos de video. Pagando anual tienes 15% menos: US$42 y US$84 al mes.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },
@@ -170,26 +170,13 @@ export const HELP: HelpArticle[] = [
   },
 
   // ---------- herramientas ----------
+  // Recrear video, Herramientas IA and Doblaje are hidden since 21 Oct 2026 (Creads sells UGC ads and images).
   {
-    id: "recrear", cat: "herramientas",
-    q: "¿Cómo recreo un video con otra persona o producto?",
-    a: "En «Recrear video» elige un ejemplo de la galería o sube tu video. Dos opciones: «Cambiar personaje u objetos» (mismo video, cambias persona, producto o lugar con una foto y una frase; hasta 10 s) o «Copiar movimiento» (tu personaje hace los mismos gestos; hasta 30 s).",
-    link: { label: "Recrear video", href: "/app/recrear" },
-    tags: "recrear cambiar persona reemplazar copiar movimiento baile",
-  },
-  {
-    id: "herramientas", cat: "herramientas",
-    q: "¿Qué hay en Herramientas IA?",
-    a: "Quitar fondo, editar imagen, mejorar calidad de imagen o video, editar video, copiar movimiento, avatar que habla, sincronizar labios, doblaje a otro idioma, música y efectos de sonido. Cada una muestra su precio antes de usarla.",
-    link: { label: "Ver herramientas", href: "/app/herramientas" },
-    tags: "herramientas fondo doblaje musica labios mejorar",
-  },
-  {
-    id: "doblaje", cat: "herramientas",
-    q: "¿Puedo pasar un anuncio a otro idioma?",
-    a: "Sí, con «Doblaje»: sube un video o audio de hasta 5 minutos y elige el idioma. Lo traduce y lo dobla con la misma voz. Si quieres que los labios calcen con el nuevo audio, pásalo después por «Sincronizar labios».",
-    link: { label: "Doblaje", href: "/app/herramientas/doblaje" },
-    tags: "idioma ingles portugues traducir doblar",
+    id: "imagenes", cat: "herramientas",
+    q: "¿Cómo hago imágenes para mis anuncios?",
+    a: "En «Imágenes para anuncios» describe tu anuncio, elige cuántas imágenes quieres y el formato (4:5 para el feed). Si subes la foto de tu avatar o de tu producto, aparecen tal cual. Creads escribe una idea distinta para cada imagen y revisa cada una al salir.",
+    link: { label: "Imágenes para anuncios", href: "/app/laboratorio" },
+    tags: "imagen imagenes foto feed 4:5 banner",
   },
 
   // ---------- problemas ----------
@@ -261,15 +248,12 @@ export const HELP_PLACES: HelpLink[] = [
   { label: "Espiar anuncios", href: "/app/spy" },
   { label: "Crear guion", href: "/app/guiones" },
   { label: "Crear anuncio", href: "/app/crear" },
-  { label: "Historias animadas", href: "/app/historias" },
   { label: "Voces", href: "/app/voces" },
   { label: "Avatares", href: "/app/avatares" },
   { label: "Productos", href: "/app/productos" },
   { label: "En producción", href: "/app/videos" },
   { label: "Anuncios terminados", href: "/app/biblioteca" },
-  { label: "Video e imagen IA", href: "/app/laboratorio" },
-  { label: "Herramientas IA", href: "/app/herramientas" },
-  { label: "Recrear video", href: "/app/recrear" },
+  { label: "Imágenes para anuncios", href: "/app/laboratorio" },
   { label: "Planes y créditos", href: "/app/planes" },
   { label: "Mi cuenta", href: "/app/cuenta" },
   { label: "Centro de ayuda", href: "/app/ayuda" },

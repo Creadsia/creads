@@ -12,7 +12,7 @@ import type { ShellUser } from "./shell";
 // The account corner every logged-in screen has: credits at a glance and a menu with the account,
 // plans, team, support, light/dark and sign out.
 
-const PLAN_NAMES: Record<string, string> = { starter: "Starter", plus: "Plus", studio: "Ultra" };
+const PLAN_NAMES: Record<string, string> = { starter: "Emprende", plus: "Negocio", studio: "Ultra" };
 const THEME_KEY = "creads-theme";
 
 function initials(user: ShellUser) {

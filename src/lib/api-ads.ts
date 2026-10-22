@@ -1,6 +1,6 @@
 import { readPrivateJSON, writePrivateJSON } from "./supabase";
 import { SITE } from "./emails";
-import { FORMATS } from "./formats";
+import { FORMATS, SOLD_FORMATS } from "./formats";
 import { videoProviders } from "./providers";
 import { type AdJob, type Studio, runStep } from "./ad-runner";
 import { once } from "./marketing";
@@ -18,7 +18,7 @@ const indexFile = (ws: string) => `api/anuncios/${ws}/index.json`;
 const DONE = new Set(["listo", "error"]);
 
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
-export const API_FORMATS = FORMATS.filter((f) => !f.narr).map((f) => f.id);
+export const API_FORMATS = FORMATS.filter((f) => !f.narr && SOLD_FORMATS.includes(f.id)).map((f) => f.id);
 
 export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string; edicion: "pro" | "simple"; indicaciones?: string; look?: { plantilla?: string; c1?: string; c2?: string } } | string {
   const guion = typeof b.guion === "string" ? b.guion.trim() : "";

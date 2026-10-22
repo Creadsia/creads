@@ -36,7 +36,7 @@ type VideoState =
   | { s: "done"; url: string }
   | { s: "error"; msg: string };
 
-export default function ModelLab({ code }: { code: string }) {
+export default function ModelLab({ code, imagesOnly = false }: { code: string; imagesOnly?: boolean }) {
   const [prompt, setPrompt] = useState("");
   const [aspect, setAspect] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
 
@@ -188,7 +188,7 @@ export default function ModelLab({ code }: { code: string }) {
   return (
     <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold">Generar</h2>
+        <h2 className="text-xl font-semibold">{imagesOnly ? "Crear imágenes" : "Generar"}</h2>
         <p className="text-sm text-muted">
           Cada botón genera de verdad y descuenta segundos. El precio aparece en el botón antes de apretarlo.
         </p>
@@ -200,7 +200,7 @@ export default function ModelLab({ code }: { code: string }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={4}
-          placeholder="Selfie video of a 40-year-old woman in her kitchen holding a phone, natural light, talking to camera, realistic UGC style"
+          placeholder={imagesOnly ? "Ej: mujer de 35 años en su cocina mostrando el producto, luz natural, foto real de celular" : "Selfie video of a 40-year-old woman in her kitchen holding a phone, natural light, talking to camera, realistic UGC style"}
           className="rounded-lg border border-line bg-surface-2 px-3 py-2 leading-relaxed"
         />
       </label>
@@ -224,7 +224,7 @@ export default function ModelLab({ code }: { code: string }) {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={`grid gap-4 ${imagesOnly ? "" : "md:grid-cols-2"}`}>
         {/* Image */}
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
           <h3 className="font-semibold">1 · Imagen</h3>
@@ -283,14 +283,15 @@ export default function ModelLab({ code }: { code: string }) {
                       : <span className="absolute inset-0 grid place-items-center p-2 text-center text-xs text-muted">{b.state === "error" ? b.err : b.state === "running" ? "Generando…" : "En cola"}</span>}
                   </div>
                   {b.nota && <span className="text-xs text-warn">⚠ {b.nota}</span>}
-                  {b.url && <button type="button" onClick={() => setFrame(b.url!)} className="text-left text-xs font-semibold text-accent-text">{frame === b.url ? "✓ Imagen de partida del video" : "Usar para el video"}</button>}
+                  {b.url && !imagesOnly && <button type="button" onClick={() => setFrame(b.url!)} className="text-left text-xs font-semibold text-accent-text">{frame === b.url ? "✓ Imagen de partida del video" : "Usar para el video"}</button>}
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        {/* Video */}
+        {/* Video (hidden in «Imágenes para anuncios»: Creads sells UGC ads, made in Crear anuncio) */}
+        {!imagesOnly && (
         <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
           <h3 className="font-semibold">2 · Video</h3>
           <div className="flex flex-wrap gap-2">
@@ -332,6 +333,7 @@ export default function ModelLab({ code }: { code: string }) {
             <video src={video.url} controls playsInline className="max-h-[480px] w-full rounded-lg bg-black" />
           )}
         </div>
+        )}
       </div>
     </section>
   );
