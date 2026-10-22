@@ -1,5 +1,7 @@
 // Server-only helpers for Supabase (database REST + storage). The service key never reaches the browser.
 
+import { fetchRetry } from "./providers/retry";
+
 const BUCKET = "media"; // public: generated images and videos
 const PRIVATE = "admin"; // private: the owner's internal files (finance book)
 
@@ -61,7 +63,8 @@ export async function mediaExists(path: string) {
 export async function readPrivateJSON<T>(path: string): Promise<T | null> {
   await ensureBucket(PRIVATE, false);
   const { url, key } = env();
-  const res = await fetch(`${url}/storage/v1/object/${PRIVATE}/${path}`, { headers: sbHeaders(key), cache: "no-store" });
+  // a stalled storage read must not hold a customer's request for a minute (seen once in 73.000 in the load test)
+  const res = await fetchRetry(`${url}/storage/v1/object/${PRIVATE}/${path}`, { headers: sbHeaders(key), cache: "no-store", signal: AbortSignal.timeout(15_000) }, { maxWaitMs: 8_000 });
   if (res.status === 404) return null;
   // Storage answers a missing file with 400 + {"statusCode":"404","error":"not_found"}; any other 400
   // (bad key, bad path) is an error, so callers never mistake it for "empty" and overwrite the file.
@@ -82,6 +85,7 @@ export async function writePrivateJSON(path: string, data: unknown) {
     method: "POST",
     headers: { ...sbHeaders(key), "content-type": "application/json", "x-upsert": "true", "cache-control": "no-cache" },
     body: JSON.stringify(data),
+    signal: AbortSignal.timeout(20_000),
   });
   if (!res.ok) throw new Error(`Storage: no se pudo guardar ${path} (${res.status}).`);
 }
