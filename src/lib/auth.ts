@@ -175,6 +175,17 @@ export async function createSession(userId: string, userAgent = ""): Promise<str
   return token;
 }
 
+/**
+ * A short session for Creads itself to continue a customer's job in the background (an ad they left open):
+ * it lasts minutes, isn't a login (last_login stays as it was) and is ended right after use.
+ */
+export async function createServiceSession(userId: string, userAgent: string, minutes = 15): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  const expires = new Date(Date.now() + minutes * 60_000).toISOString();
+  await rest("sessions", { method: "POST", headers: { prefer: "return=minimal" }, body: JSON.stringify({ id: sha(token), user_id: userId, expires_at: expires, user_agent: userAgent.slice(0, 200) }) });
+  return token;
+}
+
 export async function endSession(token: string) {
   if (!token) return;
   sessionCache.delete(sha(token));

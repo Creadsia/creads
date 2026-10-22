@@ -21,15 +21,29 @@ export interface Cuenta {
 }
 export interface AutoReply { on: boolean; palabras: string[]; mensaje: string; publico: string; maxPorHora: number }
 export interface Pedido { id: string; at: string; titulo: string; formato: string; idioma: "es-CL" | "en"; guion: string; idea: string; estado: "pendiente" | "en producción" | "listo"; avatarId?: string }
+/** What a conversion campaign asks Meta to find more of (Benjamín chooses it in Panel → Marketing). */
+export type Evento = "registro" | "compra" | "inicio_pago" | "lead";
+export const EVENTOS: Record<Evento, { label: string; meta: string; note: string }> = {
+  registro: { label: "Cuenta creada (CompleteRegistration)", meta: "COMPLETE_REGISTRATION", note: "Se envía cada vez que alguien crea su cuenta. Mucho volumen: Meta aprende rápido." },
+  inicio_pago: { label: "Inicio de pago (InitiateCheckout)", meta: "INITIATED_CHECKOUT", note: "Se envía cuando alguien va a pagar un plan." },
+  compra: { label: "Compra (Purchase)", meta: "PURCHASE", note: "Se envía cuando se aprueba un pago. Lo más valioso, pero Meta necesita ~50 a la semana para aprender bien." },
+  lead: { label: "Lead", meta: "LEAD", note: "Hoy casi no se envía (solo la lista de espera, que no está en la página)." },
+};
+export const isEvento = (v: unknown): v is Evento => typeof v === "string" && v in EVENTOS;
+
 export interface CampanaSpec {
   nombre: string; objetivo: "leads" | "trafico" | "ventas"; paises: string[]; edadMin: number; edadMax: number;
   presupuestoUsd: number; link: string; texto: string; titulo: string; cta: string; adId: string;
+  /** The conversion event; when missing, the one chosen in Marketing (or «registro»). */
+  evento?: Evento;
 }
 export interface CampanaRow { id: string; at: string; spec: CampanaSpec; estado: "ensayo" | "subida en pausa" | "activa" | "pausada" | "error"; metaId?: string; adsetId?: string; adId?: string; error?: string }
 export type Destino = "instagram" | "facebook" | "ambos";
 export interface Publicacion { id: string; at: string; cuenta: string; adId: string; texto: string; estado: "ensayo" | "publicada" | "error"; destino?: Destino; mediaId?: string; fbId?: string; error?: string }
 export interface MarketingState {
   capUsd: number; // max US$ per day across all active campaigns
+  /** The conversion event campaigns optimise for unless a campaign says another (chosen by Benjamín). */
+  evento?: Evento;
   cuentas: Cuenta[];
   autoReply: AutoReply;
   pedidos: Pedido[];
@@ -140,6 +154,15 @@ async function account() {
 interface MetaCampaign { id: string; name: string; status: string; effective_status: string; daily_budget?: string; objective: string; insights?: { data: Insight[] } }
 interface Insight { spend?: string; impressions?: string; clicks?: string; ctr?: string; cpc?: string; frequency?: string; actions?: { action_type: string; value: string }[]; cost_per_action_type?: { action_type: string; value: string }[] }
 
+/** What the ad account spent on one day (YYYY-MM-DD, account time), in US$. null while Meta isn't connected. */
+export async function metaSpendOn(day: string): Promise<number | null> {
+  const acc = await account();
+  if (!acc) return null;
+  const r = await graph<{ data: { spend?: string }[] }>(`${acc.cfg.account}/insights`, { params: { fields: "spend", level: "account", time_range: { since: day, until: day } } });
+  const spend = Number(r.data?.[0]?.spend ?? 0) || 0;
+  return +(spend / acc.rate).toFixed(2);
+}
+
 /** Campaigns with their last 7 days, in US$ (empty while Meta isn't connected). */
 export async function campaigns() {
   const acc = await account();
@@ -212,7 +235,7 @@ export function cleanCampaign(x: Record<string, unknown>, capUsd: number): Campa
   if (adId && !/^[0-9a-f-]{36}$/i.test(adId)) return "El anuncio de Creads (adId) no es válido: elige uno de «Anuncios terminados» o déjalo vacío para armar solo la estructura.";
   return {
     nombre: clip(x.nombre, 80) || "Campaña Creads", objetivo, paises, edadMin, edadMax, presupuestoUsd, link,
-    texto: clip(x.texto, 600), titulo: clip(x.titulo, 60), cta, adId,
+    texto: clip(x.texto, 600), titulo: clip(x.titulo, 60), cta, adId, ...(isEvento(x.evento) ? { evento: x.evento } : {}),
   };
 }
 
@@ -247,10 +270,11 @@ export async function createPausedCampaign(spec: CampanaSpec): Promise<{ campaig
     } });
     created.push(camp.id);
     const conv = spec.objetivo !== "trafico" && cfg.pixel;
+    const evento: Evento = spec.evento ?? (await loadMarketing().catch(() => null))?.evento ?? (spec.objetivo === "ventas" ? "compra" : "registro");
     const adset = await graph<{ id: string }>(`${cfg.account}/adsets`, { method: "POST", params: {
       name: `${spec.nombre} · público`, campaign_id: camp.id, status: "PAUSED", billing_event: "IMPRESSIONS",
       optimization_goal: conv ? "OFFSITE_CONVERSIONS" : "LINK_CLICKS",
-      ...(conv ? { promoted_object: { pixel_id: cfg.pixel, custom_event_type: spec.objetivo === "ventas" ? "PURCHASE" : "LEAD" } } : {}),
+      ...(conv ? { promoted_object: { pixel_id: cfg.pixel, custom_event_type: EVENTOS[evento].meta } } : {}),
       // with Advantage+ audience Meta takes the age as a suggestion (age_range); hard limits stay wide
       targeting: { geo_locations: { countries: spec.paises }, age_min: Math.min(spec.edadMin, 25), age_max: 65, age_range: [spec.edadMin, spec.edadMax], targeting_automation: { advantage_audience: 1 } },
     } });

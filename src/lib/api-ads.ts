@@ -5,6 +5,7 @@ import { videoProviders } from "./providers";
 import { type AdJob, type Studio, runStep } from "./ad-runner";
 import { once } from "./marketing";
 import { pickModel } from "./autoprod";
+import { createServiceSession, endSession } from "./auth";
 
 // «Hazme un anuncio» for the public API (and any system with an API key): a script in, a finished video out,
 // made by the same pipeline as «Crear anuncio» and charged to the key's account. Each job is a small private
@@ -16,6 +17,19 @@ export interface ApiAd extends AdJob { id: string; ws: string; userId: string; c
 const file = (ws: string, id: string) => `api/anuncios/${ws}/${id}.json`;
 const indexFile = (ws: string) => `api/anuncios/${ws}/index.json`;
 const DONE = new Set(["listo", "error"]);
+// Ads still in production, across all accounts: the Guardián keeps them moving when nobody is watching
+// (owner, 22 Oct 2026: an Automático ad must finish even if the customer closes the tab).
+const OPEN = "api/anuncios/abiertos.json";
+type OpenRef = { ws: string; id: string; at: string };
+async function openList() { return (await readPrivateJSON<OpenRef[]>(OPEN).catch(() => null)) ?? []; }
+async function markOpen(ws: string, id: string) {
+  const l = (await openList()).filter((x) => !(x.ws === ws && x.id === id));
+  await writePrivateJSON(OPEN, [...l, { ws, id, at: new Date().toISOString() }].slice(-300)).catch(() => {});
+}
+async function markClosed(ws: string, id: string) {
+  const l = await openList();
+  if (l.some((x) => x.ws === ws && x.id === id)) await writePrivateJSON(OPEN, l.filter((x) => !(x.ws === ws && x.id === id))).catch(() => {});
+}
 
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr && SOLD_FORMATS.includes(f.id)).map((f) => f.id);
@@ -49,6 +63,7 @@ export async function createAd(ws: string, userId: string, o: Exclude<ReturnType
   await writePrivateJSON(file(ws, job.id), job);
   const idx = ((await readPrivateJSON<string[]>(indexFile(ws)).catch(() => null)) ?? []).filter((x) => x !== job.id);
   await writePrivateJSON(indexFile(ws), [job.id, ...idx].slice(0, 100));
+  await markOpen(ws, job.id);
   return job;
 }
 
@@ -57,8 +72,11 @@ export const listAds = async (ws: string) => (await Promise.all(((await readPriv
 
 /** The studio's endpoints with the caller's own credentials (its API key or its session cookie). */
 export function studioAs(req: Request): Studio {
-  const auth = req.headers.get("authorization");
-  const cookie = req.headers.get("cookie");
+  return studioWith({ auth: req.headers.get("authorization"), cookie: req.headers.get("cookie") });
+}
+
+/** The studio's endpoints with given credentials (an API key, or a session cookie). */
+export function studioWith({ auth, cookie }: { auth?: string | null; cookie?: string | null }): Studio {
   return async <T,>(path: string, body?: unknown, timeoutMs = 240_000): Promise<T> => {
     const res = await fetch(`${SITE}${path}`, {
       method: body === undefined ? "GET" : "POST",
@@ -83,7 +101,40 @@ export async function advanceAd(job: ApiAd, studio: Studio): Promise<ApiAd> {
   const now = new Date().toISOString();
   const next: ApiAd = { ...job, ...patch, checkedAt: now, ...(Object.keys(patch).length ? { updatedAt: now } : {}) };
   await writePrivateJSON(file(job.ws, job.id), next);
+  if (DONE.has(next.estado)) await markClosed(job.ws, job.id);
   return next;
+}
+
+/**
+ * The Guardián's sweep: moves forward every ad nobody is polling (the customer closed the tab), a few steps
+ * each, as its own owner (a session of minutes, ended right after). An ad being watched is left to the page.
+ */
+export async function sweepOpenAds(maxMs = 240_000): Promise<{ moved: number; done: number }> {
+  const t0 = Date.now();
+  let moved = 0, done = 0;
+  for (const ref of await openList()) {
+    if (Date.now() - t0 > maxMs) break;
+    let job = await loadAd(ref.ws, ref.id);
+    if (!job || DONE.has(job.estado)) { await markClosed(ref.ws, ref.id); continue; }
+    if (Date.now() - Date.parse(job.checkedAt ?? job.updatedAt) < 90_000) continue; // someone is watching it
+    let token = "";
+    try {
+      token = await createServiceSession(job.userId, "CreadsGuardian/1.0 (anuncio en segundo plano)");
+      const studio = studioWith({ cookie: `creads_session=${token}` });
+      for (let i = 0; i < 4 && job && !DONE.has(job.estado) && Date.now() - t0 < maxMs; i++) {
+        const before = `${job.estado}|${job.paso}|${job.updatedAt}`;
+        job = await advanceAd(job, studio);
+        moved++;
+        if (`${job.estado}|${job.paso}|${job.updatedAt}` === before) break; // waiting on a provider: next round
+      }
+      if (job && DONE.has(job.estado)) done++;
+    } catch (e) {
+      console.error("sweepOpenAds", ref.id, e instanceof Error ? e.message : e);
+    } finally {
+      if (token) await endSession(token).catch(() => {});
+    }
+  }
+  return { moved, done };
 }
 
 /** What the caller sees (absolute link to the video; it opens with the same API key). */

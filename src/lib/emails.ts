@@ -165,6 +165,9 @@ export interface DailyReport {
   support?: { chats: number; people: number; solved: number; topics: [string, number][]; unsolved: string[] };
   errors?: { total: number; kinds: number; top: string[] };
   gen?: { total: number; failed: number; failedUsd: number; refunded: number };
+  /** Exact sales and spend of the day (lib/gasto.ts) and the month so far. */
+  money?: import("./gasto").DayLedger;
+  month?: { from: string; vendido: number; neto: number; gastado: number; resultado: number; dias: number };
 }
 
 const TOPIC_ES: Record<string, string> = { creditos: "créditos", planes_pago: "planes y pagos", crear: "crear anuncios", marca: "voces y avatares", herramientas: "herramientas", falla: "fallas", cuenta: "cuenta", otro: "otros" };
@@ -173,15 +176,35 @@ const TOPIC_ES: Record<string, string> = { creditos: "créditos", planes_pago: "
 export function ownerReportEmail(to: string, r: DailyReport): Email {
   const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const margin = r.salesUsd - r.aiUsd;
-  const rows: [string, string][] = [
+  const m = r.money;
+  const line = (l: { usd: number | null; real: boolean; note?: string }) => (l.usd == null ? `— (${l.note ?? "sin dato"})` : `${usd(l.usd)}${l.real ? "" : ` · ${l.note ?? "estimado"}`}`);
+  const moneyRows: [string, string][] = m ? [
+    ["Vendido", `${m.ventas.count} · ${usd(m.ventas.usd)}${m.ventas.clp ? ` ($${m.ventas.clp.toLocaleString("es-CL")} CLP)` : ""}`],
+    ["− IVA (19%)", usd(m.ventas.iva)],
+    ["− Mercado Pago", `${usd(m.ventas.mp)}${m.ventas.mpReal ? "" : " · estimado"}`],
+    ["= Neto de ventas", usd(m.ventas.neto)],
+    ["Video y labios (fal.ai)", line(m.gastos.fal)],
+    ["Claude (asistente, guiones, revisión)", line(m.gastos.claude)],
+    ["Imágenes (Google)", line(m.gastos.google)],
+    ["Voces (ElevenLabs, extra del plan)", line(m.gastos.eleven)],
+    ...(m.gastos.oficina.usd != null ? [["Oficina de agentes", line(m.gastos.oficina)] as [string, string]] : []),
+    ["Campañas en Meta", line(m.gastos.meta)],
+    ["Costos fijos (del día)", line(m.gastos.fijos)],
+    ["= Gastado", usd(m.gastoTotal)],
+    ["Resultado del día", usd(m.resultado)],
+    ...(r.month ? [[`Mes (desde el ${r.month.from.slice(8)})`, `vendido ${usd(r.month.vendido)} · neto ${usd(r.month.neto)} · gastado ${usd(r.month.gastado)} · resultado ${usd(r.month.resultado)}`] as [string, string]] : []),
+  ] : [];
+  const rows: [string, string][] = m ? [...moneyRows] : [
     ["Ventas", `${r.salesCount} · ${usd(r.salesUsd)}${r.salesClp ? ` ($${Math.round(r.salesClp).toLocaleString("es-CL")} CLP)` : ""}`],
     ["Gasto en IA (estimado)", usd(r.aiUsd)],
     ["Ventas − gasto IA", usd(margin)],
+  ];
+  rows.push(
     ["Cuentas nuevas", String(r.signups)],
     ["Instalaciones de la app", String(r.installs ?? 0)],
     ["Planes que vencen en 3 días", String(r.ending)],
     ["Créditos vencidos hoy", r.expired.toLocaleString("es-CL")],
-  ];
+  );
   if (r.gen) rows.push(["Generaciones fallidas", r.gen.total ? `${r.gen.failed} de ${r.gen.total} (${Math.round((r.gen.failed / r.gen.total) * 100)}%) · ${usd(r.gen.failedUsd)} en riesgo` : "Sin generaciones"]);
   if (r.gen?.refunded) rows.push(["Créditos devueltos a clientes", r.gen.refunded.toLocaleString("es-CL")]);
   if (r.errors) rows.push(["Errores registrados", r.errors.total ? `${r.errors.total} (${r.errors.kinds} tipo${r.errors.kinds === 1 ? "" : "s"})` : "Ninguno"]);
@@ -193,7 +216,7 @@ export function ownerReportEmail(to: string, r: DailyReport): Email {
   const ok = !r.alerts.length;
   return {
     to, tag: "resumen-dueno",
-    subject: `Creads · ${date}: ${r.salesCount} venta${r.salesCount === 1 ? "" : "s"}, ${usd(r.salesUsd)}${ok ? "" : " · ⚠ revisar"}`,
+    subject: `Creads · ${date}: ${r.salesCount} venta${r.salesCount === 1 ? "" : "s"}, ${usd(r.salesUsd)}${m ? ` · gastado ${usd(m.gastoTotal)}` : ""}${ok ? "" : " · ⚠ revisar"}`,
     html: layout({
       preview: ok ? "Todo en orden." : `${r.alerts.length} cosa(s) para revisar.`,
       title: `Resumen del ${date}`,

@@ -44,6 +44,15 @@ export async function GET(req: Request) {
     after(async () => { const { careSweep } = await import("@/lib/cuidado"); await careSweep().catch((e) => console.error("cuidado", e instanceof Error ? e.message : e)); });
     // the ready-made «Avatares de Creads» get their pictures (a few per round, only while some are missing)
     after(async () => { if (await once("avatares-creads", 15 * 60)) { const { ensurePresetImages } = await import("@/lib/avatares-creads"); await ensurePresetImages().catch(() => 0); } });
+    // fal.ai's real balance, every round: what it drops is what fal charged (the owner's daily money report)
+    after(async () => { const { recordFalSnapshot } = await import("@/lib/gasto"); await recordFalSnapshot().catch(() => {}); });
+    // customers' ads that nobody is watching (tab closed) keep moving (their own request, their own time)
+    after(async () => {
+      const secret = (process.env.CRON_SECRET ?? "").trim();
+      if (secret.length < 16) return;
+      const { SITE } = await import("@/lib/emails");
+      await fetch(`${SITE}/api/cron/anuncios`, { method: "POST", headers: { authorization: `Bearer ${secret}` }, signal: AbortSignal.timeout(4000) }).catch(() => {});
+    });
     // the automatic video producer moves forward (its own request, its own time)
     after(async () => { const { kickProduction } = await import("@/lib/autoprod"); await kickProduction(); });
     // the brand's organic autopilot (plan, produce, schedule, publish) and the bad-spend pause rule

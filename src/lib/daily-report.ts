@@ -5,7 +5,8 @@ import type { DailyReport } from "./emails";
 import { modelWarnings } from "./model-check";
 import { supportDay } from "./support";
 import { genStats } from "./genstats";
-import { groupErrors, recentErrors, resolvedSigs } from "./errlog";
+import { countingSince, groupErrors, recentErrors, resolvedSigs } from "./errlog";
+import { dayLedger, monthToDate } from "./gasto";
 
 // Yesterday's numbers for the owner's morning email. Every part is best-effort: a part that can't be
 // read shows 0 and the rest still goes out.
@@ -29,6 +30,8 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
   const groups = groupErrors(errs, await resolvedSigs().catch(() => ({})));
   const installs = ((await readPrivateJSON<Record<string, number>>("instalaciones.json").catch(() => null)) ?? {})[from] ?? 0;
   const leaves = ((await readPrivateJSON<{ at: string; reason: string; detail: string }[]>("cancelaciones.json").catch(() => null)) ?? []).filter((l) => l.at >= from && l.at < to);
+  const ledger = await dayLedger(from).catch((e) => { console.error("gasto", e instanceof Error ? e.message : e); return undefined; });
+  const month = ledger ? await monthToDate(from, await countingSince().catch(() => null)).catch(() => undefined) : undefined;
   const clp = pays.filter((p) => p.currency === "CLP").reduce((s, p) => s + Number(p.amount || 0), 0);
   const usd = pays.filter((p) => p.currency !== "CLP").reduce((s, p) => s + Number(p.amount || 0), 0) + clp / rate;
   return {
@@ -43,6 +46,7 @@ export async function dailyReport(extra: { expired: number; ending: number }): P
     ending: extra.ending,
     support,
     errors: { total: errs.length, kinds: groups.length, top: groups.slice(0, 3).map((g) => `${g.message.slice(0, 120)} (${g.count})`) },
+    money: ledger, month,
     gen: gen ? { total: gen.total, failed: gen.failed, failedUsd: gen.failedUsd, refunded: gen.refunded } : undefined,
     alerts: [...(money?.alerts ?? []).map((a) => a.text), ...models, ...leaves.map((l) => `Un cliente canceló la renovación: ${l.reason}${l.detail ? ` («${l.detail.slice(0, 160)}»)` : ""}.`)],
   };
