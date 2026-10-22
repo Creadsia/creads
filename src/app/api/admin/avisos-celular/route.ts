@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const b = await req.json().catch(() => null);
   if (b?.probar) {
-    const ok = await phoneAlert({ title: "💰 ¡Nueva venta! (prueba)", text: "Así va a sonar tu celular cuando alguien compre en Creads." }, true);
+    const ok = await phoneAlert({ title: "💰 ¡Nueva venta! (prueba)", text: "Así va a sonar tu celular cuando alguien compre en Creads.", priority: 5 }, true);
     return ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "No se pudo enviar. Activa primero los avisos." }, { status: 502 });
   }
   return NextResponse.json(await setPhone(b?.on !== false, b?.nuevo === true));
