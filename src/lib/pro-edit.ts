@@ -162,7 +162,12 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
 
   // punch-in on each cut (as strong as the look asks), back to normal in 0.35 s, and a gentle one at the start
   const zk = look.zoom;
-  const z = zk > 0 ? [0, ...cuts].map((c) => `if(between(t,${c},${(c + 0.35).toFixed(3)}),${(c === 0 ? zk * 0.66 : zk).toFixed(3)}*(1-(t-${c})/0.35),0)`).join("+") : "";
+  // flashy looks (with flash): a punch-in that settles back. The calm ones: a clean «jump cut», every other
+  // cut a little closer with no movement at all (the owner, 22 Oct 2026: the animated transitions looked bad)
+  const ends = [...cuts, T];
+  const z = zk <= 0 ? ""
+    : look.flash ? [0, ...cuts].map((c) => `if(between(t,${c},${(c + 0.35).toFixed(3)}),${(c === 0 ? zk * 0.66 : zk).toFixed(3)}*(1-(t-${c})/0.35),0)`).join("+")
+      : cuts.map((c, i) => (i % 2 === 0 ? `between(t,${c},${(ends[i + 1] - 0.001).toFixed(3)})*${zk.toFixed(3)}` : "")).filter(Boolean).join("+");
   const zoom = z ? `scale=w='trunc(${W}*(1+${z})/2)*2':h=-2:eval=frame,crop=${W}:${H}` : "";
   const flashes = look.flash ? cuts.map((c) => [
     `drawbox=x=0:y=0:w=iw:h=ih:color=white@0.55:t=fill:enable='between(t,${c},${(c + 0.04).toFixed(3)})'`,
@@ -174,13 +179,14 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
   const endBg = `color=c=${ffc(look.endBg)}:s=${W}x${H}:r=30:d=${total.toFixed(3)},format=yuva420p,fade=t=in:st=${T.toFixed(3)}:d=${END_FADE}:alpha=1`;
 
   // sounds: impact at the start, a whoosh on every cut, a pop on every headline, a riser into the closing card
-  // as loud as the look: «fuerte» (all of it), «suave» (soft whooshes and the riser only), «ninguno»
+  // as loud as the look: «fuerte» (all of it), «suave» (only a soft riser into the closing card), «ninguno»
   const k = look.sfx === "suave" ? 0.6 : 1;
   const sounds: { file: string; at: number; vol: number }[] = look.sfx === "ninguno" ? [] : [
     ...(look.sfx === "fuerte" ? [{ file: "impact.wav", at: 0, vol: 0.45 }] : []),
-    ...cuts.map((c, i) => ({ file: i % 2 ? "whoosh2.wav" : "whoosh.wav", at: Math.max(0, c - 0.12), vol: 0.22 * k })),
+    // only the loud looks make a sound on the cuts; the others cut in silence
+    ...(look.sfx === "fuerte" ? cuts.map((c, i) => ({ file: i % 2 ? "whoosh2.wav" : "whoosh.wav", at: Math.max(0, c - 0.12), vol: 0.22 * k })) : []),
     ...(look.sfx === "fuerte" ? plan.golpes.map((g) => ({ file: "pop.wav", at: g.desde, vol: 0.18 })) : []),
-    { file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 * k },
+    { file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 * k * (look.sfx === "suave" ? 0.6 : 1) },
   ];
   const args = ["-y", "-v", "error", "-i", input];
   sounds.forEach((x) => args.push("-i", path.join(SFX, x.file)));

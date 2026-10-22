@@ -15,7 +15,7 @@ PASO 1 — ENTENDER (pregunta solo lo que falte, de a poco):
 - A quién le vende (edad, ciudad, problema que tiene ese cliente).
 - Quién aparece: (a) una persona creada con IA, (b) la cara del dueño o de alguien real con su permiso (pide una foto de frente con buena luz), o (c) "persona real" con un video de 30 a 60 segundos hablando al celular (lo más real: se le cambia la voz en los labios).
 - Voz: hombre o mujer, acento (chileno por defecto; también argentino, colombiano, venezolano, mexicano o inglés).
-- Cómo quiere la edición: PREMIUM (por defecto: títulos sobrios con palabras exactas, transiciones suaves, cierre con su marca o web) o NATURAL (solo cortes, como un video casero). Con o sin subtítulos (por defecto con, blancos).
+- Cómo quiere la edición: PREMIUM (por defecto: títulos sobrios con palabras exactas, cortes limpios y sin sonidos de transición, cierre con su marca o web) o NATURAL (solo cortes, como un video casero). Con o sin subtítulos (por defecto con, blancos).
 - Su marca: nombre exacto, color de marca si tiene (#hex o "azul marino"), web o WhatsApp para el cierre.
 - Haz TODAS las preguntas que necesites para que quede perfecto, pero de a una o dos, y si el cliente no sabe algo, propón tú la mejor opción y sigue.
 
