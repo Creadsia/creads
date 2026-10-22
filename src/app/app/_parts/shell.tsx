@@ -46,7 +46,7 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-type Item = { href: string; label: string; icon: string; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
+type Item = { href: string; label: string; icon: string; owner?: boolean; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
 // The menu follows how a campaign is made: spy what works → write the script → make the ad (its
 // formats include animated stories). The brand is set up once; standalone AI tools come last.
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
@@ -74,16 +74,15 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     items: [
       { href: "/app/videos", label: "En producción", icon: I.film },
       { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
-      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true },
+      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true, owner: true },
     ],
   },
+  // Herramientas IA, Recrear video, Influencer IA and Historias are hidden since 21 Oct 2026 (owner and Benjamín:
+  // Creads sells UGC ads and images); their pages stay in the code and open only by their address.
   {
-    group: "Herramientas",
+    group: "Imágenes",
     items: [
-      { href: "/app/laboratorio", label: "Video e imagen IA", icon: I.lab, full: true },
-      { href: "/app/herramientas", label: "Herramientas IA", icon: I.spark, full: true },
-      { href: "/app/recrear", label: "Recrear video", icon: I.redo, full: true },
-      { href: "/app/influencer", label: "Influencer IA", icon: I.user, full: true },
+      { href: "/app/laboratorio", label: "Imágenes para anuncios", icon: I.image, full: true },
     ],
   },
 ];
@@ -116,7 +115,7 @@ function navFor(user: ShellUser) {
   // giving access is the owner's alone
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
-  const groups = [...NAV, { group: "Cuenta", items: account }];
+  const groups = [...NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.owner || user.owner) })), { group: "Cuenta", items: account }];
   const visible = user.access === "full" ? groups : groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.full) })).filter((g) => g.items.length); // "Solo anuncios"
   // number the steps in the order they're shown
   return visible.map((g) => { let n = 0; return { ...g, items: g.items.map((i) => (i.step ? { ...i, step: ++n } : i)) }; });

@@ -3,13 +3,13 @@ import ModelLab from "../_parts/model-lab";
 import { FullOnly } from "../_parts/full-only";
 import { PageHead } from "../_parts/ui";
 
-export const metadata: Metadata = { title: "Video e imagen IA" };
+export const metadata: Metadata = { title: "Imágenes para anuncios" };
 
 export default function LabPage() {
   return (
     <>
-      <PageHead title="Video e imagen IA" lead="Genera una imagen o un clip suelto con cualquiera de los modelos: Veo, Kling, Seedance, Hailuo, Wan, Grok y Nano Banana. El precio aparece antes de apretar." />
-      <FullOnly><ModelLab code="session" /></FullOnly>
+      <PageHead title="Imágenes para anuncios" lead="Describe tu anuncio y Creads crea varias imágenes con ideas distintas (otro gancho, otra escena), con la cara de tu avatar o tu producto si los subes. Usa 4:5 para el feed. El precio aparece antes de apretar." />
+      <FullOnly><ModelLab code="session" imagesOnly /></FullOnly>
     </>
   );
 }

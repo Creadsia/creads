@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const WORK_KEY = "creads-crear-en-curso";
-import { FORMATS, type FormatId, formatById } from "@/lib/formats";
+import { type FormatId, SHOWN_FORMATS, SOLD_FORMATS, formatById } from "@/lib/formats";
 import { Field, PageHead, type Row, SetupNotice, Stepper, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import { NICHES } from "@/lib/niches";
 import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
@@ -45,10 +45,8 @@ const TABS: { label: string; steps: number[] }[] = [
   { label: "Edición final", steps: [6] },
 ];
 
-// Another style of ad, next to the formats: it opens its own studio.
-const MORE_KINDS = [
-  { href: "/app/historias", icon: "🎬", name: "Historias animadas", tag: "Mini película con IA" },
-];
+// Another style of ad, next to the formats (hidden since 21 Oct 2026: Historias animadas is out of the offer).
+const MORE_KINDS: { href: string; icon: string; name: string; tag: string }[] = [];
 
 /** The language a script is written in (null while it's too short to tell). */
 export function guessLang(t: string): "en" | "es-CL" | null {
@@ -97,7 +95,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
     try {
       const w = JSON.parse(localStorage.getItem(WORK_KEY) || "null");
       if (w && Date.now() - (w.at ?? 0) < 7 * 86_400_000 && (w.cuts?.length || w.text)) {
-        setText(w.text ?? ""); setLang(w.lang === "en" ? "en" : "es-CL"); if (w.format) setFormat(w.format);
+        setText(w.text ?? ""); setLang(w.lang === "en" ? "en" : "es-CL"); if (w.format && SOLD_FORMATS.includes(w.format)) setFormat(w.format);
         setTitle(w.title ?? ""); setCuts(w.cuts ?? []); setScriptId(w.scriptId ?? null); setAdId(w.adId ?? null);
         if (w.voice) setVoice(w.voice);
         setStep(Number.isInteger(w.step) ? w.step : 0); setResumed(true);
@@ -147,7 +145,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
   }, []);
 
   const f = formatById(format);
-  useEffect(() => { try { const v = localStorage.getItem("creads-fmt"); if (v && FORMATS.some((x) => x.id === v)) setFormat(v as FormatId); } catch {} }, []);
+  useEffect(() => { try { const v = localStorage.getItem("creads-fmt"); if (v && SOLD_FORMATS.includes(v as FormatId)) setFormat(v as FormatId); } catch {} }, []);
   const pickFormat = (id: FormatId) => { setFormat(id); try { localStorage.setItem("creads-fmt", id); } catch {} };
 
   function openScript(id: string) {
@@ -260,7 +258,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
             <span className="text-sm font-semibold text-muted">¿Qué tipo de video quieres hacer?</span>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             <div role="radiogroup" aria-label="Formato del video" className="contents">
-              {FORMATS.map((x) => (
+              {SHOWN_FORMATS.map((x) => (
                 <button key={x.id} type="button" role="radio" aria-checked={x.id === format} onClick={() => pickFormat(x.id)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border p-3 text-left transition-colors ${x.id === format ? "border-accent bg-accent/10" : "border-line hover:border-accent/50"}`}>
                   <span className="text-xl" aria-hidden="true">{x.icon}</span>
