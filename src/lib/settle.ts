@@ -4,6 +4,7 @@ import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
 import { ownerSaleEmail, receiptEmail } from "./emails";
 import { ownerAddress } from "./errlog";
+import { phoneAlert } from "./phone-alert";
 import { beforeNewPeriod } from "./expiry";
 import { getPayment, getPreapproval, setSubscriptionAmount, subscriptionPaymentIds } from "./mercadopago";
 
@@ -77,6 +78,8 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   try {
     const to = await ownerAddress();
     const renewal = (order.payments ?? []).some((p) => p !== `${source}:${pay.id}`);
+    const money = pay.currency === "CLP" ? `$${Math.round(pay.amount).toLocaleString("es-CL")}` : `US$${pay.amount}`;
+    await phoneAlert({ title: renewal ? `🔁 Renovación: ${money}` : `💰 ¡Nueva venta! ${money}`, text: `${order.quote.label}${renewal ? " · se renovó" : " · cliente nuevo"}` });
     if (to) await sendEmail(ownerSaleEmail(to, { label: order.quote.label, amount: pay.amount, currency: pay.currency, customer: order.email ?? "", account: order.wsName ?? "", renewal, orderId: order.id }));
   } catch (e) { console.error("owner sale email", order.id, e instanceof Error ? e.message : e); }
   if (order.visitor) {

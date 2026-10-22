@@ -6,6 +6,7 @@ import { updatePrivateJSON } from "@/lib/supabase";
 import { creditStatus } from "@/lib/credits";
 import { cancelEmail, ownerCancelEmail } from "@/lib/emails";
 import { ownerAddress } from "@/lib/errlog";
+import { phoneAlert } from "@/lib/phone-alert";
 import { sendEmail } from "@/lib/providers/email";
 import { PLANS } from "@/lib/catalog";
 
@@ -48,6 +49,7 @@ export async function POST(req: Request) {
       const st = await creditStatus(s.user.workspace);
       const plan = PLANS.find((p) => p.id === st.plan)?.name ?? null;
       await sendEmail(cancelEmail(s.user.email, s.user.name ?? null, { plan, until: st.paidUntil ?? null }));
+      await phoneAlert({ title: "Un cliente canceló la renovación", text: `${plan ?? "Plan"} · motivo: ${reason}`, tags: "warning", priority: 3 });
       const owner = await ownerAddress();
       if (owner) await sendEmail(ownerCancelEmail(owner, { customer: s.user.email, plan, until: st.paidUntil ?? null, reason: detail ? `${reason}: ${detail}` : reason }));
     } catch (e) {
