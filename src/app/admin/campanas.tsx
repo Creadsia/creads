@@ -128,7 +128,9 @@ export default function Campanas() {
 
   const t = d?.total;
   const roas = t ? ratio(t.ingresos, t.gasto) : null;
-  const cac = t ? ratio(t.gasto, t.ventas) : null;
+  // without Meta's spend there's no cost to show (a «US$0» would look like free customers)
+  const hasSpend = Boolean(d?.meta.connected && t && t.gasto > 0);
+  const cac = t && hasSpend ? ratio(t.gasto, t.ventas) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -154,10 +156,10 @@ export default function Campanas() {
       {t && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Tile label="Gasto en Meta" value={usd(t.gasto, 2)} hint={`${int(t.clics)} clics · ${money(ratio(t.gasto, t.clics))} por clic`} />
+            <Tile label="Gasto en Meta" value={d.meta.connected ? usd(t.gasto, 2) : "—"} hint={`${int(t.clics)} clics · ${money(ratio(t.gasto, t.clics))} por clic`} />
             <Tile label="Ventas en Creads" value={usd(t.ingresos, 2)} hint={`${t.ventas} ${t.ventas === 1 ? "venta" : "ventas"} · ${t.ventasMeta} llegaron desde Meta`} />
             <Tile label="Retorno (ventas ÷ gasto)" value={roas == null ? "—" : `${roas.toLocaleString("es-CL", { maximumFractionDigits: 2 })}×`} hint={roas == null ? "Sin gasto en este período" : roas >= 1 ? "Las ventas ya pagan los anuncios" : "Las ventas todavía no cubren el gasto"} tone={roas == null ? undefined : roas >= 1 ? "good" : "bad"} />
-            <Tile label="Costo por cliente" value={money(cac)} hint={`Gasto ÷ ventas · ${money(ratio(t.gasto, t.cuentas))} por cuenta nueva`} />
+            <Tile label="Costo por cliente" value={money(cac)} hint={hasSpend ? `Gasto ÷ ventas · ${money(ratio(t.gasto, t.cuentas))} por cuenta nueva` : "Aparece cuando Meta muestre el gasto"} />
           </div>
 
           <div className={card}>
