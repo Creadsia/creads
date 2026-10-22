@@ -41,6 +41,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
         title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}),
+        lipsync: "pro", // the most natural mouth (sync-3) on the voice Creads records, like the studio
         clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });
       const ids = ad.clips.map((c) => c.id);
