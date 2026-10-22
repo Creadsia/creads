@@ -5,7 +5,7 @@ import { TOOLS, type Call, type Ctx } from "@/lib/mcp";
 import { studioAs } from "@/lib/api-ads";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { RECETA } from "@/lib/asistente-receta";
-import { repair } from "@/lib/asistente-history";
+import { flatten, repair } from "@/lib/asistente-history";
 import { publicError } from "@/lib/public-error";
 import { explainFailure, outOfFundsService } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
@@ -105,13 +105,23 @@ export async function POST(req: Request) {
 
   try {
     for (let step = 0; step < MAX_STEPS; step++) {
-      const res = await fetchRetry("https://api.anthropic.com/v1/messages", {
+      const ask = () => fetchRetry("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
         body: JSON.stringify({ model: MODEL, max_tokens: 8000, system, tools: cachedTools, messages: withCache(msgs) }),
         signal: AbortSignal.timeout(120_000),
       });
-      const data = await res.json().catch(() => null);
+      let res = await ask();
+      let data = await res.json().catch(() => null);
+      // a conversation Claude refuses because of an unpaired tool call (Gastón, 22 Oct 2026): rebuilt as plain
+      // notes and asked again, instead of the customer getting stuck
+      if (res.status === 400 && /tool_use|tool_result/.test(String(data?.error?.message ?? ""))) {
+        console.error("asistente: conversación reparada", String(data?.error?.message ?? "").slice(0, 200));
+        const fixed = flatten(msgs as Msg[]);
+        msgs.splice(0, msgs.length, ...fixed);
+        res = await ask();
+        data = await res.json().catch(() => null);
+      }
       if (!res.ok) throw new Error(`asistente ${res.status}: ${data?.error?.message ?? ""}`);
       const raw = (data?.content ?? []) as Block[];
       const finished = data?.stop_reason === "tool_use";
