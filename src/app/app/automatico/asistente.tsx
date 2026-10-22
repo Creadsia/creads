@@ -43,6 +43,8 @@ export default function Asistente() {
       const s = JSON.parse(localStorage.getItem(KEY) || "null");
       if (s?.history?.length) { setHistory(s.history); setAds(s.ads ?? []); }
     } catch {}
+    // a request written in the «Generador de prompts» arrives already typed (the customer still sends it)
+    try { const p = sessionStorage.getItem("creads-prompt"); if (p) { setText(p); sessionStorage.removeItem("creads-prompt"); } } catch {}
     loaded.current = true;
   }, []);
   useEffect(() => {

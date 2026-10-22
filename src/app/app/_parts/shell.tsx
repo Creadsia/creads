@@ -78,6 +78,12 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true, owner: true },
     ],
   },
+  {
+    group: "Herramientas",
+    items: [
+      { href: "/app/prompts", label: "Generador de prompts", icon: I.pen },
+    ],
+  },
   // Herramientas IA, Recrear video, Influencer IA and Historias are hidden since 21 Oct 2026 (owner and Benjamín:
   // Creads sells UGC ads and images); their pages stay in the code and open only by their address.
   {
