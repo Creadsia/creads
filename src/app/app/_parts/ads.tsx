@@ -6,6 +6,7 @@ import { NICHES, cleanNiche, nicheKey } from "@/lib/niches";
 import { formatById } from "@/lib/formats";
 import { DeleteButton, Empty, PageHead, type Row, SetupNotice, btnCls, useTable } from "./ui";
 import ImageLibrary from "./image-library";
+import SubtitleEditor from "./subtitle-editor";
 
 interface Ad extends Row { title: string | null; format: string | null; aspect: string | null; model: string | null; status: string; final_url: string | null; favorite: boolean; settings: Record<string, unknown> | null }
 
@@ -23,6 +24,7 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
   const [niche, setNiche] = useState<string | null>(null); // nicheKey, or null = all
   const [editing, setEditing] = useState<string | null>(null);
   const [kind, setKind] = useState<"videos" | "imagenes">("videos"); // «Anuncios terminados»: videos or images
+  const [subs, setSubs] = useState<Ad | null>(null); // the ad whose subtitles are being edited
   const nicheOf = (a: Ad) => cleanNiche(a.settings?.niche);
   // an ad being redone shows in both: in production, and finished (its last final video) until rebuilt
   const mine = (t.rows ?? []).filter((a) => (mode === "done" ? a.status === "done" || Boolean(a.final_url) : a.status !== "done"));
@@ -106,6 +108,9 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                       {nicheOf(a) || "+ Agregar nicho"}
                     </button>
                   )}
+                  {a.final_url && !story && (
+                    <button type="button" onClick={() => setSubs(a)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">✏️ Editar subtítulos</button>
+                  )}
                   <div className="mt-auto flex items-center justify-between pt-2">
                     <Link href={href} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
                     <DeleteButton onDelete={() => t.remove(a.id)} />
@@ -117,6 +122,10 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
         </ul>
       )}
       </>}
+      {subs?.final_url && (
+        <SubtitleEditor adId={subs.id} video={subs.final_url} title={subs.title || "Sin título"} onClose={() => setSubs(null)}
+          onDone={() => { t.reload(); }} />
+      )}
     </>
   );
 }

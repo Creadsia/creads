@@ -30,9 +30,10 @@ export async function POST(req: Request) {
   try {
     const r = await runDemo(ws, params);
     const titulo = (str(b.titulo, 120) || `Demo · ${r.host.titulo}`).slice(0, 120);
-    // also in the studio's «Anuncios terminados» (a missing table never loses the video)
-    await s.db.insert("ads", { title: titulo, format: "ugc", aspect: "9:16", status: "done", final_url: r.url, settings: { demo: true } }).catch((e: unknown) => console.error("montajes ads row", e instanceof Error ? e.message : e));
     const job = await saveFinishedAd(ws, s.user.id, { titulo: titulo.slice(0, 80), guion: r.host.guion, idioma: r.host.idioma, videoUrl: r.url, formato: "demo", demo: params });
+    // also in the studio's «Anuncios terminados», linked to its job so its subtitles can be edited there
+    // (a missing table never loses the video)
+    await s.db.insert("ads", { title: titulo, format: "ugc", aspect: "9:16", status: "done", final_url: r.url, settings: { demo: true, api: job.id } }).catch((e: unknown) => console.error("montajes ads row", e instanceof Error ? e.message : e));
     return NextResponse.json({ anuncio: publicAd(job), segundos: Math.round(r.seconds * 10) / 10 });
   } catch (err) {
     if (err instanceof DemoInputError) return NextResponse.json({ error: err.message }, { status: err.status });
