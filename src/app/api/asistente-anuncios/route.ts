@@ -6,6 +6,8 @@ import { studioAs } from "@/lib/api-ads";
 import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { RECETA } from "@/lib/asistente-receta";
 import { publicError } from "@/lib/public-error";
+import { explainFailure, outOfFundsService } from "@/lib/balances";
+import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
 
 export const dynamic = "force-dynamic";
@@ -126,6 +128,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ messages: added, ui });
   } catch (err) {
     console.error("asistente-anuncios", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: publicError(err, "El asistente no pudo responder. Intenta de nuevo."), messages: added, ui }, { status: 502 });
+    // Claude without balance: the owner is told exactly that (and it shows in Saldos); a customer sees a calm message
+    const svc = outOfFundsService(err, "claude");
+    const error = svc ? (isOwner(s.user) ? await explainFailure(err, true, "claude") : "El asistente no está disponible en este momento. Vuelve a intentar en unos minutos.") : publicError(err, "El asistente no pudo responder. Intenta de nuevo.");
+    return NextResponse.json({ error, messages: added, ui }, { status: 502 });
   }
 }

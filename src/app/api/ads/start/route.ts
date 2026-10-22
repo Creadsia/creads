@@ -8,6 +8,7 @@ import { defaultVoice, resolveVoice } from "@/lib/voices";
 import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
 import { avatarVideo } from "@/lib/avatar-video";
+import { isOwner } from "@/lib/auth";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -19,7 +20,8 @@ export async function POST(req: Request) {
   const model = findVideo(String(b?.model ?? ""));
   if (!clips.length || clips.some((c) => !c?.prompt || !c?.texto)) return NextResponse.json({ error: "Faltan las escenas." }, { status: 400 });
   if (!model) return NextResponse.json({ error: "Elige un modelo de video." }, { status: 400 });
-  if (!model.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
+  // the owner sees which model and why (a customer only sees the calm message)
+  if (!model.configured()) return NextResponse.json({ error: isOwner(s.user) ? `El modelo «${model.label}» no está configurado: falta su clave en Vercel.` : UNAVAILABLE_TEXT }, { status: 503 });
 
   try {
     const [avatar, product] = await Promise.all([

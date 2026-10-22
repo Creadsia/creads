@@ -8,6 +8,7 @@ import { serviceOfModel } from "@/lib/balances";
 import { refundJob } from "@/lib/credits";
 import { UNAVAILABLE as UNAVAILABLE_TEXT } from "@/lib/public-error";
 import { failMessage, failStatus, payFor } from "@/lib/paid";
+import { isOwner } from "@/lib/auth";
 
 export const maxDuration = 120;
 
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
   // default: Nano Banana 2 (about half the cost of Pro, same family); Pro stays one click away
   const provider = findImage(body?.model || "nano-banana-2") ?? findImage("nano-banana-pro");
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
-  if (!provider.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
+  if (!provider.configured()) return NextResponse.json({ error: isOwner(s.user) ? `El modelo de imagen «${provider.label}» no está configurado: falta su clave en Vercel.` : UNAVAILABLE_TEXT }, { status: 503 });
 
   const svc = serviceOfModel(provider.id);
   let ref = "";
