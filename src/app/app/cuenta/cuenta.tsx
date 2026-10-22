@@ -4,6 +4,7 @@ import { DEFAULT_USD_PER_CREDIT, SECOND_USD, fmtSeconds, secondsOf } from "@/lib
 
 import { useEffect, useState } from "react";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls } from "../_parts/ui";
+import { forgetVisitor } from "../../posthog";
 
 export default function Cuenta() {
   const [current, setCurrent] = useState("");
@@ -45,7 +46,7 @@ export default function Cuenta() {
           <h2 id="ses" className="font-display text-lg font-bold">Sesión</h2>
           <p className="text-sm text-muted">Si usaste un computador que no es tuyo, cierra la sesión al terminar. Para cerrar todas tus sesiones a la vez, cambia la clave.</p>
         </div>
-        <button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }).catch(() => {}); window.location.href = "/app"; }} className={`${ghostCls} shrink-0 self-start text-bad sm:self-center`}>Cerrar sesión</button>
+        <button type="button" onClick={async () => { forgetVisitor(); await fetch("/api/auth/logout", { method: "POST" }).catch(() => {}); window.location.href = "/app"; }} className={`${ghostCls} shrink-0 self-start text-bad sm:self-center`}>Cerrar sesión</button>
       </section>
     </>
   );

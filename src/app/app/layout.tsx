@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/admin";
 import { isOwner } from "@/lib/auth";
 import Login from "./_parts/login";
 import Shell from "./_parts/shell";
+import { PostHogIdentify } from "../posthog";
 
 export const metadata: Metadata = {
   title: { default: "Creads", template: "%s · Creads" },
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user) {
     return (
       <div lang="es">
+        <PostHogIdentify id={user.id} email={user.email} name={user.name} interno={user.workspace === "main"} />
         <Shell user={{ email: user.email, name: user.name, role: user.role, owner: isOwner(user), access: user.access ?? "full" }}>{children}</Shell>
       </div>
     );

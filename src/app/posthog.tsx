@@ -18,6 +18,17 @@ const consented = () => {
 };
 
 let started = false;
+type Who = { id: string; email: string; name?: string | null; interno: boolean };
+let who: Who | null = null;
+/** Ties the session (and its replay) to the signed-in account, so the owner can find a customer's visits. */
+function tell() {
+  if (!started || !who) return;
+  posthog.identify(who.id, { email: who.email, name: who.name ?? undefined, interno: who.interno });
+}
+export function identifyVisitor(w: Who) { who = w; tell(); }
+/** On sign-out: the next person on this browser starts as a new visitor. */
+export function forgetVisitor() { who = null; if (started) posthog.reset(); }
+
 function start() {
   if (started || !KEY.startsWith("phc_")) return;
   started = true;
@@ -34,8 +45,14 @@ function start() {
       try { if (PRIVATE.test(new URL(url).pathname)) return null; } catch { /* no url: keep */ }
       return e;
     },
-    loaded: (ph) => ph.register({ entorno: ENV }),
+    loaded: (ph) => { ph.register({ entorno: ENV }); tell(); },
   });
+}
+
+/** Rendered by the studio layout with the signed-in account. */
+export function PostHogIdentify(w: Who) {
+  useEffect(() => { identifyVisitor(w); }, [w.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
 }
 
 export default function PostHog() {

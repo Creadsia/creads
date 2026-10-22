@@ -8,6 +8,7 @@ import { useCredits } from "./use-credits";
 import { WHATSAPP, whatsappLink } from "../../whatsapp";
 import { IosSteps, useInstall } from "../../install-app";
 import type { ShellUser } from "./shell";
+import { forgetVisitor } from "../../posthog";
 
 // The account corner every logged-in screen has: credits at a glance and a menu with the account,
 // plans, team, support, light/dark and sign out.
@@ -22,7 +23,7 @@ function initials(user: ShellUser) {
 }
 
 async function logout() {
-  await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+  forgetVisitor(); await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   window.location.href = "/app";
 }
 
