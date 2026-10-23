@@ -133,7 +133,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               {/* phones: one real ad with sound right under the headline, above the fold */}
               <DemoPhone {...DEMOS.cafe} big sound className="mx-auto w-[48vw] max-w-[210px] lg:hidden" />
               <p className="max-w-[50ch] text-lg text-muted">
-                Para pymes y emprendedores de Chile: cuéntale a Creads qué vendes y te entrega el video listo para Instagram y TikTok. Guion, persona, voz chilena, edición y revisión.
+                Cuéntale a Creads qué vendes y recibe tu anuncio listo para Meta, Instagram y TikTok: guion, persona, voz chilena y edición, en minutos.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Cta href={FREE} sub="sin tarjeta · tu primer anuncio va de regalo">Probar gratis</Cta>
