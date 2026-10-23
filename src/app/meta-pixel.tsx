@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { saveSource } from "./visit-beacon";
 
-// Meta Pixel + the cookie notice. The pixel loads only after the visitor accepts (Chile's data law,
-// Ley 21.719, and GDPR-style rules ask for consent before tracking). The choice is kept for a year.
+// Meta Pixel + RedTrack. Measurement is on from the first visit with no banner (owner, 23 Oct 2026: every
+// visit must reach Meta). The only way to turn it off is the switch on /privacidad (cookie creads_consent=0).
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "2078637222831496";
 type Fbq = ((...args: unknown[]) => void) & { callMethod?: (...a: unknown[]) => void; queue?: unknown[]; push?: unknown; loaded?: boolean; version?: string };
@@ -45,7 +45,7 @@ function loadRedtrack() {
 const readChoice = () => {
   try { const m = document.cookie.match(/(?:^|;\s*)creads_consent=([01])/); return m ? m[1] : null; } catch { return null; }
 };
-const saveChoice = (v: "0" | "1") => {
+export const saveChoice = (v: "0" | "1") => {
   document.cookie = `creads_consent=${v}; Max-Age=${365 * 86400}; Path=/; SameSite=Lax; Secure`;
   if (v === "1") { saveSource(); window.dispatchEvent(new Event("creads-consent")); }
 };
@@ -53,12 +53,10 @@ const saveChoice = (v: "0" | "1") => {
 export default function MetaPixel() {
   const path = usePathname() ?? "/";
   const [choice, setChoice] = useState<string | null | undefined>(undefined);
-  const [notice, setNotice] = useState(false);
-  // Measurement is on unless the person turns it off (owner, 23 Oct 2026: the «Aceptar» banner hid most ad
-  // visits from Meta). The first visit gets a small notice with «Desactivar»; that choice is kept for a year.
+  // on unless the person turned it off on /privacidad
   useEffect(() => {
     const c = readChoice();
-    if (c === null) { saveChoice("1"); setChoice("1"); setNotice(true); } else setChoice(c);
+    if (c === null) { saveChoice("1"); setChoice("1"); } else setChoice(c);
   }, []);
 
   // a page view on load and on every page change (the studio changes pages without reloading)
@@ -73,18 +71,18 @@ export default function MetaPixel() {
     for (const args of w.__creadsQ?.splice(0) ?? []) w.fbq(...args);
   }, [choice, path]);
 
-  if (!notice) return null;
-  const es = !path.startsWith("/en");
+  return null;
+}
+
+/** The switch on /privacidad: the only place to turn measurement off (or back on). */
+export function MedicionSwitch() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { setOn(readChoice() !== "0"); }, []);
+  if (on === null) return null;
   return (
-    <div role="status" aria-live="polite"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-xl items-center gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
-      <p className="min-w-0 flex-1 text-muted">
-        {es
-          ? <>Usamos cookies para medir qué anuncios funcionan y mejorar el sitio. <a href="/privacidad" className="underline">Privacidad</a></>
-          : <>We use cookies to measure which ads work and improve the site. <a href="/privacidad" className="underline">Privacy</a></>}
-      </p>
-      <button type="button" onClick={() => { saveChoice("0"); location.reload(); }} className="shrink-0 text-muted underline hover:text-ink">{es ? "Desactivar" : "Turn off"}</button>
-      <button type="button" onClick={() => setNotice(false)} className="shrink-0 rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg">Ok</button>
-    </div>
+    <p className="text-sm">
+      Medición en este navegador: <b>{on ? "activa" : "desactivada"}</b>.{" "}
+      <button type="button" onClick={() => { saveChoice(on ? "0" : "1"); location.reload(); }} className="underline">{on ? "Desactivarla" : "Activarla"}</button>
+    </p>
   );
 }
