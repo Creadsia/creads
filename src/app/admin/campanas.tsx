@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DesdeCero from "./desde-cero";
 
 // Panel → Marketing → Resultados de campañas (owner, 22 Oct 2026: «los datos de Facebook y los de Creads por
 // las compras en un dashboard»). Meta's spend and clicks next to what really happened in Creads (accounts,
@@ -148,6 +149,7 @@ export default function Campanas() {
         </div>
       </div>
 
+      <DesdeCero onChange={load} />
       {err && <p className="text-sm text-bad">{err}</p>}
       {d && !d.meta.connected && (
         <p className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm">{d.meta.error ? `Meta no respondió: ${d.meta.error}` : "Meta no está conectado: conecta la cuenta publicitaria en Marketing → Conexiones para ver el gasto."} Los datos de Creads sí están.</p>

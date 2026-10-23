@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { sbAll } from "@/lib/supabase";
 import { ETAPAS, type Etapa, etapaOf, origins } from "@/lib/leads";
+import { panelDesde } from "@/lib/panel-desde";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,10 +11,14 @@ export const maxDuration = 60;
 export async function GET(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   const dias = [1, 7, 30, 90].includes(Number(new URL(req.url).searchParams.get("dias"))) ? Number(new URL(req.url).searchParams.get("dias")) : 7;
-  const since = new Date(Date.now() - dias * 86_400_000).toISOString();
+  const desde = await panelDesde();
+  const back = new Date(Date.now() - dias * 86_400_000).toISOString();
+  const since = desde.desde && desde.desde > back ? desde.desde : back;
   try {
-    const ws = await sbAll<{ id: string; name: string; plan: string | null; created_at: string }>(`workspaces?kind=eq.client&created_at=gte.${since}&select=id,name,plan,created_at`, "created_at.desc,id.asc");
-    if (!ws.length) return NextResponse.json({ dias, cuentas: [], resumen: Object.fromEntries(Object.keys(ETAPAS).map((k) => [k, 0])), etapas: ETAPAS });
+    const all = await sbAll<{ id: string; name: string; plan: string | null; created_at: string }>(`workspaces?kind=eq.client&created_at=gte.${since}&select=id,name,plan,created_at`, "created_at.desc,id.asc");
+    // test accounts stay listed (to unmark them) but out of the counts
+    const ws = all;
+    if (!ws.length) return NextResponse.json({ dias, cuentas: [], resumen: Object.fromEntries(Object.keys(ETAPAS).map((k) => [k, 0])), etapas: ETAPAS, desde: desde.desde });
     const inList = `in.(${ws.map((w) => `"${w.id}"`).join(",")})`;
     const [users, orders, ads, avatars, images, charges, orig] = await Promise.all([
       sbAll<{ workspace: string; email: string; name: string | null; last_login: string | null; created_at: string }>(`users?workspace=${inList}&select=workspace,email,name,last_login,created_at`, "created_at.asc,email.asc"),
@@ -38,11 +43,12 @@ export async function GET(req: Request) {
         etapa, etapaTexto: ETAPAS[etapa],
         compro: paid.map((x) => x.quote?.label ?? x.item),
         ...info, avatares: av.length, imagenes: im.length, anuncios: a.length,
-        origen: orig[w.id]?.src ?? null, campana: orig[w.id]?.camp ?? null,
+        origen: orig[w.id]?.src ?? null, campana: orig[w.id]?.camp ?? null, prueba: desde.pruebas.includes(w.id),
       };
     });
-    const resumen = Object.fromEntries(Object.keys(ETAPAS).map((k) => [k, cuentas.filter((c) => c.etapa === k).length]));
-    return NextResponse.json({ dias, cuentas, resumen, etapas: ETAPAS });
+    const real = cuentas.filter((c) => !c.prueba);
+    const resumen = Object.fromEntries(Object.keys(ETAPAS).map((k) => [k, real.filter((c) => c.etapa === k).length]));
+    return NextResponse.json({ dias, cuentas, resumen, etapas: ETAPAS, desde: desde.desde });
   } catch {
     return NextResponse.json({ error: "No se pudieron leer las cuentas nuevas." }, { status: 502 });
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import DesdeCero from "./desde-cero";
 
 // Clientes → Nuevas cuentas: every account that signed up, how far it got and what it did, so the owner sees
 // where people stop and who to write to (an account that opened the payment and didn't pay is a hot lead).
@@ -8,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 interface Cuenta {
   id: string; empresa: string; email: string; nombre: string | null; creada: string; ultimaVez: string | null;
   etapa: string; etapaTexto: string; compro: string[]; pagosAbiertos: number; pagado: boolean; generaciones: number; anunciosListos: number;
-  avatares: number; imagenes: number; anuncios: number; origen: string | null; campana: string | null;
+  avatares: number; imagenes: number; anuncios: number; origen: string | null; campana: string | null; prueba: boolean;
 }
 interface Data { dias: number; cuentas: Cuenta[]; resumen: Record<string, number>; etapas: Record<string, string> }
 
@@ -40,8 +41,12 @@ export default function Leads() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, 60_000); return () => clearInterval(t); }, [load]);
 
-  const total = d?.cuentas.length ?? 0;
-  const rows = (d?.cuentas ?? []).filter((c) => !filtro || c.etapa === filtro);
+  const total = (d?.cuentas ?? []).filter((c) => !c.prueba).length;
+  const rows = (d?.cuentas ?? []).filter((c) => !filtro || (c.etapa === filtro && !c.prueba));
+  async function prueba(c: Cuenta) {
+    await fetch("/api/admin/desde", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ prueba: c.id, on: !c.prueba }) }).catch(() => null);
+    load();
+  }
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -55,6 +60,7 @@ export default function Leads() {
           ))}
         </div>
       </div>
+      <DesdeCero onChange={load} />
       {err && <p className="text-sm text-bad">{err}</p>}
       {!d && !err && <p className="text-sm text-muted">Cargando…</p>}
       {d && (
@@ -81,8 +87,8 @@ export default function Leads() {
                   </thead>
                   <tbody>
                     {rows.map((c) => (
-                      <tr key={c.id} className="border-t border-line align-top">
-                        <td className="py-2.5 pr-3"><b>{c.nombre || c.empresa}</b><div className="text-xs text-muted" data-private>{c.email}</div></td>
+                      <tr key={c.id} className={`border-t border-line align-top ${c.prueba ? "opacity-50" : ""}`}>
+                        <td className="py-2.5 pr-3"><b>{c.nombre || c.empresa}</b>{c.prueba && <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">prueba</span>}<div className="text-xs text-muted" data-private>{c.email}</div></td>
                         <td className="pr-3 text-xs">{new Date(c.creada).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div className="text-muted">{hace(c.creada)}</div></td>
                         <td className="pr-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${TONE[c.etapa] ?? ""}`}>{c.etapaTexto}</span>{c.compro.length > 0 && <div className="mt-1 text-xs text-muted">{c.compro.join(", ")}</div>}</td>
                         <td className="pr-3 text-xs tabular-nums">
@@ -90,7 +96,7 @@ export default function Leads() {
                         </td>
                         <td className="pr-3 text-xs">{c.origen ?? <span className="text-muted">sin dato</span>}{c.campana && <div className="max-w-40 truncate text-muted" title={c.campana}>{c.campana}</div>}</td>
                         <td className="pr-3 text-xs">{hace(c.ultimaVez)}</td>
-                        <td className="text-xs">{c.email && <a href={`mailto:${c.email}?subject=${encodeURIComponent("¿Te ayudo con tu primer anuncio en Creads?")}`} className="font-semibold underline">Escribir</a>}</td>
+                        <td className="text-xs"><button type="button" onClick={() => prueba(c)} className="mb-1 block text-muted underline hover:text-ink">{c.prueba ? "No es de prueba" : "Es de prueba"}</button>{c.email && <a href={`mailto:${c.email}?subject=${encodeURIComponent("¿Te ayudo con tu primer anuncio en Creads?")}`} className="font-semibold underline">Escribir</a>}</td>
                       </tr>
                     ))}
                   </tbody>

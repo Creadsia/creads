@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import DesdeCero from "./desde-cero";
 
 // Panel → Ventas y finanzas → Suscripciones y retención (owner, 22 Oct 2026): how long customers stay, how much
 // recurring money comes and goes, and why they cancel. Data: /api/admin/retencion (rebuilt from the payment
@@ -164,6 +165,7 @@ export default function Retencion() {
           <label className="flex items-center gap-1.5">Plan <select value={plan} onChange={(e) => setPlan(e.target.value)} className={sel}><option value="">Todos</option><option value="starter">Emprende</option><option value="plus">Negocio</option><option value="studio">Ultra</option></select></label>
         </div>
       </div>
+      <DesdeCero onChange={load} />
       {err && <p className="text-sm text-bad">{err}</p>}
       {!d && !err && <p className="text-sm text-muted">Cargando…</p>}
 

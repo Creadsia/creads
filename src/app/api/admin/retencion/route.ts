@@ -5,6 +5,7 @@ import { PLANS } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import { DEFAULT_USD_PER_CREDIT } from "@/lib/credit-math";
 import { dayCL } from "@/lib/stats";
+import { counts, panelDesde } from "@/lib/panel-desde";
 import { type Leave, type OrderLite, type PayRow, avgTenureMonths, buildSpells, cohortRetention, mrrAt, activeAt, nextMonth, observedLtv, periodStats, reasonCounts, reasonOf } from "@/lib/retention";
 
 export const dynamic = "force-dynamic";
@@ -36,16 +37,18 @@ export async function GET(req: Request) {
   const plan = PLANS.some((p) => p.id === q.get("plan")) ? q.get("plan")! : undefined;
 
   try {
-    const [pays, orders, clients, leaves, rate] = await Promise.all([
+    const [pays, orders, clients, leaves, rate, cero] = await Promise.all([
       sbAll<PayRow>("payments?select=id,order_id,owner,amount,currency,created_at", "created_at.asc,id.asc"),
       sbAll<OrderLite>("orders?status=eq.pagado&select=id,owner,item,period,mp,visitor,created_at", "created_at.asc,id.asc"),
       sbAll<{ id: string }>("workspaces?kind=eq.client&select=id,created_at", "created_at.asc,id.asc"),
       readPrivateJSON<Leave[]>("cancelaciones.json").catch(() => null),
       usdClpRate().catch(() => 950),
+      panelDesde(),
     ]);
     // only real customers: Creadsia's own account and test workspaces never count
-    const ok = new Set(clients.map((c) => c.id));
-    const P = pays.filter((p) => ok.has(p.owner));
+    // and, after «Empezar de cero», only what happened since then, without the accounts marked as tests
+    const ok = new Set(clients.map((c) => c.id).filter((id) => !cero.pruebas.includes(id)));
+    const P = pays.filter((p) => ok.has(p.owner) && counts(cero, p.owner, p.created_at));
     const O = orders.filter((o) => ok.has(o.owner));
     const plans = PLANS.map((p) => ({ id: p.id, name: p.name, monthly: p.monthly, yearlyPerMonth: p.yearlyPerMonth }));
     const spells = buildSpells(P, O, plans, now);
@@ -56,7 +59,7 @@ export async function GET(req: Request) {
     for (let m = mes, i = 0; i < meses; i++, m = prevMonth(m)) months.unshift(m);
     const inMonth = (iso: string, m: string) => { const t = Date.parse(iso); return t >= monthStart(m) && t < monthStart(nextMonth(m)); };
     const cobrado = (m: string) => Math.round(P.filter((p) => inMonth(p.created_at, m)).reduce((t, p) => t + toUsd(Number(p.amount) || 0, p.currency), 0) * 100) / 100;
-    const L = (leaves ?? []).filter((l) => ok.has(l.ws));
+    const L = (leaves ?? []).filter((l) => ok.has(l.ws) && counts(cero, l.ws, l.at));
     const solicitadas = (m: string) => L.filter((l) => inMonth(l.at, m) && (!plan || l.plan === plan)).length;
     const statsOf = (m: string, pl = plan) => {
       const end = Math.min(monthStart(nextMonth(m)), now + 1);
@@ -125,7 +128,7 @@ export async function GET(req: Request) {
     }).sort((a, b) => b.clientes - a.clientes);
 
     return NextResponse.json({
-      mes, meses, plan: plan ?? null, updated: new Date().toISOString(), tasaClp: rate,
+      mes, meses, plan: plan ?? null, cero: cero.desde, updated: new Date().toISOString(), tasaClp: rate,
       hoy: { activas: activas.length, mrr: mrrHoy, enGracia: activas.filter((s) => s.end < now).length },
       actual, anterior, historia, porPlan, motivos, comentarios,
       permanencia: avgTenureMonths(spells, now, plan),
