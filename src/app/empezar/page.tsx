@@ -6,6 +6,7 @@ import { usdClpRate } from "@/lib/usd-clp";
 import Checkout from "./checkout";
 import WhatsAppButton from "../whatsapp";
 import { oneTimeOnly } from "@/lib/mercadopago";
+import { googleOn } from "@/lib/google-login";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
@@ -28,7 +29,7 @@ export default async function Empezar({ searchParams }: { searchParams: Promise<
   const rate = await usdClpRate().catch(() => 950);
   return (
     <div lang="es">
-      <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} />
+      <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} google={googleOn()} />
       <WhatsAppButton text="Hola, tengo una pregunta antes de comprar Creads IA" />
     </div>
   );

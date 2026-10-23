@@ -5,6 +5,7 @@ import { isOwner } from "@/lib/auth";
 import Login from "./_parts/login";
 import Shell from "./_parts/shell";
 import { PostHogIdentify } from "../posthog";
+import { googleOn } from "@/lib/google-login";
 
 export const metadata: Metadata = {
   title: { default: "Creads", template: "%s · Creads" },
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const n = await countUsers().catch(() => 1);
   return (
     <div lang="es">
-      <Login mode={n === -1 ? "missing" : n === 0 ? "setup" : "login"} />
+      <Login mode={n === -1 ? "missing" : n === 0 ? "setup" : "login"} google={googleOn()} />
     </div>
   );
 }

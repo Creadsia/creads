@@ -3,16 +3,30 @@
 import { useEffect, useState } from "react";
 import { Logo } from "../../brand";
 import ThemeToggle from "../../theme-toggle";
+import GoogleButton from "../../google-button";
 
 const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal text-ink";
 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
-export default function Login({ mode: initial }: { mode: "login" | "setup" | "missing" }) {
+export default function Login({ mode: initial, google = false }: { mode: "login" | "setup" | "missing"; google?: boolean }) {
   const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover" | "forgot">(initial);
   const [sent, setSent] = useState(false);
   // the owner's recovery (with the Vercel code) stays out of sight: creadsia.com/app?dueno
   const [ownerLink, setOwnerLink] = useState(false);
-  useEffect(() => { setOwnerLink(new URLSearchParams(window.location.search).has("dueno")); }, []);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setOwnerLink(q.has("dueno"));
+    // coming back from «Continuar con Google» without signing in
+    const aviso = q.get("aviso");
+    const AVISOS: Record<string, string> = {
+      "google-clave": "Esta cuenta entra con su correo y clave (tiene verificación en dos pasos o es del equipo).",
+      "google-cancelado": "No se completó el ingreso con Google. Intenta de nuevo.",
+      "google-error": "No pudimos entrar con Google. Intenta de nuevo o usa tu correo y clave.",
+      google: "El ingreso con Google no está disponible en este momento: usa tu correo y clave.",
+      pausada: "Esta cuenta está pausada. Escríbenos a hola@creadsia.com.",
+    };
+    if (aviso && AVISOS[aviso]) setError(AVISOS[aviso]);
+  }, []);
   const rescue = "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -74,6 +88,12 @@ export default function Login({ mode: initial }: { mode: "login" | "setup" | "mi
                     : "Entra con tu correo y tu clave."}
             </p>
           </div>
+          {mode === "login" && google && (
+            <>
+              <GoogleButton next="/app" />
+              <div className="flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
+            </>
+          )}
           {mode === "setup" && (
             <label htmlFor="name" className="flex flex-col gap-1 text-sm font-semibold text-muted">
               Tu nombre

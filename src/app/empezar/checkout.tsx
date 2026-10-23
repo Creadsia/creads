@@ -7,6 +7,7 @@ import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import PayBadges from "../pay-badges";
+import GoogleButton from "../google-button";
 
 // One page from "I want this plan" to Mercado Pago: pick the plan, create the account, pay.
 // New accounts always get the launch offer on Starter (first purchase), so the price shown here is the price charged.
@@ -25,7 +26,7 @@ function Check({ className = "text-good" }: { className?: string }) {
   );
 }
 
-export default function Checkout({ item: first, period: firstPeriod, rate, renews = true }: { item: ItemId; period: Period; rate: number; renews?: boolean }) {
+export default function Checkout({ item: first, period: firstPeriod, rate, renews = true, google = false }: { item: ItemId; period: Period; rate: number; renews?: boolean; google?: boolean }) {
   const [item, setItem] = useState<ItemId>(first);
   const [period, setPeriod] = useState<Period>(firstPeriod);
   const isPack = item.startsWith("pack-");
@@ -207,6 +208,12 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               <h2 id="cuenta" className="font-display text-xl font-semibold">Crea tu cuenta</h2>
               <p className="text-sm text-muted">Toma 30 segundos. Después pagas y entras directo al estudio.</p>
             </div>
+            {google && (
+              <>
+                <GoogleButton next={loginHref} />
+                <div className="flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
+              </>
+            )}
 
             <label className="flex flex-col gap-1.5 text-sm font-semibold">
               Tu nombre
