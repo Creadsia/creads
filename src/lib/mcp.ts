@@ -77,7 +77,7 @@ export const TOOLS: Tool[] = [
       color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "Optional brand colour (#RRGGBB) for key words, bar and closing card." },
       subtitulos: { type: "boolean", default: true, description: "false = the ad comes out without subtitles (with edicion simple: just the cuts, no text on screen at all)." },
       indicaciones: { type: "string", maxLength: 600, description: "Optional but recommended with edicion pro: a short brief for the editor — brand and product name (exact spelling), audience, what to highlight (offer, price, benefit), what to avoid, and the closing call to action. Example: «Marca: Café Lumbre. Destacar: envío gratis en Santiago. Evitar: precios. Cierre: cafelumbre.cl»." },
-      modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = Creads picks the most economical one that works." },
+      modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = MiniMax H3 Max (the reliable default)." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
