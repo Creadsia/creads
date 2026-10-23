@@ -74,7 +74,7 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
                 </ul>
                 <div className="flex flex-col gap-2 border-t border-line pt-4">
                   <a href={c.app} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-center text-sm font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">{c.cta}</a>
-                  <Link href="/#pricing" className="rounded-xl border border-line px-4 py-3 text-center text-sm font-semibold hover:bg-surface-2">Ver planes · desde US$55</Link>
+                  <Link href="/#pricing" className="rounded-xl border border-line px-4 py-3 text-center text-sm font-semibold hover:bg-surface-2">Ver planes · desde US$25</Link>
                 </div>
               </aside>
               {c.mock ? (

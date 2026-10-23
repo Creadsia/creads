@@ -77,7 +77,7 @@ export async function needsCredits(user: User): Promise<string | null> {
   } catch {
     return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (Emprende desde US$55 al mes).";
+  return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (desde US$25 al mes).";
 }
 
 /**

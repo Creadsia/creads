@@ -101,7 +101,7 @@ export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: s
             <b className="block truncate">{t.bar}</b>
             <span className="text-muted">{HAS_OFFER && <s>{es ? usd(plus.monthly) : `US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : es ? " al mes" : " a month"}</span>
           </span>
-          <a href={startHref("starter")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
+          <a href={startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>
       </div>
 

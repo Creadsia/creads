@@ -89,7 +89,7 @@ export default function CategoryStudio({ kind, models, examples }: { kind: "vide
         </div>
         <div className="flex flex-col gap-2 border-t border-line pt-4">
           <a href={go} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-center text-sm font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">{video ? "Crear video" : "Crear imagen"}</a>
-          <p className="text-center text-xs text-muted">Te lleva al estudio con todo listo. Ahí ves el precio antes de generar. <Link href="/#pricing" className="font-semibold underline">Planes desde US$55</Link>.</p>
+          <p className="text-center text-xs text-muted">Te lleva al estudio con todo listo. Ahí ves el precio antes de generar. <Link href="/#pricing" className="font-semibold underline">Planes desde US$25</Link>.</p>
         </div>
       </div>
       <Gallery examples={examples} filterBy={video ? "model" : "tag"} onUse={use} columns="columns-2 sm:columns-3 2xl:columns-4" />
