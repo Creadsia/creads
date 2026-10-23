@@ -24,6 +24,8 @@ export interface AdJob {
   look?: { plantilla?: string; c1?: string; c2?: string };
   /** false = no subtitles at all (the cuts only, or the Pro edit without captions). */
   subtitulos?: boolean;
+  /** Different places across the cuts (the person moves through them, same face and clothes); empty = one place. */
+  lugares?: string;
   /** Faster voice (1.0–1.2), when the customer asks for a quicker delivery. */
   velocidad?: number;
   /** A label on screen for the whole ad («Dramatización · actor IA»): a first-person story told by an AI person. */
@@ -53,7 +55,9 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
     }
     if (j.estado === "escenas") {
       const cortes = j.cortes ?? [];
-      const sc = await studio<{ scenes: { prompt: string; dir?: { setting?: string; framing?: string } }[] }>("/api/scenes", { format: j.formato, lang: j.idioma, aspect: "9:16", cuts: cortes, script: cortes.map((c) => c.texto).join(" "), ...(j.avatarId ? { avatarId: j.avatarId } : {}) });
+      const sc = await studio<{ scenes: { prompt: string; dir?: { setting?: string; framing?: string } }[] }>("/api/scenes", { format: j.formato, lang: j.idioma, aspect: "9:16", cuts: cortes, script: cortes.map((c) => c.texto).join(" "), ...(j.avatarId ? { avatarId: j.avatarId } : {}),
+        // «varios lugares» (owner, 23 Oct 2026): the director moves the person through these places, same clothes
+        ...(j.lugares ? { direction: `Distintos lugares: la persona cambia de lugar entre cortes siguiendo la historia, con la MISMA cara y la MISMA ropa en todos. Lugares: ${j.lugares}` } : {}) });
       if (sc.scenes?.length !== cortes.length) throw new Error("No se pudieron dirigir las escenas.");
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {

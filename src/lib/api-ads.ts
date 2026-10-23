@@ -39,7 +39,7 @@ const addToIndex = (ws: string, id: string) => updatePrivateJSON<string[]>(index
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr && SOLD_FORMATS.includes(f.id)).map((f) => f.id);
 
-export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string; voz?: string; edicion: "pro" | "simple"; indicaciones?: string; look?: { plantilla?: string; c1?: string; c2?: string }; subtitulos?: boolean; velocidad?: number; aviso?: string } | string {
+export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string; voz?: string; edicion: "pro" | "simple"; indicaciones?: string; look?: { plantilla?: string; c1?: string; c2?: string }; subtitulos?: boolean; velocidad?: number; aviso?: string; lugares?: string } | string {
   const guion = typeof b.guion === "string" ? b.guion.trim() : "";
   if (guion.length < 20) return "Manda el guion en «guion» (al menos 20 caracteres).";
   if (guion.length > 4000) return "El guion es muy largo (máximo 4.000 caracteres).";
@@ -72,8 +72,9 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
   const vel = Number(b.velocidad);
   const velocidad = isFinite(vel) && vel > 1 ? Math.min(1.2, Math.round(vel * 100) / 100) : undefined;
   const aviso = b.dramatizacion === true ? (idioma === "en" ? "Dramatization · AI actor" : "Dramatización · actor IA") : undefined;
+  const lugares = typeof b.lugares === "string" && b.lugares.trim() ? b.lugares.replace(/\s+/g, " ").trim().slice(0, 500) : undefined;
   if (modelo === "persona-real" && !avatarId) return "«persona-real» necesita un avatar con su video (creads_crear_avatar con «video»).";
-  return { ...(voz ? { voz } : {}), ...(velocidad ? { velocidad } : {}), ...(aviso ? { aviso } : {}), guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(b.subtitulos === false ? { subtitulos: false } : {}), ...(typeof b.indicaciones === "string" && b.indicaciones.trim() ? { indicaciones: b.indicaciones.trim().slice(0, 600) } : {}),
+  return { ...(voz ? { voz } : {}), ...(velocidad ? { velocidad } : {}), ...(aviso ? { aviso } : {}), ...(lugares ? { lugares } : {}), guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(b.subtitulos === false ? { subtitulos: false } : {}), ...(typeof b.indicaciones === "string" && b.indicaciones.trim() ? { indicaciones: b.indicaciones.trim().slice(0, 600) } : {}),
     ...(typeof b.plantilla === "string" || typeof b.color === "string" ? { look: { plantilla: typeof b.plantilla === "string" ? b.plantilla.slice(0, 20) : undefined, c1: typeof b.color === "string" ? b.color.slice(0, 7) : undefined, c2: typeof b.color2 === "string" ? b.color2.slice(0, 7) : undefined } } : {}), ...(avatarId ? { avatarId } : {}) };
 }
 
