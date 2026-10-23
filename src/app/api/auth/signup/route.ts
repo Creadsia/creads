@@ -4,6 +4,7 @@ import { SESSION_COOKIE, cookieOptions, createSession, createUser, deleteUser, f
 import { clientIp, tooMany } from "@/lib/rate";
 import { createClientWorkspace, emailOk, removeWorkspace } from "@/lib/signup";
 import { sendMeta, visitorFrom } from "@/lib/meta";
+import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
 import { welcomeEmail } from "@/lib/emails";
 
@@ -39,7 +40,10 @@ export async function POST(req: Request) {
     userId = ""; ws = ""; // from here on the account is complete: nothing to undo
     // same id the first sign-in would use, and the browser pixel gets it too: Meta counts it once
     const eventId = `reg-${user.id}`;
-    await sendMeta({ name: "CompleteRegistration", eventId, email }, visitorFrom(req)).catch(() => null);
+    const visitor = visitorFrom(req);
+    await sendMeta({ name: "CompleteRegistration", eventId, email }, visitor).catch(() => null);
+    // where this account came from (channel and ad campaign, only with cookie consent), for Clientes → Nuevas cuentas
+    if (visitor.src || visitor.camp) await saveOrigin(newWs, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
     await sendEmail(welcomeEmail(email, name)); // never fails the sign-up
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
