@@ -16,7 +16,7 @@ interface AccentVoice { ref: string; name: string; gender: string; age: string; 
 interface Accent { locale: string; label: string; voices: AccentVoice[] }
 const TONO: Record<string, string> = { casual: "casual", confident: "segura", upbeat: "alegre", warm: "cálida", friendly: "amable", pleasant: "agradable", energetic: "con energía", natural: "natural", professional: "profesional", crisp: "clara", calm: "tranquila", deep: "grave", soft: "suave", formal: "formal", serious: "seria" };
 export interface Take { key: string; url: string; ok?: boolean; heard?: string; checking?: boolean; dur?: number }
-export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string; accent?: string; gender?: "male" | "female"; manual?: boolean }
+export interface VoiceChoice { avatarId: string; voice: string; natural: boolean; takes: Take[]; say?: string; accent?: string; gender?: "male" | "female"; age?: string; manual?: boolean }
 
 /** A presenter's gender from their description, so the voice matches the face. */
 const genderOf = (t: string): "male" | "female" | undefined =>
@@ -119,9 +119,19 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
   const gender = value.gender ?? genderOf(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`) ?? "male";
   const accent = value.accent ?? "es-CL";
   const mineList: AccentVoice[] = voices.filter((v) => v.category === "cloned").map((v) => ({ ref: v.id, name: v.name, gender: "", age: "", preview: v.preview, mine: true }));
-  const shown: AccentVoice[] = accent === "mine" ? mineList : (accents.find((a) => a.locale === accent)?.voices ?? []).filter((v) => !v.gender || v.gender === gender);
-  // until the customer picks, the voice follows the presenter: their own voice, else the first matching one
-  const autoPick = !value.manual ? (avatar?.voice_id && voices.some((v) => v.id === avatar.voice_id) ? avatar.voice_id : shown[0]?.ref ?? "") : value.voice;
+  // the presenter's age from their description, to offer (and pick) a voice that fits: young, adult or older
+  const look = `${avatar?.description ?? ""} ${avatar?.name ?? ""}`.toLowerCase();
+  const ageGuess = /\b(old|older|elderly|senior|grandm|grandf|mayor|abuel|anciano|6\d|7\d)\b/.test(look) ? "old" : /\b(young|teen|20s|twenties|joven|chica|chico|universitari)\b/.test(look) ? "young" : /\b(30s|40s|50s|middle|adult|adulto|adulta)\b/.test(look) ? "middle_aged" : "";
+  const ageSel = value.age ?? "";
+  const byGender = accent === "mine" ? mineList : (accents.find((a) => a.locale === accent)?.voices ?? []).filter((v) => !v.gender || v.gender === gender);
+  const shown: AccentVoice[] = ageSel && accent !== "mine" ? byGender.filter((v) => v.age === ageSel) : byGender;
+  // until the customer picks, the voice follows the presenter: their own voice, else one of their age, and a
+  // different one for each presenter (not always the first of the list)
+  const fit = byGender.filter((v) => !ageGuess || v.age === ageGuess);
+  const pool = fit.length ? fit : byGender;
+  let h = 0;
+  for (const ch of String(avatar?.id ?? avatar?.name ?? "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const autoPick = !value.manual ? (avatar?.voice_id && voices.some((v) => v.id === avatar.voice_id) ? avatar.voice_id : pool[h % Math.max(1, pool.length)]?.ref ?? "") : value.voice;
   if (!value.manual && autoPick && autoPick !== value.voice) queueMicrotask(() => set({ voice: autoPick }));
   const long = tooLongCut(cuts);
   const ready = voiceReady(value, cuts, format);
@@ -210,6 +220,14 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
                 className={`rounded-full border px-3 py-1 text-xs font-semibold ${gender === g ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>{l}</button>
             ))}
             {avatar && genderOf(`${avatar.description ?? ""} ${avatar.name}`) && genderOf(`${avatar.description ?? ""} ${avatar.name}`) !== gender && <span className="text-xs text-warn">Ojo: {avatar.name} es {gender === "male" ? "mujer" : "hombre"}.</span>}
+          </div>
+        )}
+        {accent !== "mine" && (
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Edad de la voz">
+            {([["", "Todas las edades"], ["young", "Joven"], ["middle_aged", "Adulta"], ["old", "Mayor"]] as const).map(([a, l]) => (
+              <button key={a || "all"} type="button" role="radio" aria-checked={ageSel === a} onClick={() => set({ age: a || undefined })}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${ageSel === a ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>{l}</button>
+            ))}
           </div>
         )}
         {accents.length === 0 ? <p className="text-sm text-muted">Cargando voces…</p> : shown.length === 0 ? <p className="text-sm text-muted">No hay voces de este tipo todavía: prueba otro acento.</p> : (

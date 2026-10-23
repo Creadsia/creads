@@ -135,7 +135,15 @@ export async function accentVoices(): Promise<SharedVoice[]> {
       const got = (await Promise.all(tries.map((t) => sharedVoices({ ...t, size: 40, stem }).catch(() => [] as SharedVoice[])))).flat();
       const seen = new Set<string>();
       const pool = got.filter((g) => g.real && !hidden.has(g.id) && !seen.has(g.id) && seen.add(g.id) && (!g.gender || g.gender === gender));
-      return pool.sort((x, y) => adScore(y) - adScore(x)).slice(0, want).map((g) => ({ ...g, gender }));
+      const ranked = pool.sort((x, y) => adScore(y) - adScore(x));
+      // every age, not only the best-ranked (owner, 23 Oct 2026: «voces para personas mayores o más jóvenes»):
+      // up to 2 older voices and 2 young ones always make the list when the library has them
+      const picked = ranked.slice(0, want);
+      for (const age of ["old", "young"]) {
+        const have = picked.filter((v) => v.age === age).length;
+        for (const extra of ranked.filter((v) => v.age === age && !picked.includes(v)).slice(0, Math.max(0, 2 - have))) picked.push(extra);
+      }
+      return picked.map((g) => ({ ...g, gender }));
     }));
     return byGender.flat();
   }));
@@ -160,7 +168,11 @@ export async function defaultVoice(ws: string, avatar: { voice_id?: unknown; des
   }
   if (lang !== "es-CL") return null;
   const g = genderOfText(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`);
-  const cl = (await accentVoices()).filter((v) => v.accent === "es-CL" && (!g || v.gender === g));
+  const all = (await accentVoices()).filter((v) => v.accent === "es-CL" && (!g || v.gender === g));
+  // and of the presenter's age when the description says it (young / adult / older)
+  const look = `${avatar?.description ?? ""} ${avatar?.name ?? ""}`.toLowerCase();
+  const age = /\b(old|older|elderly|senior|grandm|grandf|mayor|abuel|anciano|6\d|7\d)\b/.test(look) ? "old" : /\b(young|teen|20s|twenties|joven|chica|chico|universitari)\b/.test(look) ? "young" : /\b(30s|40s|50s|middle|adult|adulto|adulta)\b/.test(look) ? "middle_aged" : "";
+  const cl = age && all.some((v) => v.age === age) ? all.filter((v) => v.age === age) : all;
   if (!cl.length) return null;
   // not always the same voice (owner, 22 Oct 2026: «ocupa todo el rato lo de Cornejo»): each presenter gets
   // its own Chilean voice, the same one every time for that presenter
@@ -185,7 +197,48 @@ export async function resolveVoice(ws: string, choice: string): Promise<string |
     const id = choice.split(":")[2] ?? "";
     return mine.some((v) => v.id === id && !isPrivate(v)) ? id : null;
   }
-  if (mine.some((v) => v.id === pick.id)) return pick.id;
+  if (mine.some((v) => v.id === pick.id)) { void markUsed(pick.id); return pick.id; }
   const label = ACCENTS.find((a) => a.locale === pick.accent)?.label ?? "Español";
-  return addSharedVoice(pick.owner, pick.id, `${pick.name} (${label})`);
+  const name = `${pick.name} (${label})`;
+  // ElevenLabs' plan has a limit of voices in the account (owner, 23 Oct 2026: every ad came out with the one
+  // voice already added, the others failed to add). When it's full, the least used LIBRARY copy is removed
+  // (never a customer's cloned voice) and the new one is added; a removed one comes back the same way.
+  try {
+    const id = await addSharedVoice(pick.owner, pick.id, name);
+    void markUsed(id);
+    return id;
+  } catch (e) {
+    if (!/limit|slot|maximum|max(imum)? number|too many/i.test(e instanceof Error ? e.message : "")) throw e;
+    const freed = await freeLibrarySlot(mine, [pick.id]);
+    if (!freed) throw e;
+    const id = await addSharedVoice(pick.owner, pick.id, name);
+    void markUsed(id);
+    return id;
+  }
+}
+
+// ---------- library voice slots ----------
+
+const USE_FILE = "voces/uso.json";
+const LIB_SUFFIX = / \((Chilena|Argentina|Venezolana|Colombiana|Mexicana|Español)\)$/;
+/** Remembers when a library voice was last used (to free the least used one when the account is full). */
+async function markUsed(id: string) {
+  try {
+    const cur = (await readPrivateJSON<Record<string, string>>(USE_FILE).catch(() => null)) ?? {};
+    const last = cur[id] ? Date.parse(cur[id]) : 0;
+    if (Date.now() - last < 3_600_000) return; // at most one write an hour per voice
+    await updatePrivateJSON<Record<string, string>>(USE_FILE, (c) => ({ ...(c ?? {}), [id]: new Date().toISOString() }));
+  } catch { /* only a hint */ }
+}
+/** Removes the least recently used library copy from Creads' ElevenLabs account. Never a customer's clone. */
+export async function freeLibrarySlot(mine: Voice[], keep: string[] = []): Promise<string | null> {
+  const [reg, used] = await Promise.all([registry(), readPrivateJSON<Record<string, string>>(USE_FILE).catch(() => null)]);
+  if (!reg) return null;
+  const candidates = mine.filter((v) => LIB_SUFFIX.test(v.name) && !isPrivate(v) && !reg.has(v.id) && !keep.includes(v.id));
+  if (!candidates.length) return null;
+  const at = (id: string) => (used?.[id] ? Date.parse(used[id]) : 0);
+  const victim = candidates.sort((a, b) => at(a.id) - at(b.id))[0];
+  await removeVoice(victim.id);
+  console.error("voices: freed a library slot", victim.name);
+  return victim.id;
 }

@@ -36,8 +36,12 @@ export async function POST(req: Request) {
     const wanted = typeof b?.voiceId === "string" ? b.voiceId : null; // null = not chosen (API): the avatar's or a matching accent voice
     let voiceId: string | null = null;
     if (takesOwnVoice(format)) {
-      voiceId = wanted === null ? await defaultVoice(s.user.workspace, avatar, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
-      if (wanted && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
+      let why = "";
+      voiceId = wanted === null
+        ? await defaultVoice(s.user.workspace, avatar, lang).catch((e) => { console.error("ads/start default voice", e instanceof Error ? e.message : e); return null; })
+        : wanted ? await resolveVoice(s.user.workspace, wanted).catch((e) => { why = e instanceof Error ? e.message : ""; console.error("ads/start voice", why); return null; }) : null;
+      // Creadsia's team sees ElevenLabs' real reason (to fix it fast); customers a calm message
+      if (wanted && !voiceId) return NextResponse.json({ error: `Esa voz no está disponible. Elige otra.${s.user.workspace === "main" && why ? ` (${why.slice(0, 200)})` : ""}` }, { status: 400 });
     }
     // «Persona real»: the avatar's own filmed video gets the voice on its lips; it needs both
     const video = avatar ? avatarVideo(avatar.notes) : null;
