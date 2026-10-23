@@ -8,6 +8,7 @@ import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
 import { SCENES } from "./landing";
+import Casos from "./casos";
 
 // The home page for people who arrive from an ad (owner, 22 Oct 2026: "que cada persona que llegue no se
 // aguante de suscribirse"). One job: show real ads Creads made, explain the two ways to make one
@@ -21,6 +22,8 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 
 // the checkout link (pricing.tsx is a client module: its helper can't run here)
 const startHref = (plan: string) => `/empezar?plan=${plan}&periodo=mensual`;
+/** Free sign-up, no card: the first ad is a gift (owner, 23 Oct 2026, launch audit). */
+const FREE = "/registro";
 
 const emprende = SHOWN_PLANS.find((p) => p.id === "starter")!;
 /** The cheapest plan on sale (for «desde US$…»). */
@@ -45,6 +48,7 @@ const STEPS = [
 ] as const;
 
 const FAQ = [
+  ["¿Puedo probar antes de pagar?", "Sí. Creas tu cuenta gratis, sin tarjeta, y confirmando tu correo te regalamos créditos para tu primer anuncio de unos 12 segundos (con la marca «Hecho con Creads IA»). También puedes espiar anuncios y crear guiones gratis (5 al día). Si quieres probar sin marca, hay un video de prueba de 15 s por US$9, sin plan."],
   ["¿Qué diferencia hay entre Automático y Manual?", "En Automático conversas con Creads como con una agencia: te pregunta, propone, hace el video, lo revisa y te lo entrega. En Manual haces cada paso tú (guion, voz, escenas, edición) y decides cada detalle. Puedes usar los dos con el mismo plan."],
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
   ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
@@ -113,7 +117,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span className="hidden min-[420px]:contents"><ThemeToggle lang="es" /></span>
             <a href="/app" className="px-2 text-sm font-semibold text-muted hover:text-ink">Entrar</a>
-            <a href="#pricing" className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg hover:opacity-90 sm:px-4">Ver planes</a>
+            <a href={FREE} className="whitespace-nowrap rounded-xl bg-ink px-3 py-2 text-sm font-semibold text-bg hover:opacity-90 sm:px-4">Probar gratis</a>
           </div>
         </div>
       </header>
@@ -126,23 +130,25 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <h1 className="font-display text-[2.3rem] leading-[1.03] font-semibold sm:text-[3.5rem]">
                 Anuncios en video que venden. <span className="chroma">Sin grabar a nadie.</span>
               </h1>
+              {/* phones: one real ad with sound right under the headline, above the fold */}
+              <DemoPhone {...DEMOS.cafe} big sound className="mx-auto w-[48vw] max-w-[210px] lg:hidden" />
               <p className="max-w-[50ch] text-lg text-muted">
-                Cuéntale a Creads qué vendes. Escribe el guion, crea a la persona, le pone voz con acento latino, lo edita, lo revisa y te lo entrega listo para Instagram y TikTok.
+                Para pymes y emprendedores de Chile: cuéntale a Creads qué vendes y te entrega el video listo para Instagram y TikTok. Guion, persona, voz chilena, edición y revisión.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta sub={`desde ${usd(cheapest.monthly)} al mes · cancelas cuando quieras`}>Hacer mi primer anuncio</Cta>
+                <Cta href={FREE} sub="sin tarjeta · tu primer anuncio va de regalo">Probar gratis</Cta>
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["Listo en minutos, no en días", "Voz chilena, argentina, mexicana…", "Revisado antes de entregártelo", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
+                {["Tu primer anuncio de regalo", "Listo en minutos, no en días", "Revisado antes de entregártelo", `Después, desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
               </ul>
             </div>
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="hidden flex-col items-center gap-4 lg:flex">
               <div className="flex w-full items-end justify-center">
                 <DemoPhone {...DEMOS.rubia} className="relative z-0 -mr-10 hidden w-[120px] shrink-0 -rotate-12 sm:block lg:w-[135px]" />
                 <DemoPhone {...DEMOS.dent} className="relative z-[1] -mr-5 w-[29vw] max-w-[165px] shrink-0 -rotate-6 sm:-mr-8" />
-                <DemoPhone {...DEMOS.cafe} big className="relative z-10 w-[40vw] max-w-[235px] shrink-0" />
+                <DemoPhone {...DEMOS.cafe} big sound className="relative z-10 w-[40vw] max-w-[235px] shrink-0" />
                 <DemoPhone {...DEMOS.doc} className="relative z-[1] -ml-5 w-[29vw] max-w-[165px] shrink-0 rotate-6 sm:-ml-8" />
                 <DemoPhone {...DEMOS.gym} className="relative z-0 -ml-10 hidden w-[120px] shrink-0 rotate-12 sm:block lg:w-[135px]" />
               </div>
@@ -200,7 +206,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                     ["Tiempo", "Medio día grabando y editando", "Días o semanas", "Minutos"],
                     ["Qué necesitas", "Cámara, luz y salir bien", "Brief, reuniones y correcciones", "Contar qué vendes"],
                     ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(cheapest.monthly)} al mes`],
-                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "500 a 3.000 créditos"],
+                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "≈ 3 a 17 anuncios de 15 s"],
                   ].map(([k, a, b, c]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
@@ -259,6 +265,9 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
+        {/* real customers, only with their permission (empty until there are) */}
+        <Casos />
+
         {/* 6 · Plans: what you get every month, then the two plans */}
         <section id="pricing" className={`scroll-mt-20 ${gutter}`} aria-labelledby="pricing-title">
           <div className={`${wrap} flex flex-col gap-6`}>
@@ -267,7 +276,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Sin permanencia ni letra chica. Automático, Manual, espiar a la competencia y escribir guiones vienen incluidos.</p>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[["500 a 3.000", "créditos al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
+              {[["≈ 3 a 17", "anuncios de 15 s al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "probar, espiar y crear guiones"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
                   <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>

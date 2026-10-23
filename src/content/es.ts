@@ -157,7 +157,7 @@ export const es: Content = {
     ["100%", "de los cortes revisados antes de armar"],
   ],
   hero: {
-    promo: "Emprende US$55 al mes · Negocio US$99 al mes",
+    promo: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes",
     title: "Tu anuncio con IA. Listo para lanzar.",
     lead: "Espía los anuncios que llevan semanas activos en tu rubro. Creads escribe el guion, crea hasta 8 escenas con Veo, Kling o Seedance, les pone voz y subtítulos, y revisa cada una. En unos 15 minutos tienes tu video editado, en el formato que necesites.",
     who: ["Afiliados", "Media buyers", "Agencias", "Marcas y e-commerce"],
@@ -445,9 +445,9 @@ export const es: Content = {
   },
   pricing: {
     title: "Elige tu plan y empieza a crear hoy",
-    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Emprende US$55 al mes y cancelas cuando quieras.",
-    offerTag: "Oferta de lanzamiento",
-    offer: "Emprende US$55 al mes · Negocio US$99 al mes",
+    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Desde US$25 al mes y cancelas cuando quieras.",
+    offerTag: "Prueba gratis",
+    offer: "Tu primer anuncio de regalo · planes desde US$25 al mes",
     offerNote: "Se aplica sola al pagar. No necesitas código.",
     monthly: "Mensual",
     yearly: "Anual",

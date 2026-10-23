@@ -342,7 +342,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Para generar videos activa tu plan: Emprende cuesta US$55 al mes.";
+  const plan = o.hasPlan ? "" : " Tu primer video va de regalo (confirma tu correo con el botón del mensaje de bienvenida); después, los planes parten en US$25 al mes.";
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",
@@ -373,7 +373,7 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       title: "El método de los anuncios ganadores",
       paragraphs: [
         esc(hello(name)),
-        "Después de miles de anuncios, el patrón se repite:",
+        "En los anuncios que venden, el patrón se repite:",
         "<b>1. Parte de un guion que ya funciona</b> (el tuyo o uno de la competencia) y desármalo.<br><b>2. Cambia una sola cosa por vez</b>: el hook o el ángulo, no todo junto.<br><b>3. Publica 3 versiones con el mismo presupuesto</b> y compara el costo por lead.<br><b>4. Quédate con la ganadora</b> y vuelve a iterar sobre ella.",
         `Creads está hecho para hacer ese ciclo en minutos, no en días.${esc(plan)}`,
       ],

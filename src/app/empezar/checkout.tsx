@@ -222,7 +222,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <label className="flex flex-col gap-1.5 text-sm font-semibold">
               Correo
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" className={input} aria-invalid={Boolean(fieldErr("email"))} />
-              <span className="text-xs font-normal text-muted">Usa el mismo correo de tu cuenta de Mercado Pago.</span>
+              <span className="text-xs font-normal text-muted">{renews ? "Ahí te llega el recibo. Para la renovación mensual, Mercado Pago te pide entrar con este mismo correo: si tu Mercado Pago usa otro, escribe ese." : "Ahí te llega el recibo."}</span>
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-semibold">
               Clave
