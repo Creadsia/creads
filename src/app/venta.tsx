@@ -200,7 +200,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                     ["Tiempo", "Medio día grabando y editando", "Días o semanas", "Minutos"],
                     ["Qué necesitas", "Cámara, luz y salir bien", "Brief, reuniones y correcciones", "Contar qué vendes"],
                     ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(cheapest.monthly)} al mes`],
-                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "55 a 263 segundos"],
+                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "43 a 263 segundos"],
                   ].map(([k, a, b, c]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
@@ -267,7 +267,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Sin permanencia ni letra chica. Automático, Manual, espiar a la competencia y escribir guiones vienen incluidos.</p>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[["55 a 263 s", "de video al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
+              {[["43 a 263 s", "de video al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
                   <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>

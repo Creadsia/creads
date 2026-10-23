@@ -152,8 +152,8 @@ export const DEFAULT_FINANZAS: Finanzas = {
     ivaPct: 19,
     pctChile: 100,
     planes: [
-      { id: "basico", nombre: "Básico", mensual: 25, anual: 25, creditos: 630 },
-      { id: "starter", nombre: "Emprende", mensual: 55, anual: 55, creditos: 1540 },
+      { id: "basico", nombre: "Básico", mensual: 25, anual: 25, creditos: 500 },
+      { id: "starter", nombre: "Emprende", mensual: 55, anual: 55, creditos: 1500 },
       { id: "plus", nombre: "Negocio", mensual: 99, anual: 99, creditos: 3000 },
       { id: "studio", nombre: "Ultra", mensual: 129, anual: 109, creditos: 3000 },
     ],

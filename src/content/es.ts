@@ -22,7 +22,7 @@ export const es: Content = {
     text: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes · Cancelas cuando quieras",
     cta: "Ver planes",
     items: [
-      { tag: "NUEVO", text: "Plan Básico: 55 segundos de video al mes por US$25" },
+      { tag: "NUEVO", text: "Plan Básico: 43 segundos de video al mes por US$25" },
       { tag: "NUEVO", text: "Automático: cuéntale tu negocio a Creads y te entrega el anuncio listo" },
       { tag: "NUEVO", text: "Demo con presentador: varios UGC de tu producto en un solo video" },
       { tag: "NUEVO", text: "Crea tus anuncios desde Claude o ChatGPT con el conector de Creads" },
@@ -483,7 +483,7 @@ export const es: Content = {
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Segundos de video al mes", "55 s", "135 s", "263 s"],
+            ["Segundos de video al mes", "43 s", "131 s", "263 s"],
             ["Imágenes para anuncios (con tus segundos)", "yes", "yes", "yes"],
             ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes", "yes"],
@@ -519,10 +519,10 @@ export const es: Content = {
         name: "Básico",
         price: 25,
         yearly: 25,
-        credits: "630",
+        credits: "500",
         for: "Para partir: tus primeros anuncios con IA sin gastar mucho.",
         features: [
-          "55 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "43 segundos de video al mes (las imágenes también se pagan con tus segundos)",
           "Automático y Manual",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
           "Persona IA en la escena que pidas, o tu propia persona en video",
@@ -534,10 +534,10 @@ export const es: Content = {
         name: "Emprende",
         price: 55,
         yearly: 55,
-        credits: "1.540",
+        credits: "1.500",
         for: "Para el dueño de negocio que quiere sus propios anuncios todos los meses, sin agencia.",
         features: [
-          "135 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "131 segundos de video al mes (las imágenes también se pagan con tus segundos)",
           "Espiar los anuncios que le funcionan a tu competencia",
           "Guiones de venta con IA (3 versiones y 10 ganchos)",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
