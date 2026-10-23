@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Política de privacidad · Creads IA
 
 export default function Privacidad() {
   return (
-    <Legal title="Política de privacidad" updated="22 de octubre de 2026">
+    <Legal title="Política de privacidad" updated="23 de octubre de 2026">
       <p>Creads IA («Creads», «nosotros») es una plataforma para crear anuncios, videos, imágenes y voces con inteligencia artificial, disponible en creadsia.com. Esta política explica qué datos personales usamos, para qué, con quién los compartimos y cómo puedes ejercer tus derechos, conforme a la ley chilena de protección de datos personales (Ley 19.628 y sus modificaciones, incluida la Ley 21.719).</p>
       <p>Responsable: Creads IA. Contacto para privacidad: <b>hola@creadsia.com</b>.</p>
 
