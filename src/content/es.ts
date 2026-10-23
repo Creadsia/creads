@@ -22,7 +22,7 @@ export const es: Content = {
     text: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes · Cancelas cuando quieras",
     cta: "Ver planes",
     items: [
-      { tag: "NUEVO", text: "Plan Básico: 43 segundos de video al mes por US$25" },
+      { tag: "NUEVO", text: "Plan Básico: 500 créditos al mes por US$25" },
       { tag: "NUEVO", text: "Automático: cuéntale tu negocio a Creads y te entrega el anuncio listo" },
       { tag: "NUEVO", text: "Demo con presentador: varios UGC de tu producto en un solo video" },
       { tag: "NUEVO", text: "Crea tus anuncios desde Claude o ChatGPT con el conector de Creads" },
@@ -216,7 +216,7 @@ export const es: Content = {
   },
   preview: {
     title: "Un estudio. Todos los modelos.",
-    lead: "Eliges qué quieres crear y Creads elige el modelo, escribe las escenas y te muestra cuántos segundos usa antes de gastar uno solo.",
+    lead: "Eliges qué quieres crear y Creads elige el modelo, escribe las escenas y te muestra cuántos créditos usa antes de gastar uno solo.",
     panel: {
       studio: "Estudio",
       studioValue: "Anuncio UGC",
@@ -406,7 +406,7 @@ export const es: Content = {
       voice: "Voz",
       brain: "Cerebro",
     },
-    perSecond: "de saldo por segundo de video",
+    perSecond: "créditos por segundo de video",
     perImage: "de saldo por imagen",
     included: "incluido",
     soon: "próximamente",
@@ -430,7 +430,7 @@ export const es: Content = {
   },
   credits: {
     title: "Segundos de video. Sin sorpresas.",
-    lead: "Cada plan trae segundos de video al mes: 1 segundo de anuncio con Persona IA descuenta 1 segundo (con tu persona real, menos). Ves cuánto usa antes de generar, y si un modelo falla, vuelven solos.",
+    lead: "Cada plan trae créditos al mes: un segundo de anuncio con Persona IA usa unos 11 créditos (con tu persona real, menos). Ves cuánto usa antes de generar, y si un modelo falla, vuelven solos.",
     examples: [
       ["Anuncio UGC de 30 segundos", "Avatar que habla, con tu voz", "30 s"],
       ["10 fotos de producto", "Nano Banana Pro, 4:5", "≈ 11 s"],
@@ -438,8 +438,8 @@ export const es: Content = {
       ["Guion, escenas, revisión y Edición Pro", "Creads IA", "Incluido"],
     ],
     rules: [
-      "Si un modelo falla y no entrega nada, los segundos vuelven solos.",
-      "Los segundos duran el mes que pagaste: los que no uses vencen al terminar.",
+      "Si un modelo falla y no entrega nada, los créditos vuelven solos.",
+      "Los créditos duran el mes que pagaste: los que no uses vencen al terminar.",
       "¿Necesitas más? Recarga cuando quieras sin cambiar de plan.",
     ],
   },
@@ -477,14 +477,15 @@ export const es: Content = {
     ],
     compare: {
       title: "Compara los planes",
-      lead: "Los tres hacen anuncios terminados con voz, subtítulos y revisión de calidad. Todo se paga con tus segundos: videos, imágenes y voces. Cambias de plan cuando quieras.",
+      lead: "Los tres hacen anuncios terminados con voz, subtítulos y revisión de calidad. Todo se paga con tus créditos: videos, imágenes y voces. Cambias de plan cuando quieras.",
       cols: ["", "Básico", "Emprende", "Negocio"],
       groups: [
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Segundos de video al mes", "43 s", "131 s", "263 s"],
-            ["Imágenes para anuncios (con tus segundos)", "yes", "yes", "yes"],
+            ["Créditos al mes", "500", "1.500", "3.000"],
+            ["Video con persona IA (aprox.)", "43 s", "131 s", "263 s"],
+            ["Imágenes para anuncios (con tus créditos)", "yes", "yes", "yes"],
             ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes", "yes"],
           ],
@@ -509,7 +510,7 @@ export const es: Content = {
     },
     payFaq: [
       { q: "¿Cómo pago?", a: "Con tarjeta de crédito, débito (Redcompra) o saldo de Mercado Pago, en pesos chilenos, en la ventana segura de Mercado Pago. El comprobante te llega al correo." },
-      { q: "¿Qué pasa después de pagar?", a: "Vuelves a Creads con tus segundos ya cargados y entras directo al estudio a crear tu primer anuncio." },
+      { q: "¿Qué pasa después de pagar?", a: "Vuelves a Creads con tus créditos ya cargados y entras directo al estudio a crear tu primer anuncio." },
       { q: "¿Cómo funciona la renovación mensual?", a: "Los planes mensuales se renuevan solos cada mes al precio normal. Cancelas la renovación desde «Planes» con un clic y sigues con tu plan hasta la fecha pagada." },
       { q: "¿Puedo cambiar de plan después?", a: "Sí. Subes o bajas cuando quieras, y en los meses con más trabajo sumas recargas de video sin cambiar de plan." },
     ],
@@ -522,7 +523,7 @@ export const es: Content = {
         credits: "500",
         for: "Para partir: tus primeros anuncios con IA sin gastar mucho.",
         features: [
-          "43 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "500 créditos al mes (≈ 43 s de video con persona IA; imágenes y voces con los mismos créditos)",
           "Automático y Manual",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
           "Persona IA en la escena que pidas, o tu propia persona en video",
@@ -537,7 +538,7 @@ export const es: Content = {
         credits: "1.500",
         for: "Para el dueño de negocio que quiere sus propios anuncios todos los meses, sin agencia.",
         features: [
-          "131 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "1.500 créditos al mes (≈ 131 s de video con persona IA; imágenes y voces con los mismos créditos)",
           "Espiar los anuncios que le funcionan a tu competencia",
           "Guiones de venta con IA (3 versiones y 10 ganchos)",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
@@ -553,7 +554,7 @@ export const es: Content = {
         credits: "3.000",
         for: "Para negocios que publican todas las semanas y prueban varios anuncios a la vez.",
         features: [
-          "263 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "3.000 créditos al mes (≈ 263 s de video con persona IA; imágenes y voces con los mismos créditos)",
           "Todo lo de Emprende",
           "3 avatares y 3 voces clonadas (la tuya incluida)",
           "Cola prioritaria: tus videos salen primero",
@@ -622,11 +623,11 @@ export const es: Content = {
     title: "Preguntas frecuentes",
     items: [
       { q: "¿Necesito saber editar o escribir prompts?", a: "No. Escribes lo que quieres en tus palabras. Creads escribe el guion, las escenas y las instrucciones para cada modelo, y te entrega el contenido terminado." },
-      { q: "¿Cómo se cuentan los segundos?", a: "Un segundo de anuncio con avatar que habla descuenta un segundo de tu saldo. Los modelos más caros descuentan más (Veo 3.1, unos 4 segundos por cada segundo de video) y una foto, alrededor de 1 segundo. El guion, las escenas, la revisión y la Edición Pro no descuentan. Siempre ves cuánto usa antes de generar." },
+      { q: "¿Cómo se cuentan los créditos?", a: "Un segundo de anuncio con avatar que habla usa unos 11 créditos. Los modelos más caros usan más (Veo 3.1, unas 4 veces más) y una foto, alrededor de 10 créditos. El guion, las escenas, la revisión y la Edición Pro no usan créditos. Siempre ves cuánto usa antes de generar." },
       { q: "¿Puedo usar mi propia cara o voz?", a: "Sí, con tu autorización. También puedes usar avatares creados con IA. Nunca usamos la cara o la voz de una persona sin su permiso." },
       { q: "¿Quién es dueño del contenido?", a: "Tú. Lo que creas en Creads lo puedes publicar y usar en tus campañas y en las de tus clientes." },
       { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Los planes son mes a mes y cancelas la renovación desde tu cuenta con un clic." },
-      { q: "¿Cómo pago?", a: "Con tarjeta de crédito, débito o saldo de Mercado Pago, en la ventana segura de Mercado Pago. Tus segundos se cargan apenas se aprueba el pago." },
+      { q: "¿Cómo pago?", a: "Con tarjeta de crédito, débito o saldo de Mercado Pago, en la ventana segura de Mercado Pago. Tus créditos se cargan apenas se aprueba el pago." },
     ],
   },
   start: {

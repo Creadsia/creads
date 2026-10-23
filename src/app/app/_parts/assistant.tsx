@@ -16,7 +16,7 @@ export const askAssistant = (q?: string) => window.dispatchEvent(new CustomEvent
 interface Msg { role: "user" | "assistant"; content: string; links?: { label: string; href: string }[]; error?: boolean }
 
 const KEY = "creads-asistente";
-const STARTERS = ["¿Cómo hago mi primer anuncio?", "¿Por qué falló mi video?", "¿Cuántos segundos de video me quedan y cuándo vencen?", "¿Cómo clono mi voz?"];
+const STARTERS = ["¿Cómo hago mi primer anuncio?", "¿Por qué falló mi video?", "¿Cuántos créditos me quedan y cuándo vencen?", "¿Cómo clono mi voz?"];
 
 function load(): Msg[] {
   try { const v = JSON.parse(sessionStorage.getItem(KEY) ?? "[]"); return Array.isArray(v) ? v.slice(-30) : []; } catch { return []; }
@@ -127,7 +127,7 @@ export default function Assistant() {
 
           <div ref={list} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" aria-live="polite">
             <div className="max-w-[88%] rounded-2xl rounded-tl-md bg-surface-2 px-3.5 py-2.5 text-sm">
-              ¡Hola! Soy el asistente de Creads. Veo tu plan, tus segundos de video y tus últimos trabajos, así que pregúntame lo que necesites.
+              ¡Hola! Soy el asistente de Creads. Veo tu plan, tus créditos y tus últimos trabajos, así que pregúntame lo que necesites.
             </div>
             {msgs.length === 0 && (
               <div className="flex flex-col items-start gap-1.5">

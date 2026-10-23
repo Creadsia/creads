@@ -1,6 +1,6 @@
 "use client";
 
-import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtCredits } from "@/lib/credit-math";
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -51,13 +51,13 @@ const D = {
 
 /** Credits pill: balance, and a quick way to buy more. */
 export function CreditsPill() {
-  const { info, seconds } = useCredits();
-  const low = seconds != null && seconds < 30;
+  const { info } = useCredits();
+  const low = Boolean(info && !info.unlimited && (info.balance ?? 0) < 340); // less than ≈ 30 s of video
   return (
-    <Link href="/app/planes" title="Tus segundos de video" data-tour="creditos"
+    <Link href="/app/planes" title="Tus créditos" data-tour="creditos"
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-surface-2 ${low ? "border-warn/50 text-warn" : "border-line"}`}>
       <Svg d={D.coin} />
-      <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : fmtSeconds(seconds ?? 0)}</span>
+      <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
       <span className="hidden text-muted sm:inline">de video</span>
     </Link>
   );
@@ -133,7 +133,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           <div className="mx-1 mb-2 rounded-xl bg-surface-2 p-3">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-xs font-semibold text-muted">{plan}</span>
-              <span className="font-mono text-sm font-bold">{!info ? "…" : info.unlimited ? "Sin límite" : `${fmtSeconds(secondsOf(info.balance ?? 0, info.rate))} de video`}</span>
+              <span className="font-mono text-sm font-bold">{!info ? "…" : info.unlimited ? "Sin límite" : fmtCredits(info.balance ?? 0)}</span>
             </div>
             {until && <p className="mt-0.5 text-xs text-muted">Tus segundos vencen el {until}</p>}
             {!info?.unlimited && (

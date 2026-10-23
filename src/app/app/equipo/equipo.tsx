@@ -63,7 +63,7 @@ export default function Equipo() {
 
   return (
     <>
-      <PageHead title="Equipo" lead="Personas que trabajan contigo en TU cuenta: ven tus avatares, tus anuncios y usan tus segundos de video. «Estudio completo» usa todo el estudio; «Completo + Panel interno» además entra al Panel (con verificación en dos pasos). Solo tú, el dueño, puedes quitarle el acceso a alguien con Panel interno." />
+      <PageHead title="Equipo" lead="Personas que trabajan contigo en TU cuenta: ven tus avatares, tus anuncios y usan tus créditos. «Estudio completo» usa todo el estudio; «Completo + Panel interno» además entra al Panel (con verificación en dos pasos). Solo tú, el dueño, puedes quitarle el acceso a alguien con Panel interno." />
       <p className="rounded-xl border border-warn/50 bg-warn/10 px-4 py-3 text-sm">
         <b>¿Es un cliente o un lead?</b> No lo agregues aquí: créalo en <a href="/admin" className="font-semibold underline">Panel interno → Clientes</a> o mándale el link <b>creadsia.com/empezar</b>. Así tiene su propia cuenta, vacía, con sus propios créditos. Si ya agregaste a alguien por error, usa «Pasar a cuenta de cliente».
       </p>
@@ -125,7 +125,7 @@ export default function Equipo() {
                       </label>
                       <button type="button" onClick={() => patch(u.id, { resetPassword: true })} className="text-xs font-semibold text-accent-text">Nueva clave</button>
                       {isOwner && (
-                        <button type="button" onClick={() => { if (window.confirm(`¿Pasar a ${u.email} a su propia cuenta de cliente? Dejará de ver tus avatares y anuncios, y no usará tus segundos de video. Sigue entrando con la misma clave.`)) patch(u.id, { toClient: true }); }}
+                        <button type="button" onClick={() => { if (window.confirm(`¿Pasar a ${u.email} a su propia cuenta de cliente? Dejará de ver tus avatares y anuncios, y no usará tus créditos. Sigue entrando con la misma clave.`)) patch(u.id, { toClient: true }); }}
                           className="rounded-lg border border-warn/60 px-2.5 py-1 text-xs font-semibold text-warn">Pasar a cuenta de cliente</button>
                       )}
                       <DeleteButton onDelete={() => remove(u.id)} />

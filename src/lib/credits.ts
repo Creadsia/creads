@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { User } from "./auth";
-import { DEFAULT_USD_PER_CREDIT, SECOND_USD, creditsFor, fmtSeconds, secondsOf } from "./credit-math";
+import { DEFAULT_USD_PER_CREDIT, SECOND_USD, creditsFor, fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
 import type { Finanzas } from "./finance";
 import { SbError, readPrivateJSON, sbRest, sbRpc } from "./supabase";
 
@@ -73,9 +73,9 @@ export async function needsCredits(user: User): Promise<string | null> {
   try {
     const st = await creditStatus(user.workspace);
     if ((st.balance ?? 0) > 0) return null;
-    if (st.paidUntil && !st.expired) return "Te quedaste sin segundos de video. Suma una recarga en «Planes» y sigues al tiro.";
+    if (st.paidUntil && !st.expired) return "Te quedaste sin créditos. Suma una recarga en «Planes» y sigues al tiro.";
   } catch {
-    return "No pudimos revisar tus segundos de video. Intenta de nuevo en un momento.";
+    return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
   }
   return "Para usar esto necesitas un plan activo. Elige uno en «Planes» (Emprende desde US$55 al mes).";
 }
@@ -103,14 +103,14 @@ export async function chargeJob(user: User, usd: number, note: string, ref: stri
     });
     const r = rows[0];
     if (!r?.ok) {
-      throw new CreditError(`Te falta video: esto usa ${fmtSeconds(Math.max(1, Math.round((credits * rate) / SECOND_USD)))} y te quedan ${fmtSeconds(secondsOf(Number(r?.balance ?? 0), rate))}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes» (Emprende desde US$55 al mes)." : "Suma segundos en «Planes»."}`);
+      throw new CreditError(`Te faltan créditos: esto usa ${fmtCredits(credits)} y te quedan ${fmtCredits(Number(r?.balance ?? 0))}. ${Number(r?.balance ?? 0) <= 0 && !b.plan ? "Elige un plan en «Planes» (desde US$25 al mes)." : "Suma créditos en «Planes»."}`);
     }
     return { credits, ref, free: false };
   } catch (err) {
     if (err instanceof CreditError) throw err;
     // the credits system isn't set up yet: customers can't spend (fail closed)
     if (err instanceof SbError && err.missing) throw new CreditError("El saldo aún no está activado. Escríbenos a hola@creadsia.com.", 503);
-    throw new CreditError("No pudimos revisar tus segundos de video. Intenta de nuevo en un momento.", 503);
+    throw new CreditError("No pudimos revisar tus créditos. Intenta de nuevo en un momento.", 503);
   }
 }
 

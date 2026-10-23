@@ -20,7 +20,7 @@ export default function Terminos() {
 
       <h2>3. Planes y saldo</h2>
       <ul>
-        <li>Tu saldo se muestra en segundos de video. Cada trabajo (video, imagen, voz u otro) descuenta saldo según lo que se genera; siempre ves cuánto usa antes de generar.</li>
+        <li>Tu saldo se muestra en créditos. Cada trabajo (video, imagen, voz u otro) descuenta saldo según lo que se genera; siempre ves cuánto usa antes de generar.</li>
         <li>Los planes son mensuales y entregan saldo para cada mes pagado. El saldo se usa dentro de ese mes: lo que no uses vence cuando termina y no se acumula para el siguiente. Las recargas se suman a tu saldo y vencen junto con tu plan.</li>
         <li>Si un trabajo falla por un problema del proveedor o de la plataforma, su saldo vuelve automáticamente a tu cuenta.</li>
         <li>El saldo no es dinero, no se puede transferir a otras cuentas ni canjear por efectivo.</li>

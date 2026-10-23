@@ -1,5 +1,5 @@
 import type { Email } from "./providers/email";
-import { fmtSeconds, secondsOf } from "./credit-math";
+import { fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
 
 // The emails Creads sends, in Chilean Spanish. Plain table layout so they look right in Gmail,
 // Outlook and phones; every email also has a plain-text version.
@@ -94,11 +94,11 @@ export function ownerCancelEmail(to: string, o: { customer: string; plan: string
 export function receiptEmail(to: string, o: { label: string; credits: number; amount: number; currency: string; orderId: string; paymentId: string }): Email {
   const link = `${SITE}/app`;
   const amount = o.currency === "CLP" ? clp(o.amount) : `US$${o.amount.toFixed(2)}`;
-  const secs = fmtSeconds(secondsOf(o.credits));
-  const rows: [string, string][] = [["Compra", o.label], ["Video agregado a tu saldo", secs], ["Total pagado", amount], ["N° de pedido", o.orderId]];
+  const secs = fmtCredits(o.credits);
+  const rows: [string, string][] = [["Compra", o.label], ["Créditos agregados a tu saldo", secs], ["Total pagado", amount], ["N° de pedido", o.orderId]];
   return {
     to, tag: "pago",
-    subject: `Pago recibido · ${secs} de video en tu cuenta`,
+    subject: `Pago recibido · ${secs} en tu cuenta`,
     html: layout({
       preview: `Recibimos tu pago de ${amount}. Tu saldo ya está disponible.`,
       title: "Recibimos tu pago",
@@ -148,15 +148,15 @@ export function renewalFailedEmail(to: string, name: string | null, o: { plan: s
 }
 
 /** The balance is about to run out (less than one ad left): a heads-up before a job is refused. */
-export function lowBalanceEmail(to: string, name: string | null, o: { seconds: number; until: string | null }): Email {
-  const left = fmtSeconds(Math.max(0, Math.floor(o.seconds)));
+export function lowBalanceEmail(to: string, name: string | null, o: { seconds: number; credits?: number; until: string | null }): Email {
+  const left = o.credits != null ? fmtCredits(o.credits) : fmtSeconds(Math.max(0, Math.floor(o.seconds)));
   const renew = o.until ? ` Tu plan se renueva el ${longDate(o.until)} con saldo nuevo.` : "";
   return {
     to, tag: "saldo-bajo",
-    subject: `Te quedan ${left} de video`,
+    subject: `Te quedan ${left}`,
     html: layout({
       preview: "Te alcanza para menos de un anuncio.",
-      title: `Te quedan ${left} de video`,
+      title: `Te quedan ${left}`,
       paragraphs: [esc(hello(name)), `Te queda saldo para menos de un anuncio.${esc(renew)}`, "Si necesitas más antes, puedes cargar saldo extra o pasarte a un plan más grande."],
       cta: { label: "Ver planes y saldo", href: `${SITE}/app/planes` },
     }),

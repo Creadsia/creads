@@ -49,7 +49,7 @@ const FAQ = [
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
   ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
   ["¿En qué idioma y con qué acento?", "En español con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés. También puedes usar tu propia voz."],
-  ["¿Qué pasa si un video falla?", "Si la IA no entrega el video, los segundos vuelven solos a tu saldo. Y antes de entregarte un anuncio, Creads lo revisa y te marca los posibles errores. Si quieres rehacer una escena, la regeneras con un clic: eso usa segundos de tu saldo, como una escena nueva."],
+  ["¿Qué pasa si un video falla?", "Si la IA no entrega el video, los créditos vuelven solos a tu saldo. Y antes de entregarte un anuncio, Creads lo revisa y te marca los posibles errores. Si quieres rehacer una escena, la regeneras con un clic: eso usa créditos de tu saldo, como una escena nueva."],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago, en pesos chilenos al cambio del día. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
   ["¿Puedo cancelar?", "Sí, cuando quieras, desde tu cuenta y con un clic. Sin permanencia: sigues usando tu plan hasta la fecha que pagaste."],
 ] as const;
@@ -200,7 +200,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                     ["Tiempo", "Medio día grabando y editando", "Días o semanas", "Minutos"],
                     ["Qué necesitas", "Cámara, luz y salir bien", "Brief, reuniones y correcciones", "Contar qué vendes"],
                     ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(cheapest.monthly)} al mes`],
-                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "43 a 263 segundos"],
+                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "500 a 3.000 créditos"],
                   ].map(([k, a, b, c]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
@@ -267,7 +267,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Sin permanencia ni letra chica. Automático, Manual, espiar a la competencia y escribir guiones vienen incluidos.</p>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[["43 a 263 s", "de video al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
+              {[["500 a 3.000", "créditos al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
                   <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>
@@ -275,7 +275,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               ))}
             </div>
             <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact />
-            <p className="max-w-3xl text-sm text-muted">Un solo saldo para todo: videos, imágenes y voces descuentan del mismo saldo, así que puedes repartirlo como quieras. Un segundo de saldo es un segundo de video con el modelo recomendado; algunos modelos usan más de 1 segundo de saldo por cada segundo de video, y antes de crear siempre ves cuánto cuesta. El saldo dura el mes que pagaste: lo que no uses vence al terminar y no se acumula.</p>
+            <p className="max-w-3xl text-sm text-muted">Un solo saldo para todo: videos, imágenes y voces descuentan del mismo saldo, así que puedes repartirlo como quieras. Un segundo de video con el modelo recomendado usa unos 11 créditos; algunos modelos usan más, y antes de crear siempre ves cuántos créditos cuesta. El saldo dura el mes que pagaste: lo que no uses vence al terminar y no se acumula.</p>
           </div>
         </section>
 

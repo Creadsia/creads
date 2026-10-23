@@ -23,7 +23,7 @@ export function creditsFor(usd: number, usdPerCredit = DEFAULT_USD_PER_CREDIT, d
 export const fmtCredits = (n: number) => `${n.toLocaleString("es-CL")} crédito${n === 1 ? "" : "s"}`;
 
 // ---------- seconds of video (what customers see) ----------
-// Customers see their balance and every price in SECONDS OF VIDEO, not credits (owner, 21 Oct 2026). One
+// Since 23 Oct 2026 customers see CREDITS again (owner), with seconds of video only as a hint. One
 // second = what one second of a «Persona IA» ad really costs us (MiniMax H3 Max US$0.08 + sync-3 lips
 // US$0.133 + its share of the scene picture and the voice). «Persona real» uses fewer seconds (no video is
 // generated), pricier models use more, so a plan's cost to Creads is the same whatever the customer picks.

@@ -67,8 +67,6 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
           const secs = secondsOf(credits); // shown in seconds of video (Persona IA), credits stay underneath
           const promo = !yearly && hasLaunch(p.id);
           const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
-          // everything is priced in seconds (owner, 22 Oct 2026: «háblame solo en segundos»)
-          const perSec = Math.round((monthNow / Math.max(1, secs)) * 100) / 100;
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
@@ -107,15 +105,15 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                 {/* what the money turns into */}
                 <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
                   <div className="flex flex-col gap-0.5 p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{fmtSeconds(secs)}</b>
-                    <span className="text-xs text-muted">{es ? "de video al mes" : "of video a month"}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">{credits.toLocaleString("es-CL")}</b>
+                    <span className="text-xs text-muted">{es ? "créditos al mes" : "credits a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{money(perSec)}</b>
-                    <span className="text-xs text-muted">{es ? "por segundo" : "per second"}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">≈ {secs} s</b>
+                    <span className="text-xs text-muted">{es ? "de video con persona IA" : "of AI-person video"}</span>
                   </div>
                   <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">
-                    {es ? "Videos, imágenes y voces se pagan con los mismos segundos." : "Videos, images and voices use the same seconds."}
+                    {es ? "Videos, imágenes y voces se pagan con los mismos créditos." : "Videos, images and voices use the same credits."}
                   </div>
                 </div>
 
@@ -194,7 +192,7 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
               const price = Number(p.replace(/[^\d.]/g, ""));
               return (
                 <div key={c} className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
-                  <span className="font-semibold">+{fmtSeconds(secondsOf(credits))} {es ? "de video" : "of video"}</span>
+                  <span className="font-semibold">+{credits.toLocaleString("es-CL")} {es ? "créditos" : "credits"}</span>
                   <span className="font-display text-2xl font-semibold">{money(price)}</span>
                   <a href={`/app/planes?plan=pack-${credits}`} className="mt-auto rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm font-semibold hover:border-accent-text">{t.topups.buy}</a>
                 </div>

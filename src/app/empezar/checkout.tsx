@@ -1,6 +1,6 @@
 "use client";
 
-import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
 import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
@@ -130,11 +130,11 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                   <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${on ? "border-ink" : "border-line"}`}>{on && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}</span>
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-center gap-2">
-                      <b className="text-lg">{isPlan ? (x as (typeof PLANS)[number]).name : `+${fmtSeconds(SECS(x.credits))} de video`}</b>
+                      <b className="text-lg">{isPlan ? (x as (typeof PLANS)[number]).name : `+${fmtCredits(x.credits)}`}</b>
                       {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
-                      {isPlan ? `${fmtSeconds(SECS(x.credits))} de video al mes` : `${fmtSeconds(SECS(x.credits))} de video · se suman a tu plan`}
+                      {isPlan ? `${fmtCredits(x.credits)} al mes (≈ ${fmtSeconds(SECS(x.credits))} de video)` : `${fmtCredits(x.credits)} · se suman a tu plan`}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end">
@@ -154,7 +154,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <li key={f} className="flex gap-2"><Check />{f}</li>
               ))}
               <li className="flex gap-2"><Check />Revisión de calidad automática en cada anuncio</li>
-              <li className="flex gap-2"><Check />Si un modelo falla, tus segundos vuelven solos</li>
+              <li className="flex gap-2"><Check />Si un modelo falla, tus créditos vuelven solos</li>
             </ul>
           </div>
 
@@ -249,7 +249,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
             </button>
             <p className="text-center text-xs text-muted">
-              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los segundos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
             </p>
 
             <div className="flex flex-col items-center gap-2 text-center">

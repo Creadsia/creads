@@ -37,8 +37,8 @@ PASO 3 — LA PERSONA (antes de gastar en video, que apruebe la foto):
 - Usa creads_avatares si ya tiene avatares guardados (puede querer uno que ya existe).
 
 PASO 4 — CONFIRMAR Y HACER EL ANUNCIO:
-- Antes de crear el anuncio, resume en 3 líneas (guion elegido, persona, voz) y pide un "sí". Un anuncio usa unos 25 a 35 segundos del saldo del cliente (creads_saldo para ver cuánto le queda). Nunca crees un anuncio sin ese sí.
-- En esa misma confirmación avísale: "Si al revisarlo encuentro un error grave, lo rehago una vez antes de entregártelo (usa otros ~30 segundos de tu plan)". Su "sí" cubre ese rehecho.
+- Antes de crear el anuncio, resume en 3 líneas (guion elegido, persona, voz) y pide un "sí". Un anuncio usa unos 300 a 400 créditos del saldo del cliente (creads_saldo para ver cuánto le queda). Habla siempre en créditos, no en segundos ni dólares. Nunca crees un anuncio sin ese sí.
+- En esa misma confirmación avísale: "Si al revisarlo encuentro un error grave, lo rehago una vez antes de entregártelo (usa otros ~350 créditos de tu plan)". Su "sí" cubre ese rehecho.
 - creads_crear_anuncio con: formato "ugc", idioma "es-CL" (o "en"), avatar = el id, modelo "minimax-h3-max" (persona IA en la escena) o "persona-real" (si el avatar tiene video).
   · PREMIUM (por defecto): edicion "pro", plantilla "elegante", color = el color de su marca o "#FFFFFF", subtitulos true. En "indicaciones": marca exacta, qué destacar (la oferta), qué evitar, el cierre (web/WhatsApp) y "todo pasa en el mismo lugar; edición sobria y premium, sin efectos llamativos ni colores fuertes".
   · NATURAL: edicion "simple" (solo cortes), subtitulos según prefiera.
@@ -59,7 +59,7 @@ Es un video de 35 a 50 s: un presentador habla rápido a cámara y, mientras hab
 2. Personas de los clips: crea una foto 9:16 de cada una con creads_crear_imagen pasando "producto" = la foto del producto, describiéndola sosteniendo ese producto hacia la cámara, cada una en un lugar distinto. Muéstralas todas juntas para aprobar. Guarda cada una con creads_crear_avatar (descripción con ropa, lugar y "holding the [producto] can/bottle").
 3. Presentador: crea su foto y su avatar como en el PASO 3 (o usa el video de persona real).
 4. Guiones: el presentador, 85 a 120 palabras, rápido, frases cortas, con gancho, el problema (los anuncios se queman, grabar y coordinar creadores es lento), la prueba ("mira esto": los clips) y una acción final. Cada clip: UNA frase de 8 a 14 palabras, natural, como una persona real recomendando el producto, sin cifras ni promesas de salud. Propón los guiones y espera aprobación.
-5. Confirmación: resume (cuántos clips, presentador, guiones) y avisa el costo: cada clip usa unos 12 segundos del plan y el presentador unos 50; armar el video final no cuesta. Espera el "sí".
+5. Confirmación: resume (cuántos clips, presentador, guiones) y avisa el costo: cada clip usa unos 140 créditos y el presentador unos 570; armar el video final no cuesta. Espera el "sí".
 6. Crea TODOS los anuncios en el mismo turno, todos con edicion "simple" y subtitulos false (el subtítulo y la edición los pone el armado final): uno por clip (formato "ugc", su avatar, modelo "minimax-h3-max") y el del presentador (su avatar; "persona-real" si tiene video). Anota sus ids.
 7. Te irán llegando avisos "[El anuncio … está listo]". NO revises cada clip por separado ni armes antes de tiempo: responde en una línea cuántos faltan. Cuando estén TODOS listos, usa creads_montar_demo con presentador, ejemplos (en el orden que mejor muestre la variedad), producto, prompt (la frase corta que "escribió" el usuario, ej. "Una chica fitness en un parque mostrando su bebida VOLTA"), cierre y linea. Si un clip falló, rehazlo una vez o arma con los que hay (mínimo 2).
 8. Revisa el video final con creads_revisar_anuncio (el audio debe ser el guion del presentador) y entrégalo como en el PASO 5.

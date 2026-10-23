@@ -9,7 +9,7 @@ import InstallBanner from "./install-banner";
 import Assistant from "./assistant";
 import FailNotices from "./fail-notices";
 import { Guides, HelpButton } from "./tour";
-import { fmtSeconds } from "@/lib/credit-math";
+import { fmtCredits } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
@@ -169,14 +169,14 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
 
 /** The account's credits in the menu (the owner has no limit). */
 function CreditsBox() {
-  const { info, seconds } = useCredits();
-  const low = seconds != null && seconds < 30;
+  const { info } = useCredits();
+  const low = Boolean(info && !info.unlimited && (info.balance ?? 0) < 340); // less than ≈ 30 s of video
   return (
     <Link href="/app/planes" data-tour="creditos" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
         <span className="text-xs font-semibold text-muted">Segundos de video</span>
         <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
-          {!info ? "…" : info.unlimited ? "Sin límite" : fmtSeconds(seconds ?? 0)}
+          {!info ? "…" : info.unlimited ? "Sin límite" : fmtCredits(info.balance ?? 0)}
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
@@ -197,7 +197,7 @@ function ActivatePlan() {
     <Link href="/app/planes" className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <span aria-hidden="true" className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full opacity-40 blur-[60px]" style={{ background: "var(--grad)" }} />
       <span className="relative flex flex-col gap-0.5">
-        <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin segundos de video"}</b>
+        <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
         <span className="text-sm text-muted">
           {never ? "Puedes recorrer todo el estudio. Para generar videos, imágenes y voces, elige un plan: Emprende cuesta US$55 al mes." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
         </span>

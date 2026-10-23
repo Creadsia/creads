@@ -67,7 +67,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
   const r = (n: number) => Math.round(n * 100) / 100;
   if (pack) {
     const discount = r((pack.usd * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
-    return { item, label: `${fmtSeconds(secondsOf(pack.credits))} de video extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
+    return { item, label: `${pack.credits.toLocaleString("es-CL")} créditos extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
   }
   const p = plan!;
   const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;

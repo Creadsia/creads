@@ -492,7 +492,7 @@ export default function ToolRun({ toolId, initial, promptValue, resultExtra, ima
             {busy ? <span className="inline-flex items-center gap-2"><Spinner />Iniciando…</span> : `${t.name} · ${money(usd)}`}
           </button>
           {missing && <p className="text-xs text-muted">{missing}</p>}
-          {!covers(usd) && <p className="text-xs text-warn">Te falta video para esto. <a href="/app/planes" className="font-semibold underline">Suma segundos</a>.</p>}
+          {!covers(usd) && <p className="text-xs text-warn">Te faltan créditos para esto. <a href="/app/planes" className="font-semibold underline">Suma créditos</a>.</p>}
           {err && <p className="text-sm text-bad">{err}</p>}
         </div>
       </section>

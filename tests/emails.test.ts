@@ -21,7 +21,7 @@ test("emails escape names and include a text version", () => {
   const w = welcomeEmail("a@x.cl", "<script>Ana</script> Pérez");
   assert.ok(!w.html.includes("<script>"));
   const r = receiptEmail("a@x.cl", { label: "Plan Starter · mensual", credits: 1000, amount: 55990, currency: "CLP", orderId: "C-1", paymentId: "123" });
-  assert.match(r.subject, /de video en tu cuenta/);
+  assert.match(r.subject, /créditos en tu cuenta/);
   assert.ok(r.html.includes("$55.990"));
   assert.ok(resetEmail("a@x.cl", null, "https://x/clave?t=1").html.includes("https://x/clave?t=1"));
   assert.match(planEndingEmail("a@x.cl", "Ana", { plan: "Starter", until: "2026-10-19", daysLeft: 3, credits: 200 }).subject, /vence en 3 días/);

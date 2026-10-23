@@ -50,7 +50,7 @@ async function lowBalanceCheck(user: User) {
   const { once } = await import("./marketing");
   if (!(await once(`saldo-bajo:${user.workspace}:${st.paidUntil ?? "sin-plan"}`, 40 * 86400))) return;
   const [{ lowBalanceEmail }, { sendEmail }] = await Promise.all([import("./emails"), import("./providers/email")]);
-  await sendEmail(lowBalanceEmail(user.email, user.name ?? null, { seconds: secs, until: st.paidUntil ?? null }));
+  await sendEmail(lowBalanceEmail(user.email, user.name ?? null, { seconds: secs, credits: st.balance, until: st.paidUntil ?? null }));
 }
 
 /** The message a failed job shows: credit problems as they are, provider problems explained. */

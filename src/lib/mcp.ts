@@ -1,4 +1,4 @@
-import { adsOf, fmtSeconds, secondsOf } from "./credit-math";
+import { adsOf, fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
 import { withVideo } from "./avatar-video";
 
@@ -42,7 +42,7 @@ export const TOOLS: Tool[] = [
       const d = await call<{ unlimited?: boolean; balance?: number | null; plan?: string | null; rate?: number }>("/api/credits");
       if (d.unlimited) return { text: "La cuenta no tiene límite.", data: { ilimitado: true } };
       const s = secondsOf(d.balance ?? 0, d.rate);
-      return { text: `La cuenta tiene ${fmtSeconds(s)} de video (≈ ${adsOf(s)} anuncios de 30 s con avatar que habla)${d.plan ? `, plan ${d.plan}` : ""}.`, data: { segundos: s, plan: d.plan ?? null } };
+      return { text: `La cuenta tiene ${fmtCredits(d.balance ?? 0)} (≈ ${fmtSeconds(s)} de video, ≈ ${adsOf(s)} anuncios de 30 s)${d.plan ? `, plan ${d.plan}` : ""}.`, data: { creditos: d.balance ?? 0, segundos: s, plan: d.plan ?? null } };
     },
   },
   {

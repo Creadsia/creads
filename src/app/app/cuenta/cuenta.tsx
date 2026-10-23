@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_USD_PER_CREDIT, SECOND_USD, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { DEFAULT_USD_PER_CREDIT, SECOND_USD, fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
 
 import { useEffect, useState } from "react";
 import { Field, PageHead, btnCls, cardCls, ghostCls, inputCls } from "../_parts/ui";
@@ -72,7 +72,7 @@ function Credits() {
           <h2 id="cr" className="font-display text-lg font-bold">Segundos de video</h2>
           <p className="text-sm text-muted">{d.plan ? `Plan ${d.plan}. ` : ""}{until ? (d.expired ? `Tu plan venció el ${until}.` : `Pagado hasta el ${until}.`) : ""} Si algo falla, te devolvemos los segundos automáticamente.</p>
         </div>
-        <p className="font-mono text-3xl font-bold tabular-nums">{fmtSeconds(secondsOf(d.balance ?? 0, d.rate))}</p>
+        <p className="font-mono text-3xl font-bold tabular-nums">{fmtCredits(d.balance ?? 0)}</p>
       </div>
       {d.history.length > 0 && (
         <div className="overflow-x-auto">

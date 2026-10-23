@@ -7,7 +7,7 @@ import { type FormatId, formatById, refusesFrame, takesOwnVoice } from "@/lib/fo
 import { lipsyncProUsd, lipsyncSeconds, lipsyncUsd } from "@/lib/historias";
 import { avatarVideo } from "@/lib/avatar-video";
 import { oneLocation } from "@/lib/director";
-import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtCredits } from "@/lib/credit-math";
 import { type VoiceChoice, takeOf, voiceReady } from "./voz";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { Field, type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
@@ -374,7 +374,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 <b>{cuts.length} cortes</b> · ≈ {videoSecs} s de video · {model.startsWith("veo") && aspect !== "16:9" ? "9:16" : aspect} · 720p
                 {avatar ? ` · Avatar: ${avatar.name}` : ""}{product ? ` · Producto: ${product.name}` : ""}{voice ? ` · Voz: ${voiceName ?? "elegida"}${natural ? " · boca natural" : ""}` : ""}<br />
                 {m?.actor ? `Se usa el video que grabaste de ${avatar?.name ?? "la persona"}, con tu voz en los labios. ` : model === "minimax-h3-max" && needsFrame ? "Primero se dibuja a tu avatar en la escena de cada corte, después se anima y al final se le pone tu voz en los labios. " : takesRefs && (avatar?.image_url || product?.image_url) ? "Veo usa la foto del avatar y del producto directo como referencia (cortes de 8 s). " : needsFrame ? "Primero se dibuja el cuadro inicial de cada corte con la cara del avatar (Nano Banana Pro) y después se anima. " : ""}
-                Precio estimado: <b>{price(usd)}</b>{info && !info.unlimited ? ` · te quedan ${fmtSeconds(secondsOf(info.balance ?? 0, info.rate))}` : ""}. Si un corte falla, sus segundos vuelven solos.
+                Precio estimado: <b>{price(usd)}</b>{info && !info.unlimited ? ` · te quedan ${fmtCredits(info.balance ?? 0)}` : ""}. Si un corte falla, sus créditos vuelven solos.
                 {model.startsWith("veo") && aspect !== "9:16" && aspect !== "16:9" ? " Veo no hace 4:5 ni 1:1: se genera en 9:16." : ""}
               </p>
               {!confirm ? (

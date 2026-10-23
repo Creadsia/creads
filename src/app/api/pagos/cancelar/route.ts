@@ -13,7 +13,7 @@ import { PLANS } from "@/lib/catalog";
 // what the customer reads → the reason the Panel counts (lib/retention.ts REASONS); the old wording still works
 const LEAVE_REASONS: Record<string, string> = {
   "Precio demasiado elevado": "Precio demasiado elevado",
-  "No uso suficientes segundos de video": "No utilizo suficientes créditos",
+  "No uso suficientes créditos": "No utilizo suficientes créditos", "No uso suficientes segundos de video": "No utilizo suficientes créditos",
   "Los resultados de la IA no me convencieron": "Resultados de IA insatisfactorios",
   "Problemas técnicos": "Problemas técnicos",
   "Ya no necesito la herramienta": "Ya no necesito la herramienta",

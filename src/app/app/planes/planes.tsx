@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
-import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
@@ -138,7 +138,7 @@ export default function Planes() {
 
   return (
     <>
-      <PageHead title="Planes" lead="Cada plan trae segundos de video al mes. Ves el precio exacto antes de pagar y puedes cancelar cuando quieras." />
+      <PageHead title="Planes" lead="Cada plan trae créditos al mes. Ves el precio exacto antes de pagar y puedes cancelar cuando quieras." />
 
       {pay?.owner && (
         <p className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm">
@@ -150,7 +150,7 @@ export default function Planes() {
       <section className="grid gap-3 sm:grid-cols-3" aria-label="Tu cuenta">
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Video disponible</span>
-          <span className="font-mono text-3xl font-bold tabular-nums">{!info ? "…" : info.unlimited ? "∞" : fmtSeconds(secs(info.balance ?? 0))}</span>
+          <span className="font-mono text-3xl font-bold tabular-nums">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
@@ -159,17 +159,17 @@ export default function Planes() {
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
-          <span className="text-sm text-muted">Un segundo de video con avatar que habla descuenta 1 s. Los modelos más caros descuentan más (Veo 3.1: 4 s por segundo). Grabar la voz, revisar y la Edición Pro no descuentan. Si algo falla, vuelven solos.</span>
+          <span className="text-sm text-muted">Un segundo de video con avatar que habla usa unos 11 créditos. Los modelos más caros usan más (Veo 3.1: unas 4 veces más). Revisar y la Edición Pro no usan créditos. Si algo falla, vuelven solos.</span>
         </div>
       </section>
 
       {back && (
         <section className={`${cardCls} ${back.state === "pagado" ? "border-good/50" : back.state === "rechazado" ? "border-bad/50" : ""}`} aria-live="polite">
           <h2 className="font-display text-xl font-bold">
-            {back.state === "pagado" ? "¡Pago recibido! Tus segundos de video ya están cargados." : back.state === "rechazado" ? "El pago fue rechazado" : back.state === "revisando" ? "Revisando tu pago…" : "Estamos confirmando tu pago"}
+            {back.state === "pagado" ? "¡Pago recibido! Tus créditos ya están cargados." : back.state === "rechazado" ? "El pago fue rechazado" : back.state === "revisando" ? "Revisando tu pago…" : "Estamos confirmando tu pago"}
           </h2>
           <p className="text-sm text-muted">
-            {back.state === "pagado" ? `Pedido ${back.id}. Te llega el comprobante de Mercado Pago a tu correo.` : back.state === "rechazado" ? "No se cobró nada. Puedes intentar con otra tarjeta o medio de pago." : "Mercado Pago avisa en unos minutos. Tus segundos aparecen solos en esta página; no necesitas pagar de nuevo."}
+            {back.state === "pagado" ? `Pedido ${back.id}. Te llega el comprobante de Mercado Pago a tu correo.` : back.state === "rechazado" ? "No se cobró nada. Puedes intentar con otra tarjeta o medio de pago." : "Mercado Pago avisa en unos minutos. Tus créditos aparecen solos en esta página; no necesitas pagar de nuevo."}
           </p>
         </section>
       )}
@@ -187,15 +187,15 @@ export default function Planes() {
           <h2 id="leave" className="font-display text-lg font-bold">Antes de cancelar, ¿nos cuentas por qué? (opcional)</h2>
           <p className="text-sm text-muted">Tu plan sigue activo hasta la fecha pagada y tus anuncios quedan guardados. Tu respuesta nos ayuda a mejorar.</p>
           <div role="radiogroup" aria-label="Motivo" className="grid gap-2 sm:grid-cols-2">
-            {["Precio demasiado elevado", "No uso suficientes segundos de video", "Los resultados de la IA no me convencieron", "Problemas técnicos", "Ya no necesito la herramienta", "Me cambiaré a otra plataforma", "Otro motivo"].map((m) => (
+            {["Precio demasiado elevado", "No uso suficientes créditos", "Los resultados de la IA no me convencieron", "Problemas técnicos", "Ya no necesito la herramienta", "Me cambiaré a otra plataforma", "Otro motivo"].map((m) => (
               <label key={m} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${reason === m ? "border-accent bg-accent/10" : "border-line"}`}>
                 <input type="radio" name="leave" value={m} checked={reason === m} onChange={() => setReason(m)} />{m}
               </label>
             ))}
           </div>
           {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Emprende</b>? Es el más económico y trae video para varios anuncios al mes.</p>}
-          {(reason === "Los resultados de la IA no me convencieron" || reason === "Problemas técnicos") && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos segundos.</p>}
-          {reason === "No uso suficientes segundos de video" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
+          {(reason === "Los resultados de la IA no me convencieron" || reason === "Problemas técnicos") && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
+          {reason === "No uso suficientes créditos" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>
@@ -217,7 +217,7 @@ export default function Planes() {
           <p className="text-sm">
             {pay?.online
               ? "Te llevamos a la ventana de pago."
-              : "El pago en línea se activa muy pronto. Te escribimos a tu correo con un link de pago seguro; apenas pagues, tus segundos aparecen aquí."}
+              : "El pago en línea se activa muy pronto. Te escribimos a tu correo con un link de pago seguro; apenas pagues, tus créditos aparecen aquí."}
           </p>
           <p className="text-xs text-muted">¿Dudas? Escríbenos a hola@creadsia.com con tu número de pedido.</p>
         </section>
@@ -259,7 +259,7 @@ export default function Planes() {
                     <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
                     <span className="text-xs text-muted">{period === "anual" ? `${money(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${money(first)}` : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtSeconds(secs(p.credits * 12))}</b> de video para el año</> : <><b className="font-mono">{fmtSeconds(secs(p.credits))}</b> de video al mes · imágenes y voces con los mismos segundos</>}</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtCredits(p.credits * 12)}</b> para el año</> : <><b className="font-mono">{fmtCredits(p.credits)}</b> al mes (≈ {fmtSeconds(secs(p.credits))} de video) · imágenes y voces con los mismos créditos</>}</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>
@@ -275,13 +275,13 @@ export default function Planes() {
           </div>
         </section>
       ) : (
-        <section className="flex flex-col gap-4" aria-label="Recargas de segundos">
-          <p className="text-sm text-muted">{hasPlan ? "Se suman a tu saldo apenas se aprueba el pago, encima de los segundos de tu plan, y vencen cuando termina tu período." : "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites."}</p>
+        <section className="flex flex-col gap-4" aria-label="Recargas de créditos">
+          <p className="text-sm text-muted">{hasPlan ? "Se suman a tu saldo apenas se aprueba el pago, encima de los créditos de tu plan, y vencen cuando termina tu período." : "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma créditos cuando los necesites."}</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {PACKS.map((k) => (
               <article key={k.id} className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 ${item === k.id ? "ring-2 ring-accent-text/60" : ""}`}>
                 <span className="text-xs font-semibold text-muted">{k.note}</span>
-                <b className="font-mono text-3xl">+{fmtSeconds(secs(k.credits))}</b>
+                <b className="font-mono text-3xl">+{fmtCredits(k.credits)}</b>
                 <span className="text-sm text-muted">de video</span>
                 <span className="font-display text-2xl font-semibold">{money(k.usd)}</span>
                 <button type="button" onClick={() => choose(k.id)} disabled={!hasPlan} className={`${ghostCls} mt-auto w-full py-2.5 disabled:opacity-50`}>Comprar</button>
@@ -298,7 +298,7 @@ export default function Planes() {
             <h2 id="pm" className="font-display text-lg font-bold">Pagas con Mercado Pago</h2>
             <div className="flex flex-col gap-2 rounded-xl border border-accent-text/50 bg-accent/10 p-4">
               <b className="text-sm">Tarjeta de crédito, débito o saldo Mercado Pago</b>
-              <span className="text-sm text-muted">Pagas en pesos chilenos en la ventana segura de Mercado Pago y vuelves aquí con tus segundos ya cargados.</span>
+              <span className="text-sm text-muted">Pagas en pesos chilenos en la ventana segura de Mercado Pago y vuelves aquí con tus créditos ya cargados.</span>
               <ul className="mt-1 flex flex-wrap gap-1.5 text-xs font-semibold">
                 {["Visa", "Mastercard", "American Express", "Redcompra", "Saldo Mercado Pago"].map((x) => <li key={x} className="rounded-md border border-line bg-surface px-2 py-1">{x}</li>)}
               </ul>
@@ -323,11 +323,11 @@ export default function Planes() {
               <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{usd(q.total)}</dd></div>
               <div className="flex justify-between gap-3 text-xs text-muted"><dt>Mercado Pago cobra en pesos chilenos</dt><dd className="font-mono">{pesos(clp(q.total))}</dd></div>
             </dl>
-            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{fmtSeconds(secs(q.credits))}</b> de video{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{fmtCredits(q.credits)}</b>{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
             {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
             <Garantia compact />
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${usd(q.total)} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
-            <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los segundos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
+            <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             <div className="flex flex-col items-center gap-1.5"><PayBadges compact /><span className="flex items-center gap-1.5 text-xs text-muted"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>Pago cifrado. Creads nunca ve tu tarjeta.</span></div>
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}

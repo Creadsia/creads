@@ -65,7 +65,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Básico US$25 al mes (43 segundos de video), Emprende US$55 al mes (131 segundos) y Negocio US$99 al mes (263 segundos). Todo se paga con esos segundos: videos, imágenes y voces. Sin permanencia: cancelas cuando quieras.",
+    a: "Básico US$25 al mes (500 créditos), Emprende US$55 al mes (1.500 créditos) y Negocio US$99 al mes (3.000 créditos). Todo se paga con esos créditos: videos, imágenes y voces. Un segundo de video con persona IA usa unos 11 créditos. Sin permanencia: cancelas cuando quieras.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },
