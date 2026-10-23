@@ -8,6 +8,7 @@ import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import PayBadges from "../pay-badges";
 import GoogleButton from "../google-button";
+import Garantia from "../garantia";
 
 // One page from "I want this plan" to Mercado Pago: pick the plan, create the account, pay.
 // New accounts always get the launch offer on Starter (first purchase), so the price shown here is the price charged.
@@ -243,6 +244,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </p>
             )}
 
+            <Garantia compact />
             <button type="submit" disabled={Boolean(busy)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
@@ -255,7 +257,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               <PayBadges compact />
               <p className="flex items-center gap-1.5 text-xs text-muted">
                 <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>
-                Pago cifrado en Mercado Pago.{q.period === "mensual" && renews ? " Cancela cuando quieras." : ""}
+                Pago cifrado en Mercado Pago. Creads nunca ve tu tarjeta.{q.period === "mensual" && renews ? " Cancela cuando quieras." : ""}
               </p>
             </div>
           </form>

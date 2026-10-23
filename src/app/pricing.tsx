@@ -6,6 +6,7 @@ import { track } from "@/lib/track";
 import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
+import Garantia from "./garantia";
 
 // The plans, front and center: the launch price is the big number, the regular price is crossed out,
 // and every button goes straight to checkout (/empezar) with that plan already chosen.
@@ -165,6 +166,7 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
 
       {/* why it's safe to pay */}
       <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5 sm:p-6">
+        {lang === "es" && <Garantia />}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PayBadges />
           <span className="text-sm text-muted">{t.clpNote}</span>

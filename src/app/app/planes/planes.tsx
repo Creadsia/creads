@@ -6,6 +6,8 @@ import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
+import Garantia from "../../garantia";
+import PayBadges from "../../pay-badges";
 
 // Plans and credits: choose a plan or a top-up, see exactly what you'll pay, pick how to pay.
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
@@ -324,9 +326,11 @@ export default function Planes() {
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{fmtSeconds(secs(q.credits))}</b> de video{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
             {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
+            <Garantia compact />
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${usd(q.total)} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
             <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los segundos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
+            <div className="flex flex-col items-center gap-1.5"><PayBadges compact /><span className="flex items-center gap-1.5 text-xs text-muted"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>Pago cifrado. Creads nunca ve tu tarjeta.</span></div>
             {pay?.owner && <p className="text-xs text-muted">Vista de cliente: desde tu cuenta no se crean pedidos.</p>}
             {!pay?.online && !pay?.owner && <p className="text-xs text-muted">Estamos activando el pago en línea: al confirmar, guardamos tu pedido y te escribimos para completarlo.</p>}
             <button type="button" onClick={() => { setItem(null); setErr(""); }} className="text-xs text-muted underline">Cancelar</button>
