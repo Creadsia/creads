@@ -233,6 +233,8 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [prueba, setPrueba] = useState<{ item: string; ok: boolean; detalle: string }[] | null>(null);
+  const [diag, setDiag] = useState<{ resumen: Record<string, unknown>; pasos: { paso: string; ok: boolean; http?: number; datos?: unknown; error?: Record<string, unknown> }[]; causa: string[] } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [guia, setGuia] = useState(false);
   const dirty = Object.values(form).some((x) => x !== undefined);
 
@@ -257,6 +259,17 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
     setBusy("");
   }
 
+  async function diagnosticar() {
+    setBusy("diag"); setMsg(null); setDiag(null); setCopied(false);
+    try {
+      const r = await fetch("/api/admin/marketing", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ diagnostico: true }) });
+      const x = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(x.error || "No se pudo diagnosticar.");
+      setDiag(x.diagnostico);
+    } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : "No se pudo diagnosticar." }); }
+    setBusy("");
+  }
+
   return (
     <section className={card} aria-labelledby="h-con">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -267,6 +280,7 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
         <span className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setGuia(!guia)} className={btn}>{guia ? "Ocultar guía" : "Guía paso a paso"}</button>
           <button type="button" disabled={!!busy} onClick={probar} className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-bg disabled:opacity-50">{busy === "probar" ? "Probando…" : "Probar conexión"}</button>
+          <button type="button" disabled={!!busy} onClick={diagnosticar} className={btn}>{busy === "diag" ? "Revisando…" : "Diagnóstico técnico"}</button>
         </span>
       </div>
 
@@ -313,6 +327,23 @@ function Conexiones({ d, reload }: { d: Data; reload: (x: Data) => void }) {
         </ul>
       )}
       {d.conexion.error && <p className="text-sm text-bad">Meta respondió: {d.conexion.error}</p>}
+      {diag && (
+        <div className="flex flex-col gap-3 rounded-xl border border-line p-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <b>Diagnóstico técnico (solo lectura, sin tokens)</b>
+            <button type="button" onClick={() => { navigator.clipboard?.writeText(JSON.stringify(diag, null, 2)).then(() => setCopied(true)).catch(() => {}); }} className={btn}>{copied ? "Copiado ✓" : "Copiar para Claude"}</button>
+          </div>
+          <ul className="flex flex-col gap-1">{diag.causa.map((c, i) => <li key={i} className="flex gap-2"><span aria-hidden>👉</span><span>{c}</span></li>)}</ul>
+          <ol className="flex flex-col gap-2">
+            {diag.pasos.map((p) => (
+              <li key={p.paso} className="rounded-lg bg-surface-2 p-2">
+                <span className="font-semibold">{p.ok ? "✅" : "⚠️"} {p.paso}</span>{p.http ? <span className="text-xs text-muted"> · HTTP {p.http}</span> : null}
+                <pre className="mt-1 max-h-48 overflow-auto text-xs whitespace-pre-wrap">{JSON.stringify(p.error ?? p.datos, null, 2)}</pre>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <details className="rounded-xl border border-line p-4" open={!d.conexion.webhook && !!v.adsToken.value}>
         <summary className="cursor-pointer text-sm font-bold">Respuestas automáticas a comentarios (webhook de Instagram) {d.conexion.webhook ? "· ✓ listo" : "· falta"}</summary>
