@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { needsCredits } from "@/lib/credits";
+import { freeOrLimited } from "@/lib/credits";
 import { tooMany } from "@/lib/rate";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const limited = await tooMany("ai", s.user.id);
   if (limited) return limited;
-  const broke = await needsCredits(s.user);
+  const broke = await freeOrLimited(s.user, "script");
   if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   if (!textAI.configured()) return NextResponse.json({ error: FEATURE_UNAVAILABLE }, { status: 503 });
 

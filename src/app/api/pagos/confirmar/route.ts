@@ -7,6 +7,9 @@ import { tooMany } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
 
+// what the browser needs to fire the same Purchase as the server (same id: Meta counts it once)
+const purchase = (o: { id: string; mp?: { clp: number } | null; quote: { label: string } }) => ({ eventId: `buy-${o.id}`, value: o.mp?.clp ?? 0, currency: "CLP", label: o.quote.label });
+
 // The customer came back from Mercado Pago: check the payment right away (instead of waiting for the
 // notification) so the credits show at once. Same safe settlement as the webhook.
 export async function POST(req: Request) {
@@ -19,21 +22,21 @@ export async function POST(req: Request) {
   const order = found && found.ws === s.user.workspace ? found : null;
   if (!order) return NextResponse.json({ error: "No encontré ese pedido." }, { status: 404 });
   try {
-    if (order.status === "pagado") return NextResponse.json({ state: "pagado" });
+    if (order.status === "pagado") return NextResponse.json({ state: "pagado", purchase: purchase(order) });
     const paymentId = String(b?.payment_id ?? b?.collection_id ?? "");
     if (/^\d{3,30}$/.test(paymentId)) {
       const p = await getPayment(paymentId);
       if (p.external_reference !== order.id) return NextResponse.json({ error: "Ese pago no corresponde a este pedido." }, { status: 400 });
       if (p.status === "approved") {
         const r = await settleOrder(order.id, { id: String(p.id), amount: p.transaction_amount, currency: p.currency_id });
-        return NextResponse.json({ state: r.ok ? "pagado" : "revisar" });
+        return NextResponse.json(r.ok ? { state: "pagado", purchase: purchase(order) } : { state: "revisar" });
       }
       return NextResponse.json({ state: p.status === "rejected" ? "rechazado" : "procesando" });
     }
     const pre = String(b?.preapproval_id ?? "");
     if (pre && order.mp?.kind === "subscription" && pre === order.mp.id) {
       const sub = await getPreapproval(pre);
-      if (sub.status === "authorized" && (await reconcileSubscription(order.id).catch(() => 0)) > 0) return NextResponse.json({ state: "pagado" });
+      if (sub.status === "authorized" && (await reconcileSubscription(order.id).catch(() => 0)) > 0) return NextResponse.json({ state: "pagado", purchase: purchase(order) });
       // the first charge of a subscription arrives a few seconds/minutes later, by notification
       return NextResponse.json({ state: sub.status === "authorized" ? "procesando" : sub.status === "cancelled" ? "cancelado" : "pendiente" });
     }

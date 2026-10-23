@@ -11,6 +11,8 @@ import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
 import { cutTimes, cleanPlan, proPass, proPrompt, resolveLook, type ProPlan } from "@/lib/pro-edit";
 import { textAI } from "@/lib/providers";
+import { hasPaid } from "@/lib/regalo";
+import { unlimited } from "@/lib/credits";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 300;
@@ -43,6 +45,8 @@ export async function POST(req: Request) {
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
     const clips = (await db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as unknown as ClipRow[];
     if (!clips.length || clips.some((c) => c.status !== "done" || !c.url)) return NextResponse.json({ error: "Espera a que todos los cortes estén listos." }, { status: 400 });
+    // accounts that never paid (the gift ad) carry the «Hecho con Creads IA» mark; paying removes it
+    if (!style.sello && !unlimited(s.user.workspace) && !(await hasPaid(s.user.workspace).catch(() => true))) style.sello = true;
     const settings = (ad.settings ?? {}) as { lang?: string; review?: { clipId: string; url?: string; words: Word[] }[]; aviso?: string };
     // the «Dramatización · actor IA» label: asked now, or kept from the first montage (subtitle edits rebuild it)
     const aviso = str(b?.aviso, 40) || str(settings.aviso, 40);

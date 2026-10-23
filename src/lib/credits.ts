@@ -1,3 +1,4 @@
+import { allow, limitMessage } from "./rate";
 import { randomUUID } from "node:crypto";
 import type { User } from "./auth";
 import { DEFAULT_USD_PER_CREDIT, SECOND_USD, creditsFor, fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
@@ -15,7 +16,7 @@ export class CreditError extends Error {
   }
 }
 
-const unlimited = (ws: string) => ws === "main";
+export const unlimited = (ws: string) => ws === "main";
 
 let rateCache: { at: number; v: number } | null = null;
 /** US$ of model cost per credit, from the owner's finance book (cached a minute). */
@@ -60,6 +61,21 @@ export async function creditStatus(ws: string) {
     if (err instanceof SbError && err.missing) return { unlimited: false, balance: 0, rate, discount: 0, paidUntil: null, expired: false, plan: null, notReady: true };
     throw err;
   }
+}
+
+/**
+ * Spying on ads and writing scripts are free for accounts without a plan (owner, 23 Oct 2026: let people
+ * try before paying), within a daily limit per person and a ceiling for everyone together. Returns a
+ * message when the limit is reached, or null to go ahead.
+ */
+export async function freeOrLimited(user: User, kind: "spy" | "script"): Promise<string | null> {
+  const broke = await needsCredits(user);
+  if (!broke) return null;
+  // a plan that ran out of credits still gets the free daily allowance (they're paying customers)
+  const bucket = kind === "spy" ? "freeSpy" : "freeScript";
+  if (!(await allow(bucket, user.id))) return limitMessage(bucket);
+  if (!(await allow("freeAll", "all"))) return limitMessage("freeAll");
+  return null;
 }
 
 export interface Charge { credits: number; ref: string; free: boolean }

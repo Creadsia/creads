@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     }
     // top-ups add to an active plan: on their own they couldn't be used (an ended plan blocks jobs)
     // and would expire with the period that already ended
-    if (String(b?.item ?? "").startsWith("pack-") && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10))) {
+    if (String(b?.item ?? "").startsWith("pack-") && b?.item !== "pack-prueba" && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10))) {
       return NextResponse.json({ error: "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites." }, { status: 400 });
     }
     const discountPct = Number(w.discount ?? 0);

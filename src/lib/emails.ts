@@ -41,8 +41,27 @@ const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").r
 
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
-export function welcomeEmail(to: string, name: string | null): Email {
+export function welcomeEmail(to: string, name: string | null, regalo?: string | null): Email {
   const link = `${SITE}/app`;
+  // a new account that hasn't paid: the button confirms the email and gives the first ad as a gift
+  if (regalo) {
+    return {
+      to, tag: "bienvenida",
+      subject: "Confirma tu correo y recibe tu primer anuncio de regalo",
+      html: layout({
+        preview: "Un clic y tienes créditos para tu primer anuncio en video, gratis.",
+        title: "Tu primer anuncio va por nuestra cuenta",
+        paragraphs: [
+          esc(hello(name)),
+          "Gracias por crear tu cuenta en Creads IA. Confirma tu correo con el botón y te cargamos créditos para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
+          "Después entra a <b>Automático</b>, cuéntale qué vendes y Creads te hace el guion, la persona, el video y la revisión.",
+        ],
+        cta: { label: "Confirmar y recibir mi anuncio", href: regalo },
+        after: ["Mientras tanto ya puedes espiar anuncios de tu competencia y crear guiones gratis. Si tienes cualquier duda, responde este correo."],
+      }),
+      text: plain([hello(name), "", "Confirma tu correo y te cargamos créditos para tu primer anuncio en video, gratis y sin tarjeta.", "", `Confirmar: ${regalo}`]),
+    };
+  }
   return {
     to, tag: "bienvenida",
     subject: "Bienvenido a Creads IA",
