@@ -9,18 +9,21 @@ export default function DesdeCero({ onChange }: { onChange?: () => void }) {
   const [d, setD] = useState<{ desde: string | null; pruebas: string[] } | null>(null);
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { fetch("/api/admin/desde").then((r) => (r.ok ? r.json() : null)).then(setD).catch(() => {}); }, []);
+  const [err, setErr] = useState("");
+  // shown even if the setting can't be read yet (a missing file just means «todo el historial»)
+  useEffect(() => { fetch("/api/admin/desde").then((r) => (r.ok ? r.json() : null)).then((j) => setD(j ?? { desde: null, pruebas: [] })).catch(() => setD({ desde: null, pruebas: [] })); }, []);
   const post = async (desde: "ahora" | null) => {
     setBusy(true);
     const r = await fetch("/api/admin/desde", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ desde }) }).catch(() => null);
     setBusy(false); setAsk(false);
-    if (r?.ok) { setD(await r.json()); onChange?.(); }
+    if (r?.ok) { setD(await r.json()); onChange?.(); } else setErr("No se pudo guardar. Recarga la página e intenta de nuevo.");
   };
   if (!d) return null;
   const when = d.desde ? new Date(d.desde).toLocaleString("es-CL", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm">
       <span>{when ? <>Contando desde <b>{when}</b>{d.pruebas.length ? ` · ${d.pruebas.length} ${d.pruebas.length === 1 ? "cuenta de prueba fuera" : "cuentas de prueba fuera"}` : ""}</> : <>Contando <b>todo el historial</b>{d.pruebas.length ? ` · ${d.pruebas.length} de prueba fuera` : ""}</>}</span>
+      {err && <span className="text-xs text-bad">{err}</span>}
       {ask ? (
         <span className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted">Los tableros parten en cero desde este momento. No se borra nada.</span>
