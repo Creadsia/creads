@@ -109,7 +109,7 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                     <span className="text-xs text-muted">{es ? "créditos al mes" : "credits a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">≈ {Math.max(1, Math.floor(secs / 15))} {es ? "anuncios" : "ads"}</b>
+                    <b className="font-display text-lg font-semibold leading-tight tabular-nums">≈ {Math.max(1, Math.floor(secs / 15))} {es ? "anuncios" : "ads"}</b>
                     <span className="text-xs text-muted">{es ? `de 15 s al mes (≈ ${secs} s de video)` : `of 15 s a month (≈ ${secs} s of video)`}</span>
                   </div>
                   <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">

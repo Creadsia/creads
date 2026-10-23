@@ -57,19 +57,13 @@ export default function Registro({ google }: { google: boolean }) {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-12 lg:py-14">
-        <section className="flex min-w-0 flex-col gap-5">
+      <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-x-12 lg:gap-y-6 lg:py-14">
+        <section className="flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
           <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">Prueba Creads gratis, sin tarjeta</h1>
           <p className="text-lg text-muted">Crea tu cuenta y mira con tus propios ojos cómo queda un anuncio de tu negocio antes de pagar nada.</p>
-          <ul className="flex flex-col gap-3 text-[15px]">
-            <li className="flex gap-2"><Check /><span><b>Tu primer anuncio en video de regalo</b>: confirma tu correo y te cargamos créditos para uno de unos 12 segundos (con la marca «Hecho con Creads IA»).</span></li>
-            <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
-            <li className="flex gap-2"><Check /><span><b>Guiones con 10 ganchos</b> para tu negocio: 5 gratis al día.</span></li>
-            <li className="flex gap-2"><Check /><span>Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia.</span></li>
-          </ul>
         </section>
 
-        <form onSubmit={submit} className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="crear-cuenta">
+        <form onSubmit={submit} className="flex flex-col gap-4 self-start rounded-2xl lg:col-start-2 lg:row-span-2 lg:row-start-1 border border-line bg-surface p-5 sm:p-6" aria-labelledby="crear-cuenta">
           <h2 id="crear-cuenta" className="font-display text-xl font-semibold">Crea tu cuenta gratis</h2>
           {google && (
             <>
@@ -108,6 +102,12 @@ export default function Registro({ google }: { google: boolean }) {
           </button>
           <p className="text-xs text-muted">Sin tarjeta. Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
         </form>
+          <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
+            <li className="flex gap-2"><Check /><span><b>Tu primer anuncio en video de regalo</b>: confirma tu correo y te cargamos créditos para uno de unos 12 segundos (con la marca «Hecho con Creads IA»).</span></li>
+            <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
+            <li className="flex gap-2"><Check /><span><b>Guiones con 10 ganchos</b> para tu negocio: 5 gratis al día.</span></li>
+            <li className="flex gap-2"><Check /><span>Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia.</span></li>
+          </ul>
       </main>
     </div>
   );
