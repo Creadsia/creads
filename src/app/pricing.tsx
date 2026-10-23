@@ -1,6 +1,6 @@
 "use client";
 
-import { fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
 import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";

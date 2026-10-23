@@ -41,13 +41,8 @@ export const jobSeconds = (usd: number, usdPerCredit = DEFAULT_USD_PER_CREDIT, d
   return Math.max(1, Math.round((credits * (usdPerCredit > 0 ? usdPerCredit : DEFAULT_USD_PER_CREDIT)) / SECOND_USD));
 };
 
-/** «45 s» · «2 min 10 s» */
-export const fmtSeconds = (s: number) => {
-  const n = Math.max(0, Math.round(s));
-  if (n < 60) return `${n} s`;
-  const m = Math.floor(n / 60), r = n % 60;
-  return r ? `${m} min ${r} s` : `${m} min`;
-};
+/** «45 s» · «131 s»: always in seconds, never minutes (owner, 23 Oct 2026). */
+export const fmtSeconds = (s: number) => `${Math.max(0, Math.round(s)).toLocaleString("es-CL")} s`;
 
 /** How many 30-second ads a number of seconds is (at least 1 when there is any). */
 export const adsOf = (s: number) => (s >= 30 ? Math.floor(s / 30) : s > 0 ? 1 : 0);
