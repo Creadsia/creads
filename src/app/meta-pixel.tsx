@@ -53,7 +53,13 @@ const saveChoice = (v: "0" | "1") => {
 export default function MetaPixel() {
   const path = usePathname() ?? "/";
   const [choice, setChoice] = useState<string | null | undefined>(undefined);
-  useEffect(() => setChoice(readChoice()), []);
+  const [notice, setNotice] = useState(false);
+  // Measurement is on unless the person turns it off (owner, 23 Oct 2026: the «Aceptar» banner hid most ad
+  // visits from Meta). The first visit gets a small notice with «Desactivar»; that choice is kept for a year.
+  useEffect(() => {
+    const c = readChoice();
+    if (c === null) { saveChoice("1"); setChoice("1"); setNotice(true); } else setChoice(c);
+  }, []);
 
   // a page view on load and on every page change (the studio changes pages without reloading)
   useEffect(() => {
@@ -67,20 +73,18 @@ export default function MetaPixel() {
     for (const args of w.__creadsQ?.splice(0) ?? []) w.fbq(...args);
   }, [choice, path]);
 
-  if (choice !== null) return null;
+  if (!notice) return null;
   const es = !path.startsWith("/en");
   return (
-    <div role="dialog" aria-live="polite" aria-label={es ? "Cookies" : "Cookies"}
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface/95 p-4 text-sm shadow-2xl backdrop-blur sm:flex-nowrap">
-      <p className="min-w-0 flex-1 basis-full text-muted sm:basis-auto">
+    <div role="status" aria-live="polite"
+      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-xl items-center gap-3 rounded-xl border border-line bg-surface/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+      <p className="min-w-0 flex-1 text-muted">
         {es
-          ? <>Usamos cookies para medir qué anuncios nos traen visitas (Meta y RedTrack) y cómo se usa el sitio para mejorarlo (PostHog). Las de funcionamiento siempre están activas. <a href="/privacidad" className="underline">Privacidad</a></>
-          : <>We use cookies to measure which ads bring visitors (Meta and RedTrack) and how the site is used so we can improve it (PostHog). Essential cookies are always on. <a href="/privacidad" className="underline">Privacy</a></>}
+          ? <>Usamos cookies para medir qué anuncios funcionan y mejorar el sitio. <a href="/privacidad" className="underline">Privacidad</a></>
+          : <>We use cookies to measure which ads work and improve the site. <a href="/privacidad" className="underline">Privacy</a></>}
       </p>
-      <span className="flex shrink-0 gap-2">
-        <button type="button" onClick={() => { saveChoice("0"); setChoice("0"); }} className="rounded-lg border border-line px-3 py-2 font-semibold text-muted hover:text-ink">{es ? "Solo necesarias" : "Essential only"}</button>
-        <button type="button" onClick={() => { saveChoice("1"); setChoice("1"); }} className="rounded-lg bg-ink px-3 py-2 font-semibold text-bg">{es ? "Aceptar" : "Accept"}</button>
-      </span>
+      <button type="button" onClick={() => { saveChoice("0"); location.reload(); }} className="shrink-0 text-muted underline hover:text-ink">{es ? "Desactivar" : "Turn off"}</button>
+      <button type="button" onClick={() => setNotice(false)} className="shrink-0 rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg">Ok</button>
     </div>
   );
 }
