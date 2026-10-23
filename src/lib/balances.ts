@@ -10,13 +10,14 @@ import { readPrivateJSON, selectRows, writePrivateJSON } from "./supabase";
 // - Google (Veo, Nano Banana) and Claude: no balance API. Google is estimated from the top-ups the
 //   owner wrote down in the panel minus what Creads recorded as spent; Claude only shows a link.
 
-export type Service = "fal" | "google" | "eleven" | "claude";
+export type Service = "fal" | "google" | "eleven" | "claude" | "openai";
 
 export const SERVICE_INFO: Record<Service, { name: string; what: string; recharge: string }> = {
   fal: { name: "fal.ai", what: "Kling, Seedance, Hailuo, Wan, Grok, imágenes y herramientas", recharge: "https://fal.ai/dashboard/billing" },
   google: { name: "Google (Gemini)", what: "Veo y Nano Banana Pro", recharge: "https://console.cloud.google.com/billing" },
   eleven: { name: "ElevenLabs", what: "Voces, clonación, doblaje, música y efectos", recharge: "https://elevenlabs.io/app/subscription" },
   claude: { name: "Claude (Anthropic)", what: "Escribe los prompts y revisa los anuncios", recharge: "https://console.anthropic.com/settings/billing" },
+  openai: { name: "OpenAI", what: "Imágenes GPT Image 2.5", recharge: "https://platform.openai.com/settings/organization/billing" },
 };
 
 const ELEVEN_TOOLS = new Set(["doblaje", "musica", "efectos"]);
@@ -27,6 +28,7 @@ export function serviceOf(kind: string | null | undefined, model: string | null 
   const m = (model ?? "").toLowerCase();
   if (k.startsWith("tool:")) return ELEVEN_TOOLS.has(k.slice(5)) ? "eleven" : "fal";
   if (m.startsWith("veo") || m.startsWith("nano-banana-pro") || m === "nano banana pro") return "google";
+  if (m.startsWith("gpt-image") || m.startsWith("gpt image")) return "openai";
   return "fal";
 }
 
@@ -212,6 +214,7 @@ const OUT_OF_FUNDS: [Service, RegExp][] = [
   ["fal", /exhausted balance|user is locked|insufficient (balance|credits|funds)|top up your balance/i],
   ["eleven", /quota_exceeded|exceeds your quota|insufficient[_ ]credits|credits? (are|is) (exhausted|insufficient)/i],
   ["claude", /credit balance is too low/i],
+  ["openai", /billing hard limit|insufficient_quota|exceeded your current quota/i],
   ["google", /prepa(id|yment).*(depleted|exhausted|insufficient)|billing (account|is) (disabled|not enabled|closed)|BILLING_DISABLED|billing to be enabled/i],
 ];
 
@@ -264,7 +267,7 @@ export interface ServiceStatus {
 
 interface SpendRow { kind: string | null; model: string | null; usd: number | null; created_at: string }
 
-const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i };
+const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i, openai: /openai/i };
 
 export async function overview(fresh = true): Promise<{ services: ServiceStatus[]; umbrales: Umbrales; today: number; alerts: { service: Service; name: string; text: string }[] }> {
   const [umbrales, file, finanzas, fal, eleven] = await Promise.all([

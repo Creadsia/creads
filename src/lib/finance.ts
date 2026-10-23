@@ -124,6 +124,8 @@ export const DEFAULT_FINANZAS: Finanzas = {
     { id: "tool-musica", nombre: "Música IA (ElevenLabs)", proveedor: "ElevenLabs", tipo: "voz", unidad: "s", usd: 0.0025, creditos: 1, nota: "US$0,15/min; parte va incluida en el plan" },
     { id: "tool-efectos", nombre: "Efectos de sonido (ElevenLabs)", proveedor: "ElevenLabs", tipo: "voz", unidad: "s", usd: 0.002, creditos: 1, nota: "US$0,12/min" },
     { id: "nano-banana-pro", nombre: "Nano Banana Pro", proveedor: "Google (Gemini)", tipo: "imagen", unidad: "img", usd: 0.134, creditos: 8 },
+    { id: "gpt-image-2.5", nombre: "GPT Image 2.5", proveedor: "OpenAI", tipo: "imagen", unidad: "img", usd: 0.06, creditos: 4 },
+    { id: "gpt-image-2.5-pro", nombre: "GPT Image 2.5 Pro", proveedor: "OpenAI", tipo: "imagen", unidad: "img", usd: 0.22, creditos: 12 },
     { id: "claude", nombre: "Claude", proveedor: "Anthropic", tipo: "texto", unidad: "anuncio", usd: 0.03, creditos: 0, nota: "Guion, cortes y revisión. Estimado; va incluido" },
   ],
   cuentas: [

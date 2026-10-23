@@ -4,6 +4,7 @@ import { elevenlabs } from "./elevenlabs";
 import { direct } from "./byteplus";
 import { falImageProviders, falVideoProviders } from "./fal";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
+import { openaiImageProviders } from "./openai-image";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
 // `configured()` reports whether the provider's key is present.
@@ -17,7 +18,7 @@ export const videoProviders: VideoProvider[] = [
   ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
 ];
 
-export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders];
+export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders, ...openaiImageProviders];
 
 export const voiceProviders: VoiceProvider[] = [elevenlabs];
 
