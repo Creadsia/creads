@@ -43,7 +43,7 @@ const DEMOS = {
 const STEPS = [
   { title: "Cuéntale tu negocio", text: "Qué vendes, a quién y qué quieres que hagan: comprar, agendar, escribirte.", why: "Así el anuncio habla de tu oferta real, no de algo genérico." },
   { title: "Aprueba el guion y la persona", text: "Creads te propone guiones con gancho y la persona que va a hablar, en tu tipo de local.", why: "No se gasta nada en video hasta que tú dices que sí." },
-  { title: "Creads hace el video y lo revisa", text: "Voz con acento latino, labios sincronizados, cortes y subtítulos. Luego escucha cada palabra y mira cada escena.", why: "Si encuentra un error, te marca qué escena rehacer y la regeneras con un clic." },
+  { title: "Creads hace el video y lo revisa", text: "Voz con acento chileno u otro latino, labios sincronizados, cortes y subtítulos. Luego escucha cada palabra y mira cada escena.", why: "Si encuentra un error, te marca qué escena rehacer y la regeneras con un clic." },
   { title: "Descárgalo y publícalo", text: "Vertical, listo para Reels, TikTok y Stories. Haz variaciones para probar cuál vende más.", why: "Un anuncio se cansa en semanas: siempre tienes uno nuevo." },
 ] as const;
 
@@ -133,10 +133,10 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               {/* phones: one real ad with sound right under the headline, above the fold */}
               <DemoPhone {...DEMOS.cafe} big sound className="mx-auto w-[48vw] max-w-[210px] lg:hidden" />
               <p className="max-w-[50ch] text-lg text-muted">
-                Cuéntale a Creads qué vendes y recibe tu anuncio listo para Meta, Instagram y TikTok: guion, persona, voz chilena y edición, en minutos.
+                Cuéntale a Creads qué vendes y recibe tu anuncio listo para Facebook, Instagram y TikTok: guion, persona, voz chilena y edición, en minutos.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta href={FREE} sub="sin tarjeta · tu primer anuncio va de regalo">Probar gratis</Cta>
+                <Cta href={FREE} sub="Sin tarjeta. Confirmas tu correo y te regalamos tu primer anuncio.">Crea tu primer anuncio gratis</Cta>
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
@@ -276,7 +276,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Sin permanencia ni letra chica. Automático, Manual, espiar a la competencia y escribir guiones vienen incluidos.</p>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[["≈ 2 a 17", "anuncios de 15 s al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "probar, espiar y crear guiones"]].map(([n, k]) => (
+              {[["≈ 2 a 17", "anuncios de 15 s al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "pruébalo: espía anuncios y crea guiones sin pagar"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
                   <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>

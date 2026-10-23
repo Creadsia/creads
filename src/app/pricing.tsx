@@ -3,7 +3,7 @@
 import { secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
+import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, clpFor, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import Garantia from "./garantia";
@@ -15,7 +15,7 @@ const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFracti
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-export default function Pricing({ t, lang, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
+export default function Pricing({ t, lang, rate = 950, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -97,6 +97,8 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                     <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
                     <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
                   </p>
+                  {/* Mercado Pago charges pesos: the amount a Chilean SMB will actually see (launch audit, 23 Oct 2026) */}
+                  {es && !yearly && <p className="text-sm font-semibold">≈ ${clpFor(monthNow, rate).toLocaleString("es-CL")} CLP al mes</p>}
                   <p className="text-sm text-muted">
                     {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : promo ? `${t.then} ${money(p.price)}${t.perMonth}` : t.billedMonthly} · {t.cancel}
                   </p>
