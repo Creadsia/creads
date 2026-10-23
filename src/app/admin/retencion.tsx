@@ -32,7 +32,7 @@ const usd = (n: number, d = 2) => `US$${n.toLocaleString("es-CL", { minimumFract
 const pct = (n: number | null) => (n == null ? "—" : `${n.toLocaleString("es-CL", { maximumFractionDigits: 1 })}%`);
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"];
 const mlabel = (m: string) => `${MESES[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`;
-const PLAN_NAME: Record<string, string> = { starter: "Emprende", plus: "Negocio", studio: "Ultra" };
+const PLAN_NAME: Record<string, string> = { basico: "Básico", starter: "Emprende", plus: "Negocio", studio: "Ultra" };
 const thisMonth = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date()).slice(0, 7);
 const prevM = (m: string) => { const [y, mo] = m.split("-").map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, "0")}`; };
 
@@ -162,7 +162,7 @@ export default function Retencion() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <label className="flex items-center gap-1.5">Mes <select value={mes} onChange={(e) => setMes(e.target.value)} className={sel}>{monthOpts.map((m) => <option key={m} value={m}>{mlabel(m)}</option>)}</select></label>
           <label className="flex items-center gap-1.5">Historia <select value={meses} onChange={(e) => setMeses(Number(e.target.value))} className={sel}><option value={3}>3 meses</option><option value={6}>6 meses</option><option value={12}>12 meses</option></select></label>
-          <label className="flex items-center gap-1.5">Plan <select value={plan} onChange={(e) => setPlan(e.target.value)} className={sel}><option value="">Todos</option><option value="starter">Emprende</option><option value="plus">Negocio</option><option value="studio">Ultra</option></select></label>
+          <label className="flex items-center gap-1.5">Plan <select value={plan} onChange={(e) => setPlan(e.target.value)} className={sel}><option value="">Todos</option><option value="basico">Básico</option><option value="starter">Emprende</option><option value="plus">Negocio</option><option value="studio">Ultra</option></select></label>
         </div>
       </div>
       <DesdeCero onChange={load} />

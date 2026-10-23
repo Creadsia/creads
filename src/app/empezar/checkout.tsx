@@ -1,6 +1,6 @@
 "use client";
 
-import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
 import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
@@ -16,7 +16,6 @@ import Garantia from "../garantia";
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 // shown in seconds of video (talking avatar); credits stay underneath
 const SECS = (credits: number) => secondsOf(credits);
-const ADS = (credits: number) => adsOf(SECS(credits));
 const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
 function Check({ className = "text-good" }: { className?: string }) {
@@ -135,7 +134,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                       {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
-                      {isPlan ? `${fmtSeconds(SECS(x.credits))} de video al mes · ≈ ${ADS(x.credits)} anuncios de 30 s` : `≈ ${ADS(x.credits)} anuncios de 30 s · se suman a tu plan`}
+                      {isPlan ? `${fmtSeconds(SECS(x.credits))} de video al mes` : `${fmtSeconds(SECS(x.credits))} de video · se suman a tu plan`}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end">

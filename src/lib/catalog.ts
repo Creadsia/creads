@@ -5,7 +5,7 @@ import { fmtSeconds, secondsOf } from "./credit-math";
 // (to show prices) and the server (to compute the amount of an order), so both always agree.
 
 export type Period = "mensual" | "anual";
-export type ItemId = "starter" | "plus" | "studio" | "pack-500" | "pack-1000" | "pack-3000";
+export type ItemId = "basico" | "starter" | "plus" | "studio" | "pack-500" | "pack-1000" | "pack-3000";
 
 export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,

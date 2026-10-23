@@ -23,6 +23,8 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 const startHref = (plan: string) => `/empezar?plan=${plan}&periodo=mensual`;
 
 const emprende = SHOWN_PLANS.find((p) => p.id === "starter")!;
+/** The cheapest plan on sale (for «desde US$…»). */
+const cheapest = [...SHOWN_PLANS].sort((a, b) => a.monthly - b.monthly)[0];
 
 const DEMOS = {
   cafe: { src: "/demos/cafeteria.mp4", poster: "/demos/cafeteria.jpg", label: "Cafetería" },
@@ -128,11 +130,11 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 Cuéntale a Creads qué vendes. Escribe el guion, crea a la persona, le pone voz con acento latino, lo edita, lo revisa y te lo entrega listo para Instagram y TikTok.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta sub={`desde ${usd(emprende.monthly)} al mes · cancelas cuando quieras`}>Hacer mi primer anuncio</Cta>
+                <Cta sub={`desde ${usd(cheapest.monthly)} al mes · cancelas cuando quieras`}>Hacer mi primer anuncio</Cta>
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["Listo en minutos, no en días", "Voz chilena, argentina, mexicana…", "Revisado antes de entregártelo", `Planes desde ${usd(emprende.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
+                {["Listo en minutos, no en días", "Voz chilena, argentina, mexicana…", "Revisado antes de entregártelo", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
               </ul>
             </div>
 
@@ -197,8 +199,8 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                   {[
                     ["Tiempo", "Medio día grabando y editando", "Días o semanas", "Minutos"],
                     ["Qué necesitas", "Cámara, luz y salir bien", "Brief, reuniones y correcciones", "Contar qué vendes"],
-                    ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(emprende.monthly)} al mes`],
-                    ["Versiones para probar", "Pocas", "Las que pagues aparte", "4 a 8 al mes"],
+                    ["Costo", "Tu tiempo", "Se cobra cada video", `Plan desde ${usd(cheapest.monthly)} al mes`],
+                    ["Video al mes", "Lo que alcances a grabar", "Lo que pagues aparte", "55 a 263 segundos"],
                   ].map(([k, a, b, c]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
@@ -265,7 +267,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Sin permanencia ni letra chica. Automático, Manual, espiar a la competencia y escribir guiones vienen incluidos.</p>
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {[["4 a 8", "anuncios en video al mes"], ["20 a 40", "imágenes para tus anuncios"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
+              {[["55 a 263 s", "de video al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "espiar y crear guiones"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
                   <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>
@@ -273,7 +275,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               ))}
             </div>
             <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact />
-            <p className="max-w-3xl text-sm text-muted">Un solo saldo para todo: videos, imágenes y voces descuentan del mismo saldo, así que puedes repartirlo como quieras. Las cantidades son un ejemplo con anuncios de 30 s y el modelo recomendado; algunos modelos usan más de 1 segundo de saldo por cada segundo de video, y antes de crear siempre ves cuánto cuesta. El saldo dura el mes que pagaste: lo que no uses vence al terminar y no se acumula.</p>
+            <p className="max-w-3xl text-sm text-muted">Un solo saldo para todo: videos, imágenes y voces descuentan del mismo saldo, así que puedes repartirlo como quieras. Un segundo de saldo es un segundo de video con el modelo recomendado; algunos modelos usan más de 1 segundo de saldo por cada segundo de video, y antes de crear siempre ves cuánto cuesta. El saldo dura el mes que pagaste: lo que no uses vence al terminar y no se acumula.</p>
           </div>
         </section>
 

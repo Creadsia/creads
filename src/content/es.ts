@@ -19,10 +19,10 @@ export const es: Content = {
     switchLabel: "View in English",
   },
   bar: {
-    text: "Emprende US$55 al mes · Negocio US$99 al mes · Cancelas cuando quieras",
+    text: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes · Cancelas cuando quieras",
     cta: "Ver planes",
     items: [
-      { tag: "US$55", text: "Emprende: ≈ 4 anuncios en video y 20 imágenes al mes" },
+      { tag: "NUEVO", text: "Plan Básico: 55 segundos de video al mes por US$25" },
       { tag: "NUEVO", text: "Automático: cuéntale tu negocio a Creads y te entrega el anuncio listo" },
       { tag: "NUEVO", text: "Demo con presentador: varios UGC de tu producto en un solo video" },
       { tag: "NUEVO", text: "Crea tus anuncios desde Claude o ChatGPT con el conector de Creads" },
@@ -477,32 +477,32 @@ export const es: Content = {
     ],
     compare: {
       title: "Compara los planes",
-      lead: "Los dos hacen anuncios terminados con voz, subtítulos y revisión de calidad. Cambias de plan cuando quieras.",
-      cols: ["", "Emprende", "Negocio"],
+      lead: "Los tres hacen anuncios terminados con voz, subtítulos y revisión de calidad. Todo se paga con tus segundos: videos, imágenes y voces. Cambias de plan cuando quieras.",
+      cols: ["", "Básico", "Emprende", "Negocio"],
       groups: [
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Anuncios en video de 30 s", "≈ 4", "≈ 8"],
-            ["Imágenes para anuncios", "20", "40"],
-            ["Espiar anuncios de la competencia", "yes", "yes"],
-            ["Guiones de venta con IA", "yes", "yes"],
+            ["Segundos de video al mes", "55 s", "135 s", "263 s"],
+            ["Imágenes para anuncios (con tus segundos)", "yes", "yes", "yes"],
+            ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
+            ["Guiones de venta con IA", "yes", "yes", "yes"],
           ],
         },
         {
           title: "Tu marca",
           rows: [
-            ["Voces con acento latino", "yes", "yes"],
-            ["Avatares (Persona IA o tu persona real)", "1", "3"],
-            ["Voces clonadas", "1", "3"],
-            ["Revisión de calidad en cada anuncio", "yes", "yes"],
+            ["Voces con acento latino", "yes", "yes", "yes"],
+            ["Avatares (Persona IA o tu persona real)", "1", "1", "3"],
+            ["Voces clonadas", "no", "1", "3"],
+            ["Revisión de calidad en cada anuncio", "yes", "yes", "yes"],
           ],
         },
         {
           title: "Ayuda",
           rows: [
-            ["Cola de videos", "Normal", "Prioritaria"],
-            ["Soporte", "Asistente 24/7", "Asistente 24/7 + WhatsApp"],
+            ["Cola de videos", "Normal", "Normal", "Prioritaria"],
+            ["Soporte", "Asistente 24/7", "Asistente 24/7", "Asistente 24/7 + WhatsApp"],
           ],
         },
       ],
@@ -515,6 +515,21 @@ export const es: Content = {
     ],
     plans: [
       {
+        id: "basico",
+        name: "Básico",
+        price: 25,
+        yearly: 25,
+        credits: "630",
+        for: "Para partir: tus primeros anuncios con IA sin gastar mucho.",
+        features: [
+          "55 segundos de video al mes (las imágenes también se pagan con tus segundos)",
+          "Automático y Manual",
+          "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
+          "Persona IA en la escena que pidas, o tu propia persona en video",
+          "Edición con subtítulos, lista para Meta y TikTok",
+        ],
+      },
+      {
         id: "starter",
         name: "Emprende",
         price: 55,
@@ -522,7 +537,7 @@ export const es: Content = {
         credits: "1.540",
         for: "Para el dueño de negocio que quiere sus propios anuncios todos los meses, sin agencia.",
         features: [
-          "Saldo para ≈ 4 anuncios en video de 30 s + 20 imágenes al mes",
+          "135 segundos de video al mes (las imágenes también se pagan con tus segundos)",
           "Espiar los anuncios que le funcionan a tu competencia",
           "Guiones de venta con IA (3 versiones y 10 ganchos)",
           "Voces con acento chileno, argentino, colombiano, venezolano o mexicano",
@@ -538,7 +553,7 @@ export const es: Content = {
         credits: "3.000",
         for: "Para negocios que publican todas las semanas y prueban varios anuncios a la vez.",
         features: [
-          "Saldo para ≈ 8 anuncios en video de 30 s + 40 imágenes al mes",
+          "263 segundos de video al mes (las imágenes también se pagan con tus segundos)",
           "Todo lo de Emprende",
           "3 avatares y 3 voces clonadas (la tuya incluida)",
           "Cola prioritaria: tus videos salen primero",

@@ -1,6 +1,6 @@
 "use client";
 
-import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
 import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
@@ -60,15 +60,15 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
       </div>}
 
       {/* plans: the cards on sale, everything about each plan from top to bottom, built to pick one and pay */}
-      <div className="mx-auto grid w-full max-w-4xl gap-5 md:grid-cols-2 md:items-start">
+      <div className={`mx-auto grid w-full gap-5 md:items-start ${shown.length >= 3 ? "max-w-6xl md:grid-cols-3" : "max-w-4xl md:grid-cols-2"}`}>
         {shown.map((p) => {
           const featured = p.id === "plus";
           const credits = Number(String(p.credits).replace(/\D/g, ""));
           const secs = secondsOf(credits); // shown in seconds of video (Persona IA), credits stay underneath
-          const ads = adsOf(secs);
           const promo = !yearly && hasLaunch(p.id);
           const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
-          const perAd = Math.round((monthNow / ads) * 100) / 100;
+          // everything is priced in seconds (owner, 22 Oct 2026: «háblame solo en segundos»)
+          const perSec = Math.round((monthNow / Math.max(1, secs)) * 100) / 100;
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
@@ -111,11 +111,11 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                     <span className="text-xs text-muted">{es ? "de video al mes" : "of video a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">≈ {ads}</b>
-                    <span className="text-xs text-muted">{t.adsMonth}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">{money(perSec)}</b>
+                    <span className="text-xs text-muted">{es ? "por segundo" : "per second"}</span>
                   </div>
-                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-sm">
-                    <b className="tabular-nums">≈ {money(perAd)}</b> <span className="text-muted">{t.perAd}</span>
+                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">
+                    {es ? "Videos, imágenes y voces se pagan con los mismos segundos." : "Videos, images and voices use the same seconds."}
                   </div>
                 </div>
 

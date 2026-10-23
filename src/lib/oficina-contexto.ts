@@ -28,7 +28,7 @@ LA PLATAFORMA (lo que hace hoy el estudio, 22-oct-2026)
 - ESCONDIDO desde el 21-oct (no ofrecer ni proponer): Historias animadas, Recrear video, Influencer IA, Herramientas IA sueltas, formatos podcast/entrevista/noticiero/ronda.
 
 PRECIOS (siempre en US$)
-- Desde el 21 oct 2026, dos planes mensuales sin descuentos: Emprende US$55 (1.540 créditos ≈ 135 s de video ≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99 (3.000 créditos ≈ 263 s ≈ 8 anuncios + 40 imágenes). Sin primer mes rebajado ni plan anual. Ultra (US$129) ya no se vende. Al cliente se le muestran segundos de video (1 s = US$0,22, un segundo de anuncio con Persona IA).
+- Desde el 22 oct 2026 (noche) hay también Básico US$25 (630 créditos ≈ 55 s). Precios se hablan solo en segundos (las imágenes se pagan con segundos). Desde el 21 oct 2026, planes mensuales sin descuentos: Emprende US$55 (1.540 créditos ≈ 135 s de video ≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99 (3.000 créditos ≈ 263 s ≈ 8 anuncios + 40 imágenes). Sin primer mes rebajado ni plan anual. Ultra (US$129) ya no se vende. Al cliente se le muestran segundos de video (1 s = US$0,22, un segundo de anuncio con Persona IA).
 - Costo interno aproximado: 1 crédito ≈ US$0,0193 de IA.
 - En la práctica los anuncios duran unos 20 s y usan ≈ 25 s del plan, así que Emprende alcanza para unos 5 anuncios y Negocio para unos 10 (la web promete 4 y 8: mejor prometer menos). Margen en el peor caso (cliente usa todo, con IVA y Mercado Pago): Emprende ≈ US$12,6 y Negocio ≈ US$18 al mes. Costo real de un anuncio de 20 s ≈ US$5,50.
 

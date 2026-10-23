@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
-import { adsOf, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
@@ -151,7 +151,6 @@ export default function Planes() {
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Video disponible</span>
           <span className="font-mono text-3xl font-bold tabular-nums">{!info ? "…" : info.unlimited ? "∞" : fmtSeconds(secs(info.balance ?? 0))}</span>
-          {info && !info.unlimited && <span className="text-xs text-muted">≈ {adsOf(secs(info.balance ?? 0))} anuncios de 30 s con avatar que habla</span>}
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
@@ -243,7 +242,7 @@ export default function Planes() {
             </div>}
             <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "15% menos" : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             {PLANS.filter((p) => !p.hidden || currentPlan === p.name).map((p) => {
               const featured = p.id === "plus";
               const mine = currentPlan === p.name;
@@ -260,7 +259,7 @@ export default function Planes() {
                     <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
                     <span className="text-xs text-muted">{period === "anual" ? `${money(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${money(first)}` : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtSeconds(secs(p.credits * 12))}</b> de video para el año (≈ {adsOf(secs(p.credits * 12))} anuncios de 30 s)</> : <><b className="font-mono">{fmtSeconds(secs(p.credits))}</b> de video al mes (≈ {adsOf(secs(p.credits))} anuncios de 30 s)</>}</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtSeconds(secs(p.credits * 12))}</b> de video para el año</> : <><b className="font-mono">{fmtSeconds(secs(p.credits))}</b> de video al mes · imágenes y voces con los mismos segundos</>}</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>
@@ -283,7 +282,7 @@ export default function Planes() {
               <article key={k.id} className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 ${item === k.id ? "ring-2 ring-accent-text/60" : ""}`}>
                 <span className="text-xs font-semibold text-muted">{k.note}</span>
                 <b className="font-mono text-3xl">+{fmtSeconds(secs(k.credits))}</b>
-                <span className="text-sm text-muted">de video (≈ {adsOf(secs(k.credits))} anuncios de 30 s)</span>
+                <span className="text-sm text-muted">de video</span>
                 <span className="font-display text-2xl font-semibold">{money(k.usd)}</span>
                 <button type="button" onClick={() => choose(k.id)} disabled={!hasPlan} className={`${ghostCls} mt-auto w-full py-2.5 disabled:opacity-50`}>Comprar</button>
               </article>
