@@ -43,7 +43,7 @@ export const montageBody = (j: AdJob, sello: boolean) => ({
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
 const frame = (dir: { setting?: string; framing?: string } | undefined, lang: string, avatar = false) =>
-  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${avatar ? " The person from the first reference image (same face, hair and clothes)." : ""} Setting: ${dir?.setting || "a real place, natural light"}. Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
+  `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${avatar ? " The person from the first reference image (same face, hair and clothes)." : ""} Setting: ${dir?.setting || "a real place, natural light"} (show the place exactly as this setting says it is now, even if the reference image shows it damaged or unfinished). Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
 
 /** Runs one step and returns what changed (never throws: an error stops the job with a plain message). */
 export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise<string>, sello: boolean): Promise<Partial<AdJob>> {
