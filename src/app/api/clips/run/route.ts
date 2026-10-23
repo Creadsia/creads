@@ -29,6 +29,7 @@ interface Settings {
   product?: { image_url?: string | null } | null;
   frames?: string[];
   voiceId?: string | null; // ads: the person's lines are recorded with this voice and lip-synced
+  voiceSpeed?: number; // ads: faster voice (1.0–1.2)
   lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so sync-3)
   audios?: (string | null)[]; // ads: the approved recording of each cut (step «Voz»)
   secs?: (number | null)[]; // ads: seconds chosen per cut
@@ -154,7 +155,7 @@ export async function POST(req: Request) {
       // the approved take (else record it now), and a piece of the person's video exactly that long, starting
       // at a different moment for each cut so two cuts never open on the same frame
       const approved = st.audios?.[Number(clip.idx)] ?? null;
-      const audio = approved ?? (await saveMedia(ws, "audio", (await elevenlabs.speak(ownVoice!, line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
+      const audio = approved ?? (await saveMedia(ws, "audio", (await elevenlabs.speak(ownVoice!, line, { model: "eleven_multilingual_v2", ...(st.voiceSpeed ? { speed: st.voiceSpeed } : {}) })).bytes, "audio/mpeg"));
       const dir = await workdir(`actor-${id}`);
       const vf = path.join(dir, "person.in"), af = path.join(dir, "voice.in"), out = path.join(dir, "part.mp4");
       await Promise.all([download(await fetchableUrl(actorVideo, ws), vf), download(await fetchableUrl(audio, ws), af)]);
@@ -170,7 +171,7 @@ export async function POST(req: Request) {
     if (talking) {
       // the recording the customer approved in «Voz»; if there's none (API), record the line now
       const approved = st.audios?.[Number(clip.idx)] ?? null;
-      const audio = approved ?? (await saveMedia(ws, "audio", (await elevenlabs.speak(ownVoice!, line, { model: "eleven_multilingual_v2" })).bytes, "audio/mpeg"));
+      const audio = approved ?? (await saveMedia(ws, "audio", (await elevenlabs.speak(ownVoice!, line, { model: "eleven_multilingual_v2", ...(st.voiceSpeed ? { speed: st.voiceSpeed } : {}) })).bytes, "audio/mpeg"));
       refs.push({ url: await fetchableUrl(audio, ws), role: "audio" });
     }
 

@@ -60,6 +60,8 @@ export async function POST(req: Request) {
         avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id, ...(video ? { video } : {}) } : null,
         product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
         voiceId,
+        // faster voice (1.0–1.2) when the customer asked for it
+        ...(voiceId && typeof b?.voiceSpeed === "number" && b.voiceSpeed > 1 ? { voiceSpeed: Math.min(1.2, b.voiceSpeed) } : {}),
         lipsync,
         audios,
         // seconds the customer chose per cut (or the length of its recorded voice): no filler the AI makes up

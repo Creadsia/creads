@@ -24,6 +24,10 @@ export interface AdJob {
   look?: { plantilla?: string; c1?: string; c2?: string };
   /** false = no subtitles at all (the cuts only, or the Pro edit without captions). */
   subtitulos?: boolean;
+  /** Faster voice (1.0–1.2), when the customer asks for a quicker delivery. */
+  velocidad?: number;
+  /** A label on screen for the whole ad («Dramatización · actor IA»): a first-person story told by an AI person. */
+  aviso?: string;
   /** The customer's corrections to the subtitles («CREATZIA.COM» → «creadsia.com»). */
   correcciones?: { de: string; a: string }[];
 }
@@ -32,6 +36,7 @@ export interface AdJob {
 export const montageBody = (j: AdJob, sello: boolean) => ({
   adId: j.adId, captions: j.subtitulos !== false, style: { ...DEFAULT_STYLE, sello, ...(j.look?.c1 ? { accent: j.look.c1 } : {}) }, pro: j.edicion !== "simple",
   ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}), ...(j.correcciones?.length ? { correcciones: j.correcciones } : {}),
+  ...(j.aviso ? { aviso: j.aviso } : {}),
 });
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 
@@ -52,7 +57,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       if (sc.scenes?.length !== cortes.length) throw new Error("No se pudieron dirigir las escenas.");
       const modelo = j.modelo || (await pickModel());
       const ad = await studio<{ ad: { id: string }; clips: { id: string }[] }>("/api/ads/start", {
-        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}), ...(j.voz ? { voiceId: j.voz } : {}),
+        title: j.titulo, format: j.formato, lang: j.idioma, aspect: "9:16", model: modelo, ...(j.avatarId ? { avatarId: j.avatarId } : {}), ...(j.voz ? { voiceId: j.voz } : {}), ...(j.velocidad ? { voiceSpeed: j.velocidad } : {}),
         lipsync: "pro", // the most natural mouth (sync-3) on the voice Creads records, like the studio
         clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });
