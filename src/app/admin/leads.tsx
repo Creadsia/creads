@@ -28,6 +28,34 @@ function hace(iso: string | null) {
   return `hace ${Math.round(h / 24)} d`;
 }
 
+/** «Invitar a usar su regalo»: everyone who signed up and hasn't generated anything yet gets one email. */
+function RecordarRegalo({ onDone }: { onDone: () => void }) {
+  const [n, setN] = useState<number | null>(null);
+  const [lista, setLista] = useState<string[]>([]);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = () => fetch("/api/admin/regalo-recordatorio").then((r) => r.json()).then((d) => { setN(d.cuantos ?? 0); setLista(d.correos ?? []); }).catch(() => setN(null));
+  useEffect(() => { load(); }, []);
+  async function send() {
+    setBusy(true); setMsg("");
+    const r = await fetch("/api/admin/regalo-recordatorio", { method: "POST" }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(false);
+    setMsg(r?.ok ? `Listo: ${d.enviados} ${d.enviados === 1 ? "correo enviado" : "correos enviados"}${d.regalos ? ` (a ${d.regalos} se le cargó el regalo que no tenía)` : ""}.` : d.error || "No se pudo enviar.");
+    load(); onDone();
+  }
+  if (!n && !msg) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/[0.06] p-3 text-sm">
+      <span>
+        {n ? <><b>{n} {n === 1 ? "persona se registró" : "personas se registraron"} y no {n === 1 ? "ha usado" : "han usado"} su anuncio de regalo.</b> <span className="text-muted" title={lista.join(", ")}>Les llega «Tu anuncio de regalo te está esperando» (una sola vez; a quien no tenía el regalo se le carga).</span></> : null}
+        {msg && <b className="block text-good">{msg}</b>}
+      </span>
+      {n ? <button type="button" onClick={send} disabled={busy} className="rounded-lg bg-ink px-3 py-2 font-semibold text-bg disabled:opacity-50">{busy ? "Enviando…" : `Enviarles el correo (${n})`}</button> : null}
+    </div>
+  );
+}
+
 export default function Leads() {
   const [dias, setDias] = useState(7);
   const [d, setD] = useState<Data | null>(null);
@@ -64,6 +92,7 @@ export default function Leads() {
         </div>
       </div>
       <DesdeCero onChange={load} />
+      <RecordarRegalo onDone={load} />
       {err && <p className="text-sm text-bad">{err}</p>}
       {!d && !err && <p className="text-sm text-muted">Cargando…</p>}
       {d && (

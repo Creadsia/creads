@@ -465,3 +465,25 @@ export function officeEmail(to: string, b: { resumen: string; prioridades: strin
     text: plain([`${mark} ${b.resumen}`, "", ...b.prioridades.map((p, i) => `${i + 1}. ${p}`), "", b.informe, "", ...b.alertas.map(([k, v]) => `${k}: ${v}`), "", `Oficina: ${SITE}/admin?tab=oficina`]),
   };
 }
+
+/** «Tu anuncio de regalo te está esperando» (owner, 24 Oct 2026): accounts that signed up and haven't used it. */
+export function regaloReminderEmail(to: string, name: string | null, unsub: string): Email {
+  const link = `${SITE}/app/automatico`;
+  return {
+    to, tag: "regalo-recordatorio", unsub,
+    subject: "Tu anuncio de regalo te está esperando",
+    html: layout({
+      preview: "Tienes créditos cargados para tu primer anuncio en video. Te toma 5 minutos.",
+      title: "Tu primer anuncio sigue esperándote",
+      paragraphs: [
+        esc(hello(name)),
+        "Cuando creaste tu cuenta en Creads te cargamos créditos para tu primer anuncio en video, con una persona hablando de tu negocio. Todavía no lo has usado, y te toma unos 5 minutos:",
+        "<b>1.</b> Entra a <b>Automático</b>.<br><b>2.</b> Escríbele qué vendes y qué quieres que haga la gente. Por ejemplo: <i>«Tengo una pastelería en Ñuñoa y quiero más pedidos por WhatsApp»</i>.<br><b>3.</b> Aprueba el guion y la persona, y Creads te entrega el video revisado, listo para Instagram, Facebook y TikTok.",
+      ],
+      cta: { label: "Hacer mi anuncio de regalo", href: link },
+      after: ["Si te trabaste en algo, responde este correo y te ayudamos."],
+      unsub,
+    }),
+    text: plain([hello(name), "", "Tienes créditos cargados para tu primer anuncio en video y todavía no los usas. Entra a Automático, cuéntale qué vendes y en 5 minutos lo tienes.", "", `Hacer mi anuncio: ${link}`, "", `No recibir más estos correos: ${unsub}`]),
+  };
+}
