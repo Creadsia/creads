@@ -7,7 +7,8 @@ import { giveStarterAvatars } from "@/lib/avatares-creads";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
-import { welcomeEmail } from "@/lib/emails";
+import { SITE, welcomeEmail } from "@/lib/emails";
+import { regaloSign } from "@/lib/regalo";
 import { STATE_COOKIE, googleOn, readIdToken, safeNext } from "@/lib/google-login";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ export async function GET(req: Request) {
     after(() => giveStarterAvatars(ws));
     await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitor).catch(() => null);
     if (visitor.src || visitor.camp) await saveOrigin(ws, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
-    await sendEmail(welcomeEmail(user.email, user.name ?? id.name ?? "")).catch(() => null);
+    await sendEmail(welcomeEmail(user.email, user.name ?? id.name ?? "", `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`)).catch(() => null);
   } else if (!user.last_login) {
     await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitor).catch(() => null);
   }

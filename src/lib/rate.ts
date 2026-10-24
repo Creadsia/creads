@@ -34,6 +34,10 @@ const BUCKETS = {
   assistDay: [24 * 60 * 60, 150], // ... and per day (each one is a paid AI call)
   assistFree: [24 * 60 * 60, 10], // ... per day for accounts without an active plan
   assistIp: [10 * 60, 40], // ... per connection in 10 min (many free accounts from one place)
+  regaloIp: [30 * 24 * 60 * 60, 2], // gift ads claimed from one connection per month
+  freeSpy: [24 * 60 * 60, 5], // ad-library searches per day for accounts without a plan
+  freeScript: [24 * 60 * 60, 5], // scripts per day for accounts without a plan
+  freeAll: [24 * 60 * 60, 1500], // free searches and scripts for everyone together per day (AI bill ceiling)
   assistAll: [24 * 60 * 60, 6000], // ... for everyone together per day (a hard ceiling on the AI bill)
 } as const;
 export type Bucket = keyof typeof BUCKETS;
@@ -57,6 +61,8 @@ export async function allow(bucket: Bucket, key: string): Promise<boolean> {
     return !STRICT.includes(bucket);
   }
 }
+
+export const limitMessage = (b: Bucket) => MSG[b];
 
 /** The caller's IP as Vercel reports it. */
 export function clientIp(req: Request) {
@@ -91,6 +97,10 @@ const MSG: Record<Bucket, string> = {
   assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
   assistFree: "Ya hiciste varias preguntas hoy. Para seguir, revisa el Centro de ayuda; con un plan activo el asistente responde mucho más.",
   assistIp: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",
+  regaloIp: "Desde esta conexión ya se pidieron los regalos de este mes.",
+  freeSpy: "Usaste tus 5 búsquedas gratis de hoy. Mañana tienes 5 más, o elige un plan (desde US$25 al mes) y espía sin límite.",
+  freeScript: "Hiciste tus 5 guiones gratis de hoy. Mañana tienes 5 más, o elige un plan (desde US$25 al mes) y crea sin límite.",
+  freeAll: "Lo gratis está con mucha demanda hoy. Vuelve mañana o elige un plan (desde US$25 al mes).",
   assistAll: "El asistente está con mucha demanda. Revisa el Centro de ayuda o escribe a hola@creadsia.com.",
   assistDay: "Llegaste al máximo de preguntas de hoy. Mañana sigo ayudándote; mientras, revisa el Centro de ayuda o escribe a hola@creadsia.com.",
 };

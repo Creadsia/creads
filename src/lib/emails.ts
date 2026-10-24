@@ -41,8 +41,27 @@ const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").r
 
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
-export function welcomeEmail(to: string, name: string | null): Email {
+export function welcomeEmail(to: string, name: string | null, regalo?: string | null): Email {
   const link = `${SITE}/app`;
+  // a new account that hasn't paid: the button confirms the email and gives the first ad as a gift
+  if (regalo) {
+    return {
+      to, tag: "bienvenida",
+      subject: "Confirma tu correo y recibe tu primer anuncio de regalo",
+      html: layout({
+        preview: "Un clic y tienes créditos para tu primer anuncio en video, gratis.",
+        title: "Tu primer anuncio va por nuestra cuenta",
+        paragraphs: [
+          esc(hello(name)),
+          "Gracias por crear tu cuenta en Creads IA. Confirma tu correo con el botón y te cargamos créditos para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
+          "Después entra a <b>Automático</b>, cuéntale qué vendes y Creads te hace el guion, la persona, el video y la revisión.",
+        ],
+        cta: { label: "Confirmar y recibir mi anuncio", href: regalo },
+        after: ["Mientras tanto ya puedes espiar anuncios de tu competencia y crear guiones gratis. Si tienes cualquier duda, responde este correo."],
+      }),
+      text: plain([hello(name), "", "Confirma tu correo y te cargamos créditos para tu primer anuncio en video, gratis y sin tarjeta.", "", `Confirmar: ${regalo}`]),
+    };
+  }
   return {
     to, tag: "bienvenida",
     subject: "Bienvenido a Creads IA",
@@ -323,7 +342,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Para generar videos activa tu plan: Emprende cuesta US$55 al mes.";
+  const plan = o.hasPlan ? "" : " Tu primer video va de regalo (confirma tu correo con el botón del mensaje de bienvenida); después, los planes parten en US$25 al mes.";
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",
@@ -354,7 +373,7 @@ export function activationEmail(to: string, name: string | null, o: { step: Acti
       title: "El método de los anuncios ganadores",
       paragraphs: [
         esc(hello(name)),
-        "Después de miles de anuncios, el patrón se repite:",
+        "En los anuncios que venden, el patrón se repite:",
         "<b>1. Parte de un guion que ya funciona</b> (el tuyo o uno de la competencia) y desármalo.<br><b>2. Cambia una sola cosa por vez</b>: el hook o el ángulo, no todo junto.<br><b>3. Publica 3 versiones con el mismo presupuesto</b> y compara el costo por lead.<br><b>4. Quédate con la ganadora</b> y vuelve a iterar sobre ella.",
         `Creads está hecho para hacer ese ciclo en minutos, no en días.${esc(plan)}`,
       ],

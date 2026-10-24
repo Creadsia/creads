@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, PRUEBA, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
@@ -73,6 +73,7 @@ export default function Planes() {
     if (sp.get("aviso") === "pago") setErr("Tu cuenta quedó creada, pero no pudimos abrir el pago. Elige tu plan aquí abajo e inténtalo de nuevo.");
     // arriving from the website with a plan already chosen (/app/planes?plan=plus&periodo=anual)
     const want = sp.get("plan") as ItemId | null;
+    if (want === "pack-prueba") requestAnimationFrame(() => setTimeout(() => document.getElementById("prueba")?.scrollIntoView({ behavior: "smooth", block: "center" }), 400));
     if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
       if (PACKS.some((x) => x.id === want)) setTab("creditos");
       if (ANNUAL && sp.get("periodo") === "anual") setPeriod("anual");
@@ -83,7 +84,16 @@ export default function Planes() {
     if (sp.get("pago") === "volver" && pedido) {
       setBack({ state: "revisando", id: pedido });
       fetch("/api/pagos/confirmar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pedido, payment_id: sp.get("payment_id") ?? sp.get("collection_id"), preapproval_id: preapproval }) })
-        .then((r) => r.json()).then((d) => { setBack({ state: d.state ?? "procesando", id: pedido }); load(); refreshCredits(); })
+        .then((r) => r.json()).then((d) => {
+          setBack({ state: d.state ?? "procesando", id: pedido }); load(); refreshCredits();
+          // the browser Purchase, once per order, with the server's id (Meta deduplicates them)
+          const p = d.purchase as { eventId: string; value: number; currency: string; label: string } | undefined;
+          if (d.state === "pagado" && p?.eventId) {
+            let seen = false;
+            try { seen = localStorage.getItem(`creads-buy-${p.eventId}`) === "1"; localStorage.setItem(`creads-buy-${p.eventId}`, "1"); } catch {}
+            if (!seen) track("Purchase", { value: p.value, currency: p.currency, content_name: p.label }, p.eventId);
+          }
+        })
         .catch(() => setBack({ state: "procesando", id: pedido }));
       window.history.replaceState(null, "", "/app/planes");
     }
@@ -136,6 +146,20 @@ export default function Planes() {
     requestAnimationFrame(() => document.getElementById("pedido-ok")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }
 
+  // «Video de prueba»: US$9 once, no plan needed (owner, 23 Oct 2026)
+  async function buyPrueba() {
+    if (busy) return;
+    setBusy(true); setErr("");
+    const eventId = newEventId();
+    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item: PRUEBA.id, period: "mensual", method: "mercadopago", eventId }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (!r?.ok) return setErr(d.error || "No se pudo crear el pedido. Intenta de nuevo.");
+    track("InitiateCheckout", { value: d.order.total, currency: "USD", content_name: d.order.label }, eventId);
+    if (d.redirect) { window.location.href = d.redirect; return; }
+    setDone(d.order); load();
+  }
+
   return (
     <>
       <PageHead title="Planes" lead="Cada plan trae créditos al mes. Ves el precio exacto antes de pagar y puedes cancelar cuando quieras." />
@@ -162,6 +186,16 @@ export default function Planes() {
           <span className="text-sm text-muted">Un segundo de video con avatar que habla usa unos 11 créditos. Los modelos más caros usan más (Veo 3.1: unas 4 veces más). Revisar y la Edición Pro no usan créditos. Si algo falla, vuelven solos.</span>
         </div>
       </section>
+
+      {info && !hasPlan && (
+        <section id="prueba" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5" aria-labelledby="prueba-t">
+          <div className="min-w-0 max-w-xl">
+            <h2 id="prueba-t" className="font-display text-lg font-semibold">¿Quieres probar antes de elegir un plan?</h2>
+            <p className="text-sm text-muted">Un video de prueba de 15 segundos, sin la marca «Hecho con Creads IA», por {usd(PRUEBA.usd)} (≈ ${clpFor(PRUEBA.usd, pay?.usdClp ?? 950).toLocaleString("es-CL")}). Un solo pago, sin suscripción.</p>
+          </div>
+          <button type="button" onClick={buyPrueba} disabled={busy} className={`${btnCls} disabled:opacity-50`}>{busy ? "Abriendo el pago…" : `Probar por ${usd(PRUEBA.usd)}`}</button>
+        </section>
+      )}
 
       {back && (
         <section className={`${cardCls} ${back.state === "pagado" ? "border-good/50" : back.state === "rechazado" ? "border-bad/50" : ""}`} aria-live="polite">

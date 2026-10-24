@@ -75,3 +75,33 @@ test("readOrder: «persona-real» is accepted with an avatar (Automático used t
     assert.match(String(readOrder({ guion: "x".repeat(30), modelo: "persona-real" })), /avatar/);
   } finally { if (prev === undefined) delete process.env.FAL_KEY; else process.env.FAL_KEY = prev; }
 });
+
+test("readOrder: dramatization label by language and voice speed capped at 1.2", () => {
+  const g = "I got three quotes, fixed my foundation and the cracks are gone.";
+  const en = readOrder({ guion: g, idioma: "en", dramatizacion: true, velocidad: 1.5 });
+  assert.ok(typeof en !== "string");
+  assert.equal(en.aviso, "Dramatization · AI actor");
+  assert.equal(en.velocidad, 1.2);
+  const es = readOrder({ guion: g, dramatizacion: true, velocidad: 1 });
+  assert.ok(typeof es !== "string");
+  assert.equal(es.aviso, "Dramatización · actor IA");
+  assert.equal(es.velocidad, undefined);
+  const none = readOrder({ guion: g });
+  assert.ok(typeof none !== "string" && !none.aviso);
+});
+
+test("avisoAss: one label for the whole ad, top right", async () => {
+  const { avisoAss } = await import("../src/lib/montage");
+  const a = avisoAss("Dramatización · actor IA", 720, 1280, 20);
+  assert.match(a, /Dialogue: 0,0:00:00\.00,0:00:21\.00,Aviso,,0,0,0,,Dramatización · actor IA/);
+  assert.match(a, /Style: Aviso,[^\n]*,9,/);
+});
+
+test("readOrder: several places only when asked", () => {
+  const g = "Si tu fundación se ve así, no firmes nada todavía, mira esto.";
+  const o = readOrder({ guion: g, lugares: "  afuera de la casa;  el sótano; la cocina " });
+  assert.ok(typeof o !== "string");
+  assert.equal(o.lugares, "afuera de la casa; el sótano; la cocina");
+  const one = readOrder({ guion: g });
+  assert.ok(typeof one !== "string" && !one.lugares);
+});

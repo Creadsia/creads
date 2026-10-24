@@ -5,7 +5,7 @@ import { fmtSeconds, secondsOf } from "./credit-math";
 // (to show prices) and the server (to compute the amount of an order), so both always agree.
 
 export type Period = "mensual" | "anual";
-export type ItemId = "basico" | "starter" | "plus" | "studio" | "pack-500" | "pack-1000" | "pack-3000";
+export type ItemId = "basico" | "starter" | "plus" | "studio" | "pack-500" | "pack-1000" | "pack-3000" | "pack-prueba";
 
 export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,
@@ -27,6 +27,12 @@ export const PACKS = [
   { id: "pack-1000" as ItemId, credits: 1000, usd: 55, note: "El más pedido" },
   { id: "pack-3000" as ItemId, credits: 3000, usd: 139, note: "Para los meses fuertes" },
 ];
+
+/**
+ * «Video de prueba» (owner, 23 Oct 2026, launch audit): one 15 s ad without the «Hecho con Creads IA» mark for
+ * US$9, no plan needed, paid once. ~US$3.5 of video for ~US$7.2 after VAT and Mercado Pago. Fires Purchase.
+ */
+export const PRUEBA = { id: "pack-prueba" as ItemId, credits: 200, usd: 9, note: "Un video de 15 s, sin plan" };
 
 /**
  * No discounts (owner, 21 Oct 2026): Emprende US$55 and Negocio US$99 a month, no cheaper first month and no
@@ -56,18 +62,18 @@ export interface Quote {
 /** The amount to pay for an item, in US$ (rounded to cents). */
 /** Whether an item can be bought now: retired plans (Ultra) and the annual payment are not on sale. */
 export function onSale(item: ItemId, period: Period) {
-  if (PACKS.some((p) => p.id === item)) return true;
+  if (PACKS.some((p) => p.id === item) || item === PRUEBA.id) return true;
   return SHOWN_PLANS.some((p) => p.id === item) && (period === "mensual" || ANNUAL);
 }
 
 export function quote(item: ItemId, period: Period, opts: { discountPct?: number; firstPurchase?: boolean } = {}): Quote | null {
   const plan = PLANS.find((p) => p.id === item);
-  const pack = PACKS.find((p) => p.id === item);
+  const pack = PACKS.find((p) => p.id === item) ?? (item === PRUEBA.id ? PRUEBA : undefined);
   if (!plan && !pack) return null;
   const r = (n: number) => Math.round(n * 100) / 100;
   if (pack) {
     const discount = r((pack.usd * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
-    return { item, label: `${pack.credits.toLocaleString("es-CL")} créditos extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
+    return { item, label: item === PRUEBA.id ? "Video de prueba (15 s)" : `${pack.credits.toLocaleString("es-CL")} créditos extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
   }
   const p = plan!;
   const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;

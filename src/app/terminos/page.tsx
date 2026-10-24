@@ -32,6 +32,7 @@ export default function Terminos() {
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
         <li>Las recargas se pagan una sola vez.</li>
         <li><b>Derecho a retracto:</b> conforme al artículo 3 bis de la Ley 19.496, te informamos antes de pagar que en la compra de planes y recargas no aplica el derecho a retracto, porque el servicio es digital y se entrega de inmediato: los créditos quedan disponibles apenas se confirma el pago. Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago.</li>
+        <li><b>Garantía de calidad:</b> si el primer anuncio que haces con tu compra no te gusta, escríbenos a hola@creadsia.com dentro de los 10 días siguientes y elige: lo rehacemos gratis (una vez) o te devolvemos a tu saldo los créditos que usó.</li>
         <li>Si tienes un problema con un cobro, escríbenos a hola@creadsia.com antes de reclamar en Mercado Pago, y lo resolvemos. Si un pago se devuelve o se desconoce, descontamos los créditos que ese pago entregó. Esto no limita los derechos que te da la Ley 19.496 sobre protección de los derechos de los consumidores.</li>
       </ul>
 

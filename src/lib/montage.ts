@@ -579,3 +579,38 @@ export async function stripAudio(dir: string, file: string) {
 export async function sideBySide(a: string, b: string, out: string) {
   await ff(["-y", "-v", "error", "-i", a, "-i", b, "-filter_complex", "[0:v]scale=-2:360[l];[1:v]scale=-2:360[r];[l][r]hstack=inputs=2", "-q:v", "3", out]);
 }
+
+/**
+ * «Dramatización · actor IA»: a small label in the top-right corner for the whole ad, burned in after every
+ * other step (zooms included) so it is always readable. Used when an AI person tells a first-person story
+ * (owner, 23 Oct 2026: Automático must always be able to make those ads, clearly labelled).
+ */
+export function avisoAss(text: string, W: number, H: number, seconds: number) {
+  const size = Math.round(W * 0.03), m = Math.round(W * 0.045), top = Math.round(H * 0.055);
+  const t = (s: number) => { const h = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), x = s % 60; return `${h}:${String(mm).padStart(2, "0")}:${x.toFixed(2).padStart(5, "0")}`; };
+  const clean = text.replace(/[{}\\\n]/g, "").slice(0, 40);
+  return `[Script Info]
+ScriptType: v4.00+
+PlayResX: ${W}
+PlayResY: ${H}
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Aviso,Montserrat ExtraBold,${size},&H00FFFFFF,&H00FFFFFF,&H60000000,&H60000000,0,0,0,0,100,100,0,0,3,${Math.max(4, Math.round(size * 0.4))},0,9,${m},${m},${top},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,${t(0)},${t(seconds + 1)},Aviso,,0,0,0,,${clean}
+`;
+}
+
+export async function avisoPass(dir: string, bytes: Uint8Array | Buffer, W: number, H: number, text: string, seconds: number) {
+  const input = path.join(dir, "aviso-in.mp4"), out = path.join(dir, "aviso.mp4"), file = path.join(dir, "aviso.ass");
+  await writeFile(input, bytes);
+  await writeFile(file, avisoAss(text, W, H, seconds));
+  const e = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
+  await ff(["-y", "-v", "error", "-i", input, "-vf", `ass=filename='${e(file)}':fontsdir='${e(FONTS)}'`,
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", out], 200_000);
+  return readFile(out);
+}

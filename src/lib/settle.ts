@@ -1,5 +1,5 @@
 import { type Order, applyPayment, getOrder, recordIncome } from "./billing";
-import { PACKS, PLANS } from "./catalog";
+import { PACKS, PLANS, PRUEBA } from "./catalog";
 import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
 import { ownerSaleEmail, receiptEmail } from "./emails";
@@ -18,7 +18,7 @@ export interface Paid { id: string; amount: number; currency: string }
 
 /** What an order gives: credits and months of plan (0 for a top-up). */
 export function orderGrant(o: Order) {
-  const pack = PACKS.find((p) => p.id === o.item);
+  const pack = PACKS.find((p) => p.id === o.item) ?? (o.item === PRUEBA.id ? PRUEBA : undefined);
   if (pack) return { credits: pack.credits, months: 0, plan: null as string | null };
   // a pack that's no longer sold: the credits stored in the order when it was placed
   if (o.item.startsWith("pack-") && Number(o.quote?.credits) > 0) return { credits: Number(o.quote.credits), months: 0, plan: null as string | null };
@@ -83,7 +83,10 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
     if (to) await sendEmail(ownerSaleEmail(to, { label: order.quote.label, amount: pay.amount, currency: pay.currency, customer: order.email ?? "", account: order.wsName ?? "", renewal, orderId: order.id }));
   } catch (e) { console.error("owner sale email", order.id, e instanceof Error ? e.message : e); }
   if (order.visitor) {
-    await sendMeta({ name: "Purchase", eventId: `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
+    // the first payment uses «buy-<order>», the same id the browser fires on the thank-you screen (Meta counts it
+    // once); renewals keep their own id per payment
+    const firstPay = !(order.payments ?? []).some((p) => p !== `${source}:${pay.id}`);
+    await sendMeta({ name: "Purchase", eventId: firstPay ? `buy-${order.id}` : `buy-${order.id}-${pay.id}`, email: order.email, value: pay.amount, currency: pay.currency, content: order.quote.label }, { ...order.visitor, url: "https://www.creadsia.com/app/planes" });
   }
   return { ok: true };
 }

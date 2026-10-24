@@ -6,7 +6,8 @@ import { createClientWorkspace, emailOk, removeWorkspace } from "@/lib/signup";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
-import { welcomeEmail } from "@/lib/emails";
+import { SITE, welcomeEmail } from "@/lib/emails";
+import { regaloSign } from "@/lib/regalo";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
     await sendMeta({ name: "CompleteRegistration", eventId, email }, visitor).catch(() => null);
     // where this account came from (channel and ad campaign, only with cookie consent), for Clientes → Nuevas cuentas
     if (visitor.src || visitor.camp) await saveOrigin(newWs, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
-    await sendEmail(welcomeEmail(email, name)); // never fails the sign-up
+    // the welcome email carries the «confirm and get your first ad» link (the gift needs a real inbox)
+    const regalo = `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`;
+    await sendEmail(welcomeEmail(email, name, regalo)); // never fails the sign-up
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;

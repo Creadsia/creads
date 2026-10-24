@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { needsCredits } from "@/lib/credits";
+import { freeOrLimited } from "@/lib/credits";
 import { adSpyConfigured, adTranscript } from "@/lib/providers/adspy";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { tooMany } from "@/lib/rate";
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const id = String(b?.id ?? "").replace(/\D/g, "").slice(0, 30);
   if (!id) return NextResponse.json({ error: "Falta el anuncio." }, { status: 400 });
-  const broke = await needsCredits(s.user);
+  const broke = await freeOrLimited(s.user, "script");
   if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   if (!adSpyConfigured()) return NextResponse.json({ error: FEATURE_UNAVAILABLE }, { status: 503 });
   const limited = (await tooMany("spy", s.user.id)) ?? (await tooMany("spyDay", s.user.id));

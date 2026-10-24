@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { needsCredits } from "@/lib/credits";
+import { freeOrLimited } from "@/lib/credits";
 import { adSpyConfigured, searchAds, type SpyAd } from "@/lib/providers/adspy";
 import { tooMany } from "@/lib/rate";
 import { readPrivateJSON, writePrivateJSON } from "@/lib/supabase";
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   const video = u.searchParams.get("video") === "1";
   const cursor = (u.searchParams.get("cursor") ?? "").slice(0, 4000) || undefined;
 
-  const broke = await needsCredits(s.user);
+  const broke = await freeOrLimited(s.user, "spy");
   if (broke) return NextResponse.json({ error: broke }, { status: 402 });
   if (!adSpyConfigured()) return NextResponse.json({ error: FEATURE_UNAVAILABLE }, { status: 503 });
 

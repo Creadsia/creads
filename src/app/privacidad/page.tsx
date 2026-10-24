@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Legal from "../legal";
+import { MedicionSwitch } from "../meta-pixel";
 
 export const metadata: Metadata = { title: "Política de privacidad · Creads IA", description: "Qué datos usa Creads IA, para qué y cómo ejercer tus derechos." };
 
@@ -16,7 +17,7 @@ export default function Privacidad() {
         <li><b>Contenido que subes o creas:</b> guiones, fotos de personas y productos, audios y voces, videos e imágenes generados.</li>
         <li><b>Uso de la plataforma:</b> trabajos realizados, créditos usados, registros técnicos de seguridad (por ejemplo, dirección IP e intentos de ingreso).</li>
         <li><b>Consultas al Asistente Creads:</b> tus mensajes se procesan con IA para responderte (junto con el estado de tu plan, créditos y últimos trabajos). Guardamos el tema y un resumen corto de cada pregunta para mejorar el Centro de ayuda.</li>
-        <li><b>Medición publicitaria:</b> salvo que las desactives (en el aviso de cookies o escribiéndonos), usamos el píxel y la API de conversiones de Meta para saber qué anuncios nos traen visitas y compras. Tu correo se envía cifrado (hash) y nunca en texto. Con esas mismas cookies, RedTrack registra de qué anuncio llegaste y si te registraste o compraste (sin tu correo). También usamos PostHog, con esas mismas cookies, para ver cómo se usa el sitio (páginas, clics y grabaciones de la pantalla en las que todo lo que escribes queda tapado; si inicias sesión, se asocian a tu cuenta para poder ayudarte) y así arreglar lo que confunde o falla.</li>
+        <li><b>Medición publicitaria:</b> salvo que las desactives (al final de esta página o escribiéndonos), usamos el píxel y la API de conversiones de Meta para saber qué anuncios nos traen visitas y compras. Tu correo se envía cifrado (hash) y nunca en texto. Con esas mismas cookies, RedTrack registra de qué anuncio llegaste y si te registraste o compraste (sin tu correo). También usamos PostHog, con esas mismas cookies, para ver cómo se usa el sitio (páginas, clics y grabaciones de la pantalla en las que todo lo que escribes queda tapado; si inicias sesión, se asocian a tu cuenta para poder ayudarte) y así arreglar lo que confunde o falla.</li>
       </ul>
 
       <h2>2. Para qué los usamos</h2>
@@ -25,7 +26,7 @@ export default function Privacidad() {
         <li>Procesar pagos, renovaciones y comprobantes.</li>
         <li>Proteger la plataforma y a los usuarios: evitar fraudes, abusos y accesos no autorizados.</li>
         <li>Mejorar la calidad: la revisión automática compara cada video con su guion. Los aprendizajes que se aplican a todos los usuarios son reglas generales, nunca tu contenido.</li>
-        <li>Medir nuestras campañas, solo con tu consentimiento.</li>
+        <li>Medir nuestras campañas (puedes desactivarlo al final de esta página).</li>
         <li>Responder tus consultas (también con el Asistente Creads, con IA) y avisarte cambios importantes del servicio.</li>
         <li>Enviarte consejos para usar la plataforma durante tu primera semana. Puedes dejar de recibirlos con un clic en el enlace del correo.</li>
       </ul>
@@ -56,8 +57,9 @@ export default function Privacidad() {
       <p>Puedes pedir acceso, rectificación, supresión, oposición y portabilidad de tus datos, y retirar tu consentimiento a la medición publicitaria cuando quieras (borrando las cookies o escribiéndonos). Escríbenos a <b>hola@creadsia.com</b> desde el correo de tu cuenta y te respondemos en los plazos que fija la ley.</p>
 
       <h2>8. Cookies</h2>
-      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta, RedTrack y PostHog están activas desde tu primera visita; puedes desactivarlas con «Desactivar» en el aviso de cookies (o borrando la cookie creads_consent para volver a ver el aviso).</p>
-      <p>Además contamos las visitas de forma anónima y agregada (cuántas visitas hubo cada día, desde qué tipo de dispositivo, ciudad y canal), sin guardar tu IP ni nada que te identifique. Si aceptas las cookies, una cookie propia recuerda además solo el canal por el que llegaste (por ejemplo, «instagram») durante 90 días, para saber qué canales nos traen clientes.</p>
+      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta, RedTrack y PostHog están activas desde tu primera visita; puedes desactivarlas aquí mismo:</p>
+      <MedicionSwitch />
+      <p>Además contamos las visitas de forma anónima y agregada (cuántas visitas hubo cada día, desde qué tipo de dispositivo, ciudad y canal), sin guardar tu IP ni nada que te identifique. Mientras la medición esté activa, una cookie propia recuerda además solo el canal por el que llegaste (por ejemplo, «instagram») durante 90 días, para saber qué canales nos traen clientes.</p>
 
       <h2>9. Cambios</h2>
       <p>Si cambiamos esta política, publicaremos la nueva versión aquí con su fecha y, si el cambio es importante, te avisaremos.</p>

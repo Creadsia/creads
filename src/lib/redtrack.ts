@@ -24,7 +24,8 @@ export function postbackUrl(domain: string, clickid: string, type: string, sumUs
 
 /** Reports one conversion to RedTrack. Never throws; returns whether it went out. */
 export async function sendRedtrack(type: string, clickid: string | undefined, value?: number, currency = "USD"): Promise<boolean> {
-  const domain = process.env.REDTRACK_DOMAIN;
+  // Creads' RedTrack postback domain (owner, 23 Oct 2026); Vercel can override it
+  const domain = process.env.REDTRACK_DOMAIN || "t1klo.ttrk.io";
   if (!domain || !clickid || !ID.test(clickid)) return false;
   try {
     let usd = value;

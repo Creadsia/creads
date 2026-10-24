@@ -99,9 +99,9 @@ export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: s
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
             <b className="block truncate">{t.bar}</b>
-            <span className="text-muted">{HAS_OFFER && <s>{es ? usd(plus.monthly) : `US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : es ? " al mes" : " a month"}</span>
+            <span className="text-muted">{es ? `sin tarjeta · después desde ${price} al mes` : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
           </span>
-          <a href={startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
+          <a href={es ? "/registro" : startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: s
             </form>
           )}
           {state === "error" && <p role="alert" className="relative text-sm text-bad">{es ? "No se pudo guardar. Intenta de nuevo." : "Couldn't save. Try again."}</p>}
-          <a href="#pricing" onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{t.exitPlans}</a>
+          <a href={es ? "/registro" : "#pricing"} onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{t.exitPlans}</a>
           <button type="button" onClick={() => setOpen(false)} className="relative text-sm text-muted underline">{t.exitClose}</button>
         </div>
       </dialog>

@@ -56,13 +56,20 @@ async function studio<T>(path: string, body?: unknown, timeoutMs = STEP_TIMEOUT,
   return d;
 }
 
-/** The model for automatic videos: the one chosen in Marketing, else the cheapest that talks and is available. */
+export const DEFAULT_MODEL = "minimax-h3-max";
+const NEVER_AUTO = new Set(["veo-3.1-lite"]);
+
+/** The model for automatic videos: the one chosen, else MiniMax H3 Max, else the cheapest reliable one that talks. */
 export async function pickModel(cfg: Pick<AutoProd, "modelo">): Promise<string> {
   const paused = await pausedModels().catch(() => ({} as Record<string, unknown>));
   const ok = videoProviders.filter((p) => p.configured() && !p.silent && !p.needsImage && !paused[p.id]);
   const chosen = ok.find((p) => p.id === cfg.modelo);
   if (chosen) return chosen.id;
-  const best = [...ok].sort((a, b) => a.usdPerSecond - b.usdPerSecond)[0];
+  // Owner, 23 Oct 2026: MiniMax H3 Max is the default (every ad of the day came out right with it); Veo 3.1
+  // Lite is never picked on its own (it failed every cut), only when the customer asks for it by name.
+  const preferred = ok.find((p) => p.id === DEFAULT_MODEL);
+  if (preferred) return preferred.id;
+  const best = [...ok].filter((p) => !NEVER_AUTO.has(p.id)).sort((a, b) => a.usdPerSecond - b.usdPerSecond)[0];
   if (!best) throw new Error("No hay ningún modelo de video con voz disponible ahora.");
   return best.id;
 }

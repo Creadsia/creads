@@ -83,6 +83,8 @@ export const elevenlabs: VoiceProvider = {
         text,
         model_id: opts?.model ?? "eleven_multilingual_v2",
         ...(opts?.lang ? { language_code: opts.lang } : {}),
+        // faster delivery when the customer asks for it (ElevenLabs accepts 0.7–1.2)
+        ...(opts?.speed && opts.speed !== 1 ? { voice_settings: { speed: Math.min(1.2, Math.max(0.7, opts.speed)) } } : {}),
       }),
     });
     if (!res.ok) return fail(res, "ElevenLabs (voz)");

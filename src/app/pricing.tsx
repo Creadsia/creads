@@ -3,7 +3,7 @@
 import { secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, usd } from "@/lib/catalog";
+import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, clpFor, hasLaunch, usd } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import Garantia from "./garantia";
@@ -15,7 +15,7 @@ const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFracti
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-export default function Pricing({ t, lang, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
+export default function Pricing({ t, lang, rate = 950, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -97,6 +97,8 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                     <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
                     <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
                   </p>
+                  {/* Mercado Pago charges pesos: the amount a Chilean SMB will actually see (launch audit, 23 Oct 2026) */}
+                  {es && !yearly && <p className="text-sm font-semibold">≈ ${clpFor(monthNow, rate).toLocaleString("es-CL")} CLP al mes</p>}
                   <p className="text-sm text-muted">
                     {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : promo ? `${t.then} ${money(p.price)}${t.perMonth}` : t.billedMonthly} · {t.cancel}
                   </p>
@@ -109,8 +111,8 @@ export default function Pricing({ t, lang, renews = true, compact = false }: { t
                     <span className="text-xs text-muted">{es ? "créditos al mes" : "credits a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">≈ {secs} s</b>
-                    <span className="text-xs text-muted">{es ? "de video con persona IA" : "of AI-person video"}</span>
+                    <b className="font-display text-lg font-semibold leading-tight tabular-nums">≈ {Math.max(1, Math.floor(secs / 15))} {es ? "anuncios" : "ads"}</b>
+                    <span className="text-xs text-muted">{es ? `de 15 s al mes (≈ ${secs} s de video)` : `of 15 s a month (≈ ${secs} s of video)`}</span>
                   </div>
                   <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">
                     {es ? "Videos, imágenes y voces se pagan con los mismos créditos." : "Videos, images and voices use the same credits."}
