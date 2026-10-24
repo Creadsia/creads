@@ -9,9 +9,12 @@ export const metadata: Metadata = { title: "Anuncio automático" };
 export default function Page() {
   return (
     <>
-      <PageHead title="Anuncio automático" lead="Conversa con Creads: te pregunta lo necesario, hace el anuncio, lo revisa y te lo entrega listo.">
-        <Link href="/app/crear" className="text-sm font-semibold text-muted underline">Prefiero hacerlo paso a paso (Manual)</Link>
-      </PageHead>
+      {/* phones: the chat is the page (its own welcome says what it does) */}
+      <div className="hidden sm:block">
+        <PageHead title="Anuncio automático" lead="Conversa con Creads: te pregunta lo necesario, hace el anuncio, lo revisa y te lo entrega listo.">
+          <Link href="/app/crear" className="text-sm font-semibold text-muted underline">Prefiero hacerlo paso a paso (Manual)</Link>
+        </PageHead>
+      </div>
       <RegaloAviso />
       <Asistente />
     </>

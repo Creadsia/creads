@@ -55,10 +55,10 @@ export function CreditsPill() {
   const low = Boolean(info && !info.unlimited && (info.balance ?? 0) < 340); // less than ≈ 30 s of video
   return (
     <Link href="/app/planes" title="Tus créditos" data-tour="creditos"
-      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors hover:bg-surface-2 ${low ? "border-warn/50 text-warn" : "border-line"}`}>
+      className={`flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-sm font-semibold transition-colors hover:bg-surface-2 lg:px-3 lg:py-1.5 ${low ? "border-warn/50 text-warn" : "border-line"}`}>
       <Svg d={D.coin} />
-      <span className="font-mono">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
-      <span className="hidden text-muted sm:inline">de video</span>
+      <span className="tabular-nums">{!info ? "…" : info.unlimited ? "∞" : (info.balance ?? 0).toLocaleString("es-CL")}</span>
+      <span className="hidden text-muted sm:inline">créditos</span>
     </Link>
   );
 }

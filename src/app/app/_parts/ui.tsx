@@ -10,16 +10,16 @@ import { useCallback, useEffect, useState } from "react";
 export const dl = (u: string) => (u.includes("/api/media/") ? `${u}${u.includes("?") ? "&" : "?"}descargar=1` : u);
 
 export const inputCls = "min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink";
-export const btnCls = "rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50";
-export const ghostCls = "rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink";
+export const btnCls = "rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50 sm:py-2";
+export const ghostCls = "rounded-lg border border-line px-3 py-2.5 text-sm font-semibold text-muted hover:text-ink sm:py-2";
 export const cardCls = "flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5";
 
 export function PageHead({ title, lead, children }: { title: string; lead?: string; children?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="flex max-w-2xl flex-col gap-1">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>
-        {lead && <p className="text-muted">{lead}</p>}
+        <h1 className="font-display text-[1.6rem] leading-tight font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+        {lead && <p className="text-[15px] leading-snug text-muted sm:text-base">{lead}</p>}
       </div>
       {children}
     </div>
@@ -153,10 +153,10 @@ const FLOWS = {
 export function Stepper({ flow, current }: { flow: keyof typeof FLOWS; current: number }) {
   const f = FLOWS[flow];
   return (
-    <nav aria-label={f.label} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-      <span className="font-semibold text-muted">{f.label}:</span>
+    <nav aria-label={f.label} className="scroll-row -mx-4 flex items-center gap-x-2 gap-y-1 overflow-x-auto px-4 text-xs whitespace-nowrap sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+      <span className="hidden font-semibold text-muted sm:inline">{f.label}:</span>
       {f.steps.map(([label, href], i) => (
-        <span key={href} className="flex items-center gap-2">
+        <span key={href} className="flex shrink-0 items-center gap-2">
           {i > 0 && <span aria-hidden="true" className="text-muted">→</span>}
           <Link href={href} aria-current={i === current ? "step" : undefined}
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold ${i === current ? "bg-accent/12 text-accent-text" : "text-muted hover:text-ink"}`}>

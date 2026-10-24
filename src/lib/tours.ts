@@ -13,6 +13,17 @@ export interface TourStep { target?: string; title: string; text: string; option
 export interface Tour { id: string; path: string; exact?: boolean; when?: string; title: string; steps: TourStep[]; video?: string; listed?: boolean }
 
 export const TOURS: Tour[] = [
+  // where new accounts land (owner, 24 Oct 2026: a phone sign-up got no guide at all): short, phone-first
+  {
+    id: "automatico", path: "/app/automatico", title: "Tu primer anuncio con Automático", listed: true,
+    steps: [
+      { title: "¡Bienvenido a Creads! 🎉", text: "Tu primer anuncio va de regalo. En 30 segundos te muestro cómo sacarlo." },
+      { target: "auto-ideas", title: "Cuéntale de tu negocio", text: "Toca una de estas ideas o escribe con tus palabras qué vendes y qué quieres que haga la gente (comprar, agendar, escribirte).", optional: true },
+      { target: "auto-chat", title: "Conversas y apruebas", text: "Creads te hace unas preguntas, te propone el guion y la persona. Tú dices que sí y te entrega el video revisado. Con 📎 subes una foto o un video tuyo." },
+      { target: "creditos", title: "Tus créditos", text: "Aquí ves tu saldo. Tu regalo ya está cargado; si algo falla, los créditos vuelven solos." },
+      { target: "nav-menu", title: "Todo lo demás, en «Más»", text: "Imágenes para anuncios, tus avatares, tus anuncios terminados y los planes. ¡Listo, a crear!", optional: true },
+    ],
+  },
   {
     id: "inicio", path: "/app", exact: true, title: "Recorrido por Creads", video: "primer-anuncio", listed: true,
     steps: [

@@ -206,7 +206,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
           <button type="button" onClick={startOver} className="text-xs font-semibold text-muted underline hover:text-ink">Empezar uno nuevo</button>
         </p>
       )}
-      <ol className="flex flex-wrap gap-2" aria-label="Pasos" data-tour="crear-pasos">
+      <ol className="scroll-row -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" aria-label="Pasos" data-tour="crear-pasos">
         {TABS.map((t, i) => {
           const first = t.steps[0];
           // guion and voz always open (they explain what they need); scenes need the cuts; videos the scenes; the rest the ad
@@ -215,7 +215,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
           return (
             <li key={t.label}>
               <button type="button" disabled={!can} onClick={() => setStep(first === 0 && step === 1 ? 1 : first)} aria-current={on ? "step" : undefined}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${on ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-semibold disabled:opacity-40 ${on ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>
                 <span className="font-mono text-xs">{i + 2}</span>{t.label}
               </button>
             </li>

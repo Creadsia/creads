@@ -220,11 +220,11 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
   const pill = "rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm";
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
-      <div className="flex flex-col gap-1">
+    <section className="flex min-w-0 flex-col gap-4 rounded-2xl sm:border sm:border-line sm:bg-surface sm:p-4">
+      <div className={`flex flex-col gap-1 ${imagesOnly ? "hidden sm:flex" : ""}`}>
         <h2 className="text-xl font-semibold">{imagesOnly ? "Crear imágenes" : "Generar"}</h2>
         <p className="text-sm text-muted">
-          Cada botón genera de verdad y descuenta segundos. El precio aparece en el botón antes de apretarlo.
+          Cada botón genera de verdad y descuenta créditos. El precio aparece en el botón antes de apretarlo.
         </p>
       </div>
 
@@ -240,7 +240,7 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
       </label>
 
       {!ready && (
-        <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escribe qué quieres ver (al menos una frase) para activar los botones.</p>
+        <p className="hidden rounded-lg bg-surface-2 px-3 py-2 text-sm sm:block">Escribe qué quieres ver (al menos una frase) para activar los botones.</p>
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -258,11 +258,11 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
         ))}
       </div>
 
-      <div className={`grid gap-4 ${imagesOnly ? "" : "md:grid-cols-2"}`}>
+      <div className={`grid min-w-0 gap-4 ${imagesOnly ? "" : "md:grid-cols-2"}`}>
         {/* Image */}
-        <div className="flex flex-col gap-3 rounded-xl border border-line p-3">
+        <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-line p-3">
           <h3 className="font-semibold">1 · Imagen</h3>
-          <select value={im.id} onChange={(e) => setImgModel(e.target.value)} className={pill} aria-label="Modelo de imagen">
+          <select value={im.id} onChange={(e) => setImgModel(e.target.value)} className={`${pill} w-full min-w-0`} aria-label="Modelo de imagen">
             {imageModels.map((m) => (
               <option key={m.id} value={m.id} disabled={!m.configured}>
                 {m.label} · {m.configured ? price(m.usd) : "No disponible por ahora"}

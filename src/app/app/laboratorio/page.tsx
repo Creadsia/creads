@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Imágenes para anuncios" };
 export default function LabPage() {
   return (
     <>
-      <PageHead title="Imágenes para anuncios" lead="Describe tu anuncio y Creads crea varias imágenes con ideas distintas (otro gancho, otra escena), con la cara de tu avatar o tu producto si los subes. Usa 4:5 para el feed. El precio aparece antes de apretar." />
+      <PageHead title="Imágenes para anuncios" lead="Describe tu anuncio o sube uno que ya funciona: Creads crea imágenes con ideas distintas. Usa 4:5 para el feed." />
       <FullOnly><ModelLab code="session" imagesOnly /></FullOnly>
     </>
   );

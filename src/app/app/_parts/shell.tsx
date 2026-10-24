@@ -11,6 +11,7 @@ import FailNotices from "./fail-notices";
 import { Guides, HelpButton } from "./tour";
 import { fmtCredits } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
+import CreditsPopup from "./credits-popup";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
 
@@ -167,6 +168,41 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
   );
 }
 
+/**
+ * Phones (owner, 24 Oct 2026: almost every customer arrives on a phone): an app-style tab bar with the four
+ * places people use most and «Más» for the full menu.
+ */
+function MobileTabs({ path, user, onMore, moreOpen }: { path: string; user: ShellUser; onMore: () => void; moreOpen: boolean }) {
+  const tabs = [
+    { href: "/app", label: "Inicio", icon: I.home, on: path === "/app" },
+    { href: "/app/automatico", label: "Automático", icon: I.spark, on: path.startsWith("/app/automatico") },
+    user.access === "full"
+      ? { href: "/app/laboratorio", label: "Imágenes", icon: I.image, on: path.startsWith("/app/laboratorio") }
+      : { href: "/app/crear", label: "Crear", icon: I.create, on: path.startsWith("/app/crear") },
+    { href: "/app/biblioteca", label: "Mis anuncios", icon: I.lib, on: path.startsWith("/app/biblioteca") || path.startsWith("/app/videos") },
+  ];
+  return (
+    <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
+        {tabs.map((t) => (
+          <li key={t.href}>
+            <Link href={t.href} aria-current={t.on ? "page" : undefined} className={`flex flex-col items-center gap-0.5 px-1 pt-2 pb-1.5 text-[11px] font-semibold ${t.on ? "text-accent-text" : "text-muted"}`}>
+              <span className={`grid h-7 w-12 place-items-center rounded-full ${t.on ? "bg-accent/15" : ""}`}><Icon d={t.icon} className="h-5 w-5" /></span>
+              {t.label}
+            </Link>
+          </li>
+        ))}
+        <li>
+          <button type="button" data-tour="nav-menu" onClick={onMore} aria-expanded={moreOpen} className={`flex w-full flex-col items-center gap-0.5 px-1 pt-2 pb-1.5 text-[11px] font-semibold ${moreOpen ? "text-accent-text" : "text-muted"}`}>
+            <span className="grid h-7 w-12 place-items-center rounded-full"><Icon d={I.menu} className="h-5 w-5" /></span>
+            Más
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
+
 /** The account's credits in the menu (the owner has no limit). */
 function CreditsBox() {
   const { info } = useCredits();
@@ -174,13 +210,13 @@ function CreditsBox() {
   return (
     <Link href="/app/planes" data-tour="creditos" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-muted">Segundos de video</span>
+        <span className="text-xs font-semibold text-muted">Tus créditos</span>
         <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
           {!info ? "…" : info.unlimited ? "Sin límite" : fmtCredits(info.balance ?? 0)}
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te queda poco video." : "Sumar más segundos"}
+        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Sumar más créditos"}
       </p>
     </Link>
   );
@@ -199,10 +235,10 @@ function ActivatePlan() {
       <span className="relative flex flex-col gap-0.5">
         <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
         <span className="text-sm text-muted">
-          {never ? "Puedes recorrer todo el estudio. Para generar videos, imágenes y voces, elige un plan: Emprende cuesta US$55 al mes." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
+          {never ? "Puedes recorrer todo el estudio. Para seguir generando videos, imágenes y voces, elige un plan desde US$25 al mes o prueba un video de 15 s por US$9." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
         </span>
       </span>
-      <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Sumar segundos"}</span>
+      <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Sumar créditos"}</span>
     </Link>
   );
 }
@@ -253,16 +289,14 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       </aside>
 
       {/* phone top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
-        <Logo size={24} href="/app" gid="mark-top" />
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-surface/95 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-2 backdrop-blur lg:hidden">
+        <Logo size={22} href="/app" gid="mark-top" />
         <div className="flex items-center gap-2">
           <CreditsPill />
           <AccountMenu user={user} />
-          <button type="button" data-tour="nav-menu" onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} className="grid h-9 w-9 place-items-center rounded-lg border border-line">
-            <Icon d={I.menu} />
-          </button>
         </div>
       </header>
+      <MobileTabs path={path} user={user} onMore={() => setOpen(true)} moreOpen={open} />
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/40" />
@@ -277,11 +311,11 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
         </div>
       )}
 
-      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:pt-4 lg:pb-8">
+      <main className="min-w-0 px-4 pt-3 pb-[calc(88px+env(safe-area-inset-bottom))] sm:px-6 lg:px-10 lg:pt-4 lg:pb-8">
         {/* back, and (desktop) the account corner */}
-        <div className="mx-auto mb-4 flex max-w-6xl items-center justify-between gap-2">
-          {path !== "/app" ? <BackButton path={path} /> : <span />}
-          <div className="flex items-center gap-2">
+        <div className="mx-auto mb-2 flex max-w-6xl items-center justify-between gap-2 lg:mb-4">
+          {path !== "/app" ? <span className={["/app/automatico", "/app/laboratorio", "/app/biblioteca"].includes(path) ? "hidden lg:block" : ""}><BackButton path={path} /></span> : <span />}
+          <div className="ml-auto flex items-center gap-2">
             <HelpButton />
             <span className="hidden items-center gap-2 lg:flex">
               <CreditsPill />
@@ -289,10 +323,11 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
             </span>
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 lg:gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
       </main>
       <Assistant />
       <Guides />
+      {!user.owner && <CreditsPopup />}
     </div>
   );
 }

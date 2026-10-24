@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
+import { refreshCredits } from "../_parts/use-credits";
 
 // «Automático»: the customer talks with the Creads assistant (Claude + the Creads tools + the RECETA). The
 // page keeps the conversation (in this browser), shows the pictures it makes, follows each ad until it's
@@ -61,6 +63,7 @@ export default function Asistente() {
     const res = await fetch("/api/asistente-anuncios", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: next }) }).catch(() => null);
     const d = res ? await res.json().catch(() => ({})) : {};
     setBusy(false);
+    refreshCredits(); // images and ads made in this turn spent credits: the balance (and the credits pop-up) follow
     if (Array.isArray(d.messages) && d.messages.length) setHistory([...next, ...d.messages]);
     if (Array.isArray(d.ui?.ads) && d.ui.ads.length) setAds((a) => [...a, ...d.ui.ads.filter((id: string) => !a.some((x) => x.id === id)).map((id: string) => ({ id, estado: "cola" }))]);
     if (!res || !res.ok) setErr(d.error || "No pude responder. Revisa tu conexión e intenta de nuevo.");
@@ -147,16 +150,21 @@ export default function Asistente() {
   const empty = history.length === 0;
   return (
     <div className="flex flex-col gap-4">
-      <section className={`${cardCls} min-h-[60vh]`} aria-label="Conversación">
+      <section className={`${cardCls} min-h-[38vh] sm:min-h-[60vh]`} aria-label="Conversación">
         {empty ? (
-          <div className="flex flex-1 flex-col items-start justify-center gap-4 py-6">
-            <h2 className="font-display text-2xl font-semibold">Cuéntame de tu negocio y yo hago el anuncio.</h2>
-            <p className="max-w-[56ch] text-muted">Te hago unas preguntas, te propongo el guion, creo a la persona en tu negocio, hago el video, lo reviso palabra por palabra y te lo entrego listo para publicar. Tú solo apruebas.</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-1 flex-col items-start justify-start gap-3 py-2 sm:justify-center sm:gap-4 sm:py-6">
+            <span className="flex items-center gap-2 text-xs font-semibold text-muted">
+              <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-[image:var(--grad)] text-sm text-white">✦</span>
+              Creads · Automático
+            </span>
+            <h2 className="font-display text-xl leading-tight font-semibold sm:text-2xl">Cuéntame de tu negocio y yo hago el anuncio.</h2>
+            <p className="max-w-[56ch] text-[15px] leading-snug text-muted sm:text-base">Te pregunto lo justo, te propongo el guion, creo a la persona, hago el video, lo reviso y te lo entrego listo. Tú solo apruebas.</p>
+            <div data-tour="auto-ideas" className="scroll-row -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0">
               {[START, "Quiero un anuncio con mi propia cara", "Tengo una clínica y quiero que agenden horas", "Vendo productos y quiero más ventas"].map((x) => (
-                <button key={x} type="button" onClick={() => send(x)} className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-accent-text">{x}</button>
+                <button key={x} type="button" onClick={() => send(x)} className="shrink-0 rounded-full border border-line px-3.5 py-2 text-sm hover:border-accent-text">{x}</button>
               ))}
             </div>
+            <Link href="/app/crear" className="text-xs font-semibold text-muted underline sm:hidden">Prefiero hacerlo paso a paso (Manual)</Link>
           </div>
         ) : (
           <div className="flex flex-col gap-3">{rows}</div>
@@ -182,15 +190,15 @@ export default function Asistente() {
         <div ref={end} />
       </section>
 
-      <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="sticky bottom-3 flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-lg">
-        <label className={`${ghostCls} cursor-pointer`} title="Subir una foto o un video">
+      <form data-tour="auto-chat" onSubmit={(e) => { e.preventDefault(); send(text); }} className="sticky bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 flex items-end gap-2 rounded-2xl border border-line bg-surface p-2 shadow-lg lg:bottom-3">
+        <label className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-line text-lg sm:h-10 sm:w-10" title="Subir una foto o un video" aria-label="Subir una foto o un video">
           {uploading ? "Subiendo…" : "📎"}
           <input type="file" accept="image/png,image/jpeg,image/webp,video/*" className="sr-only" disabled={uploading || busy} onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={empty ? "Ej: Tengo una cafetería en Ñuñoa y quiero más clientes" : "Escribe tu respuesta…"}
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={1} placeholder={empty ? "Ej: Tengo una cafetería" : "Escribe tu respuesta…"}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
-          className={`${inputCls} max-h-40 flex-1 resize-none text-[15px]`} aria-label="Tu mensaje" />
-        <button type="submit" disabled={busy || !text.trim()} className="rounded-lg bg-[image:var(--grad)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Enviar</button>
+          className={`${inputCls} max-h-40 min-h-11 flex-1 resize-none py-2.5 text-[15px] sm:min-h-10`} aria-label="Tu mensaje" />
+        <button type="submit" disabled={busy || !text.trim()} aria-label="Enviar" className="grid h-11 shrink-0 place-items-center rounded-xl bg-[image:var(--grad)] px-4 text-sm font-semibold text-white disabled:opacity-50 sm:h-10">Enviar</button>
       </form>
       {!empty && <button type="button" onClick={restart} disabled={busy} className="w-fit text-xs text-muted underline">Empezar un anuncio nuevo</button>}
     </div>

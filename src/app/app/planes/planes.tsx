@@ -171,17 +171,17 @@ export default function Planes() {
       )}
 
       {/* where the account stands */}
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Tu cuenta">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Tu cuenta">
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
-          <span className="text-xs font-semibold text-muted">Video disponible</span>
-          <span className="font-mono text-3xl font-bold tabular-nums">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
+          <span className="text-xs font-semibold text-muted">Tus créditos</span>
+          <span className="font-mono text-2xl font-bold tabular-nums sm:text-3xl">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
-          <span className="text-xl font-bold">{info?.unlimited ? "Dueño" : currentPlan ?? "Sin plan todavía"}</span>
+          <span className="text-lg font-bold sm:text-xl">{info?.unlimited ? "Dueño" : currentPlan ?? "Sin plan todavía"}</span>
           {info?.paidUntil && <span className={`text-sm ${info.expired ? "text-bad" : "text-muted"}`}>{info.expired ? "Venció" : pay?.subscription ? "Se renueva" : "Vigente hasta"} el {new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</span>}
         </div>
-        <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
+        <div className="hidden flex-col gap-1 rounded-2xl border border-line bg-surface p-4 sm:flex">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
           <span className="text-sm text-muted">Un segundo de video con avatar que habla usa unos 11 créditos. Los modelos más caros usan más (Veo 3.1: unas 4 veces más). Revisar y la Edición Pro no usan créditos. Si algo falla, vuelven solos.</span>
         </div>

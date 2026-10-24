@@ -54,7 +54,7 @@ export default function Home({ full = true }: { full?: boolean }) {
 
   return (
     <>
-      <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Sigue estos pasos en orden. Los primeros se hacen una sola vez; después, cada anuncio es guion → anuncio." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
+      <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Tu primer anuncio va de regalo. Lo más rápido: hazlo conversando con Automático." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
       {missing && <SetupNotice />}
       {/* the two ways to make an ad, first thing on the page */}
       <section aria-label="Crea tu anuncio" className="grid gap-3 md:grid-cols-2">
@@ -64,20 +64,31 @@ export default function Home({ full = true }: { full?: boolean }) {
             <span className="rounded-full bg-[image:var(--grad)] px-2.5 py-0.5 text-xs font-bold text-white">Recomendado</span>
           </span>
           <p className="text-[15px] text-muted">Conversas con Creads: te pregunta lo necesario, escribe el guion, crea a la persona en tu negocio, hace el video, lo revisa palabra por palabra y te lo entrega listo.</p>
-          <ol className="flex flex-wrap gap-1.5 text-xs font-semibold">
+          <ol className="hidden flex-wrap gap-1.5 text-xs font-semibold sm:flex">
             {["Preguntas", "Guion", "Persona", "Video", "Revisión", "Listo"].map((x, i) => <li key={x} className="rounded-full bg-surface-2 px-2.5 py-1">{i + 1}. {x}</li>)}
           </ol>
-          <span className="mt-auto w-fit rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-sm font-semibold text-white">Hacer mi anuncio conversando →</span>
+          <span className="mt-auto w-full rounded-xl bg-[image:var(--grad)] px-4 py-3 text-center text-[15px] font-semibold text-white sm:w-fit sm:py-2.5 sm:text-sm">Hacer mi anuncio conversando</span>
         </Link>
-        <Link href="/app/crear" className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-muted">
-          <b className="font-display text-2xl font-semibold">Manual</b>
-          <p className="text-[15px] text-muted">Tú controlas cada paso: espiar, guion, voz, escenas, videos, correcciones y edición. Para quien quiere decidir cada detalle.</p>
-          <ol className="flex flex-wrap gap-1.5 text-xs font-semibold text-muted">
+        <Link href="/app/crear" className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted sm:p-5">
+          <span className="flex items-center justify-between gap-2 sm:block">
+            <b className="font-display text-xl font-semibold sm:text-2xl">Manual</b>
+            <span aria-hidden="true" className="text-muted sm:hidden">Paso a paso ›</span>
+          </span>
+          <p className="hidden text-[15px] text-muted sm:block">Tú controlas cada paso: espiar, guion, voz, escenas, videos, correcciones y edición. Para quien quiere decidir cada detalle.</p>
+          <ol className="hidden flex-wrap gap-1.5 text-xs font-semibold text-muted sm:flex">
             {["Espiar", "Guion", "Voz", "Escenas", "Videos", "Edición"].map((x, i) => <li key={x} className="rounded-full border border-line px-2.5 py-1">{i + 1}. {x}</li>)}
           </ol>
-          <span className="mt-auto w-fit rounded-xl border border-line px-4 py-2.5 text-sm font-semibold">Hacerlo paso a paso →</span>
+          <span className="mt-auto hidden w-fit rounded-xl border border-line px-4 py-2.5 text-sm font-semibold sm:inline">Hacerlo paso a paso →</span>
         </Link>
       </section>
+      {/* phones: the shortcuts people use most, as app tiles */}
+      <nav aria-label="Atajos" className="grid grid-cols-4 gap-2 sm:hidden">
+        {[["/app/laboratorio", "🖼️", "Imágenes"], ["/app/avatares", "🧑", "Avatares"], ["/app/spy", "🔎", "Espiar"], ["/app/guiones", "✍️", "Guiones"]].map(([href, ico, label]) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-1 rounded-2xl border border-line bg-surface px-1 py-3 text-xs font-semibold active:scale-[0.98]">
+            <span aria-hidden="true" className="text-xl">{ico}</span>{label}
+          </Link>
+        ))}
+      </nav>
       {working.length > 0 && (
         <section aria-label="Anuncios en producción" className="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
