@@ -3,15 +3,15 @@
 import { secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, clpFor, hasLaunch, usd } from "@/lib/catalog";
+import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, clpFor, hasLaunch } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
+import { Money, MoneyText } from "./money";
 import Garantia from "./garantia";
 
 // The plans, front and center: the launch price is the big number, the regular price is crossed out,
 // and every button goes straight to checkout (/empezar) with that plan already chosen.
 
-const dollarsEn = (n: number) => `US$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
@@ -20,10 +20,10 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
   const [yearly, setYearly] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   // money as the visitor reads it: pesos in Spanish (that's what Mercado Pago charges), dollars in English
-  const dollars = (n: number) => (es ? usd(n) : dollarsEn(n)); // prices are always in US$ (decimal comma in Spanish)
-  const money = dollars;
+  // pesos for visitors in Chile, US$ for the rest (see ./money)
+  const money = (n: number) => <Money usd={n} rate={rate} en={!es} />;
   // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
-  const perMonthOfYear = (usdYear: number) => dollars(Math.round((usdYear / 12) * 100) / 100);
+  const perMonthOfYear = (usdYear: number) => money(Math.round((usdYear / 12) * 100) / 100);
   // without automatic renewal (temporary payment setup) the FAQ must not promise it
   // plans on sale (Ultra is kept for anyone who has it, not sold)
   const shown = t.plans.filter((p) => !("hidden" in p && p.hidden));
@@ -46,8 +46,8 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <span className="chroma relative font-display text-5xl leading-none font-semibold sm:text-[3.4rem]">−{LAUNCH_PCT}%</span>
         <span className="relative flex min-w-0 flex-1 flex-col gap-1">
           <span className="w-fit rounded-md bg-rec px-2 py-0.5 text-xs font-bold">{t.offerTag}</span>
-          <b className="text-lg leading-snug sm:text-xl">{t.offer}</b>
-          <span className="text-sm text-white/70">{t.offerNote}</span>
+          <b className="text-lg leading-snug sm:text-xl"><MoneyText text={t.offer} rate={rate} /></b>
+          <span className="text-sm text-white/70"><MoneyText text={t.offerNote} rate={rate} /></span>
         </span>
         <div role="radiogroup" aria-label={es ? "Forma de pago" : "Billing"} className="relative inline-flex w-fit shrink-0 rounded-xl border border-white/20 bg-white/5 p-1">
           {([[false, t.monthly], [true, t.yearly]] as const).map(([val, label]) => (
@@ -98,9 +98,9 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                     <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
                   </p>
                   {/* Mercado Pago charges pesos: the amount a Chilean SMB will actually see (launch audit, 23 Oct 2026) */}
-                  {es && !yearly && <p className="text-sm font-semibold">≈ ${clpFor(monthNow, rate).toLocaleString("es-CL")} CLP al mes</p>}
+                  {es && !yearly && <p className="p-usd text-sm font-semibold">≈ ${clpFor(monthNow, rate).toLocaleString("es-CL")} CLP al mes</p>}
                   <p className="text-sm text-muted">
-                    {yearly ? `${money(p.yearly * 12)} ${t.yearlyTotal}` : promo ? `${t.then} ${money(p.price)}${t.perMonth}` : t.billedMonthly} · {t.cancel}
+                    {yearly ? <>{money(p.yearly * 12)} {t.yearlyTotal}</> : promo ? <>{t.then} {money(p.price)}{t.perMonth}</> : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
 
@@ -186,7 +186,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-7">
           <div>
             <h3 className="text-xl font-extrabold">{t.topups.title}</h3>
-            <p className="text-[15px] text-muted">{t.topups.lead}</p>
+            <p className="text-[15px] text-muted"><MoneyText text={t.topups.lead} rate={rate} /></p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {t.topups.packs.map(([c, p]) => {
@@ -209,7 +209,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                 {f.q}
                 <span aria-hidden="true" className="text-xl leading-none text-muted transition-transform group-open:rotate-45">+</span>
               </summary>
-              <p className="mt-2 text-[15px] text-muted">{f.a}</p>
+              <p className="mt-2 text-[15px] text-muted"><MoneyText text={f.a} rate={rate} /></p>
             </details>
           ))}
         </div>

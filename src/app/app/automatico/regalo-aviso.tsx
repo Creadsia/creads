@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MoneyText } from "../../money";
 
 // Above Automático: the gift ad's state for accounts that haven't paid (owner, 23 Oct 2026, launch audit).
 // After the email button (?regalo=…), or while the account has no credits and no plan.
@@ -36,7 +37,7 @@ export default function RegaloAviso() {
   if (!m && !sinSaldo) return null;
   return (
     <div className={`mb-4 flex flex-col gap-2 rounded-xl border p-4 text-sm ${m?.tone === "good" ? "border-good/40 bg-good/10" : "border-line bg-surface"}`}>
-      {m && <p className="font-semibold">{m.text}</p>}
+      {m && <p className="font-semibold"><MoneyText text={m.text} /></p>}
       {sinSaldo && res !== "ok" && (
         <>
           {!m && <p><b>Te quedaste sin créditos.</b> Si no recibiste tu anuncio de regalo, pide el correo para activarlo.</p>}

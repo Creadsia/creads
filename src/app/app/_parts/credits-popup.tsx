@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
 import { buyNow } from "./buy";
+import { MoneyText } from "../../money";
 
 // «Se te acabaron los créditos» (owner, 24 Oct 2026): the moment a customer runs out (or is about to), an
 // on-brand sheet offers the next step: a plan for those who never paid, a top-up or
@@ -126,7 +127,7 @@ export default function CreditsPopup() {
                 <Link href={o.href} onClick={(e) => { if (o.item) { e.preventDefault(); go(o); } else close(); }} aria-busy={going === o.item}
                   className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-transform active:scale-[0.99] ${going && going !== o.item ? "opacity-50" : ""} ${o.hot ? "border-transparent [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box] border-2" : "border-line hover:bg-surface-2"}`}>
                   <span className="flex min-w-0 flex-col">
-                    <span className="flex flex-wrap items-center gap-2"><b>{o.title}</b>{o.tag && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">{o.tag}</span>}</span>
+                    <span className="flex flex-wrap items-center gap-2"><b><MoneyText text={o.title} /></b>{o.tag && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">{o.tag}</span>}</span>
                     <span className="text-sm text-muted">{o.text}</span>
                   </span>
                   <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${o.hot ? "bg-[image:var(--grad)] text-white" : "bg-surface-2"}`}>{going === o.item ? "…" : "›"}</span>

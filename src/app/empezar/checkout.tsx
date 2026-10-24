@@ -2,7 +2,8 @@
 
 import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
-import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote, usd } from "@/lib/catalog";
+import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { Money, OnlyUSD } from "../money";
 import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
@@ -34,6 +35,8 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   const plan = PLANS.find((p) => p.id === item);
   const pack = PACKS.find((p) => p.id === item);
   const totalClp = clpFor(q.total, rate);
+  // pesos for visitors in Chile, US$ for the rest (../money)
+  const usd = (n: number) => <Money usd={n} rate={rate} />;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -198,10 +201,10 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">
-                {q.period === "mensual" ? (renews ? `Luego ${usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.` : `Pago de un mes, sin cobro automático. Luego ${usd(plan?.monthly ?? 0)}/mes si renuevas.`) : q.period === "anual" ? `${fmtSeconds(SECS(q.credits))} de video para todo el año.` : `${fmtSeconds(SECS(pack?.credits ?? 0))} de video que se suman a tu plan y vencen con él.`}
+                {q.period === "mensual" ? (renews ? <>Luego {usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.</> : <>Pago de un mes, sin cobro automático. Luego {usd(plan?.monthly ?? 0)}/mes si renuevas.</>) : q.period === "anual" ? `${fmtSeconds(SECS(q.credits))} de video para todo el año.` : `${fmtSeconds(SECS(pack?.credits ?? 0))} de video que se suman a tu plan y vencen con él.`}
               </span>
-              <span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
-              </span>
+              <OnlyUSD><span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
+              </span></OnlyUSD>
             </div>
 
             <div className="flex flex-col gap-1">
@@ -246,7 +249,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <Garantia compact />
             <button type="submit" disabled={Boolean(busy)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
-              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : `Crear cuenta y pagar ${usd(q.total)}`}
+              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : <>Crear cuenta y pagar {usd(q.total)}</>}
             </button>
             <p className="text-center text-xs text-muted">
               Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.

@@ -5,6 +5,7 @@ import { track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import GoogleButton from "../google-button";
+import { MoneyText } from "../money";
 
 // The free sign-up form: name, email, password. Then straight into Automático; the welcome email has the
 // button that confirms the email and loads the gift ad.
@@ -106,7 +107,7 @@ export default function Registro({ google }: { google: boolean }) {
             <li className="flex gap-2"><Check /><span><b>200 créditos de regalo</b>: alcanzan para tu primer anuncio en video (unos 12 segundos), listo para publicar.</span></li>
             <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
             <li className="flex gap-2"><Check /><span><b>Guiones con 10 ganchos</b> para tu negocio: 5 gratis al día.</span></li>
-            <li className="flex gap-2"><Check /><span>Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia.</span></li>
+            <li className="flex gap-2"><Check /><span><MoneyText text="Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia." /></span></li>
           </ul>
       </main>
     </div>

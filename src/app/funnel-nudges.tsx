@@ -5,6 +5,7 @@ import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, PLANS, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
 import type { Content } from "@/content/en";
 import { startHref } from "./pricing";
+import { Money, MoneyText } from "./money";
 
 // Two gentle nudges so a visitor from an ad doesn't leave empty-handed:
 // - on phones, a bar at the bottom with the launch offer once they scroll past the top of the page;
@@ -17,7 +18,7 @@ const seenRecently = () => {
 };
 const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); } catch { /* private mode */ } };
 
-export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: string; rate?: number }) {
+export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate?: number }) {
   const es = lang === "es";
   const plus = PLANS.find((p) => p.id === "starter")!; // the plan with the launch offer
   const first = LAUNCH_PRICE;
@@ -98,8 +99,8 @@ export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: s
       <div aria-hidden={!bar} className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))] backdrop-blur transition-transform duration-300 lg:hidden ${bar ? "translate-y-0" : "translate-y-full"}`}>
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
-            <b className="block truncate">{t.bar}</b>
-            <span className="text-muted">{es ? `sin tarjeta · después desde ${price} al mes` : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
+            <b className="block truncate"><MoneyText text={t.bar} rate={rate} /></b>
+            <span className="text-muted">{es ? <>sin tarjeta · después desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
           </span>
           <a href={es ? "/registro" : startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>
@@ -112,8 +113,8 @@ export default function FunnelNudges({ t, lang }: { t: Content["nudge"]; lang: s
           <span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full opacity-40 blur-[70px]" style={{ background: "var(--grad)" }} />
           <button type="button" onClick={() => setOpen(false)} aria-label={t.exitClose} className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2 hover:text-ink">×</button>
           <span className="chroma relative font-display text-5xl leading-none font-semibold">−{LAUNCH_PCT}%</span>
-          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight">{t.exitTitle}</h2>
-          <p className="relative text-muted">{t.exitLead}</p>
+          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={t.exitTitle} rate={rate} /></h2>
+          <p className="relative text-muted"><MoneyText text={t.exitLead} rate={rate} /></p>
           {state === "done" ? (
             <p role="status" className="relative rounded-xl bg-good/15 px-4 py-3 font-semibold text-good">{t.exitDone}</p>
           ) : (

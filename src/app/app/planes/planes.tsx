@@ -8,6 +8,7 @@ import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
+import { Money } from "../../money";
 
 // Plans and credits: choose a plan or a top-up, see exactly what you'll pay, pick how to pay.
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
@@ -15,7 +16,6 @@ import PayBadges from "../../pay-badges";
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
 interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string } | null }
 
-const usd = (n: number) => `US$${n.toLocaleString("es-CL", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const STATUS: Record<string, [string, string]> = {
   pendiente: ["Esperando pago", "bg-warn/15 text-warn"],
@@ -100,7 +100,8 @@ export default function Planes() {
   const rate = pay?.usdClp ?? 950;
   // prices are always in US$; Mercado Pago charges the equivalent in Chilean pesos (same rounding as the server)
   const clp = (n: number) => clpFor(n, rate);
-  const money = (n: number) => usd(n);
+  // pesos for customers in Chile, US$ for the rest (../../money); the pesos match what Mercado Pago charges
+  const money = (n: number) => <Money usd={n} rate={pay?.usdClp} />;
   const [leaving, setLeaving] = useState(false);
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
@@ -266,7 +267,7 @@ export default function Planes() {
                   <p className="text-sm text-muted">{p.for}</p>
                   <div className="flex flex-col">
                     <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
-                    <span className="text-xs text-muted">{period === "anual" ? `${money(p.yearlyPerMonth * 12)} al año` : first !== null ? `Primer mes ${money(first)}` : "Facturado cada mes"}</span>
+                    <span className="text-xs text-muted">{period === "anual" ? <>{money(p.yearlyPerMonth * 12)} al año</> : first !== null ? <>Primer mes {money(first)}</> : "Facturado cada mes"}</span>
                   </div>
                   <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtCredits(p.credits * 12)}</b> para el año</> : <><b className="font-mono">{fmtCredits(p.credits)}</b> al mes (≈ {fmtSeconds(secs(p.credits))} de video) · imágenes y voces con los mismos créditos</>}</p>
                   <ul className="flex flex-col gap-2 text-sm">
@@ -326,16 +327,16 @@ export default function Planes() {
           <aside className={`${cardCls} lg:sticky lg:top-20 lg:self-start`} aria-labelledby="sum">
             <h2 id="sum" className="font-display text-lg font-bold">Tu pedido</h2>
             <dl className="flex flex-col gap-2 text-sm">
-              <div className="flex justify-between gap-3"><dt>{q.label}</dt><dd className="font-mono">{usd(q.subtotal)}</dd></div>
-              {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{usd(q.launch)}</dd></div>}
-              {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{usd(q.discount)}</dd></div>}
-              <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{usd(q.total)}</dd></div>
-              <div className="flex justify-between gap-3 text-xs text-muted"><dt>Mercado Pago cobra en pesos chilenos</dt><dd className="font-mono">{pesos(clp(q.total))}</dd></div>
+              <div className="flex justify-between gap-3"><dt>{q.label}</dt><dd className="font-mono">{money(q.subtotal)}</dd></div>
+              {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{money(q.launch)}</dd></div>}
+              {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{money(q.discount)}</dd></div>}
+              <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{money(q.total)}</dd></div>
+              <div className="p-usd flex justify-between gap-3 text-xs text-muted"><dt>Mercado Pago cobra en pesos chilenos</dt><dd className="font-mono">{pesos(clp(q.total))}</dd></div>
             </dl>
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{fmtCredits(q.credits)}</b>{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? `Pago de un mes, sin renovación automática. Desde el segundo mes: ${money(m)}.` : `Se renueva solo cada mes: ${money(m)}. Cancela cuando quieras.`}</p>; })()}
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? <>Pago de un mes, sin renovación automática. Desde el segundo mes: {money(m)}.</> : <>Se renueva solo cada mes: {money(m)}. Cancela cuando quieras.</>}</p>; })()}
             <Garantia compact />
-            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? `Pagar ${usd(q.total)} con Mercado Pago` : `Ir a pagar ${usd(q.total)}`}</button>
+            <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? <>Pagar {money(q.total)} con Mercado Pago</> : <>Ir a pagar {money(q.total)}</>}</button>
             <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}
             <div className="flex flex-col items-center gap-1.5"><PayBadges compact /><span className="flex items-center gap-1.5 text-xs text-muted"><svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 1 1 8 0v3" /></svg>Pago cifrado. Creads nunca ve tu tarjeta.</span></div>

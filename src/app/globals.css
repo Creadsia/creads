@@ -249,3 +249,8 @@ h3 {
   .scroll-row::-webkit-scrollbar { display: none; }
 }
 html { -webkit-tap-highlight-color: transparent; }
+
+/* prices: US$ abroad, pesos in Chile (<html data-cl>, see src/app/money.tsx) */
+.p-clp { display: none; }
+html[data-cl] .p-clp { display: inline; }
+html[data-cl] .p-usd { display: none; }

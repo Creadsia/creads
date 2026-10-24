@@ -10,6 +10,8 @@ import { publicError } from "@/lib/public-error";
 import { explainFailure, outOfFundsService } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
+import { SHOWN_PLANS, clpFor } from "@/lib/catalog";
+import { usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -90,7 +92,13 @@ export async function POST(req: Request) {
   // every call; marked as cache they cost ~10% the second time. Same answers, same quality, much cheaper.
   const ephemeral = { type: "ephemeral" } as const;
   const cachedTools = tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: ephemeral } : t));
-  const system = [{ type: "text", text: RECETA, cache_control: ephemeral }];
+  const system: { type: "text"; text: string; cache_control?: typeof ephemeral }[] = [{ type: "text", text: RECETA, cache_control: ephemeral }];
+  // prices in the customer's money (owner, 24 Oct 2026): pesos in Chile, US$ elsewhere
+  if (await inChile(req)) {
+    const rate = await usdClpRate().catch(() => 950);
+    const list = SHOWN_PLANS.map((p) => `${p.name} $${clpFor(p.monthly, rate).toLocaleString("es-CL")}`).join(", ");
+    system.push({ type: "text", text: `PRECIOS: este cliente está en Chile. Cuando hables de precios dilos en pesos chilenos, nunca en dólares: ${list} al mes («planes desde $${clpFor(Math.min(...SHOWN_PLANS.map((p) => p.monthly)), rate).toLocaleString("es-CL")} al mes»).` });
+  }
   /** The conversation with a cache mark on its last block (only the newest message carries one). */
   const withCache = (list: { role: string; content: unknown }[]) => list.map((m, i) => {
     if (i !== list.length - 1) return m;
@@ -169,4 +177,11 @@ export async function POST(req: Request) {
     const error = svc ? (isOwner(s.user) ? await explainFailure(err, true, "claude") : "El asistente no está disponible en este momento. Vuelve a intentar en unos minutos.") : (isOwner(s.user) ? `El asistente falló: ${(err instanceof Error ? err.message : String(err)).slice(0, 300)}` : publicError(err, "El asistente no pudo responder. Intenta de nuevo."));
     return NextResponse.json({ error, messages: added, ui }, { status: 502 });
   }
+}
+
+/** Is the customer in Chile? Vercel's geo header, or the country the site already chose for them. */
+async function inChile(req: Request) {
+  const geo = req.headers.get("x-vercel-ip-country");
+  const cookie = /(?:^|;\s*)creads_pais=([A-Z]{2})/.exec(req.headers.get("cookie") ?? "")?.[1];
+  return (cookie ?? geo ?? "").toUpperCase() === "CL";
 }

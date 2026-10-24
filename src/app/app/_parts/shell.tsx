@@ -13,6 +13,7 @@ import { fmtCredits } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 import CreditsPopup from "./credits-popup";
 import { openUpgrade } from "./buy";
+import { MoneyText } from "../../money";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
 
@@ -259,7 +260,7 @@ function ActivatePlan() {
       <span className="relative flex flex-col gap-0.5">
         <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
         <span className="text-sm text-muted">
-          {never ? "Puedes recorrer todo el estudio. Para seguir generando videos, imágenes y voces, elige un plan desde US$25 al mes." : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
+          {never ? <MoneyText text="Puedes recorrer todo el estudio. Para seguir generando videos, imágenes y voces, elige un plan desde US$25 al mes." /> : info.expired ? "Renueva para seguir generando. Tus anuncios y archivos siguen aquí." : "Suma una recarga o sube de plan para seguir generando."}
         </span>
       </span>
       <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Sumar créditos"}</span>

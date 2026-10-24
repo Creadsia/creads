@@ -9,6 +9,7 @@ import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
 import { SCENES } from "./landing";
 import Casos from "./casos";
+import { Money, MoneyText } from "./money";
 
 // The home page for people who arrive from an ad (owner, 22 Oct 2026: "que cada persona que llegue no se
 // aguante de suscribirse"). One job: show real ads Creads made, explain the two ways to make one
@@ -140,7 +141,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["Tu primer anuncio de regalo", "Listo en minutos, no en días", "Revisado antes de entregártelo", `Después, desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
+                {["Tu primer anuncio de regalo", "Listo en minutos, no en días", "Revisado antes de entregártelo", `Después, desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check /><MoneyText text={x} rate={rate} /></li>)}
               </ul>
             </div>
 
@@ -212,7 +213,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
                       <td className="hidden p-3 text-muted sm:table-cell sm:p-4">{a}</td>
                       <td className="p-3 text-muted sm:p-4">{b}</td>
-                      <td className="p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{c}</span></td>
+                      <td className="p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" /><MoneyText text={c} rate={rate} /></span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -278,7 +279,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {[["≈ 2 a 17", "anuncios de 15 s al mes"], [`Desde ${usd(cheapest.monthly)}`, "al mes, sin permanencia"], ["Gratis", "pruébalo: espía anuncios y crea guiones sin pagar"]].map(([n, k]) => (
                 <div key={k} className="flex flex-col gap-0.5 rounded-2xl border border-line bg-surface p-3 sm:p-4">
-                  <span className="font-display text-xl font-semibold sm:text-3xl">{n}</span>
+                  <span className="font-display text-xl font-semibold sm:text-3xl"><MoneyText text={n} rate={rate} /></span>
                   <span className="text-xs text-muted sm:text-sm">{k}</span>
                 </div>
               ))}
@@ -309,7 +310,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-20 blur-[90px]" style={{ background: "var(--grad)" }} />
             <div className="relative flex flex-col items-start gap-4">
               <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próximo anuncio puede estar publicado hoy.</h2>
-              <p className="text-muted">Empieza con {emprende.name} por {usd(emprende.monthly)} al mes. Si no te sirve, cancelas con un clic.</p>
+              <p className="text-muted">Empieza con {emprende.name} por <Money usd={emprende.monthly} rate={rate} /> al mes. Si no te sirve, cancelas con un clic.</p>
               <Cta>Hacer mi primer anuncio</Cta>
             </div>
             <div className="relative mx-auto flex items-end">

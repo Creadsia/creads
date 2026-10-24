@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { buyNow, openUpgrade } from "../_parts/buy";
+import { MoneyText } from "../../money";
 
 // «Automático»: the customer talks with the Creads assistant (Claude + the Creads tools + the RECETA). The
 // page keeps the conversation (in this browser), shows the pictures it makes, follows each ad until it's
@@ -249,8 +250,8 @@ function AfterFirstAd() {
         <span className="text-sm text-muted">Con Emprende tienes ≈ 8 anuncios de 15 s al mes, sin agencia y sin grabar. Cancelas cuando quieras.</span>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={() => go("starter")} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === "starter" ? "Abriendo el pago…" : "Quiero Emprende · US$55/mes"}</button>
-        <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : "Básico · US$25/mes"}</button>
+        <button type="button" onClick={() => go("starter")} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === "starter" ? "Abriendo el pago…" : <MoneyText text="Quiero Emprende · US$55/mes" />}</button>
+        <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : <MoneyText text="Básico · US$25/mes" />}</button>
       </div>
       <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver todas las opciones</button>
     </div>

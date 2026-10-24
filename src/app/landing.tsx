@@ -1,6 +1,7 @@
 import { DEFAULT_USD_PER_CREDIT, SECOND_USD } from "@/lib/credit-math";
 import Image from "next/image";
 import Link from "next/link";
+import { Money, MoneyText } from "./money";
 import type { Content } from "@/content/en";
 import { Logo, Mark } from "./brand";
 import AffiliateForm from "./affiliate-form";
@@ -17,7 +18,7 @@ import { Gallery } from "./gallery";
 import { EXAMPLES } from "@/lib/examples";
 import Outcome, { type NicheMedia } from "./outcome";
 import { labHref } from "@/lib/examples";
-import { LAUNCH_PRICE, PLANS, usd as usdLabel } from "@/lib/catalog";
+import { LAUNCH_PRICE, PLANS } from "@/lib/catalog";
 
 const CDN = "https://d8j0ntlcm91z4.cloudfront.net/user_3DdKYHg29Dc6YLtguhB32IBiQZ7/hf_20261015_220556_";
 const img = (id: string) => `${CDN}${id}.png`;
@@ -354,7 +355,7 @@ function Ticker({ t }: { t: Content["bar"] }) {
       {t.items.map((it, i) => (
         <li key={i} className="flex items-center gap-2 px-5 whitespace-nowrap">
           {it.tag && <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-black">{it.tag}</span>}
-          <span>{it.text}</span>
+          <span><MoneyText text={it.text} /></span>
           <span aria-hidden="true" className="pl-5 text-white/50">✦</span>
         </li>
       ))}
@@ -632,7 +633,7 @@ function SectionHead({ id, title, lead }: { id: string; title: string; lead?: st
       <h2 id={id} className="scroll-mt-32 text-[2rem] font-extrabold sm:text-[2.75rem] lg:scroll-mt-24">
         {title}
       </h2>
-      {lead && <p className="text-lg text-muted">{lead}</p>}
+      {lead && <p className="text-lg text-muted"><MoneyText text={lead} /></p>}
     </div>
   );
 }
@@ -641,8 +642,7 @@ function SectionHead({ id, title, lead }: { id: string; title: string; lead?: st
 function fromPrice(lang: string, rate: number) {
   const usd = LAUNCH_PRICE; // Starter's first month, the launch offer
   void PLANS;
-  void rate;
-  return lang === "es" ? usdLabel(usd) : `US$${usd.toFixed(2).replace(/\.00$/, "")}`;
+  return <Money usd={usd} rate={rate} en={lang !== "es"} />;
 }
 
 /** A thin reminder between sections: the price and one button to the plans. */
@@ -1120,7 +1120,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
           <div className="relative mx-auto flex max-w-7xl flex-col items-center gap-6 overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-16 text-center">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-30 blur-[90px]" style={{ background: "var(--grad)" }} />
             <h2 className="relative max-w-3xl text-[2.2rem] font-black [font-stretch:118%] sm:text-6xl">{t.start.title}</h2>
-            <p className="relative max-w-[52ch] text-lg text-muted">{t.start.lead}</p>
+            <p className="relative max-w-[52ch] text-lg text-muted"><MoneyText text={t.start.lead} /></p>
             <div className="relative flex flex-col items-center gap-3 sm:flex-row">
               <a href="/empezar?plan=starter&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">
                 {t.start.cta}
