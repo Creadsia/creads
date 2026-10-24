@@ -48,7 +48,9 @@ export interface MetaEvent {
 export async function sendMeta(ev: MetaEvent, v: Visitor) {
   if (!v.consent) return false;
   // the same step goes to RedTrack (when it's set up and the visitor came through it)
-  if (v.rtk) await sendRedtrack(ev.name, v.rtk, ev.value, ev.currency ?? "USD");
+  // only a real payment carries an amount: a checkout that was opened but not paid must not show as revenue
+  // in RedTrack (owner, 24 Oct 2026: «registra un revenue de 25 pero no aparece el dinero»)
+  if (v.rtk) await sendRedtrack(ev.name, v.rtk, ev.name === "Purchase" ? ev.value : undefined, ev.currency ?? "USD");
   const conn = await metaConn().catch(() => null);
   const token = conn?.capiToken;
   if (!token || !conn) return false;
