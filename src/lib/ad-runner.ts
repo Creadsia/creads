@@ -66,8 +66,12 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
         clips: cortes.map((c, i) => ({ tipo: c.tipo, texto: c.texto, prompt: sc.scenes[i].prompt, framePrompt: frame(sc.scenes[i].dir, j.idioma, Boolean(j.avatarId)) })),
       });
       const ids = ad.clips.map((c) => c.id);
-      for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map((id) => studio("/api/clips/run", { id }).catch(() => null)));
-      return { estado: "generando", paso: `Generando ${ids.length} cortes`, modelo, adId: ad.ad.id, clipIds: ids };
+      // a cut that can't start (e.g. not enough credits) used to be swallowed and the ad stayed «generando»
+      // forever (owner, 24 Oct 2026: a gift ad stuck after its first cut). Now the reason shows in the step,
+      // and the next check starts it again (it goes on by itself once there are credits).
+      let blocked = "";
+      for (let i = 0; i < ids.length; i += 2) await Promise.all(ids.slice(i, i + 2).map((id) => studio("/api/clips/run", { id }).catch((e: unknown) => { blocked ||= e instanceof Error ? e.message : "un corte no pudo empezar"; })));
+      return { estado: "generando", paso: blocked ? `En espera: ${blocked}` : `Generando ${ids.length} cortes`, modelo, adId: ad.ad.id, clipIds: ids };
     }
     if (j.estado === "generando") {
       const ids = j.clipIds ?? [];
@@ -79,7 +83,18 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
         reintentos[id] = (reintentos[id] ?? 0) + 1;
         await studio("/api/clips/run", { id }).catch(() => null);
       }
+      // cuts that never started (their start failed, e.g. credits ran out): try again; say why if it still can't
+      let blocked = "";
+      for (const [i, id] of ids.entries()) {
+        if (st[i] !== "pending" && st[i] !== "draft" && st[i] !== "idle") continue;
+        await studio("/api/clips/run", { id }).catch((e: unknown) => { blocked ||= e instanceof Error ? e.message : "un corte no pudo empezar"; });
+      }
       const done = st.filter((x) => x === "done").length;
+      if (blocked) {
+        if (Date.now() - Date.parse(j.updatedAt) > 24 * 3600_000) throw new Error(`El anuncio quedó a medias: ${blocked}`);
+        const paso = `En espera: ${blocked}`;
+        return paso !== j.paso || failed.length ? { paso, reintentos } : {};
+      }
       if (done === ids.length) return { estado: j.revisado ? "armando" : "revisando", paso: "Cortes listos", reintentos };
       if (Date.now() - Date.parse(j.updatedAt) > 3 * 3600_000 && !failed.length) throw new Error("La generación lleva más de 3 horas sin terminar.");
       const paso = `${done} de ${ids.length} cortes listos`;

@@ -4,9 +4,9 @@ import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
 
 // «Tu primer anuncio de regalo» (owner, 23 Oct 2026, launch audit): a new account confirms its email and gets
 // enough credits for one short ad (~12 s, with the «Hecho con Creads IA» mark), once per account, with a
-// monthly ceiling for everyone together so the gift can never run up the bill. Cost: about US$2.5 per gift.
+// monthly ceiling for everyone together so the gift can never run up the bill. Cost: US$2.5 to 3.9 per gift.
 
-export const REGALO_CREDITS = 150;
+export const REGALO_CREDITS = 200; // two cuts of up to 8 s (the first gift, 150, ran out after one cut)
 /** Gifts per calendar month for everyone (owner can change it with REGALO_TOPE in Vercel). */
 export const regaloTope = () => Math.max(0, Math.min(1000, Number(process.env.REGALO_TOPE ?? 50) || 0));
 
