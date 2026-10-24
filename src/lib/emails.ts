@@ -53,7 +53,7 @@ export function welcomeEmail(to: string, name: string | null, regalo?: string | 
         title: "Tu primer anuncio va por nuestra cuenta",
         paragraphs: [
           esc(hello(name)),
-          "Gracias por crear tu cuenta en Creads IA. Ya te cargamos créditos para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
+          "Gracias por crear tu cuenta en Creads IA. Ya te cargamos 200 créditos de regalo para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
           "Entra a <b>Automático</b>, cuéntale qué vendes y a quién, y Creads te hace el guion, la persona, el video y la revisión.",
         ],
         cta: { label: "Hacer mi anuncio de regalo", href: `${link}/automatico` },
