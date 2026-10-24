@@ -90,3 +90,20 @@ For each approach:
 
 Return JSON only: {"analisis":{"tipo":"...","que_se_ve":"...","por_que_funciona":["..."],"angulo":"...","conciencia":"...","riesgos":"...","testear":"..."},"iteraciones":[{"cambio":"...","persona":"...","titular":"..."}],"enfoques":[{"angulo":"...","idea":"...","titular":"...","hipotesis":"...","prompt":"..."}]}`;
 }
+
+// The model sometimes slips into Argentine «vos» («Dejá de pagar…») even when told «tú». Creads speaks
+// Chilean: an explicit list of unambiguous voseo forms (no «está», «será»…) is turned into tuteo.
+const VOSEO: Record<string, string> = {
+  dejá: "deja", probá: "prueba", mirá: "mira", creá: "crea", hacé: "haz", pagá: "paga", usá: "usa", comprá: "compra",
+  empezá: "empieza", vendé: "vende", contá: "cuenta", llamá: "llama", escribí: "escribe", sumá: "suma", aprovechá: "aprovecha",
+  descargá: "descarga", registrate: "regístrate", animate: "anímate", olvidate: "olvídate", fijate: "fíjate", imaginate: "imagínate",
+  tenés: "tienes", querés: "quieres", podés: "puedes", sabés: "sabes", necesitás: "necesitas", pagás: "pagas", vendés: "vendes",
+  sos: "eres", vos: "tú",
+};
+export function sinVoseo(text: string) {
+  return text.replace(/[A-Za-zÁÉÍÓÚáéíóúÑñ]+/g, (w) => {
+    const t = VOSEO[w.toLowerCase()];
+    if (!t) return w;
+    return w === w.toUpperCase() && w.length > 1 ? t.toUpperCase() : w[0] === w[0].toUpperCase() ? t[0].toUpperCase() + t.slice(1) : t;
+  });
+}

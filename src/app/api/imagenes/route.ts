@@ -6,7 +6,7 @@ import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { FEATURE_UNAVAILABLE, publicError } from "@/lib/public-error";
-import { IMAGE_STYLES, ideasPrompt, iterarPrompt, reviewPrompt, winnerPrompt, type Analisis, type Enfoque, type ImageStyle } from "@/lib/image-batch";
+import { IMAGE_STYLES, ideasPrompt, iterarPrompt, reviewPrompt, sinVoseo, winnerPrompt, type Analisis, type Enfoque, type ImageStyle } from "@/lib/image-batch";
 import { freeOrLimited } from "@/lib/credits";
 
 export const maxDuration = 60;
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       const nota = typeof b.nota === "string" ? b.nota.trim() : "";
       const raw = await textAI.complete({ prompt: winnerPrompt(nota, n, aspect), images: [url], json: true, maxTokens: 3500 });
       const out = parseJSON<{ analisis?: Analisis; enfoques?: Enfoque[]; iteraciones?: { cambio?: unknown; persona?: unknown; titular?: unknown }[] }>(raw);
-      const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+      const str = (v: unknown, max: number) => (typeof v === "string" ? sinVoseo(v.trim()).slice(0, max) : "");
       const enfoques = (Array.isArray(out?.enfoques) ? out.enfoques : [])
         .map((e) => ({ angulo: str(e?.angulo, 80), idea: str(e?.idea, 400), titular: str(e?.titular, 90), hipotesis: str(e?.hipotesis, 300), prompt: str(e?.prompt, 1800) }))
         .filter((e) => e.prompt.length > 20).slice(0, n);
