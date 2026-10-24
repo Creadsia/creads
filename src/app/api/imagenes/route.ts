@@ -6,7 +6,8 @@ import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { FEATURE_UNAVAILABLE, publicError } from "@/lib/public-error";
-import { IMAGE_STYLES, ideasPrompt, reviewPrompt, type ImageStyle } from "@/lib/image-batch";
+import { IMAGE_STYLES, ideasPrompt, reviewPrompt, winnerPrompt, type Analisis, type Enfoque, type ImageStyle } from "@/lib/image-batch";
+import { freeOrLimited } from "@/lib/credits";
 
 export const maxDuration = 60;
 
@@ -36,6 +37,27 @@ export async function POST(req: Request) {
       const prompts = (Array.isArray(out?.prompts) ? out.prompts : []).filter((p): p is string => typeof p === "string" && p.trim().length > 10).map((p) => p.trim().slice(0, 1500)).slice(0, n);
       if (!prompts.length) throw new Error("No salieron ideas.");
       return NextResponse.json({ prompts });
+    }
+
+    // a winning ad → why it works + new angles, each with its prompt (free; the images are charged one by one)
+    if (b?.accion === "analizar") {
+      const broke = await freeOrLimited(s.user, "script");
+      if (broke) return NextResponse.json({ error: broke }, { status: 402 });
+      if (!ownsMedia(b.url, s.user.workspace)) return NextResponse.json({ error: "Sube primero la imagen ganadora." }, { status: 400 });
+      const url = await fetchableUrl(b.url, s.user.workspace, 600);
+      const n = Math.min(6, Math.max(2, Math.round(Number(b.n) || 4)));
+      const aspect = ["9:16", "1:1", "4:5", "16:9"].includes(b.aspect) ? b.aspect : "4:5";
+      const nota = typeof b.nota === "string" ? b.nota.trim() : "";
+      const raw = await textAI.complete({ prompt: winnerPrompt(nota, n, aspect), images: [url], json: true, maxTokens: 3500 });
+      const out = parseJSON<{ analisis?: Analisis; enfoques?: Enfoque[] }>(raw);
+      const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+      const enfoques = (Array.isArray(out?.enfoques) ? out.enfoques : [])
+        .map((e) => ({ angulo: str(e?.angulo, 80), idea: str(e?.idea, 400), titular: str(e?.titular, 90), hipotesis: str(e?.hipotesis, 300), prompt: str(e?.prompt, 1800) }))
+        .filter((e) => e.prompt.length > 20).slice(0, n);
+      if (!enfoques.length) throw new Error("No salieron enfoques.");
+      const a = out?.analisis;
+      const analisis = { tipo: str(a?.tipo, 200), que_se_ve: str(a?.que_se_ve, 600), angulo: str(a?.angulo, 120), conciencia: str(a?.conciencia, 400), riesgos: str(a?.riesgos, 400), testear: str(a?.testear, 500), por_que_funciona: (Array.isArray(a?.por_que_funciona) ? a.por_que_funciona : []).map((x) => str(x, 300)).filter(Boolean).slice(0, 6) };
+      return NextResponse.json({ analisis, enfoques });
     }
 
     if (b?.accion === "revisar") {

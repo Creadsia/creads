@@ -36,3 +36,35 @@ export function reviewPrompt(prompt: string) {
 Look only for SERIOUS problems a customer would reject: misspelled or garbled text, extra or deformed fingers/limbs, a melted face, an obviously wrong product, or a real brand logo.
 Return JSON: {"ok": true|false, "nota": "if not ok: one short sentence in Spanish saying what is wrong"}`;
 }
+
+/** One new angle proposed from a winning ad: shown to the customer in Spanish, drawn from the English prompt. */
+export interface Enfoque { angulo: string; idea: string; titular: string; hipotesis: string; prompt: string }
+export interface Analisis { tipo: string; que_se_ve: string; por_que_funciona: string[]; angulo: string; conciencia: string; riesgos: string; testear: string }
+
+/**
+ * «Analizar una ganadora» (owner, 24 Oct 2026): he uploaded a winning foundation-repair image with "analyse it
+ * and find another approach" and the image model, which can't think, drew unrelated pictures. Claude looks at
+ * the ad with a marketer's eye first (affiliate, business owner or e-commerce), explains why it works, and
+ * proposes NEW angles for the same offer, each with its hypothesis and a ready prompt.
+ */
+export function winnerPrompt(nota: string, n: number, aspect: string) {
+  return `You are a senior performance marketer and direct-response creative strategist for paid social (Meta, TikTok) static image ads. You think like the person who pays for the traffic: an affiliate or media buyer running an offer, a local business owner, or an e-commerce brand. The image is a WINNING ad from a real campaign.
+${nota ? `What the advertiser says about it and wants: """${nota.slice(0, 1500)}"""\n` : ""}
+1. Analyse it as a marketer, in natural Spanish (Chile), short and concrete:
+- "tipo": what kind of advertiser and funnel this is (e.g. "afiliado de lead-gen en EE. UU. para reparación de cimientos → landing de cotización", "ecommerce de un producto", "negocio local que busca agendas").
+- "que_se_ve": what we see and why it stops the scroll in the feed.
+- "por_que_funciona": 3 to 5 reasons: the hook in the headline (curiosity, fear of loss, savings, proof, real urgency, identity), who exactly it speaks to, the emotion, why it looks native (a phone photo or news, not an ad), how it pre-qualifies the click and what the click promises.
+- "angulo": the angle in a few words.
+- "conciencia": the audience's awareness level it targets (unaware / problem-aware / solution-aware / product-aware / most-aware) and what that means for the next tests.
+- "riesgos": Meta ad-policy or trust risks to keep in mind for this niche (e.g. personal attributes, sensational claims, before/after, prices or promises the landing doesn't keep). One or two lines; say "ninguno relevante" if so.
+- "testear": how to test the new approaches (same offer, budget and audience; what metric to compare: CTR, cost per lead or per purchase; how many days).
+2. Propose ${n} NEW approaches for the SAME offer and audience — truly different angles or awareness levels, not variations of the same picture. Draw from what works in that business model (lead-gen/affiliate: the scary detail close-up, "what X won't tell you", a quiz/checklist of signs, local-news style, quotes compared, the neighbour who waited too long; e-commerce: the product in real use, the problem it solves, unboxing, "why everyone is buying this", comparison with the usual alternative; local business: the owner, the real place, the offer, social proof only if real). Each one must look believable and be understood in one second.
+For each approach:
+- "angulo": the angle in a few words (Spanish).
+- "idea": what the image shows, 1–2 sentences (Spanish).
+- "titular": the EXACT headline on the image, max 8 words, in the SAME language as the winning ad. No prices, numbers or claims the ad doesn't support.
+- "hipotesis": one line in Spanish: why it could beat the winner (which new audience segment, emotion or awareness level it opens).
+- "prompt": a complete English prompt for an image model, written as a description of a REAL PHOTO, not an ad: "Amateur iPhone photo, slightly tilted, natural light, [exact real place typical of the audience], [subject and the detail that hooks], ordinary and unpolished, looks like a real person took it, not a stock photo. Bold text overlay at the top in a plain white box with black sans-serif letters: \\"[titular]\\". No logos, no other text." Adapt the look to the angle (local-news lower third, a phone screenshot, a product in hand…). ${aspect} format. Never copy the winning ad's photo, people, brand or exact headline.
+
+Return JSON only: {"analisis":{"tipo":"...","que_se_ve":"...","por_que_funciona":["..."],"angulo":"...","conciencia":"...","riesgos":"...","testear":"..."},"enfoques":[{"angulo":"...","idea":"...","titular":"...","hipotesis":"...","prompt":"..."}]}`;
+}

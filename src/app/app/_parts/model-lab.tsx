@@ -51,6 +51,10 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
   const [style, setStyle] = useState<ImageStyle>("libre");
   type Shot = { prompt: string; url?: string; err?: string; nota?: string; state: "waiting" | "running" | "done" | "error" };
   const [batch, setBatch] = useState<Shot[]>([]);
+  // «Analizar una ganadora»: a winning ad → why it works + new angles to create with one click
+  const [refWin, setRefWin] = useState("");
+  const [winBusy, setWinBusy] = useState(false);
+  const [win, setWin] = useState<{ analisis: { tipo: string; que_se_ve: string; por_que_funciona: string[]; angulo: string; conciencia: string; riesgos: string; testear: string }; enfoques: { angulo: string; idea: string; titular: string; hipotesis: string; prompt: string }[] } | null>(null);
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
@@ -119,9 +123,19 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
       const res = await fetch("/api/imagenes", { method: "POST", headers, body: JSON.stringify({ accion: "ideas", idea: prompt, estilo: style, n: count, aspect }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "No se pudieron preparar las ideas.");
-      const prompts: string[] = data.prompts;
+      await runPrompts(data.prompts as string[]);
+    } catch (e) {
+      setImgErr(e instanceof Error ? e.message : "No se pudieron generar las imágenes.");
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
+  /** Generates (and checks) one image per prompt, three at a time; each is charged on its own. */
+  async function runPrompts(prompts: string[], withRefs = true) {
+    {
       setBatch(prompts.map((p) => ({ prompt: p, state: "waiting" })));
-      const refs = [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])];
+      const refs = withRefs ? [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])] : [];
       const set = (i: number, patch: Partial<Shot>) => setBatch((b) => b.map((x, k) => (k === i ? { ...x, ...patch } : x)));
       let next = 0;
       const worker = async () => {
@@ -142,11 +156,31 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
         }
       };
       await Promise.all([worker(), worker(), worker()]);
-    } catch (e) {
-      setImgErr(e instanceof Error ? e.message : "No se pudieron generar las imágenes.");
-    } finally {
-      setImgBusy(false);
     }
+  }
+
+  async function analyzeWinner() {
+    if (!refWin || winBusy) return;
+    setWinBusy(true); setImgErr(""); setWin(null);
+    try {
+      const res = await fetch("/api/imagenes", { method: "POST", headers, body: JSON.stringify({ accion: "analizar", url: refWin, nota: prompt, n: 4, aspect: aspect === "9:16" ? "4:5" : aspect }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "No se pudo analizar la imagen.");
+      setWin(data);
+      // ad images with text come out best with GPT Image Pro (if it's on)
+      const pro = imageModels.find((m) => m.id === "gpt-image-2.5-pro" && m.configured);
+      if (pro) setImgModel(pro.id);
+      if (aspect === "9:16") setAspect("4:5");
+    } catch (e) {
+      setImgErr(e instanceof Error ? e.message : "No se pudo analizar la imagen.");
+    } finally {
+      setWinBusy(false);
+    }
+  }
+
+  async function createFrom(prompts: string[]) {
+    setImgBusy(true); setImgErr("");
+    try { await runPrompts(prompts, false); } finally { setImgBusy(false); }
   }
 
   async function check(id: string, job: string, tries: number) {
@@ -235,6 +269,44 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
               </option>
             ))}
           </select>
+          <details className="rounded-lg border border-line px-3 py-2 text-sm" open={Boolean(refWin || win)}>
+            <summary className="cursor-pointer font-semibold">¿Tienes un anuncio que ya funciona? Analízalo y prueba enfoques nuevos</summary>
+            <p className="mt-1 text-xs text-muted">Sube la imagen ganadora. Creads te dice por qué funciona y te propone 4 enfoques distintos para el mismo nicho, cada uno listo para crear. Analizar es gratis; arriba puedes escribir qué buscas (opcional).</p>
+            <div className="mt-2 flex flex-col gap-2">
+              <ImageInput value={refWin} onChange={(v) => { setRefWin(v); setWin(null); }} library={library.rows ?? []} />
+              <button type="button" onClick={analyzeWinner} disabled={!refWin || winBusy} className="w-fit rounded-lg bg-ink px-3 py-2 font-semibold text-bg disabled:opacity-50">
+                {winBusy ? <Working label="Analizando…" /> : "Analizar y proponer enfoques"}
+              </button>
+              {win && (
+                <div className="flex flex-col gap-3">
+                  <div className="rounded-lg bg-surface-2 p-3">
+                    <p className="font-semibold">Por qué funciona · {win.analisis.angulo}</p>
+                    {win.analisis.tipo && <p className="mt-1 text-xs font-semibold text-muted">{win.analisis.tipo}</p>}
+                    {win.analisis.que_se_ve && <p className="mt-1 text-muted">{win.analisis.que_se_ve}</p>}
+                    <ul className="mt-1 list-disc pl-5 text-muted">{win.analisis.por_que_funciona.map((x) => <li key={x}>{x}</li>)}</ul>
+                    {win.analisis.conciencia && <p className="mt-2"><b>Nivel de conciencia:</b> <span className="text-muted">{win.analisis.conciencia}</span></p>}
+                    {win.analisis.riesgos && <p className="mt-1"><b>Ojo con Meta:</b> <span className="text-muted">{win.analisis.riesgos}</span></p>}
+                    {win.analisis.testear && <p className="mt-1"><b>Cómo testear:</b> <span className="text-muted">{win.analisis.testear}</span></p>}
+                  </div>
+                  <ul className="flex flex-col gap-2">
+                    {win.enfoques.map((e) => (
+                      <li key={e.prompt} className="flex flex-col gap-1 rounded-lg border border-line p-3">
+                        <b>{e.angulo}</b>
+                        <span className="text-muted">{e.idea}</span>
+                        <span>Titular: <b>«{e.titular}»</b></span>
+                        {e.hipotesis && <span className="text-xs text-muted">Por qué podría ganarle: {e.hipotesis}</span>}
+                        <button type="button" onClick={() => createFrom([e.prompt])} disabled={imgBusy || !covers(im.usd)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 font-semibold hover:bg-surface-2 disabled:opacity-50">Crear esta · {price(im.usd)}</button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" onClick={() => createFrom(win.enfoques.map((e) => e.prompt))} disabled={imgBusy || !covers(im.usd * win.enfoques.length)} className="w-fit rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50">
+                    {imgBusy ? <Working label="Generando…" /> : `Crear las ${win.enfoques.length} · ${price(im.usd * win.enfoques.length)}`}
+                  </button>
+                  <p className="text-xs text-muted">Modelo: {im.label}. Para imágenes con texto, GPT Image 2.5 Pro escribe el titular mejor.</p>
+                </div>
+              )}
+            </div>
+          </details>
           <details className="rounded-lg border border-line px-3 py-2 text-sm" open={Boolean(refFace || refProduct)}>
             <summary className="cursor-pointer font-semibold text-muted">Fotos de referencia (opcional)</summary>
             <p className="mt-1 text-xs text-muted">Sube una foto para que la imagen mantenga esa cara o ese producto. Describe en el texto qué quieres que haga o dónde aparece.</p>

@@ -6,7 +6,7 @@ export type AspectRatio = "9:16" | "1:1" | "4:5" | "16:9";
 /** A reference passed to a generator: a face, a product, a voice sample. */
 export interface MediaRef {
   url: string;
-  role: "face" | "product" | "first_frame" | "audio" | "video";
+  role: "face" | "product" | "style" | "first_frame" | "audio" | "video";
 }
 
 /** A long-running generation. Video and image providers answer with a job, then we poll it. */

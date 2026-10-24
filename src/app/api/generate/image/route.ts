@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   // references must be this customer's own files
   const refs: MediaRef[] = Array.isArray(body?.refs)
     ? body.refs
-        .filter((r: MediaRef) => ownsMedia(r?.url, s.user.workspace) && (r.role === "face" || r.role === "product"))
+        .filter((r: MediaRef) => ownsMedia(r?.url, s.user.workspace) && (r.role === "face" || r.role === "product" || r.role === "style"))
         .slice(0, 3)
     : [];
   if (prompt.length < 10) return NextResponse.json({ error: "Describe la imagen con un poco más de detalle." }, { status: 400 });
