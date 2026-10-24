@@ -1,6 +1,7 @@
 import { adsOf, fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
 import { API_FORMATS } from "./api-ads";
 import { withVideo } from "./avatar-video";
+import { iterarPrompt } from "./image-batch";
 
 // The Creads connector (MCP, «Streamable HTTP» without sessions): Claude, ChatGPT or any MCP client calls
 // these tools with an API key of the user's account (from OAuth or «API para sistemas»). Each tool goes
@@ -52,17 +53,19 @@ export const TOOLS: Tool[] = [
       descripcion: { type: "string", minLength: 10, maxLength: 4000, description: "What the image shows, in detail (any language)." },
       formato: { type: "string", enum: ["9:16", "1:1", "4:5", "16:9"], default: "4:5", description: "Aspect ratio: 4:5 feed, 9:16 stories/reels, 1:1 square, 16:9 wide." },
       producto: { type: "string", maxLength: 600, description: "Optional: link of a product photo of this account (from creads_crear_imagen or an upload). The new image shows that exact product (same shape, colours and label)." },
-      referencia: { type: "string", maxLength: 600, description: "Optional: link of an image the user uploaded to use ONLY as a reference for layout and style (a winning ad they want variations of). Never for a new angle: then describe the new idea without it." },
+      referencia: { type: "string", maxLength: 600, description: "Optional: link of an image the user uploaded (a winning ad). With «iterar» true it is EDITED: same design, only what «descripcion» says changes. Without «iterar», only a loose style reference. Never for a new angle." },
+      iterar: { type: "boolean", description: "true when the user wants to iterate a winner: the same ad (layout, text boxes, fonts, colours, button kept identical) changing only the person and/or the text. Then «descripcion» says ONLY what changes, e.g. «Replace the woman with a man about 35» or «New headline exactly: …». Use modelo gpt-image-pro." },
       modelo: { type: "string", enum: ["nano-banana", "gpt-image", "gpt-image-pro"], description: "Optional. «gpt-image»: best for ad images with text on them (headline, price, offer, sign) and following the brief exactly. «gpt-image-pro»: same, maximum quality (pricier). «nano-banana» (default): people and scenes, the presenter's photo, keeping the same face." },
     }, required: ["descripcion"], additionalProperties: false },
     annotations: { title: "Crear imagen", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call, origin, ctx) => {
       const producto = str(a.producto, 600);
-      const model = a.modelo === "gpt-image" ? "gpt-image-2.5" : a.modelo === "gpt-image-pro" ? "gpt-image-2.5-pro" : undefined;
+      const model = a.modelo === "gpt-image" ? "gpt-image-2.5" : a.modelo === "gpt-image-pro" || (a.iterar === true && a.referencia) ? "gpt-image-2.5-pro" : undefined;
       const referencia = str(a.referencia, 600);
       const refs = [...(producto ? [{ url: mediaRef(producto), role: "product" }] : []), ...(referencia ? [{ url: mediaRef(referencia), role: "style" }] : [])];
       // a style reference guides the layout only: never copy its text, brand, people or photo
-      const prompt = referencia ? `${producto ? "The FIRST reference image is the product (show exactly that product). " : ""}The ${producto ? "LAST" : ""} reference image is ONLY a layout and style reference: take its composition and kind of look, but do NOT copy its text, brand, logo, people or photo. Make this new image: ${str(a.descripcion)}` : str(a.descripcion);
+      const iterar = Boolean(referencia) && a.iterar === true;
+      const prompt = iterar ? iterarPrompt({ extra: str(a.descripcion) }) : referencia ? `${producto ? "The FIRST reference image is the product (show exactly that product). " : ""}The ${producto ? "LAST" : ""} reference image is ONLY a layout and style reference: take its composition and kind of look, but do NOT copy its text, brand, logo, people or photo. Make this new image: ${str(a.descripcion)}` : str(a.descripcion);
       const body = { prompt, aspect: str(a.formato, 5) || "4:5", ...(refs.length ? { refs } : {}) };
       // GPT Image when asked; if it isn't available (no key yet), the default model makes it instead
       const d = model

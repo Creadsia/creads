@@ -6,7 +6,7 @@ import { fetchableUrl, ownsMedia } from "@/lib/media";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
 import { FEATURE_UNAVAILABLE, publicError } from "@/lib/public-error";
-import { IMAGE_STYLES, ideasPrompt, reviewPrompt, winnerPrompt, type Analisis, type Enfoque, type ImageStyle } from "@/lib/image-batch";
+import { IMAGE_STYLES, ideasPrompt, iterarPrompt, reviewPrompt, winnerPrompt, type Analisis, type Enfoque, type ImageStyle } from "@/lib/image-batch";
 import { freeOrLimited } from "@/lib/credits";
 
 export const maxDuration = 60;
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
       const aspect = ["9:16", "1:1", "4:5", "16:9"].includes(b.aspect) ? b.aspect : "4:5";
       const nota = typeof b.nota === "string" ? b.nota.trim() : "";
       const raw = await textAI.complete({ prompt: winnerPrompt(nota, n, aspect), images: [url], json: true, maxTokens: 3500 });
-      const out = parseJSON<{ analisis?: Analisis; enfoques?: Enfoque[] }>(raw);
+      const out = parseJSON<{ analisis?: Analisis; enfoques?: Enfoque[]; iteraciones?: { cambio?: unknown; persona?: unknown; titular?: unknown }[] }>(raw);
       const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
       const enfoques = (Array.isArray(out?.enfoques) ? out.enfoques : [])
         .map((e) => ({ angulo: str(e?.angulo, 80), idea: str(e?.idea, 400), titular: str(e?.titular, 90), hipotesis: str(e?.hipotesis, 300), prompt: str(e?.prompt, 1800) }))
@@ -57,7 +57,12 @@ export async function POST(req: Request) {
       if (!enfoques.length) throw new Error("No salieron enfoques.");
       const a = out?.analisis;
       const analisis = { tipo: str(a?.tipo, 200), que_se_ve: str(a?.que_se_ve, 600), angulo: str(a?.angulo, 120), conciencia: str(a?.conciencia, 400), riesgos: str(a?.riesgos, 400), testear: str(a?.testear, 500), por_que_funciona: (Array.isArray(a?.por_que_funciona) ? a.por_que_funciona : []).map((x) => str(x, 300)).filter(Boolean).slice(0, 6) };
-      return NextResponse.json({ analisis, enfoques });
+      // iterations of the same ad: the edit instruction is built here (the winner is the image being edited)
+      const iteraciones = (Array.isArray(out?.iteraciones) ? out.iteraciones : []).map((it) => {
+        const persona = str(it?.persona, 300), titular = str(it?.titular, 160);
+        return { cambio: str(it?.cambio, 80) || "Variación", titular, persona, prompt: iterarPrompt({ persona, titular }) };
+      }).slice(0, 4);
+      return NextResponse.json({ analisis, iteraciones, enfoques });
     }
 
     if (b?.accion === "revisar") {

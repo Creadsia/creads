@@ -54,7 +54,11 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
   // «Analizar una ganadora»: a winning ad → why it works + new angles to create with one click
   const [refWin, setRefWin] = useState("");
   const [winBusy, setWinBusy] = useState(false);
-  const [win, setWin] = useState<{ analisis: { tipo: string; que_se_ve: string; por_que_funciona: string[]; angulo: string; conciencia: string; riesgos: string; testear: string }; enfoques: { angulo: string; idea: string; titular: string; hipotesis: string; prompt: string }[] } | null>(null);
+  const [win, setWin] = useState<{ analisis: { tipo: string; que_se_ve: string; por_que_funciona: string[]; angulo: string; conciencia: string; riesgos: string; testear: string }; enfoques: { angulo: string; idea: string; titular: string; hipotesis: string; prompt: string }[]; iteraciones?: { cambio: string; titular: string; persona: string; prompt: string }[] } | null>(null);
+  // «Iterar este anuncio»: the same design, another person and/or other words
+  const [itPersona, setItPersona] = useState("igual");
+  const [itOtra, setItOtra] = useState("");
+  const [itTitular, setItTitular] = useState("");
 
   const [models, setModels] = useState<VideoModel[]>(FALLBACK);
   const [imageModels, setImageModels] = useState<ImageModel[]>(IMAGE_FALLBACK);
@@ -132,10 +136,10 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
   }
 
   /** Generates (and checks) one image per prompt, three at a time; each is charged on its own. */
-  async function runPrompts(prompts: string[], withRefs = true) {
+  async function runPrompts(prompts: string[], withRefs = true, onlyRefs?: { url: string; role: string }[], model?: string, shape?: string) {
     {
       setBatch(prompts.map((p) => ({ prompt: p, state: "waiting" })));
-      const refs = withRefs ? [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])] : [];
+      const refs = onlyRefs ?? (withRefs ? [...(refFace ? [{ url: refFace, role: "face" }] : []), ...(refProduct ? [{ url: refProduct, role: "product" }] : [])] : []);
       const set = (i: number, patch: Partial<Shot>) => setBatch((b) => b.map((x, k) => (k === i ? { ...x, ...patch } : x)));
       let next = 0;
       const worker = async () => {
@@ -143,7 +147,7 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
           const i = next++;
           set(i, { state: "running" });
           try {
-            const r = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt: prompts[i], aspect, model: im.id, refs }) });
+            const r = await fetch("/api/generate/image", { method: "POST", headers, body: JSON.stringify({ prompt: prompts[i], aspect: shape ?? aspect, model: model ?? im.id, refs }) });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || "No se pudo generar.");
             set(i, { state: "done", url: d.url });
@@ -181,6 +185,39 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
   async function createFrom(prompts: string[]) {
     setImgBusy(true); setImgErr("");
     try { await runPrompts(prompts, false); } finally { setImgBusy(false); }
+  }
+
+  // the model that edits an ad keeping its design and its words best: GPT Image Pro (else the one chosen)
+  const editModel = imageModels.find((m) => m.id === "gpt-image-2.5-pro" && m.configured) ?? imageModels.find((m) => m.id === "gpt-image-2.5" && m.configured) ?? im;
+  /** Variations of the uploaded winner: the winner is the image being edited, so the design stays the same. */
+  async function iterate(prompts: string[]) {
+    if (!refWin) return;
+    setImgBusy(true); setImgErr("");
+    // the variation keeps the winner's shape (a 4:5 ad stays 4:5)
+    const shape = await new Promise<"9:16" | "4:5" | "1:1" | "16:9" | null>((ok) => {
+      const img = new Image();
+      img.onload = () => {
+        const r = img.naturalWidth / img.naturalHeight;
+        const opts = [["9:16", 9 / 16], ["4:5", 4 / 5], ["1:1", 1], ["16:9", 16 / 9]] as const;
+        ok(opts.reduce((a, b) => (Math.abs(b[1] - r) < Math.abs(a[1] - r) ? b : a))[0]);
+      };
+      img.onerror = () => ok(null);
+      img.src = refWin;
+    });
+    if (shape) setAspect(shape);
+    try { await runPrompts(prompts, false, [{ url: refWin, role: "style" }], editModel.id, shape ?? undefined); } finally { setImgBusy(false); }
+  }
+  const PERSONAS: Record<string, string> = {
+    igual: "",
+    mujer: "a different woman of a similar age and style (different face and hair), natural and attractive",
+    hombre: "a man of a similar age, natural and attractive, casual clothes",
+    mayor: "a woman in her 40s, natural and elegant",
+  };
+  function customPrompt() {
+    const persona = itPersona === "otra" ? itOtra.trim() : PERSONAS[itPersona] ?? "";
+    const keep = "Edit this exact ad image. Keep IDENTICAL: the layout and composition, the framing and camera angle, the photo style and lighting, the background gradient, every text box (same shape, colour, position and size), the font, the highlight colour and its position, the call-to-action button (same shape, colour and text) and the overall design.";
+    const ch = [persona ? `Replace the person with ${persona}, in the same pose and position, holding the same product the same way, same natural phone-selfie look.` : "", itTitular.trim() ? `Replace the headline text with exactly: "${itTitular.trim()}" — same font, same white boxes; highlight the key words with the same highlight colour. Spell it exactly, letter by letter.` : ""].filter(Boolean);
+    return `${keep}\nChange ONLY this:\n- ${ch.join("\n- ") || "a slightly different pose and expression of the same person"}\nEverything else must look exactly like the original ad. No new logos or extra text.`;
   }
 
   async function check(id: string, job: string, tries: number) {
@@ -270,12 +307,28 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
             ))}
           </select>
           <details className="rounded-lg border border-line px-3 py-2 text-sm" open={Boolean(refWin || win)}>
-            <summary className="cursor-pointer font-semibold">¿Tienes un anuncio que ya funciona? Analízalo y prueba enfoques nuevos</summary>
-            <p className="mt-1 text-xs text-muted">Sube la imagen ganadora. Creads te dice por qué funciona y te propone 4 enfoques distintos para el mismo nicho, cada uno listo para crear. Analizar es gratis; arriba puedes escribir qué buscas (opcional).</p>
+            <summary className="cursor-pointer font-semibold">¿Tienes un anuncio que ya funciona? Itéralo o prueba enfoques nuevos</summary>
+            <p className="mt-1 text-xs text-muted">Sube la imagen ganadora. Puedes iterarla al tiro (el mismo anuncio con otra persona u otro texto) o pedir que Creads la analice y te proponga iteraciones y enfoques nuevos. Analizar es gratis.</p>
             <div className="mt-2 flex flex-col gap-2">
               <ImageInput value={refWin} onChange={(v) => { setRefWin(v); setWin(null); }} library={library.rows ?? []} />
+              {refWin && (
+                <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+                  <b>Iterar este anuncio (mismo diseño)</b>
+                  <span className="text-xs text-muted">Mismos recuadros, letras, colores y botón. Cambias solo la persona y/o el texto.</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[["igual", "La misma persona"], ["mujer", "Otra mujer"], ["hombre", "Un hombre"], ["mayor", "Mujer 40+"], ["otra", "Describir…"]].map(([k, l]) => (
+                      <button key={k} type="button" onClick={() => setItPersona(k)} aria-pressed={itPersona === k} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${itPersona === k ? "border-ink bg-ink text-bg" : "border-line text-muted"}`}>{l}</button>
+                    ))}
+                  </div>
+                  {itPersona === "otra" && <input value={itOtra} onChange={(e) => setItOtra(e.target.value)} placeholder="Ej: hombre de 50 años, canoso, camisa azul" className="rounded-lg border border-line bg-surface-2 px-3 py-2" />}
+                  <input value={itTitular} onChange={(e) => setItTitular(e.target.value)} placeholder="Texto nuevo (opcional): escríbelo tal cual" className="rounded-lg border border-line bg-surface-2 px-3 py-2" />
+                  <button type="button" onClick={() => iterate([customPrompt()])} disabled={imgBusy || !covers(editModel.usd) || (itPersona === "otra" && !itOtra.trim())} className="w-fit rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50">
+                    {imgBusy ? <Working label="Generando…" /> : `Crear variación · ${price(editModel.usd)}`}
+                  </button>
+                </div>
+              )}
               <button type="button" onClick={analyzeWinner} disabled={!refWin || winBusy} className="w-fit rounded-lg bg-ink px-3 py-2 font-semibold text-bg disabled:opacity-50">
-                {winBusy ? <Working label="Analizando…" /> : "Analizar y proponer enfoques"}
+                {winBusy ? <Working label="Analizando…" /> : "Analizar y proponer iteraciones y enfoques"}
               </button>
               {win && (
                 <div className="flex flex-col gap-3">
@@ -288,6 +341,22 @@ export default function ModelLab({ code, imagesOnly = false }: { code: string; i
                     {win.analisis.riesgos && <p className="mt-1"><b>Ojo con Meta:</b> <span className="text-muted">{win.analisis.riesgos}</span></p>}
                     {win.analisis.testear && <p className="mt-1"><b>Cómo testear:</b> <span className="text-muted">{win.analisis.testear}</span></p>}
                   </div>
+                  {(win.iteraciones?.length ?? 0) > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <b>Iteraciones del mismo anuncio</b>
+                      <ul className="flex flex-col gap-2">
+                        {win.iteraciones!.map((it) => (
+                          <li key={it.prompt} className="flex flex-col gap-1 rounded-lg border border-line p-3">
+                            <b>{it.cambio}</b>
+                            {it.titular && <span>Texto: <b>«{it.titular}»</b></span>}
+                            <button type="button" onClick={() => iterate([it.prompt])} disabled={imgBusy || !covers(editModel.usd)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 font-semibold hover:bg-surface-2 disabled:opacity-50">Crear esta · {price(editModel.usd)}</button>
+                          </li>
+                        ))}
+                      </ul>
+                      <button type="button" onClick={() => iterate(win.iteraciones!.map((it) => it.prompt))} disabled={imgBusy || !covers(editModel.usd * win.iteraciones!.length)} className="w-fit rounded-lg bg-accent px-4 py-2 font-semibold text-accent-ink disabled:opacity-50">Crear las {win.iteraciones!.length} iteraciones · {price(editModel.usd * win.iteraciones!.length)}</button>
+                      <b className="mt-2">Enfoques nuevos (otro ángulo)</b>
+                    </div>
+                  )}
                   <ul className="flex flex-col gap-2">
                     {win.enfoques.map((e) => (
                       <li key={e.prompt} className="flex flex-col gap-1 rounded-lg border border-line p-3">

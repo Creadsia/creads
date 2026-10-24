@@ -39,6 +39,23 @@ Return JSON: {"ok": true|false, "nota": "if not ok: one short sentence in Spanis
 
 /** One new angle proposed from a winning ad: shown to the customer in Spanish, drawn from the English prompt. */
 export interface Enfoque { angulo: string; idea: string; titular: string; hipotesis: string; prompt: string }
+/** A variation of the SAME ad (same layout, boxes, colours, fonts, button), only the person or the words change. */
+export interface Iteracion { cambio: string; titular: string; prompt: string }
+
+/**
+ * «Itera sobre este winner» (owner, 24 Oct 2026: he wanted the same ad with another person or other words, and
+ * got an unrelated picture). The winning image goes to the image model as the image to EDIT, with this
+ * instruction: everything identical except what the customer asks to change.
+ */
+export function iterarPrompt(cambio: { persona?: string; titular?: string; extra?: string }) {
+  const keep = "Edit this exact ad image. Keep IDENTICAL: the layout and composition, the framing and camera angle, the photo style and lighting, the background gradient, every text box (same shape, colour, position and size), the font, the highlight colour and its position, the call-to-action button (same shape, colour and text) and the overall design.";
+  const changes = [
+    cambio.persona ? `Replace the person with ${cambio.persona}, in the same pose and position, holding the same product the same way, same natural phone-selfie look.` : "",
+    cambio.titular ? `Replace the headline text with exactly: "${cambio.titular}" — same font, same white boxes, same line breaks style; highlight the same kind of key words with the same highlight colour. Spell it exactly, letter by letter.` : "",
+    cambio.extra ? cambio.extra : "",
+  ].filter(Boolean);
+  return `${keep}\nChange ONLY this:\n- ${changes.join("\n- ") || "a slightly different pose and expression of the same person"}\nEverything else must look exactly like the original ad. No new logos or extra text.`;
+}
 export interface Analisis { tipo: string; que_se_ve: string; por_que_funciona: string[]; angulo: string; conciencia: string; riesgos: string; testear: string }
 
 /**
@@ -50,7 +67,7 @@ export interface Analisis { tipo: string; que_se_ve: string; por_que_funciona: s
 export function winnerPrompt(nota: string, n: number, aspect: string) {
   return `You are a senior performance marketer and direct-response creative strategist for paid social (Meta, TikTok) static image ads. You think like the person who pays for the traffic: an affiliate or media buyer running an offer, a local business owner, or an e-commerce brand. The image is a WINNING ad from a real campaign.
 ${nota ? `What the advertiser says about it and wants: """${nota.slice(0, 1500)}"""\n` : ""}
-1. Analyse it as a marketer, in natural Spanish (Chile), short and concrete:
+1. Analyse it as a marketer, in natural Spanish from Chile (tuteo: «tú», never «vos»), short and concrete:
 - "tipo": what kind of advertiser and funnel this is (e.g. "afiliado de lead-gen en EE. UU. para reparación de cimientos → landing de cotización", "ecommerce de un producto", "negocio local que busca agendas").
 - "que_se_ve": what we see and why it stops the scroll in the feed.
 - "por_que_funciona": 3 to 5 reasons: the hook in the headline (curiosity, fear of loss, savings, proof, real urgency, identity), who exactly it speaks to, the emotion, why it looks native (a phone photo or news, not an ad), how it pre-qualifies the click and what the click promises.
@@ -58,13 +75,18 @@ ${nota ? `What the advertiser says about it and wants: """${nota.slice(0, 1500)}
 - "conciencia": the audience's awareness level it targets (unaware / problem-aware / solution-aware / product-aware / most-aware) and what that means for the next tests.
 - "riesgos": Meta ad-policy or trust risks to keep in mind for this niche (e.g. personal attributes, sensational claims, before/after, prices or promises the landing doesn't keep). One or two lines; say "ninguno relevante" if so.
 - "testear": how to test the new approaches (same offer, budget and audience; what metric to compare: CTR, cost per lead or per purchase; how many days).
-2. Propose ${n} NEW approaches for the SAME offer and audience — truly different angles or awareness levels, not variations of the same picture. Draw from what works in that business model (lead-gen/affiliate: the scary detail close-up, "what X won't tell you", a quiz/checklist of signs, local-news style, quotes compared, the neighbour who waited too long; e-commerce: the product in real use, the problem it solves, unboxing, "why everyone is buying this", comparison with the usual alternative; local business: the owner, the real place, the offer, social proof only if real). Each one must look believable and be understood in one second.
+2. Then propose ${n} NEW approaches for the SAME offer and audience — truly different angles or awareness levels, not variations of the same picture. Draw from what works in that business model (lead-gen/affiliate: the scary detail close-up, "what X won't tell you", a quiz/checklist of signs, local-news style, quotes compared, the neighbour who waited too long; e-commerce: the product in real use, the problem it solves, unboxing, "why everyone is buying this", comparison with the usual alternative; local business: the owner, the real place, the offer, social proof only if real). Each one must look believable and be understood in one second.
 For each approach:
 - "angulo": the angle in a few words (Spanish).
 - "idea": what the image shows, 1–2 sentences (Spanish).
-- "titular": the EXACT headline on the image, max 8 words, in the SAME language as the winning ad. No prices, numbers or claims the ad doesn't support.
+- "titular": the EXACT headline on the image, max 8 words, in the SAME language as the winning ad (Spanish from Chile uses «tú», never «vos»: «prueba», «deja», never «probá», «dejá»). No prices, numbers or claims the ad doesn't support.
 - "hipotesis": one line in Spanish: why it could beat the winner (which new audience segment, emotion or awareness level it opens).
 - "prompt": a complete English prompt for an image model, written as a description of a REAL PHOTO, not an ad: "Amateur iPhone photo, slightly tilted, natural light, [exact real place typical of the audience], [subject and the detail that hooks], ordinary and unpolished, looks like a real person took it, not a stock photo. Bold text overlay at the top in a plain white box with black sans-serif letters: \\"[titular]\\". No logos, no other text." Adapt the look to the angle (local-news lower third, a phone screenshot, a product in hand…). ${aspect} format. Never copy the winning ad's photo, people, brand or exact headline.
 
-Return JSON only: {"analisis":{"tipo":"...","que_se_ve":"...","por_que_funciona":["..."],"angulo":"...","conciencia":"...","riesgos":"...","testear":"..."},"enfoques":[{"angulo":"...","idea":"...","titular":"...","hipotesis":"...","prompt":"..."}]}`;
+3. Propose 4 ITERATIONS of the SAME ad: the same design kept identical (layout, boxes, colours, fonts, highlight, button), changing only ONE thing each, the way a media buyer iterates a winner: (a) another person of the same profile, (b) a different person (another age, look or a man), (c) the same image with a new headline in the same structure and tone, (d) another headline angle. For each:
+- "cambio": what changes, in a few words (Spanish).
+- "persona": only if the person changes: an English description of the new person (age, look, hair, clothes) — else "".
+- "titular": the new headline EXACTLY as it must appear on the image (same language and length as the winner; Spanish from Chile uses «tú») — or "" to keep the original text.
+
+Return JSON only: {"analisis":{"tipo":"...","que_se_ve":"...","por_que_funciona":["..."],"angulo":"...","conciencia":"...","riesgos":"...","testear":"..."},"iteraciones":[{"cambio":"...","persona":"...","titular":"..."}],"enfoques":[{"angulo":"...","idea":"...","titular":"...","hipotesis":"...","prompt":"..."}]}`;
 }
