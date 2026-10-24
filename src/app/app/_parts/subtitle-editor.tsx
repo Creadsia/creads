@@ -27,14 +27,20 @@ export default function SubtitleEditor({ adId, video, title, aspect = "9:16", on
   const [style0, setStyle0] = useState<CaptionStyle | null>(null); // as the video has it now
   const [style, setStyle] = useState<CaptionStyle | null>(null); // as the customer leaves it
   const [fondo, setFondo] = useState<string | null>(null);
+  // what the finished video carries that can be taken off
+  const [hasAviso, setHasAviso] = useState(false);
+  const [hasCierre, setHasCierre] = useState(false);
+  const [quitarAviso, setQuitarAviso] = useState(false);
+  const [quitarCierre, setQuitarCierre] = useState(false);
 
   useEffect(() => {
     fetch(`/api/ads/${adId}/subtitulos`).then((r) => r.json()).then((d) => {
       const list = d.srt ? parseSrt(d.srt) : [];
       setCues(list);
-      setModo(list.length ? "lineas" : d.modo === "sin" ? "sin" : "palabras");
+      setModo(list.length ? "lineas" : d.modo === "sin" ? (d.aviso || d.cierre ? "palabras" : "sin") : "palabras");
       if (d.estilo) { setStyle0(d.estilo); setStyle(d.estilo); }
       setFondo(d.fondo ?? null);
+      setHasAviso(Boolean(d.aviso)); setHasCierre(Boolean(d.cierre));
     }).catch(() => setModo("palabras"));
   }, [adId]);
   useEffect(() => {
@@ -59,12 +65,12 @@ export default function SubtitleEditor({ adId, video, title, aspect = "9:16", on
 
   const pending = modo === "lineas" ? plan.fixes : pairs.filter((p) => p.de.trim()).map((p) => ({ de: p.de.trim(), a: p.a.trim() }));
   const moved = Boolean(style && style0 && JSON.stringify(style) !== JSON.stringify(style0));
-  const count = pending.length + (moved ? 1 : 0);
+  const count = pending.length + (moved ? 1 : 0) + (quitarAviso ? 1 : 0) + (quitarCierre ? 1 : 0);
 
   async function save() {
     if (!count || busy || plan.bad.length) return;
     setBusy(true); setErr(""); setMsg("");
-    const r = await fetch(`/api/ads/${adId}/subtitulos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cambios: pending.slice(0, 15), ...(moved ? { estilo: style } : {}) }) }).catch(() => null);
+    const r = await fetch(`/api/ads/${adId}/subtitulos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ cambios: pending.slice(0, 15), ...(moved ? { estilo: style } : {}), ...(quitarAviso ? { quitarAviso: true } : {}), ...(quitarCierre ? { quitarCierre: true } : {}) }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
     if (!r?.ok || !d.url) return setErr(d.error || "No se pudo guardar. Intenta de nuevo.");
@@ -72,6 +78,8 @@ export default function SubtitleEditor({ adId, video, title, aspect = "9:16", on
     onDone(d.url);
     setMsg("Listo: tu video ya tiene los subtítulos como los dejaste.");
     if (moved) setStyle0(style);
+    if (quitarAviso) { setHasAviso(false); setQuitarAviso(false); }
+    if (quitarCierre) { setHasCierre(false); setQuitarCierre(false); }
     // the new lines become the starting point for more changes
     setCues((list) => list.map((c) => (edits[c.n] !== undefined ? { ...c, texto: edits[c.n].trim() } : c)));
     setEdits({}); setPairs([{ de: "", a: "" }]);
@@ -145,6 +153,13 @@ export default function SubtitleEditor({ adId, video, title, aspect = "9:16", on
               </>
             )}
 
+            {(hasAviso || hasCierre) && tab === "texto" && (
+              <div className="flex flex-col gap-2 rounded-xl border border-line p-3 text-sm">
+                <b>Quitar del video</b>
+                {hasCierre && <label className="flex items-start gap-2"><input type="checkbox" checked={quitarCierre} onChange={(e) => setQuitarCierre(e.target.checked)} disabled={busy} className="mt-1" /><span>La tarjeta final <span className="text-muted">(el video termina cuando la persona deja de hablar)</span></span></label>}
+                {hasAviso && <label className="flex items-start gap-2"><input type="checkbox" checked={quitarAviso} onChange={(e) => setQuitarAviso(e.target.checked)} disabled={busy} className="mt-1" /><span>La etiqueta «Dramatización · actor IA» <span className="text-muted">(si la persona cuenta una experiencia que no vivió, Meta puede rechazar o limitar el anuncio sin esa aclaración)</span></span></label>}
+              </div>
+            )}
             {err && <p className="text-sm text-bad">{err}</p>}
             {msg && <p className="text-sm font-semibold text-good">{msg}</p>}
           </div>

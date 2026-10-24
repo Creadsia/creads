@@ -70,9 +70,9 @@ export default function CreditsPopup() {
   const paid = Boolean(info.plan || info.paidUntil);
   const opts: Opt[] = !paid
     ? [
-        { href: "/app/planes?plan=starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes, sin marca.", hot: true },
+        { href: "/app/planes?plan=starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes.", hot: true },
         { href: "/app/planes?plan=basico", title: "Básico · US$25 al mes", text: "500 créditos: ≈ 2 anuncios de 15 s al mes." },
-        { href: "/app/planes?plan=pack-prueba", title: "Video de prueba · US$9", text: "Un anuncio de 15 s sin marca. Un solo pago." },
+        { href: "/app/planes?plan=pack-prueba", title: "Video de prueba · US$9", text: "Un anuncio más de 15 s. Un solo pago, sin plan." },
       ]
     : info.expired
       ? [{ href: "/app/planes", title: "Renovar mi plan", text: "Tus anuncios y archivos siguen aquí.", hot: true }]

@@ -11,8 +11,6 @@ import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
 import { cutTimes, cleanPlan, proPass, proPrompt, resolveLook, type ProPlan } from "@/lib/pro-edit";
 import { textAI } from "@/lib/providers";
-import { hasPaid } from "@/lib/regalo";
-import { unlimited } from "@/lib/credits";
 import { parseJSON } from "@/lib/providers/claude";
 
 export const maxDuration = 300;
@@ -45,11 +43,10 @@ export async function POST(req: Request) {
     if (!ad) return NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 });
     const clips = (await db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as unknown as ClipRow[];
     if (!clips.length || clips.some((c) => c.status !== "done" || !c.url)) return NextResponse.json({ error: "Espera a que todos los cortes estén listos." }, { status: 400 });
-    // accounts that never paid (the gift ad) carry the «Hecho con Creads IA» mark; paying removes it
-    if (!style.sello && !unlimited(s.user.workspace) && !(await hasPaid(s.user.workspace).catch(() => true))) style.sello = true;
+    // no forced «Hecho con Creads IA» mark (owner, 24 Oct 2026: the customer takes their finished video, clean)
     const settings = (ad.settings ?? {}) as { lang?: string; review?: { clipId: string; url?: string; words: Word[] }[]; aviso?: string };
     // the «Dramatización · actor IA» label: asked now, or kept from the first montage (subtitle edits rebuild it)
-    const aviso = str(b?.aviso, 40) || str(settings.aviso, 40);
+    const aviso = b?.quitarAviso === true ? "" : str(b?.aviso, 40) || str(settings.aviso, 40);
     const lang = settings.lang === "es-CL" ? "es" : "en";
     const aspect = String(ad.aspect || "9:16");
     const dir = await workdir(adId);
@@ -91,7 +88,7 @@ export async function POST(req: Request) {
     if (pro && b?.mismoPlan === true && saved && typeof saved === "object") {
       const fix = (t: string) => fixes.reduce((acc, f) => acc.replace(new RegExp(f.de.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), f.a), t);
       const plan = cleanPlan(saved, offset, (saved as ProPlan).cierre ?? { titulo: "", linea: "" });
-      proPlan = { golpes: plan.golpes.map((g) => ({ ...g, texto: fix(g.texto) })), cierre: { titulo: fix(plan.cierre.titulo), linea: fix(plan.cierre.linea) } };
+      proPlan = { golpes: plan.golpes.map((g) => ({ ...g, texto: fix(g.texto) })), cierre: b?.quitarCierre === true ? { titulo: "", linea: "" } : { titulo: fix(plan.cierre.titulo), linea: fix(plan.cierre.linea) } };
     } else if (pro) {
       const script = clips.map((c) => c.text ?? "").join(" ").trim();
       const fallback = { titulo: cierreHint.titulo || (lang === "es" ? "¡Pruébalo hoy!" : "Try it today!"), linea: cierreHint.linea || "" };
@@ -101,8 +98,8 @@ export async function POST(req: Request) {
           .then((t) => parseJSON(t)).catch(() => null);
       }
       proPlan = cleanPlan(raw, offset, fallback);
-      if (cierreHint.titulo) proPlan.cierre.titulo = cierreHint.titulo;
-      if (cierreHint.linea) proPlan.cierre.linea = cierreHint.linea;
+      // a closing card only when the customer wrote one (owner, 24 Oct 2026: «¡Pruébalo hoy!» on someone's ad)
+      proPlan.cierre = cierreHint.titulo ? { titulo: cierreHint.titulo, linea: cierreHint.linea } : { titulo: "", linea: "" };
     }
     // captions, and/or the «Hecho con Creads IA» badge (also without captions)
     const makeCap = (hide: { desde: number; hasta: number }[]) =>

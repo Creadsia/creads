@@ -48,7 +48,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const modo = srt ? "lineas" : st.demo || st.captions !== null ? "palabras" : "sin";
   // the first clip has no subtitles burnt in: the style preview is drawn on top of it
   const first = st.demo ? null : ((await s.db.list("clips", `ad_id=eq.${row.id}&order=idx.asc&limit=1`).catch(() => [])) as { url?: string | null }[])[0];
-  return NextResponse.json({ modo, srt, correcciones: st.correcciones ?? [], estilo: st.demo || st.captions === null ? null : normalizeStyle(st.captions), fondo: first?.url ?? null });
+  const extras = st as { aviso?: string; pro?: { cierre?: { titulo?: string } } | null };
+  return NextResponse.json({ modo, srt, correcciones: st.correcciones ?? [], estilo: st.demo || st.captions === null ? null : normalizeStyle(st.captions), fondo: first?.url ?? null,
+    // what can be taken off the finished video: the dramatization label and the closing card
+    aviso: Boolean(extras.aviso), cierre: Boolean(extras.pro?.cierre?.titulo) });
 }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -62,7 +65,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const body = await req.json().catch(() => null);
   const cambios = cleanFixes(body?.cambios);
   const estilo = body?.estilo && typeof body.estilo === "object" ? normalizeStyle(body.estilo) : null;
-  if (!cambios.length && !estilo) return NextResponse.json({ error: "No hay cambios que guardar." }, { status: 400 });
+  const quitarAviso = body?.quitarAviso === true, quitarCierre = body?.quitarCierre === true;
+  if (!cambios.length && !estilo && !quitarAviso && !quitarCierre) return NextResponse.json({ error: "No hay cambios que guardar." }, { status: 400 });
   try {
     if (st.demo) {
       if (!cambios.length) return NextResponse.json({ error: "En las demos con presentador por ahora solo se pueden corregir palabras." }, { status: 409 });
@@ -75,12 +79,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await s.db.update("ads", row.id, { final_url: url, settings: { ...st, correcciones: params.correcciones, api: job.id } });
       return NextResponse.json({ url, correcciones: params.correcciones });
     }
-    if (st.captions === null) return NextResponse.json({ error: "Este anuncio se armó sin subtítulos." }, { status: 409 });
+    if (st.captions === null && (cambios.length || estilo)) return NextResponse.json({ error: "Este anuncio se armó sin subtítulos." }, { status: 409 });
     const job = await jobOf(ws, row);
     const prev = st.correcciones ?? job?.correcciones ?? [];
     const merged = [...prev.filter((c) => !cambios.some((x) => x.de.toLowerCase() === c.de.toLowerCase())), ...cambios].slice(-15);
     const look = st.look ? { plantilla: st.look.plantilla, c1: st.look.c1, sonidos: st.look.sonidos } : undefined;
-    const d = await studioAs(req)<{ url: string }>("/api/montage", { adId: row.id, captions: true, style: estilo ?? st.captions, pro: Boolean(st.pro), mismoPlan: true, ...(look ? { look } : {}), correcciones: merged }, 290_000);
+    const d = await studioAs(req)<{ url: string }>("/api/montage", { adId: row.id, captions: st.captions !== null, style: estilo ?? st.captions, pro: Boolean(st.pro), mismoPlan: true, ...(look ? { look } : {}), correcciones: merged, ...(quitarAviso ? { quitarAviso: true } : {}), ...(quitarCierre ? { quitarCierre: true } : {}) }, 290_000);
     // Automático's copy of the same ad shows the corrected video too
     if (job && job.adId === row.id) await saveAd({ ...job, videoUrl: d.url, correcciones: merged, updatedAt: new Date().toISOString() }).catch(() => null);
     return NextResponse.json({ url: d.url, correcciones: merged });

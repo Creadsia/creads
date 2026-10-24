@@ -191,7 +191,7 @@ export default function Planes() {
         <section id="prueba" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5" aria-labelledby="prueba-t">
           <div className="min-w-0 max-w-xl">
             <h2 id="prueba-t" className="font-display text-lg font-semibold">¿Quieres probar antes de elegir un plan?</h2>
-            <p className="text-sm text-muted">Un video de prueba de 15 segundos, sin la marca «Hecho con Creads IA», por {usd(PRUEBA.usd)} (≈ ${clpFor(PRUEBA.usd, pay?.usdClp ?? 950).toLocaleString("es-CL")}). Un solo pago, sin suscripción.</p>
+            <p className="text-sm text-muted">Un video de prueba de 15 segundos por {usd(PRUEBA.usd)} (≈ ${clpFor(PRUEBA.usd, pay?.usdClp ?? 950).toLocaleString("es-CL")}). Un solo pago, sin suscripción.</p>
           </div>
           <button type="button" onClick={buyPrueba} disabled={busy} className={`${btnCls} disabled:opacity-50`}>{busy ? "Abriendo el pago…" : `Probar por ${usd(PRUEBA.usd)}`}</button>
         </section>

@@ -129,7 +129,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     if (look.glow) ev.push(`Dialogue: 0,${t2(g.desde)},${t2(g.hasta)},Brillo,,0,0,0,,{${anim}\\blur${Math.round(10 * s)}\\3c${accent}}${txt.replace(/\{\\c[^}]*\}/g, "")}`);
     ev.push(`Dialogue: 1,${t2(g.desde)},${t2(g.hasta)},Golpe,,0,0,0,,{${anim}}${txt}`);
   });
-  // closing card (the background is drawn by FFmpeg): title, a two-colour underline, the line
+  // closing card (the background is drawn by FFmpeg): title, a two-colour underline, the line — only when the
+  // customer wrote a closing title
+  if (!plan.cierre.titulo.trim()) return head + ev.join("\n") + "\n";
   const a = T + END_FADE * 0.6, b = T + END_SECS;
   const cx = Math.round(W / 2), cy = Math.round(H * 0.42);
   ev.push(`Dialogue: 2,${t2(a)},${t2(b)},Fin,,0,0,0,,{\\pos(${cx},${cy})${look.pop ? "\\fad(120,0)\\fscx60\\fscy60\\t(0,260,\\fscx100\\fscy100)" : "\\fad(300,0)"}}${escAss(plan.cierre.titulo)}`);
@@ -158,7 +160,9 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
   await writeFile(path.join(dir, "pro.ass"), proAss(plan, W, H, T, look));
   const esc = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
   const FONTS = path.join(process.cwd(), "assets", "fonts");
-  const total = T + END_SECS;
+  const withEnd = Boolean(plan.cierre.titulo.trim());
+  const endSecs = withEnd ? END_SECS : 0;
+  const total = T + endSecs;
 
   // punch-in on each cut (as strong as the look asks), back to normal in 0.35 s, and a gentle one at the start
   const zk = look.zoom;
@@ -174,7 +178,7 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
     `drawbox=x=0:y=0:w=iw:h=ih:color=${ffc(look.c1)}@0.2:t=fill:enable='between(t,${(c + 0.04).toFixed(3)},${(c + 0.12).toFixed(3)})'`,
   ].join(",")).join(",") : "";
   const bar = look.bar ? `drawbox=x=0:y=0:w='max(1,iw*min(t,${T.toFixed(3)})/${T.toFixed(3)})':h=${Math.max(4, Math.round(H / 240))}:color=${ffc(look.c1)}:t=fill:enable='lt(t,${T.toFixed(3)})'` : "";
-  const vf = [`tpad=stop_mode=clone:stop_duration=${END_SECS}`, zoom, flashes, bar].filter(Boolean).join(",");
+  const vf = [withEnd ? `tpad=stop_mode=clone:stop_duration=${END_SECS}` : "", zoom, flashes, bar].filter(Boolean).join(",");
   // the closing card fades in over the last frame (it used to snap in: the owner found it abrupt)
   const endBg = `color=c=${ffc(look.endBg)}:s=${W}x${H}:r=30:d=${total.toFixed(3)},format=yuva420p,fade=t=in:st=${T.toFixed(3)}:d=${END_FADE}:alpha=1`;
 
@@ -186,11 +190,12 @@ export async function proPass(ff: (args: string[], timeoutMs?: number) => Promis
     // only the loud looks make a sound on the cuts; the others cut in silence
     ...(look.sfx === "fuerte" ? cuts.map((c, i) => ({ file: i % 2 ? "whoosh2.wav" : "whoosh.wav", at: Math.max(0, c - 0.12), vol: 0.22 * k })) : []),
     ...(look.sfx === "fuerte" ? plan.golpes.map((g) => ({ file: "pop.wav", at: g.desde, vol: 0.18 })) : []),
-    { file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 * k * (look.sfx === "suave" ? 0.6 : 1) },
+    ...(withEnd ? [{ file: "riser.wav", at: Math.max(0, T - 1.1), vol: 0.28 * k * (look.sfx === "suave" ? 0.6 : 1) }] : []),
   ];
   const args = ["-y", "-v", "error", "-i", input];
   sounds.forEach((x) => args.push("-i", path.join(SFX, x.file)));
-  const parts = [`[0:v]${vf}[v1]`, `${endBg}[eb]`, `[v1][eb]overlay=shortest=1,ass=filename='${esc(path.join(dir, "pro.ass"))}':fontsdir='${esc(FONTS)}'[vo]`, `[0:a]aresample=44100,aformat=channel_layouts=stereo,apad=whole_dur=${total.toFixed(3)}[a0]`];
+  const assF = `ass=filename='${esc(path.join(dir, "pro.ass"))}':fontsdir='${esc(FONTS)}'`;
+  const parts = [...(withEnd ? [`[0:v]${vf}[v1]`, `${endBg}[eb]`, `[v1][eb]overlay=shortest=1,${assF}[vo]`] : [`[0:v]${vf ? `${vf},` : ""}${assF}[vo]`]), `[0:a]aresample=44100,aformat=channel_layouts=stereo,apad=whole_dur=${total.toFixed(3)}[a0]`];
   sounds.forEach((x, i) => {
     const ms = Math.round(x.at * 1000);
     parts.push(`[${i + 1}:a]aresample=44100,aformat=channel_layouts=stereo,volume=${x.vol},adelay=${ms}|${ms}[s${i}]`);

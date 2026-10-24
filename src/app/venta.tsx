@@ -48,7 +48,7 @@ const STEPS = [
 ] as const;
 
 const FAQ = [
-  ["¿Puedo probar antes de pagar?", "Sí. Creas tu cuenta gratis, sin tarjeta, y al tiro te regalamos créditos para tu primer anuncio de unos 12 segundos (con la marca «Hecho con Creads IA»). También puedes espiar anuncios y crear guiones gratis (5 al día). Si quieres probar sin marca, hay un video de prueba de 15 s por US$9, sin plan."],
+  ["¿Puedo probar antes de pagar?", "Sí. Creas tu cuenta gratis, sin tarjeta, y al tiro te regalamos créditos para tu primer anuncio de unos 12 segundos, listo para publicar. También puedes espiar anuncios y crear guiones gratis (5 al día). Y si quieres uno más antes de elegir plan, hay un video de prueba de 15 s por US$9."],
   ["¿Qué diferencia hay entre Automático y Manual?", "En Automático conversas con Creads como con una agencia: te pregunta, propone, hace el video, lo revisa y te lo entrega. En Manual haces cada paso tú (guion, voz, escenas, edición) y decides cada detalle. Puedes usar los dos con el mismo plan."],
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
   ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],

@@ -3,7 +3,7 @@ import { AlreadyDone, grant } from "./credits";
 import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
 
 // «Tu primer anuncio de regalo» (owner, 23 Oct 2026, launch audit): a new account confirms its email and gets
-// enough credits for one short ad (~12 s, with the «Hecho con Creads IA» mark), once per account, with a
+// enough credits for one short ad (~12 s), once per account, with a
 // monthly ceiling for everyone together so the gift can never run up the bill. Cost: US$2.5 to 3.9 per gift.
 
 export const REGALO_CREDITS = 200; // two cuts of up to 8 s (the first gift, 150, ran out after one cut)

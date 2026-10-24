@@ -29,7 +29,7 @@ export const PACKS = [
 ];
 
 /**
- * «Video de prueba» (owner, 23 Oct 2026, launch audit): one 15 s ad without the «Hecho con Creads IA» mark for
+ * «Video de prueba» (owner, 23 Oct 2026, launch audit): one more 15 s ad for
  * US$9, no plan needed, paid once. ~US$3.5 of video for ~US$7.2 after VAT and Mercado Pago. Fires Purchase.
  */
 export const PRUEBA = { id: "pack-prueba" as ItemId, credits: 200, usd: 9, note: "Un video de 15 s, sin plan" };
