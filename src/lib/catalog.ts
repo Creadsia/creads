@@ -62,7 +62,8 @@ export interface Quote {
 /** The amount to pay for an item, in US$ (rounded to cents). */
 /** Whether an item can be bought now: retired plans (Ultra) and the annual payment are not on sale. */
 export function onSale(item: ItemId, period: Period) {
-  if (PACKS.some((p) => p.id === item) || item === PRUEBA.id) return true;
+  // the US$9 trial video is no longer sold (owner, 24 Oct 2026); old orders still settle
+  if (PACKS.some((p) => p.id === item)) return true;
   return SHOWN_PLANS.some((p) => p.id === item) && (period === "mensual" || ANNUAL);
 }
 

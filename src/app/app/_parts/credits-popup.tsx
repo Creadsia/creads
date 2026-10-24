@@ -7,7 +7,7 @@ import { useCredits } from "./use-credits";
 import { buyNow } from "./buy";
 
 // «Se te acabaron los créditos» (owner, 24 Oct 2026): the moment a customer runs out (or is about to), an
-// on-brand sheet offers the next step: a plan for those who never paid (or the US$9 trial video), a top-up or
+// on-brand sheet offers the next step: a plan for those who never paid, a top-up or
 // a bigger plan for those who did. A bottom sheet on phones, a centred card on computers. It shows at most
 // once a day per state, never on «Planes», and right away when a job is refused for lack of credits (402).
 
@@ -82,7 +82,7 @@ export default function CreditsPopup() {
     ? [
         { href: "/app/planes?plan=starter", item: "starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes.", hot: true },
         { href: "/app/planes?plan=basico", item: "basico", title: "Básico · US$25 al mes", text: "500 créditos: ≈ 2 anuncios de 15 s al mes." },
-        { href: "/app/planes?plan=pack-prueba", item: "pack-prueba", title: "Video de prueba · US$9", text: "Un anuncio más de 15 s. Un solo pago, sin plan." },
+        { href: "/app/planes?plan=plus", item: "plus", title: "Negocio · US$99 al mes", text: "3.000 créditos: ≈ 17 anuncios de 15 s al mes." },
       ]
     : info.expired
       ? [{ href: "/app/planes", title: "Renovar mi plan", text: "Tus anuncios y archivos siguen aquí.", hot: true }]

@@ -252,7 +252,7 @@ function AfterFirstAd() {
         <button type="button" onClick={() => go("starter")} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === "starter" ? "Abriendo el pago…" : "Quiero Emprende · US$55/mes"}</button>
         <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : "Básico · US$25/mes"}</button>
       </div>
-      <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver más opciones (video de prueba US$9)</button>
+      <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver todas las opciones</button>
     </div>
   );
 }

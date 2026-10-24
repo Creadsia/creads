@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 const MSG: Record<string, { tone: "good" | "warn"; text: string }> = {
   ok: { tone: "good", text: "¡Listo! Te cargamos créditos para tu primer anuncio de regalo (unos 12 segundos). Cuéntale a Creads aquí abajo qué vendes y te lo hace." },
   ya: { tone: "warn", text: "Tu anuncio de regalo ya estaba cargado en tu cuenta." },
-  tope: { tone: "warn", text: "Este mes ya se entregaron todos los anuncios de regalo. Puedes probar con un video de 15 s por US$9, sin plan." },
+  tope: { tone: "warn", text: "Este mes ya se entregaron todos los anuncios de regalo. Elige un plan desde US$25 al mes y empiezas al tiro." },
   correo: { tone: "warn", text: "Los correos temporales no reciben el regalo. Crea tu cuenta con tu correo de siempre." },
   pagado: { tone: "good", text: "Tu cuenta ya tiene créditos de un plan: úsalos aquí abajo." },
   link: { tone: "warn", text: "Ese enlace no es válido. Pide uno nuevo con el botón de abajo." },
@@ -42,7 +42,6 @@ export default function RegaloAviso() {
           {!m && <p><b>Te quedaste sin créditos.</b> Si no recibiste tu anuncio de regalo, pide el correo para activarlo.</p>}
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={reenviar} disabled={sent === "…"} className="rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg disabled:opacity-50">Reenviarme el correo</button>
-            <a href="/app/planes?plan=pack-prueba" className="font-semibold underline">O haz un video de 15 s por US$9</a>
             <a href="/app/planes" className="text-muted underline">Ver planes</a>
           </div>
           {sent && sent !== "…" && <p className="text-muted">{sent}</p>}

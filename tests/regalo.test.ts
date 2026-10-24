@@ -18,8 +18,8 @@ test("gift: throwaway inboxes don't get it", () => {
   assert.ok(!regaloEmailOk("x@yopmail.com"));
 });
 
-test("trial video: US$9, 200 credits, on sale without a plan, no months", () => {
-  assert.ok(onSale(PRUEBA.id, "mensual"));
+test("trial video: not sold any more, but an old order still settles (200 credits, no months)", () => {
+  assert.ok(!onSale(PRUEBA.id, "mensual"));
   const q = quote(PRUEBA.id, "mensual")!;
   assert.equal(q.total, 9);
   assert.equal(q.credits, 200);
