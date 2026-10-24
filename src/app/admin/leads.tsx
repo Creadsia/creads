@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import DesdeCero from "./desde-cero";
+import Actividad from "./actividad";
+import { Fragment } from "react";
 
 // Clientes → Nuevas cuentas: every account that signed up, how far it got and what it did, so the owner sees
 // where people stop and who to write to (an account that opened the payment and didn't pay is a hot lead).
@@ -31,6 +33,7 @@ export default function Leads() {
   const [d, setD] = useState<Data | null>(null);
   const [err, setErr] = useState("");
   const [filtro, setFiltro] = useState<string | null>(null);
+  const [ver, setVer] = useState<string | null>(null);
   const load = useCallback(async () => {
     setErr("");
     const r = await fetch(`/api/admin/leads?dias=${dias}`).catch(() => null);
@@ -87,7 +90,8 @@ export default function Leads() {
                   </thead>
                   <tbody>
                     {rows.map((c) => (
-                      <tr key={c.id} className={`border-t border-line align-top ${c.prueba ? "opacity-50" : ""}`}>
+                      <Fragment key={c.id}>
+                      <tr className={`border-t border-line align-top ${c.prueba ? "opacity-50" : ""}`}>
                         <td className="py-2.5 pr-3"><b>{c.nombre || c.empresa}</b>{c.prueba && <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">prueba</span>}<div className="text-xs text-muted" data-private>{c.email}</div></td>
                         <td className="pr-3 text-xs">{new Date(c.creada).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div className="text-muted">{hace(c.creada)}</div></td>
                         <td className="pr-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${TONE[c.etapa] ?? ""}`}>{c.etapaTexto}</span>{c.compro.length > 0 && <div className="mt-1 text-xs text-muted">{c.compro.join(", ")}</div>}</td>
@@ -96,8 +100,10 @@ export default function Leads() {
                         </td>
                         <td className="pr-3 text-xs">{c.origen ?? <span className="text-muted">sin dato</span>}{c.campana && <div className="max-w-40 truncate text-muted" title={c.campana}>{c.campana}</div>}</td>
                         <td className="pr-3 text-xs">{hace(c.ultimaVez)}</td>
-                        <td className="text-xs"><button type="button" onClick={() => prueba(c)} className="mb-1 block text-muted underline hover:text-ink">{c.prueba ? "No es de prueba" : "Es de prueba"}</button>{c.email && <a href={`mailto:${c.email}?subject=${encodeURIComponent("¿Te ayudo con tu primer anuncio en Creads?")}`} className="font-semibold underline">Escribir</a>}</td>
+                        <td className="text-xs"><button type="button" onClick={() => setVer(ver === c.id ? null : c.id)} className="mb-1 block font-semibold underline">{ver === c.id ? "Cerrar" : "Ver qué hizo"}</button><button type="button" onClick={() => prueba(c)} className="mb-1 block text-muted underline hover:text-ink">{c.prueba ? "No es de prueba" : "Es de prueba"}</button>{c.email && <a href={`mailto:${c.email}?subject=${encodeURIComponent("¿Te ayudo con tu primer anuncio en Creads?")}`} className="font-semibold underline">Escribir</a>}</td>
                       </tr>
+                      {ver === c.id && <tr className="border-t border-line"><td colSpan={7} className="bg-surface-2/50 p-3"><Actividad ws={c.id} /></td></tr>}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
