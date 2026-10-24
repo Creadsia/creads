@@ -41,8 +41,27 @@ const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").r
 
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
-export function welcomeEmail(to: string, name: string | null, regalo?: string | null): Email {
+export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false): Email {
   const link = `${SITE}/app`;
+  // the gift is already in the account: straight to Automático
+  if (cargado) {
+    return {
+      to, tag: "bienvenida",
+      subject: "Tu primer anuncio de regalo ya está cargado",
+      html: layout({
+        preview: "Entra a Automático, cuéntale qué vendes y en minutos tienes tu anuncio.",
+        title: "Tu primer anuncio va por nuestra cuenta",
+        paragraphs: [
+          esc(hello(name)),
+          "Gracias por crear tu cuenta en Creads IA. Ya te cargamos créditos para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
+          "Entra a <b>Automático</b>, cuéntale qué vendes y a quién, y Creads te hace el guion, la persona, el video y la revisión.",
+        ],
+        cta: { label: "Hacer mi anuncio de regalo", href: `${link}/automatico` },
+        after: ["También puedes espiar anuncios de tu competencia y crear guiones gratis. Si tienes cualquier duda, responde este correo."],
+      }),
+      text: plain([hello(name), "", "Ya te cargamos créditos para tu primer anuncio en video, gratis y sin tarjeta.", "", `Hacer mi anuncio: ${link}/automatico`]),
+    };
+  }
   // a new account that hasn't paid: the button confirms the email and gives the first ad as a gift
   if (regalo) {
     return {

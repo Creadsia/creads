@@ -7,7 +7,8 @@ import { sendMeta, visitorFrom } from "@/lib/meta";
 import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
 import { SITE, welcomeEmail } from "@/lib/emails";
-import { regaloSign } from "@/lib/regalo";
+import { darRegalo, regaloSign } from "@/lib/regalo";
+import { allow } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +46,12 @@ export async function POST(req: Request) {
     await sendMeta({ name: "CompleteRegistration", eventId, email }, visitor).catch(() => null);
     // where this account came from (channel and ad campaign, only with cookie consent), for Clientes → Nuevas cuentas
     if (visitor.src || visitor.camp) await saveOrigin(newWs, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
-    // the welcome email carries the «confirm and get your first ad» link (the gift needs a real inbox)
-    const regalo = `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`;
-    await sendEmail(welcomeEmail(email, name, regalo)); // never fails the sign-up
+    // the first ad is a gift, loaded right away (owner, 24 Oct 2026: asking to confirm the email first lost
+    // people); limits: once per account, monthly ceiling, 2 per connection a month, no throwaway inboxes.
+    // If it couldn't be given now, the welcome email's button tries again.
+    const gift = (await allow("regaloIp", clientIp(req))) ? await darRegalo(newWs, email).catch(() => null) : null;
+    const regalo = gift?.ok ? null : `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`;
+    await sendEmail(welcomeEmail(email, name, regalo, Boolean(gift?.ok))); // never fails the sign-up
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;

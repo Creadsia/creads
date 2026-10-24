@@ -39,7 +39,7 @@ export default function RegaloAviso() {
       {m && <p className="font-semibold">{m.text}</p>}
       {sinSaldo && res !== "ok" && (
         <>
-          {!m && <p><b>Tu primer anuncio es de regalo.</b> Confirma tu correo con el botón del mensaje de bienvenida y te cargamos créditos para uno de unos 12 segundos.</p>}
+          {!m && <p><b>Te quedaste sin créditos.</b> Si no recibiste tu anuncio de regalo, pide el correo para activarlo.</p>}
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={reenviar} disabled={sent === "…"} className="rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg disabled:opacity-50">Reenviarme el correo</button>
             <a href="/app/planes?plan=pack-prueba" className="font-semibold underline">O haz un video de 15 s por US$9</a>

@@ -78,7 +78,7 @@ export default function Registro({ google }: { google: boolean }) {
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Correo
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" className={input} aria-invalid={err?.field === "email"} />
-            <span className="text-xs font-normal text-muted">Ahí te llega el botón para recibir tu anuncio de regalo.</span>
+            <span className="text-xs font-normal text-muted">Ahí te llegan tus anuncios y avisos.</span>
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-semibold">
             Clave
@@ -103,7 +103,7 @@ export default function Registro({ google }: { google: boolean }) {
           <p className="text-xs text-muted">Sin tarjeta. Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
         </form>
           <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
-            <li className="flex gap-2"><Check /><span><b>Tu primer anuncio en video de regalo</b>: confirma tu correo y te cargamos créditos para uno de unos 12 segundos (con la marca «Hecho con Creads IA»).</span></li>
+            <li className="flex gap-2"><Check /><span><b>Tu primer anuncio en video de regalo</b>: te cargamos créditos al tiro para uno de unos 12 segundos (con la marca «Hecho con Creads IA»).</span></li>
             <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
             <li className="flex gap-2"><Check /><span><b>Guiones con 10 ganchos</b> para tu negocio: 5 gratis al día.</span></li>
             <li className="flex gap-2"><Check /><span>Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia.</span></li>
