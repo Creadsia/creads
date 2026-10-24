@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
+import { buyNow } from "./buy";
 
 // «Se te acabaron los créditos» (owner, 24 Oct 2026): the moment a customer runs out (or is about to), an
 // on-brand sheet offers the next step: a plan for those who never paid (or the US$9 trial video), a top-up or
@@ -33,19 +34,22 @@ function watch402() {
   };
 }
 
-type Opt = { href: string; title: string; text: string; tag?: string; hot?: boolean };
+type Opt = { href: string; item?: string; title: string; text: string; tag?: string; hot?: boolean };
 
 export default function CreditsPopup() {
   const { info } = useCredits();
   const path = usePathname() ?? "";
-  const [open, setOpen] = useState<null | "agotado" | "poco">(null);
+  const [open, setOpen] = useState<null | "agotado" | "poco" | "mejorar">(null);
+  const [going, setGoing] = useState("");
   const closeBtn = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     watch402();
     const on = () => { if (!path.startsWith("/app/planes")) setOpen("agotado"); };
+    const up = () => setOpen("mejorar"); // the «Mejorar» button and the finished gift ad
     window.addEventListener("creads:sin-creditos", on);
-    return () => window.removeEventListener("creads:sin-creditos", on);
+    window.addEventListener("creads:upgrade", up);
+    return () => { window.removeEventListener("creads:sin-creditos", on); window.removeEventListener("creads:upgrade", up); };
   }, [path]);
 
   useEffect(() => {
@@ -64,24 +68,31 @@ export default function CreditsPopup() {
   }); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open || !info) return null;
-  function close() { if (open) markSeen(open); setOpen(null); }
+  function close() { if (open && open !== "mejorar") markSeen(open); setOpen(null); }
+  // straight to Mercado Pago (the plans page only if the payment can't open here)
+  async function go(o: Opt) {
+    if (!o.item || going) return;
+    setGoing(o.item);
+    await buyNow(o.item);
+  }
 
   const bal = Math.max(0, info.balance ?? 0);
   const paid = Boolean(info.plan || info.paidUntil);
   const opts: Opt[] = !paid
     ? [
-        { href: "/app/planes?plan=starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes.", hot: true },
-        { href: "/app/planes?plan=basico", title: "Básico · US$25 al mes", text: "500 créditos: ≈ 2 anuncios de 15 s al mes." },
-        { href: "/app/planes?plan=pack-prueba", title: "Video de prueba · US$9", text: "Un anuncio más de 15 s. Un solo pago, sin plan." },
+        { href: "/app/planes?plan=starter", item: "starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes.", hot: true },
+        { href: "/app/planes?plan=basico", item: "basico", title: "Básico · US$25 al mes", text: "500 créditos: ≈ 2 anuncios de 15 s al mes." },
+        { href: "/app/planes?plan=pack-prueba", item: "pack-prueba", title: "Video de prueba · US$9", text: "Un anuncio más de 15 s. Un solo pago, sin plan." },
       ]
     : info.expired
       ? [{ href: "/app/planes", title: "Renovar mi plan", text: "Tus anuncios y archivos siguen aquí.", hot: true }]
       : [
-          { href: "/app/planes?plan=pack-1000", title: "Recargar créditos", text: "Desde US$29 · se suman al tiro a tu saldo.", hot: true },
+          { href: "/app/planes?plan=pack-500", item: "pack-500", title: "Recargar 500 créditos · US$29", text: "Se suman al tiro a tu saldo.", hot: true },
+          { href: "/app/planes?plan=pack-1000", item: "pack-1000", title: "Recargar 1.000 créditos · US$55", text: "Para seguir todo el mes." },
           { href: "/app/planes?plan=plus", title: "Subir a Negocio · US$99", text: "3.000 créditos al mes: ≈ 17 anuncios de 15 s." },
         ];
-  const title = open === "poco" ? "Te quedan pocos créditos" : info.expired ? "Tu plan venció" : "Se te acabaron los créditos";
-  const lead = open === "poco"
+  const title = open === "mejorar" ? "Saca todo el potencial de Creads" : open === "poco" ? "Te quedan pocos créditos" : info.expired ? "Tu plan venció" : "Se te acabaron los créditos";
+  const lead = open === "mejorar" ? (paid ? "Suma créditos o sube de plan y sigue creando sin parar." : "Anuncios todos los meses, sin agencia y sin grabar. Paga con Mercado Pago y empiezas al tiro.") : open === "poco"
     ? `Tienes ${bal.toLocaleString("es-CL")} créditos: no alcanza para un anuncio completo. Suma ahora y no te quedes a medias.`
     : paid ? "Tu próximo anuncio te está esperando. Suma créditos y sigues al tiro." : "Ya viste lo que hace Creads. Elige cómo seguir creando anuncios que venden:";
   const pct = Math.min(100, Math.round((bal / LOW) * 100));
@@ -105,24 +116,25 @@ export default function CreditsPopup() {
             <p className="text-[15px] leading-snug text-muted">{lead}</p>
           </div>
           {/* the meter */}
-          <div className="flex flex-col gap-1">
+          <div className={`flex flex-col gap-1 ${open === "mejorar" ? "hidden" : ""}`}>
             <div className="h-2 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.max(pct, 3)}%`, background: "var(--grad)" }} /></div>
             <span className="text-xs text-muted tabular-nums">{bal.toLocaleString("es-CL")} créditos disponibles</span>
           </div>
           <ul className="flex flex-col gap-2">
             {opts.map((o) => (
               <li key={o.href}>
-                <Link href={o.href} onClick={close}
-                  className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-transform active:scale-[0.99] ${o.hot ? "border-transparent [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box] border-2" : "border-line hover:bg-surface-2"}`}>
+                <Link href={o.href} onClick={(e) => { if (o.item) { e.preventDefault(); go(o); } else close(); }} aria-busy={going === o.item}
+                  className={`flex items-center justify-between gap-3 rounded-2xl border p-3.5 transition-transform active:scale-[0.99] ${going && going !== o.item ? "opacity-50" : ""} ${o.hot ? "border-transparent [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box] border-2" : "border-line hover:bg-surface-2"}`}>
                   <span className="flex min-w-0 flex-col">
                     <span className="flex flex-wrap items-center gap-2"><b>{o.title}</b>{o.tag && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[10px] font-bold text-white">{o.tag}</span>}</span>
                     <span className="text-sm text-muted">{o.text}</span>
                   </span>
-                  <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${o.hot ? "bg-[image:var(--grad)] text-white" : "bg-surface-2"}`}>›</span>
+                  <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${o.hot ? "bg-[image:var(--grad)] text-white" : "bg-surface-2"}`}>{going === o.item ? "…" : "›"}</span>
                 </Link>
               </li>
             ))}
           </ul>
+          <p className="text-center text-xs text-muted">Pagas seguro con Mercado Pago · sin permanencia · <Link href="/app/planes" onClick={close} className="underline">ver todos los planes</Link></p>
           <button type="button" onClick={close} className="py-1 text-sm font-semibold text-muted hover:text-ink">Ahora no</button>
         </div>
       </div>

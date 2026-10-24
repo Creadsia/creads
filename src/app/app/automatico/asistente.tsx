@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
-import { refreshCredits } from "../_parts/use-credits";
+import { refreshCredits, useCredits } from "../_parts/use-credits";
+import { buyNow, openUpgrade } from "../_parts/buy";
 
 // «Automático»: the customer talks with the Creads assistant (Claude + the Creads tools + the RECETA). The
 // page keeps the conversation (in this browser), shows the pictures it makes, follows each ad until it's
@@ -178,6 +179,7 @@ export default function Asistente() {
                 <video key={a.video_url} src={a.video_url} controls playsInline className="max-h-[70vh] w-full max-w-xs rounded-xl bg-black" />
                 <a href={dl(a.video_url)} download target="_blank" rel="noopener noreferrer" className={`${ghostCls} w-fit`}>Descargar</a>
                 <FixSubtitles id={a.id} onDone={(url) => setAds((all) => all.map((x) => (x.id === a.id ? { ...x, video_url: url } : x)))} />
+                <AfterFirstAd />
               </>
             ) : a.estado !== "error" ? (
               <span className="text-xs text-muted">{a.paso ?? "En cola"} · tarda unos 6 a 8 minutos. Te aviso aquí mismo cuando esté y lo reviso antes de mostrártelo.</span>
@@ -231,5 +233,26 @@ function FixSubtitles({ id, onDone }: { id: string; onDone: (url: string) => voi
       <button type="submit" disabled={busy || !de.trim()} className="rounded-lg bg-ink px-3 py-1.5 font-semibold text-bg disabled:opacity-50">{busy ? "Corrigiendo… (1 a 3 min)" : "Corregir subtítulos"}</button>
       {msg && <span className="text-xs text-muted">{msg}</span>}
     </form>
+  );
+}
+
+/** Under a finished ad, for accounts without a plan: the moment they like it, one tap to keep going. */
+function AfterFirstAd() {
+  const { info } = useCredits();
+  const [going, setGoing] = useState("");
+  if (!info || info.unlimited || info.owner || (info.paidUntil && !info.expired)) return null;
+  const go = async (item: string) => { setGoing(item); await buyNow(item); };
+  return (
+    <div className="relative mt-1 flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-4 [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box]">
+      <div className="flex flex-col gap-0.5">
+        <b className="font-display text-lg leading-tight">¿Te gustó? Haz uno así cada semana.</b>
+        <span className="text-sm text-muted">Con Emprende tienes ≈ 8 anuncios de 15 s al mes, sin agencia y sin grabar. Cancelas cuando quieras.</span>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button type="button" onClick={() => go("starter")} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === "starter" ? "Abriendo el pago…" : "Quiero Emprende · US$55/mes"}</button>
+        <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : "Básico · US$25/mes"}</button>
+      </div>
+      <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver más opciones (video de prueba US$9)</button>
+    </div>
   );
 }

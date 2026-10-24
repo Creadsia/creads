@@ -12,6 +12,7 @@ import { Guides, HelpButton } from "./tour";
 import { fmtCredits } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 import CreditsPopup from "./credits-popup";
+import { openUpgrade } from "./buy";
 
 // The platform frame: a left menu on desktop, a top bar with a slide-in menu on phones.
 
@@ -222,6 +223,29 @@ function CreditsBox() {
   );
 }
 
+/** «Mejorar»: always one tap from paying, for customers without an active plan (phone header and desktop corner). */
+function UpgradeButton() {
+  const { info } = useCredits();
+  if (!info || info.unlimited || info.owner || (info.paidUntil && !info.expired)) return null;
+  return (
+    <button type="button" onClick={openUpgrade} className="whitespace-nowrap rounded-full bg-[image:var(--grad)] px-3 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(255,43,214,0.8)] active:scale-[0.98]">
+      Mejorar
+    </button>
+  );
+}
+
+/** The free trial, said plainly at the top of every screen: what's left and one tap to choose a plan. */
+function TrialStrip() {
+  const { info } = useCredits();
+  if (!info || info.unlimited || info.owner || info.plan || info.paidUntil || (info.balance ?? 0) <= 0) return null;
+  return (
+    <button type="button" onClick={openUpgrade} className="flex w-full items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/[0.07] px-3 py-2 text-left text-sm">
+      <span className="min-w-0"><b>Prueba gratis</b> <span className="text-muted">· te quedan {(info.balance ?? 0).toLocaleString("es-CL")} créditos</span></span>
+      <span className="shrink-0 font-semibold text-accent-text">Elegir plan ›</span>
+    </button>
+  );
+}
+
 /** Customers without a plan or credits: what to do next, on every screen but the plans page. */
 function ActivatePlan() {
   const { info } = useCredits();
@@ -230,7 +254,7 @@ function ActivatePlan() {
   if (!empty && !info.expired) return null;
   const never = !info.plan && !info.paidUntil;
   return (
-    <Link href="/app/planes" className="relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <button type="button" onClick={openUpgrade} className="relative flex w-full flex-col gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-4 text-left sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <span aria-hidden="true" className="pointer-events-none absolute -top-16 -left-10 h-40 w-40 rounded-full opacity-40 blur-[60px]" style={{ background: "var(--grad)" }} />
       <span className="relative flex flex-col gap-0.5">
         <b className="text-lg">{never ? "Activa tu plan para empezar a crear" : info.expired ? "Tu plan venció" : "Te quedaste sin créditos"}</b>
@@ -239,7 +263,7 @@ function ActivatePlan() {
         </span>
       </span>
       <span className="relative shrink-0 rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-center text-sm font-semibold text-white">{never ? "Ver planes" : info.expired ? "Renovar plan" : "Sumar créditos"}</span>
-    </Link>
+    </button>
   );
 }
 
@@ -291,8 +315,9 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       {/* phone top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-line bg-surface/95 px-4 pt-[max(8px,env(safe-area-inset-top))] pb-2 backdrop-blur lg:hidden">
         <Logo size={22} href="/app" gid="mark-top" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <CreditsPill />
+          {!user.owner && <UpgradeButton />}
           <AccountMenu user={user} />
         </div>
       </header>
@@ -319,11 +344,12 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
             <HelpButton />
             <span className="hidden items-center gap-2 lg:flex">
               <CreditsPill />
+              {!user.owner && <UpgradeButton />}
               <AccountMenu user={user} />
             </span>
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 lg:gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{children}</div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 lg:gap-6"><InstallBanner /><FailNotices />{user.owner && <MoneyAlerts />}{!user.owner && !path.startsWith("/app/planes") && <ActivatePlan />}{!user.owner && !path.startsWith("/app/planes") && <TrialStrip />}{children}</div>
       </main>
       <Assistant />
       <Guides />
