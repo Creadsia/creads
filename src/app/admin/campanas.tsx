@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DesdeCero from "./desde-cero";
+import Rentable from "./rentable";
 
 // Panel → Marketing → Resultados de campañas (owner, 22 Oct 2026: «los datos de Facebook y los de Creads por
 // las compras en un dashboard»). Meta's spend and clicks next to what really happened in Creads (accounts,
@@ -11,7 +12,7 @@ interface MetaRow { spend: number; impressions: number; clicks: number; regs: nu
 interface Day { day: string; cuentas: number; pagosIniciados: number; ventas: number; ventasMeta: number; ingresos: number; ingresosMeta: number; meta: (MetaRow & { day: string }) | null }
 interface Camp extends MetaRow { id: string; nombre: string; estado: string; presupuestoUsd: number | null }
 interface Data {
-  range: { from: string; to: string }; updated: string;
+  range: { from: string; to: string }; updated: string; regalos?: number;
   meta: { connected: boolean; error?: string; campaigns: Camp[] };
   total: { gasto: number; impresiones: number; clics: number; metaRegistros: number; metaPagos: number; metaCompras: number; metaValor: number; cuentas: number; pagosIniciados: number; ventas: number; ventasMeta: number; ingresos: number; ingresosMeta: number };
   porDia: Day[];
@@ -154,6 +155,8 @@ export default function Campanas() {
       {d && !d.meta.connected && (
         <p className="rounded-xl border border-warn/40 bg-warn/10 p-3 text-sm">{d.meta.error ? `Meta no respondió: ${d.meta.error}` : "Meta no está conectado: conecta la cuenta publicitaria en Marketing → Conexiones para ver el gasto."} Los datos de Creads sí están.</p>
       )}
+
+      {t && <Rentable registros={t.cuentas} ventas={t.ventas} ingresosUsd={t.ingresos} regalosUsd={d.regalos ?? 0} gastoUsd={hasSpend ? t.gasto : null} />}
 
       {t && (
         <>

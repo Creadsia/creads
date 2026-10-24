@@ -27,10 +27,12 @@ export async function GET(req: Request) {
   const day = (iso: string | null | undefined) => (iso ? dayCL(new Date(iso)) : "");
   const inR = (d: string) => d >= from && d <= to;
 
-  const [orders, ws, meta] = await Promise.all([
+  const [orders, ws, meta, charges] = await Promise.all([
     sbAll<OrderRow>(`orders?select=id,owner,item,status,quote,visitor,created_at,closed_at&or=(created_at.gte.${since},closed_at.gte.${since})`, "created_at.asc,id.asc").catch(() => [] as OrderRow[]),
     sbAll<WsRow>(`workspaces?kind=eq.client&created_at=gte.${since}&select=id,created_at`, "created_at.asc,id.asc").catch(() => [] as WsRow[]),
     metaRange(from, to).catch((e: unknown) => ({ connected: false as const, error: e instanceof Error ? e.message.slice(0, 200) : "Meta no respondió." })),
+    // what free accounts generated (gift credits): the real cost of each lead besides Meta
+    sbAll<{ owner: string; usd: number | null; created_at: string }>(`credits?kind=eq.charge&created_at=gte.${since}&select=owner,usd,created_at`, "created_at.asc,id.asc").catch(() => []),
   ]);
 
   // Creads, per day
@@ -61,8 +63,11 @@ export async function GET(req: Request) {
     cuentas: sum(totC, "cuentas"), pagosIniciados: sum(totC, "pagosIniciados"), ventas: sum(totC, "ventas"), ventasMeta: sum(totC, "ventasMeta"),
     ingresos: +sum(totC, "ingresos").toFixed(2), ingresosMeta: +sum(totC, "ingresosMeta").toFixed(2),
   };
+  // AI cost of accounts that never paid in this range (the gift ads and free tries), in US$
+  const payers = new Set(orders.filter((o) => o.status === "pagado").map((o) => o.owner));
+  const regalos = +charges.filter((c) => inR(day(c.created_at)) && !payers.has(c.owner) && !desde.pruebas.includes(c.owner) && counts(desde, c.owner, c.created_at)).reduce((t, c) => t + (Number(c.usd) || 0), 0).toFixed(2);
   return NextResponse.json({
-    range: { from, to }, desde: desde.desde, updated: new Date().toISOString(),
+    range: { from, to }, desde: desde.desde, regalos, updated: new Date().toISOString(),
     meta: { connected: meta.connected, error: "error" in meta ? meta.error : undefined, campaigns: meta.connected && "campaigns" in meta ? meta.campaigns ?? [] : [] },
     total, porDia,
   });
