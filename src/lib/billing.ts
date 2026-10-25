@@ -82,7 +82,7 @@ export interface Order {
   /** For Meta: consent and browser ids at checkout, so the purchase can be matched later. */
   visitor?: Visitor | null;
   /** Online payment with Mercado Pago. */
-  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean } | null;
+  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean; /** free trial with card: first charge on this date */ trial?: string } | null;
   /** Payments already applied (a subscription adds one each month). */
   payments?: string[];
 }

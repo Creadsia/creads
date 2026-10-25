@@ -1,5 +1,5 @@
 import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
-import { darRegalo, hasPaid } from "./regalo";
+import { darRegalo, hasPaid, tarjetaObligatoria } from "./regalo";
 import { SITE, regaloReminderEmail } from "./emails";
 import { optedOut, unsubLink } from "./unsub";
 import { sendEmail } from "./providers/email";
@@ -39,6 +39,8 @@ export async function pendientes(horas = 20): Promise<Pendiente[]> {
 
 export async function enviarRecordatorios(horas = 20): Promise<{ enviados: number; regalos: number }> {
   let enviados = 0, regalos = 0;
+  // with the card trial the gift can't be loaded by email: this reminder would promise something that isn't there
+  if (tarjetaObligatoria()) return { enviados, regalos };
   for (const p of await pendientes(horas)) {
     const g = await darRegalo(p.ws, p.email).catch(() => null);
     if (g?.ok) regalos++;

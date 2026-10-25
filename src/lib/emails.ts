@@ -41,8 +41,27 @@ const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").r
 
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
-export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false): Email {
+export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false, prueba?: { dias: number; plan: string } | null): Email {
   const link = `${SITE}/app`;
+  // «prueba con tarjeta»: the gift loads once the card is added on Mercado Pago (nothing charged today)
+  if (prueba && !cargado) {
+    return {
+      to, tag: "bienvenida",
+      subject: `Activa tu prueba gratis de ${prueba.dias} días en Creads IA`,
+      html: layout({
+        preview: "Agrega tu tarjeta (hoy no se cobra nada) y recibe 200 créditos para tu primer anuncio.",
+        title: "Tu primer anuncio va por nuestra cuenta",
+        paragraphs: [
+          esc(hello(name)),
+          `Gracias por crear tu cuenta en Creads IA. Para recibir tus <b>200 créditos de regalo</b> activa tu prueba gratis de ${prueba.dias} días: agregas tu tarjeta en Mercado Pago y hoy no se cobra nada.`,
+          `Si te gusta, al terminar la prueba se cobra el plan ${esc(prueba.plan)} cada mes. Si no, lo cancelas antes en «Planes» con un clic y no pagas nada.`,
+        ],
+        cta: { label: "Activar mi prueba gratis", href: `${link}/automatico` },
+        after: ["Mientras tanto ya puedes espiar anuncios de tu competencia y crear guiones gratis. Si tienes cualquier duda, responde este correo."],
+      }),
+      text: plain([hello(name), "", `Activa tu prueba gratis de ${prueba.dias} días (hoy no se cobra nada) y recibe 200 créditos para tu primer anuncio.`, "", `Activar: ${link}/automatico`]),
+    };
+  }
   // the gift is already in the account: straight to Automático
   if (cargado) {
     return {

@@ -20,7 +20,7 @@ function Check() {
   );
 }
 
-export default function Registro({ google }: { google: boolean }) {
+export default function Registro({ google, tarjeta = false }: { google: boolean; /** card trial on (REGALO_CON_TARJETA) */ tarjeta?: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,7 +60,7 @@ export default function Registro({ google }: { google: boolean }) {
 
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-x-12 lg:gap-y-6 lg:py-14">
         <section className="flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
-          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">Prueba Creads gratis, sin tarjeta</h1>
+          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{tarjeta ? "Prueba Creads 7 días gratis" : "Prueba Creads gratis, sin tarjeta"}</h1>
           <p className="text-lg text-muted">Crea tu cuenta y mira con tus propios ojos cómo queda un anuncio de tu negocio antes de pagar nada.</p>
         </section>
 
@@ -101,13 +101,13 @@ export default function Registro({ google }: { google: boolean }) {
           <button type="submit" disabled={busy} className="rounded-xl bg-ink px-4 py-3.5 text-base font-semibold text-bg disabled:opacity-50">
             {busy ? "Creando tu cuenta…" : "Crear mi cuenta gratis"}
           </button>
-          <p className="text-xs text-muted">Sin tarjeta. Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
+          <p className="text-xs text-muted">{tarjeta ? "Después agregas tu tarjeta en Mercado Pago: hoy no se cobra nada." : "Sin tarjeta."} Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
         </form>
           <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
-            <li className="flex gap-2"><Check /><span><b>200 créditos de regalo</b>: alcanzan para tu primer anuncio en video (unos 12 segundos), listo para publicar.</span></li>
+            <li className="flex gap-2"><Check /><span><b>200 créditos de regalo</b>: alcanzan para tu primer anuncio en video (unos 12 segundos), listo para publicar.{tarjeta && " Se cargan al agregar tu tarjeta (hoy no se cobra nada)."}</span></li>
             <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
             <li className="flex gap-2"><Check /><span><b>Guiones con 10 ganchos</b> para tu negocio: 5 gratis al día.</span></li>
-            <li className="flex gap-2"><Check /><span><MoneyText text="Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia." /></span></li>
+            <li className="flex gap-2"><Check /><span>{tarjeta ? <MoneyText text="Si te gusta, a los 7 días sigues con el plan Básico (US$25 al mes). Si no, cancelas antes con un clic y no pagas nada." /> : <MoneyText text="Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia." />}</span></li>
           </ul>
       </main>
     </div>

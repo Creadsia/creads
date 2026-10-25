@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/admin";
 import { googleOn } from "@/lib/google-login";
 import Registro from "./registro";
+import { tarjetaObligatoria } from "@/lib/regalo";
 
 export const metadata: Metadata = {
   title: "Prueba Creads IA gratis",
-  description: "Crea tu cuenta gratis, sin tarjeta: espía anuncios, crea guiones y recibe tu primer anuncio en video de regalo.",
+  description: "Crea tu cuenta gratis: espía anuncios, crea guiones y recibe tu primer anuncio en video de regalo.",
   alternates: { canonical: "/registro" },
 };
 export const dynamic = "force-dynamic";
@@ -15,5 +16,5 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const user = await currentUser().catch(() => null);
   if (user) redirect("/app/automatico");
-  return <Registro google={googleOn()} />;
+  return <Registro google={googleOn()} tarjeta={tarjetaObligatoria()} />;
 }

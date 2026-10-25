@@ -8,7 +8,7 @@ import { sendMeta, visitorFrom } from "@/lib/meta";
 import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
 import { SITE, welcomeEmail } from "@/lib/emails";
-import { darRegalo, regaloSign } from "@/lib/regalo";
+import { PRUEBA_DIAS, darRegalo, regaloSign, tarjetaObligatoria } from "@/lib/regalo";
 import { allow } from "@/lib/rate";
 import { STATE_COOKIE, googleOn, readIdToken, safeNext } from "@/lib/google-login";
 
@@ -68,7 +68,7 @@ export async function GET(req: Request) {
     await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitor).catch(() => null);
     if (visitor.src || visitor.camp) await saveOrigin(ws, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
     const gift = (await allow("regaloIp", clientIp(req))) ? await darRegalo(ws, user.email).catch(() => null) : null;
-    await sendEmail(welcomeEmail(user.email, user.name ?? id.name ?? "", gift?.ok ? null : `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`, Boolean(gift?.ok))).catch(() => null);
+    await sendEmail(welcomeEmail(user.email, user.name ?? id.name ?? "", gift?.ok ? null : `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`, Boolean(gift?.ok), tarjetaObligatoria() ? { dias: PRUEBA_DIAS, plan: "Básico" } : null)).catch(() => null);
   } else if (!user.last_login) {
     await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitor).catch(() => null);
   }

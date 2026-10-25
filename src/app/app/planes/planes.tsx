@@ -14,7 +14,7 @@ import { Money } from "../../money";
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
 
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
-interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string } | null }
+interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string; trial?: string; clp?: number } | null }
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const STATUS: Record<string, [string, string]> = {
@@ -116,7 +116,7 @@ export default function Planes() {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return setErr(d.error || "No se pudo cancelar la renovación. Intenta de nuevo o escríbenos a hola@creadsia.com.");
     setLeaving(false);
-    setCancelled(info?.paidUntil ? `Listo, cancelamos la renovación. Tu plan sigue activo hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}.` : "Listo, cancelamos la renovación.");
+    setCancelled(d.prueba ? "Listo, cancelamos tu prueba: no se te cobrará nada y tus créditos de regalo siguen en tu cuenta." : info?.paidUntil ? `Listo, cancelamos la renovación. Tu plan sigue activo hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}.` : "Listo, cancelamos la renovación.");
     load();
   }
 
@@ -186,8 +186,10 @@ export default function Planes() {
 
       {pay?.subscription && (
         <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-3 text-sm">
-          <span>Renovación automática activa: <b>{pay.subscription.label}</b>, con Mercado Pago.</span>
-          {!leaving && <button type="button" onClick={() => setLeaving(true)} className="text-sm font-semibold text-muted underline hover:text-ink">Cancelar renovación</button>}
+          {pay.subscription.trial
+            ? <span>Estás en tu <b>prueba gratis</b>. El <b>{new Date(`${pay.subscription.trial}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" })}</b> Mercado Pago cobra el <b>{pay.subscription.label}</b>{pay.subscription.clp ? ` ($${pay.subscription.clp.toLocaleString("es-CL")})` : ""} y se renueva cada mes, salvo que canceles antes.</span>
+            : <span>Renovación automática activa: <b>{pay.subscription.label}</b>, con Mercado Pago.</span>}
+          {!leaving && <button type="button" onClick={() => setLeaving(true)} className="text-sm font-semibold text-muted underline hover:text-ink">{pay.subscription.trial ? "Cancelar prueba" : "Cancelar renovación"}</button>}
         </p>
       )}
       {cancelled && <p role="status" className="rounded-xl border border-good/40 bg-good/10 px-4 py-3 text-sm">{cancelled}</p>}
@@ -209,7 +211,7 @@ export default function Planes() {
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setLeaving(false)} className={btnCls}>Mantener mi plan</button>
-            <button type="button" onClick={cancelSub} disabled={cancelBusy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{cancelBusy ? "Cancelando…" : "Cancelar la renovación"}</button>
+            <button type="button" onClick={cancelSub} disabled={cancelBusy} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50">{cancelBusy ? "Cancelando…" : pay.subscription.trial ? "Cancelar la prueba" : "Cancelar la renovación"}</button>
           </div>
           {err && <p className="text-sm text-bad" role="alert">{err}</p>}
         </section>

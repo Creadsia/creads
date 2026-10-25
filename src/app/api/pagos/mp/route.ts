@@ -7,6 +7,7 @@ import { once } from "@/lib/marketing";
 import { renewalFailedEmail } from "@/lib/emails";
 import { sendEmail } from "@/lib/providers/email";
 import { listUsers } from "@/lib/auth";
+import { activarPrueba } from "@/lib/prueba";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -69,6 +70,11 @@ export async function POST(req: Request) {
     }
     if (type === "subscription_preapproval") {
       const pre = await getPreapproval(id);
+      // a card trial whose card was just accepted: the gift loads now
+      if (pre.status === "authorized" && pre.external_reference) {
+        const o = await getOrder(pre.external_reference);
+        if (o?.mp?.trial) return NextResponse.json({ ok: true, prueba: await activarPrueba(o) });
+      }
       if (pre.status === "cancelled" && pre.external_reference) {
         const o = await getOrder(pre.external_reference);
         if (o?.mp && !o.mp.cancelled) await setOrderMp(o.id, { ...o.mp, cancelled: true });

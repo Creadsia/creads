@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Content } from "@/content/en";
+import { tarjetaObligatoria } from "@/lib/regalo";
 import { SHOWN_PLANS, usd } from "@/lib/catalog";
 import { Logo } from "./brand";
 import Pricing from "./pricing";
@@ -48,8 +49,10 @@ const STEPS = [
   { title: "Descárgalo y publícalo", text: "Vertical, listo para Reels, TikTok y Stories. Haz variaciones para probar cuál vende más.", why: "Un anuncio se cansa en semanas: siempre tienes uno nuevo." },
 ] as const;
 
+// with the card trial (REGALO_CON_TARJETA) the copy can't say «sin tarjeta»
+const CON_TARJETA = tarjetaObligatoria();
 const FAQ = [
-  ["¿Puedo probar antes de pagar?", "Sí. Creas tu cuenta gratis, sin tarjeta, y al tiro te regalamos 200 créditos para tu primer anuncio de unos 12 segundos, listo para publicar. También puedes espiar anuncios y crear guiones gratis (5 al día)."],
+  ["¿Puedo probar antes de pagar?", CON_TARJETA ? "Sí. Creas tu cuenta, agregas tu tarjeta en Mercado Pago (hoy no se cobra nada) y te regalamos 200 créditos para tu primer anuncio. Tienes 7 días de prueba: si no te sirve, cancelas en Planes con un clic y no pagas nada. También puedes espiar anuncios y crear guiones gratis (5 al día)." : "Sí. Creas tu cuenta gratis, sin tarjeta, y al tiro te regalamos 200 créditos para tu primer anuncio de unos 12 segundos, listo para publicar. También puedes espiar anuncios y crear guiones gratis (5 al día)."],
   ["¿Qué diferencia hay entre Automático y Manual?", "En Automático conversas con Creads como con una agencia: te pregunta, propone, hace el video, lo revisa y te lo entrega. En Manual haces cada paso tú (guion, voz, escenas, edición) y decides cada detalle. Puedes usar los dos con el mismo plan."],
   ["¿Necesito saber de inteligencia artificial o de edición?", "No. Escribes en tus palabras qué vendes y a quién. Creads escribe el guion, crea a la persona, pone la voz y edita. Tú solo apruebas."],
   ["¿Se ve real?", "Mira los ejemplos de arriba: ninguna de esas personas existe. Si prefieres algo 100% real, subes un video tuyo hablando al celular y Creads le pone la voz nueva en los labios en cada anuncio."],
@@ -104,7 +107,7 @@ function StepsMock() {
 export default function Venta({ t, rate = 950, renews = true }: { t: Content; rate?: number; renews?: boolean }) {
   return (
     <div className="overflow-x-clip pb-20 lg:pb-0">
-      <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} />
+      <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} tarjeta={CON_TARJETA} />
       <WhatsAppButton />
 
       <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
@@ -137,7 +140,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 Cuéntale a Creads qué vendes y recibe tu anuncio listo para Facebook, Instagram y TikTok: guion, persona, voz chilena y edición, en minutos.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta href={FREE} sub="Sin tarjeta. Te regalamos 200 créditos para tu primer anuncio.">Crea tu primer anuncio gratis</Cta>
+                <Cta href={FREE} sub={CON_TARJETA ? "7 días gratis. Hoy no se cobra nada: 200 créditos para tu primer anuncio." : "Sin tarjeta. Te regalamos 200 créditos para tu primer anuncio."}>Crea tu primer anuncio gratis</Cta>
                 <a href="#formas" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo se hace</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">

@@ -11,6 +11,7 @@ const MSG: Record<string, { tone: "good" | "warn"; text: string }> = {
   ya: { tone: "warn", text: "Tu anuncio de regalo ya estaba cargado en tu cuenta." },
   tope: { tone: "warn", text: "Este mes ya se entregaron todos los anuncios de regalo. Elige un plan desde US$25 al mes y empiezas al tiro." },
   correo: { tone: "warn", text: "Los correos temporales no reciben el regalo. Crea tu cuenta con tu correo de siempre." },
+  tarjeta: { tone: "warn", text: "Para recibir tus créditos de regalo, activa tu prueba gratis agregando tu tarjeta aquí abajo." },
   pagado: { tone: "good", text: "Tu cuenta ya tiene créditos de un plan: úsalos aquí abajo." },
   link: { tone: "warn", text: "Ese enlace no es válido. Pide uno nuevo con el botón de abajo." },
   error: { tone: "warn", text: "No pudimos cargar tu regalo ahora. Intenta de nuevo en unos minutos." },
@@ -25,7 +26,8 @@ export default function RegaloAviso() {
     const r = sp.get("regalo");
     if (r && MSG[r]) setRes(r);
     if (r || sp.get("bienvenida")) window.history.replaceState(null, "", "/app/automatico");
-    fetch("/api/credits").then((x) => x.json()).then((d) => setSinSaldo(!d.unlimited && !d.plan && (d.balance ?? 0) <= 0)).catch(() => null);
+    Promise.all([fetch("/api/credits").then((x) => x.json()), fetch("/api/prueba").then((x) => x.json()).catch(() => ({}))])
+      .then(([d, p]) => setSinSaldo(!p?.activa && !d.unlimited && !d.plan && (d.balance ?? 0) <= 0)).catch(() => null);
   }, []);
   async function reenviar() {
     setSent("…");

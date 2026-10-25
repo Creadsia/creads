@@ -34,10 +34,19 @@ export async function hasPaid(ws: string) {
   return Boolean(rows?.length);
 }
 
-export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" };
+/** «Prueba con tarjeta» (owner, 25 Oct 2026): the gift only after the customer adds a card on Mercado Pago (a
+ *  7-day trial that becomes the Básico plan unless cancelled). Turned on with REGALO_CON_TARJETA=1 in Vercel. */
+export const tarjetaObligatoria = () =>
+  process.env.REGALO_CON_TARJETA === "1" ||
+  // its own preview link, to try it before turning it on for everyone
+  (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF === "prueba-tarjeta");
+export const PRUEBA_DIAS = 7;
+
+export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" | "tarjeta" };
 
 /** Gives the gift once (the credit ledger's unique ref makes a second try a no-op). */
-export async function darRegalo(ws: string, email: string): Promise<RegaloResult> {
+export async function darRegalo(ws: string, email: string, o: { conTarjeta?: boolean } = {}): Promise<RegaloResult> {
+  if (tarjetaObligatoria() && !o.conTarjeta) return { ok: false, why: "tarjeta" };
   if (!regaloEmailOk(email)) return { ok: false, why: "correo" };
   if (await hasPaid(ws)) return { ok: false, why: "pagado" };
   const n = await regalosDelMes();
@@ -49,7 +58,7 @@ export async function darRegalo(ws: string, email: string): Promise<RegaloResult
   if (given.length) return { ok: false, why: "ya" };
   await writePrivateJSON(mark, { at: new Date().toISOString(), email });
   try {
-    await grant(ws, REGALO_CREDITS, "adjust", "Anuncio de regalo (correo confirmado)", "regalo", `regalo:${ws}`);
+    await grant(ws, REGALO_CREDITS, "adjust", o.conTarjeta ? "Prueba gratis (tarjeta agregada)" : "Anuncio de regalo (correo confirmado)", "regalo", `regalo:${ws}`);
   } catch (err) {
     if (err instanceof AlreadyDone) return { ok: false, why: "ya" };
     throw err;

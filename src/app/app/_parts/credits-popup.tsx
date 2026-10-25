@@ -43,6 +43,11 @@ export default function CreditsPopup() {
   const [open, setOpen] = useState<null | "agotado" | "poco" | "mejorar">(null);
   const [going, setGoing] = useState("");
   const closeBtn = useRef<HTMLButtonElement>(null);
+  // a new account that hasn't added its card for the free trial: the trial box invites it, not this sheet
+  const [sinTarjeta, setSinTarjeta] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/prueba").then((r) => r.json()).then((d) => setSinTarjeta(Boolean(d?.activa && d.estado === "sin-tarjeta"))).catch(() => setSinTarjeta(false));
+  }, []);
 
   useEffect(() => {
     watch402();
@@ -54,11 +59,11 @@ export default function CreditsPopup() {
   }, [path]);
 
   useEffect(() => {
-    if (!info || info.unlimited || info.owner || path.startsWith("/app/planes")) return;
+    if (!info || info.unlimited || info.owner || path.startsWith("/app/planes") || sinTarjeta !== false) return;
     const bal = info.balance ?? 0;
     const state = bal <= 0 || info.expired ? "agotado" : bal < LOW ? "poco" : null;
     if (state && !seenToday(state)) setOpen(state);
-  }, [info, path]);
+  }, [info, path, sinTarjeta]);
 
   useEffect(() => {
     if (!open) return;

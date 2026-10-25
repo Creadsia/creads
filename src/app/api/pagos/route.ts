@@ -3,8 +3,9 @@ import { SESSION_ENDED, session } from "@/lib/access";
 import { addOrder, hasPaidBefore, ordersOf, setOrderMp, workspaceRow } from "@/lib/billing";
 import { type ItemId, METHODS, type MethodId, PLANS, type Period, clpFor, onSale, quote } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
+import { cancelarPrueba, pruebaAbierta } from "@/lib/prueba";
 import { sendMeta, visitorFrom } from "@/lib/meta";
-import { createPreference, createSubscription, mpReady, oneTimeOnly } from "@/lib/mercadopago";
+import { createPreference, createSubscription, getPreapproval, mpReady, oneTimeOnly } from "@/lib/mercadopago";
 import { reconcileSubscription } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
 
@@ -31,9 +32,12 @@ export async function GET(req: Request) {
     }
     const [w, paid, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), ordersOf(ws)]);
     const sub = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
+    // the card trial counts as a subscription to cancel (before its first charge)
+    const trial = sub ? null : mine.find((o) => o.mp?.trial && !o.mp.cancelled && o.status === "pendiente");
+    const trialOn = trial?.mp ? (await getPreapproval(trial.mp.id).catch(() => null))?.status === "authorized" : false;
     return NextResponse.json({
       online: mpReady(), renews: !oneTimeOnly(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
-      subscription: sub ? { id: sub.id, label: sub.quote.label } : null,
+      subscription: sub ? { id: sub.id, label: sub.quote.label } : trial && trialOn ? { id: trial.id, label: trial.quote.label, trial: trial.mp!.trial, clp: trial.mp!.clp } : null,
       orders: mine.filter((o) => o.status !== "reemplazado").slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
     });
   } catch {
@@ -63,6 +67,11 @@ export async function POST(req: Request) {
     // and would expire with the period that already ended
     if (String(b?.item ?? "").startsWith("pack-") && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10))) {
       return NextResponse.json({ error: "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites." }, { status: 400 });
+    }
+    // buying a plan during the card trial: the trial's subscription is cancelled first (two would both charge)
+    if (PLANS.some((p) => p.id === b?.item)) {
+      const trial = await pruebaAbierta(ws);
+      if (trial) await cancelarPrueba(trial);
     }
     const discountPct = Number(w.discount ?? 0);
     // retired plans (Ultra) and the annual payment can't be bought, even with an old link (audit 22 Oct 2026)

@@ -12,6 +12,7 @@ import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
 import { SHOWN_PLANS, clpFor } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
+import { PRUEBA_DIAS, tarjetaObligatoria } from "@/lib/regalo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -93,6 +94,8 @@ export async function POST(req: Request) {
   const ephemeral = { type: "ephemeral" } as const;
   const cachedTools = tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: ephemeral } : t));
   const system: { type: "text"; text: string; cache_control?: typeof ephemeral }[] = [{ type: "text", text: RECETA, cache_control: ephemeral }];
+  // card trial: a new account with no credits gets its gift by adding a card (the card box is above the chat)
+  if (tarjetaObligatoria()) system.push({ type: "text", text: `PRUEBA CON TARJETA: si el cliente tiene 0 créditos y nunca pagó, sus 200 créditos de regalo se cargan cuando activa su prueba gratis de ${PRUEBA_DIAS} días en el recuadro de arriba («Agregar tarjeta y empezar gratis»): agrega su tarjeta en Mercado Pago, hoy no se cobra nada, y si no cancela antes, al terminar la prueba se cobra el plan Básico cada mes. Díselo así de claro, sin presionar, y nunca le pidas datos de tarjeta en el chat.` });
   // prices in the customer's money (owner, 24 Oct 2026): pesos in Chile, US$ elsewhere
   if (await inChile(req)) {
     const rate = await usdClpRate().catch(() => 950);

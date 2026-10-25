@@ -18,7 +18,7 @@ const seenRecently = () => {
 };
 const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); } catch { /* private mode */ } };
 
-export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; lang: string; rate?: number }) {
+export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Content["nudge"]; lang: string; rate?: number; /** card trial on: no «sin tarjeta» */ tarjeta?: boolean }) {
   const es = lang === "es";
   const plus = PLANS.find((p) => p.id === "starter")!; // the plan with the launch offer
   const first = LAUNCH_PRICE;
@@ -100,7 +100,7 @@ export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; l
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
             <b className="block truncate"><MoneyText text={t.bar} rate={rate} /></b>
-            <span className="text-muted">{es ? <>sin tarjeta · después desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
+            <span className="text-muted">{es ? <>{tarjeta ? "7 días gratis" : "sin tarjeta"} · después desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
           </span>
           <a href={es ? "/registro" : startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>
@@ -126,7 +126,7 @@ export default function FunnelNudges({ t, lang, rate }: { t: Content["nudge"]; l
             </form>
           )}
           {state === "error" && <p role="alert" className="relative text-sm text-bad">{es ? "No se pudo guardar. Intenta de nuevo." : "Couldn't save. Try again."}</p>}
-          <a href={es ? "/registro" : "#pricing"} onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{t.exitPlans}</a>
+          <a href={es ? "/registro" : "#pricing"} onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{es && tarjeta ? "Probar 7 días gratis" : t.exitPlans}</a>
           <button type="button" onClick={() => setOpen(false)} className="relative text-sm text-muted underline">{t.exitClose}</button>
         </div>
       </dialog>

@@ -9,6 +9,7 @@ import { ownerAddress } from "@/lib/errlog";
 import { phoneAlert } from "@/lib/phone-alert";
 import { sendEmail } from "@/lib/providers/email";
 import { PLANS } from "@/lib/catalog";
+import { cancelarPrueba, pruebaAbierta } from "@/lib/prueba";
 
 // what the customer reads → the reason the Panel counts (lib/retention.ts REASONS); the old wording still works
 const LEAVE_REASONS: Record<string, string> = {
@@ -34,6 +35,18 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   const reason = LEAVE_REASONS[String(b?.reason ?? "")] ?? "Sin motivo";
   const detail = String(b?.detail ?? "").trim().slice(0, 500);
+  // during the card trial: cancel before the first charge (the gift stays, nothing is charged)
+  const trial = await pruebaAbierta(s.user.workspace);
+  if (trial) {
+    try {
+      await cancelarPrueba(trial);
+      await updatePrivateJSON<Leave[]>("cancelaciones.json", (cur) => [...(cur ?? []), { ws: s.user.workspace, at: new Date().toISOString(), reason, detail, plan: "prueba" }].slice(-500)).catch(() => null);
+      await phoneAlert({ title: "Canceló la prueba gratis", text: `${s.user.email} · motivo: ${reason}`, tags: "warning", priority: 3 }).catch(() => null);
+      return NextResponse.json({ ok: true, prueba: true });
+    } catch {
+      return NextResponse.json({ error: "No se pudo cancelar. Escríbenos a hola@creadsia.com." }, { status: 502 });
+    }
+  }
   const sub = (await ordersOf(s.user.workspace)).find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
   if (!sub?.mp) return NextResponse.json({ error: "No tienes una suscripción activa." }, { status: 404 });
   try {

@@ -53,15 +53,15 @@ export async function createPreference(o: { orderId: string; title: string; clp:
  * Monthly subscription: Mercado Pago charges the card every month. `firstClp` can be lower than the
  * regular price (launch offer); after the first payment the amount is raised to `clp`.
  */
-export async function createSubscription(o: { orderId: string; title: string; firstClp: number; email: string }) {
+export async function createSubscription(o: { orderId: string; title: string; firstClp: number; email: string; /** free trial: first charge on this day (ISO) */ startDate?: string; backUrl?: string }) {
   const r = await mp<{ id: string; init_point: string; sandbox_init_point?: string }>("/preapproval", {
     method: "POST",
     body: JSON.stringify({
       reason: o.title,
       external_reference: o.orderId,
       payer_email: o.email,
-      auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: o.firstClp, currency_id: "CLP" },
-      back_url: back(o.orderId),
+      auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: o.firstClp, currency_id: "CLP", ...(o.startDate ? { start_date: o.startDate } : {}) },
+      back_url: o.backUrl ?? back(o.orderId),
       status: "pending",
     }),
   });

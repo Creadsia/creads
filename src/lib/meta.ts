@@ -35,7 +35,7 @@ export function visitorFrom(req: Request): Visitor {
 }
 
 export interface MetaEvent {
-  name: "Lead" | "CompleteRegistration" | "InitiateCheckout" | "Purchase" | "Subscribe";
+  name: "Lead" | "CompleteRegistration" | "InitiateCheckout" | "Purchase" | "Subscribe" | "StartTrial";
   eventId?: string;
   email?: string;
   value?: number;
