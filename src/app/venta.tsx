@@ -57,8 +57,8 @@ const PRODUCTO_DEMOS = [
 /** The product reel: several product videos cut fast, to the beat. */
 const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto hechos con Creads" };
 const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
-/** Everything that moves on the wall: product videos and UGC, mixed. */
-const MURO_VIDEOS = [PRODUCTO_DEMOS[4], DEMOS.dent, PRODUCTO_DEMOS[5], DEMOS.gym, PRODUCTO_DEMOS[0], DEMOS.rubia, PRODUCTO_DEMOS[6], DEMOS.cafe, PRODUCTO_DEMOS[3], DEMOS.bano, PRODUCTO_DEMOS[1], DEMOS.doc, PRODUCTO_DEMOS[2], DEMOS.cocina];
+/** The wall under the hero: only clean product videos. */
+const MURO_VIDEOS = [PRODUCTO_DEMOS[4], PRODUCTO_DEMOS[0], PRODUCTO_DEMOS[5], PRODUCTO_DEMOS[1], PRODUCTO_DEMOS[3], PRODUCTO_DEMOS[6], PRODUCTO_DEMOS[2]];
 
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
@@ -87,34 +87,6 @@ function Cta({ children, href = START, sub }: { children: React.ReactNode; href?
       <span className="text-[17px]">{children}</span>
       {sub && <span className="text-xs font-normal text-white/85">{sub}</span>}
     </a>
-  );
-}
-
-/** What a batch looks like in the studio: the link, the angles, the ads by placement. */
-function TandaMock() {
-  return (
-    <div className="flex w-full max-w-[460px] flex-col gap-3 rounded-3xl border border-line bg-surface p-4 shadow-[0_40px_100px_-50px_rgba(138,92,255,0.8)]">
-      <div className="flex items-center gap-2 rounded-xl border border-line bg-bg px-3 py-2.5 text-sm">
-        <span className="truncate text-muted">https://tutienda.com/producto</span>
-        <span className="ml-auto shrink-0 rounded-lg bg-ink px-2.5 py-1 text-xs font-semibold text-bg">Leer</span>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {["Dolor", "Deseo", "Mecanismo", "Prueba social", "Creencia", "Oferta"].map((x) => (
-          <span key={x} className="rounded-full border border-accent/50 bg-accent/10 px-2.5 py-1 text-xs font-semibold">{x}</span>
-        ))}
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {["pawease", "luma-noche", "techo", "aurea-serum", "quiz-sueno", "grano-alto", "bano-antes-despues", "flexdaily"].map((n) => (
-          <div key={n} className="relative aspect-[4/5] overflow-hidden rounded-lg bg-surface-2">
-            <Image src={`/ejemplos/${n}.jpg`} alt="" fill sizes="110px" className="object-cover" />
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-between gap-2 text-xs text-muted">
-        <span>10 anuncios · feed 4:5 + stories 9:16</span>
-        <span className="rounded-md border border-line px-2 py-1 font-semibold text-ink">Descargar ZIP</span>
-      </div>
-    </div>
   );
 }
 
@@ -170,16 +142,15 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                   <figcaption className="text-center text-sm text-muted">Demo de 2 minutos, con sonido: de un link a 10 anuncios.</figcaption>
                 </figure>
               ) : (
-                <div className="relative mx-auto w-full max-w-[460px] py-6">
-                  <div className="relative z-10"><TandaMock /></div>
-                  <DemoPhone {...PRODUCTO_DEMOS[4]} label="" className="float pointer-events-none absolute top-24 -left-16 z-0 hidden w-28 lg:block [--fd:8s] [--r:-10deg]" />
-                  <DemoPhone {...DEMOS.dent} label="" className="float pointer-events-none absolute -right-16 bottom-10 z-0 hidden w-28 lg:block [--fd:9s] [--fdl:-3s] [--r:9deg]" />
+                <div className="relative flex w-full justify-center py-4">
+                  <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-30 blur-[110px]" />
+                  <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} big className="relative w-60 sm:w-72" />
                 </div>
               )}
             </div>
           </div>
-          {/* the wall: real outputs moving */}
-          <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] pb-10 sm:pb-14" aria-label="Lo que se hace con Creads" role="region">
+          {/* the wall: clean product videos moving */}
+          <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] pb-12 sm:pb-16">
             <Muro videos={MURO_VIDEOS} />
           </div>
         </section>
@@ -204,7 +175,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
-        {/* 2b · Product videos: the reel big, phones floating around */}
+        {/* 2b · Product videos: three of them side by side, the style under each */}
         <section className={`stage relative overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="producto-title">
           <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[120px]" />
           <div className={`${wrap} relative grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]`}>
@@ -219,10 +190,12 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-sm text-muted">Tecnología, moda, belleza, comida, suplementos: sirve para cualquier producto que se venda por foto.</p>
               <div className="self-start"><Cta href="/app/video-producto" sub="Usa el mismo saldo de tu plan.">Haz el video de tu producto</Cta></div>
             </div>
-            <div className="relative mx-auto flex h-[520px] w-full max-w-[520px] items-center justify-center sm:h-[600px]">
-              <DemoPhone {...PRODUCTO_DEMOS[5]} label="" className="float absolute top-16 left-0 w-32 opacity-90 sm:w-40 [--fd:9s] [--r:-9deg]" />
-              <DemoPhone {...PRODUCTO_DEMOS[6]} label="" className="float absolute right-0 bottom-6 w-32 opacity-90 sm:w-40 [--fd:8s] [--fdl:-4s] [--r:8deg]" />
-              <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} label="" big className="relative z-10 w-56 sm:w-64" />
+            <div className="grid grid-cols-3 items-center gap-3 sm:gap-5">
+              {([[PRODUCTO_DEMOS[4], "Salpicadura"], [PRODUCTO_DEMOS[3], "Flotando"], [PRODUCTO_DEMOS[6], "Salpicadura"]] as const).map(([d, estilo], i) => (
+                <div key={d.src} className={i === 1 ? "-mt-10" : "mt-10"}>
+                  <DemoPhone {...d} label={`${d.label} · ${estilo}`} big={i === 1} />
+                </div>
+              ))}
             </div>
           </div>
         </section>
