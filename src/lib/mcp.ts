@@ -122,13 +122,24 @@ export const TOOLS: Tool[] = [
       color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$", description: "Optional brand colour (#RRGGBB) for key words, bar and closing card." },
       subtitulos: { type: "boolean", default: true, description: "false = the ad comes out without subtitles (with edicion simple: just the cuts, no text on screen at all)." },
       indicaciones: { type: "string", maxLength: 600, description: "Optional but recommended with edicion pro: a short brief for the editor — brand and product name (exact spelling), audience, what to highlight (offer, price, benefit), what to avoid, and the closing call to action. Example: «Marca: Café Lumbre. Destacar: envío gratis en Santiago. Evitar: precios. Cierre: cafelumbre.cl»." },
-      modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = MiniMax H3 Max (the reliable default)." },
+      modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = MiniMax H3 Max (the reliable default). Prefer creads_video_producto for product videos (older apps: «producto:<estilo>» here, with the photo link in indicaciones)." },
       velocidad: { type: "number", minimum: 1, maximum: 1.2, description: "Optional: a faster voice, 1.0 (normal) to 1.2 (the fastest). Use 1.15–1.2 when the user asks for a quick, energetic delivery or «1.2x»." },
       lugares: { type: "string", maxLength: 500, description: "Optional: the places the person moves through, in the story's order (e.g. «afuera de la casa mostrando la grieta; el sótano junto a la pared; la cocina con el notebook; el porche»). Same face and clothes in all. Empty = the whole ad in ONE place (the safest)." },
       dramatizacion: { type: "boolean", default: false, description: "true = the ad shows a small label the whole time: «Dramatización · actor IA» («Dramatization · AI actor» in English). Use it whenever an AI person tells a first-person story or result that didn't happen to them (a testimonial-style script): it is then allowed and honest." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
+      // Compatibility for apps that still show the older tool list (they can't see creads_video_producto yet):
+      // modelo «producto:<estilo>» makes a «Video de producto» instead — the product photo link goes in
+      // «indicaciones», the headline in «titulo», what the product is in «guion». Its id keeps the ad_ shape
+      // (ad_vp…) so creads_estado_anuncio can follow it.
+      const pm = str(a.modelo, 40).match(/^producto:([a-z]+)$/);
+      if (pm) {
+        const foto = (str(a.indicaciones, 600).match(/https?:\/\/\S+\/api\/media\/\S+|\/api\/media\/\S+/) ?? [""])[0];
+        const v = await call<{ video: { id: string; estilo: string } }>("/api/video-producto", { producto: mediaRef(foto), estilo: pm[1], titular: str(a.titulo, 80), descripcion: str(a.guion, 400) });
+        const id = `ad_vp${v.video.id.slice(3)}`;
+        return { text: `Video de producto en camino (${v.video.estilo}). Id: ${id}. Revísalo con creads_estado_anuncio en 1 a 3 minutos.`, data: { id, estado: "creando" } };
+      }
       const d = await call<{ anuncio: Json }>("/api/v1/anuncios", { guion: str(a.guion), formato: str(a.formato, 30) || "ugc", idioma: a.idioma === "en" ? "en" : "es-CL", ...(str(a.titulo, 80) ? { titulo: str(a.titulo, 80) } : {}), ...(str(a.avatar, 40) ? { avatar: str(a.avatar, 40) } : {}), ...(str(a.voz, 140) ? { voz: str(a.voz, 140) } : {}), ...(str(a.modelo, 40) ? { modelo: str(a.modelo, 40) } : {}), edicion: a.edicion === "simple" ? "simple" : "pro", ...(a.subtitulos === false ? { subtitulos: false } : {}), ...(str(a.indicaciones, 600) ? { indicaciones: str(a.indicaciones, 600) } : {}), ...(str(a.plantilla, 20) ? { plantilla: str(a.plantilla, 20) } : {}), ...(str(a.color, 7) ? { color: str(a.color, 7) } : {}), ...(typeof a.velocidad === "number" ? { velocidad: a.velocidad } : {}), ...(a.dramatizacion === true ? { dramatizacion: true } : {}), ...(str(a.lugares, 500) ? { lugares: str(a.lugares, 500) } : {}) });
       return { text: `Anuncio pedido (id ${d.anuncio.id}). Está «${d.anuncio.estado}». Consulta su avance con creads_estado_anuncio cada 30 a 60 segundos.`, data: d.anuncio };
     },
@@ -141,6 +152,13 @@ export const TOOLS: Tool[] = [
     run: async (a, call, _origin, ctx) => {
       const id = str(a.id, 30);
       if (!/^ad_[a-z0-9]{6,20}$/.test(id)) throw new Error("El id debe ser como ad_xxxxxx.");
+      // a «Video de producto» ordered through creads_crear_anuncio (see above)
+      if (id.startsWith("ad_vp")) {
+        const v = (await call<{ video: { estado: string; url?: string; error?: string } }>(`/api/video-producto?id=vp_${id.slice(5)}`)).video;
+        const descarga = v.estado === "listo" && v.url ? await ctx.link(v.url).catch(() => null) : null;
+        const text = v.estado === "listo" ? `Listo: ${_origin}${v.url}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}` : v.estado === "error" ? `No se pudo terminar: ${v.error ?? "error"} (el saldo volvió a la cuenta)` : "En proceso: animando el producto. Vuelve a consultar en 30 a 60 segundos.";
+        return { text, data: { estado: v.estado, ...(v.url ? { video_url: `${_origin}${v.url}` } : {}), ...(descarga ? { descarga } : {}) } };
+      }
       const d = await call<{ anuncio: { estado: string; paso?: string | null; video_url?: string | null; error?: string | null } & Json }>(`/api/v1/anuncios/${id}`);
       const x = d.anuncio;
       const descarga = x.estado === "listo" && x.video_url ? await ctx.link(mediaRef(x.video_url)).catch(() => null) : null;
