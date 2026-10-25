@@ -63,6 +63,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
     "/api/montage": ffmpegFiles,
+    // «Editor de video»: the export cuts, burns texts and subtitles and mixes the music
+    "/api/ads/[id]/editor/exportar": ffmpegFiles,
     "/api/review": ffmpegFiles,
     // the assistant's review (frame sheet) and «Persona real» (cuts a piece of the person's video)
     "/api/v1/anuncios/[id]/revisar": ["./node_modules/ffmpeg-static/ffmpeg"],
