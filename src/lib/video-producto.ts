@@ -8,12 +8,12 @@ export const ESTILOS_VIDEO = [
   {
     id: "giro", label: "Giro 360",
     escena: "the product standing alone on a glossy pedestal in a minimal studio with a soft gradient background in the brand colours, dramatic rim light, lots of empty space above",
-    movimiento: "the product slowly rotates 360 degrees on the pedestal, smooth orbit of soft light, subtle reflections, premium commercial look",
+    movimiento: "[Arc shot] the camera smoothly orbits around the product in a wide half circle while the pedestal turns slowly, so we clearly see the product from the front and then its sides; a bright light streak sweeps across the glass, reflections move, premium commercial look",
   },
   {
     id: "macro", label: "Acercamiento macro",
     escena: "extreme close-up of the product's best detail (texture, label, material) with shallow depth of field, studio light, lots of empty space above",
-    movimiento: "slow cinematic push-in towards the product detail, light sweeps across the surface, gentle focus pull",
+    movimiento: "[Push in] steady cinematic push-in towards the product detail, a light streak sweeps across the surface, gentle focus pull, tiny dust particles glow in the light",
   },
   {
     id: "salpicadura", label: "Salpicadura",
@@ -23,7 +23,7 @@ export const ESTILOS_VIDEO = [
   {
     id: "flotando", label: "Flotando",
     escena: "the product floating in mid-air over a soft pastel background in the brand colours, a few small related elements floating around it, lots of empty space above",
-    movimiento: "the product floats and gently rises and tilts, the small elements drift slowly around it, dreamy soft light",
+    movimiento: "[Pedestal up] the product floats, rises and tilts clearly, the small elements drift around it at different depths, the camera rises with it, dreamy soft light",
   },
   {
     id: "unboxing", label: "Unboxing",
@@ -33,7 +33,7 @@ export const ESTILOS_VIDEO = [
   {
     id: "lifestyle", label: "En su lugar",
     escena: "the product in its natural place of use (kitchen, bathroom, desk, gym bag or nightstand), styled like a premium lifestyle photo, morning light, lots of empty space above",
-    movimiento: "slow dolly shot around the product, soft morning light moves through the scene, subtle steam or natural movement where it makes sense",
+    movimiento: "[Truck left] smooth dolly shot sliding sideways past the product with visible parallax in the foreground and background, soft morning light moves through the scene, steam or natural movement where it makes sense",
   },
 ] as const;
 export type EstiloVideo = (typeof ESTILOS_VIDEO)[number]["id"];
@@ -48,5 +48,5 @@ export function escenaPrompt(o: { estilo: EstiloVideo; producto: string; marca: 
 
 /** What moves in the video. */
 export function movimientoPrompt(o: { estilo: EstiloVideo }) {
-  return `${estiloDe(o.estilo).movimiento}. The product keeps its exact shape, label and colours the whole time. No text appears. Smooth, premium, 6 seconds.`;
+  return `${estiloDe(o.estilo).movimiento}. The product keeps its exact shape, label and colours the whole time. Clear, visible motion from the first second (never a still image). No text appears. Smooth, premium, 6 seconds.`;
 }

@@ -86,7 +86,7 @@ export async function revisarVideoProducto(user: User, v: VideoProducto): Promis
   let bytes: Uint8Array | Buffer = raw;
   if (v.titular) {
     const dir = await workdir(`vp-${v.id}`);
-    bytes = await pasadaTextos(dir, raw, textosAss([{ id: "t", texto: v.titular, desde: 0.2, hasta: SECONDS + 1, x: 50, y: 17, tam: 9.5, color: "#FFFFFF", fondo: null, fuente: "Montserrat ExtraBold", animacion: "pop" }], 1080, 1920)).catch(() => raw);
+    bytes = await pasadaTextos(dir, raw, textosAss([{ id: "t", texto: v.titular, desde: 0.2, hasta: SECONDS + 1, x: 50, y: 15, tam: 11.5, color: "#FFFFFF", fondo: null, fuente: "Montserrat ExtraBold", animacion: "pop" }], 1080, 1920), "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1").catch(() => raw);
   }
   const url = await saveMedia(ws, "videos-producto", bytes, "video/mp4", `${v.id}.mp4`);
   const out = { ...v, estado: "listo" as const, url, job: undefined };
