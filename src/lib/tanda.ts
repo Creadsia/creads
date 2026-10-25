@@ -110,12 +110,15 @@ export async function leerPagina(raw: string): Promise<Pagina> {
 
 // ---------- prompts ----------
 
-const LANG = (l: "es" | "en") => (l === "en" ? "English (United States)" : "Spanish (neutral Latin American, «tú», never «vos»)");
+export const LANG = (l: "es" | "en") => (l === "en" ? "English (United States)" : "Spanish (neutral Latin American, «tú», never «vos»)");
+
+/** The product as the model reads it: the page that was read, or what the advertiser wrote. */
+export const productoPrompt = (o: { pagina?: Pagina; descripcion?: string }) => o.pagina
+  ? `PRODUCT PAGE (${o.pagina.url})\nTitle: ${o.pagina.titulo}\nDescription: ${o.pagina.descripcion}\nPrice: ${o.pagina.precio || "not shown"}\nPage text: """${o.pagina.texto}"""`
+  : `THE ADVERTISER DESCRIBES THEIR PRODUCT: """${o.descripcion}"""`;
 
 export function angulosPrompt(o: { pagina?: Pagina; descripcion?: string; brief: string; idioma: "es" | "en"; rubro?: Rubro }) {
-  const src = o.pagina
-    ? `PRODUCT PAGE (${o.pagina.url})\nTitle: ${o.pagina.titulo}\nDescription: ${o.pagina.descripcion}\nPrice: ${o.pagina.precio || "not shown"}\nPage text: """${o.pagina.texto}"""`
-    : `THE ADVERTISER DESCRIBES THEIR PRODUCT: """${o.descripcion}"""`;
+  const src = productoPrompt(o);
   return `You are a senior direct-response strategist for paid social (Meta, TikTok). Read the product and propose ONE selling angle of each of these 6 kinds, in this order:
 1. dolor: the problem or frustration it removes
 2. deseo: the outcome or feeling the buyer wants

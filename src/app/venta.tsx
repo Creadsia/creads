@@ -344,6 +344,11 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
       </main>
 
       <footer className={`border-t border-line ${gutter}`}>
+        <nav aria-labelledby="footer-herramientas" className={`${wrap} flex flex-wrap items-center gap-x-4 gap-y-2 pt-8 text-sm text-muted`}>
+          <span id="footer-herramientas" className="font-semibold text-ink">Herramientas gratis</span>
+          <a href="/generador-de-hooks" className="hover:text-ink">Generador de hooks</a>
+          <a href="/plantilla-meta" className="hover:text-ink">Plantilla para Meta Ads</a>
+        </nav>
         <div className={`${wrap} flex flex-col gap-4 py-10 text-sm text-muted sm:flex-row sm:items-center sm:justify-between`}>
           <span>© {new Date().getFullYear()} Creads IA · hola@creadsia.com</span>
           <span className="flex flex-wrap gap-4">

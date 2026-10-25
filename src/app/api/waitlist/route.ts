@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { clientIp, tooMany } from "@/lib/rate";
+import { guardarEnLista } from "@/lib/waitlist";
 
-// Saves a sign-up (plan reservation) in Supabase, table `waitlist` (see supabase/schema.sql).
-// Uses the REST endpoint with the service-role key, which stays on the server.
+// Saves a sign-up (plan reservation) in Supabase, table `waitlist` (see src/lib/waitlist.ts).
 export async function POST(req: Request) {
   const limited = await tooMany("upload", `waitlist:${clientIp(req)}`);
   if (limited) return limited;
@@ -13,46 +13,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid email." }, { status: 400 });
   }
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    return NextResponse.json({ error: "Sign-ups open very soon." }, { status: 503 });
-  }
-
   // masterclass sign-ups (creadsia.com/curso) keep their WhatsApp in the niche column
   const masterclass = body?.plan === "masterclass";
   const wa = typeof body?.whatsapp === "string" ? body.whatsapp.replace(/[^\d+ ]/g, "").trim().slice(0, 20) : "";
-  const base = {
-    email,
-    niche: masterclass ? `Masterclass${wa ? ` · WhatsApp ${wa}` : ""}`.slice(0, 80) : String(body?.niche ?? "").slice(0, 80),
-    ads_per_month: String(body?.ads_per_month ?? "").slice(0, 20),
-  };
   const extra = {
     plan: String(body?.plan ?? "").slice(0, 20),
     lang: String(body?.lang ?? "").slice(0, 5),
   };
-
-  const insert = (row: object) =>
-    fetch(`${url}/rest/v1/waitlist`, {
-      method: "POST",
-      headers: {
-        apikey: key,
-        // Legacy service_role keys are JWTs and also go in Authorization; new sb_secret_ keys only need apikey.
-        ...(key.startsWith("eyJ") ? { authorization: `Bearer ${key}` } : {}),
-        "content-type": "application/json",
-        prefer: "resolution=ignore-duplicates,return=minimal",
-      },
-      body: JSON.stringify(row),
-    });
-
-  let res = await insert({ ...base, ...extra });
-  // If the plan/lang columns haven't been added yet (schema.sql), save the sign-up without them.
-  if (res.status === 400) res = await insert(base);
-
-  if (!res.ok && res.status !== 409) {
-    const detail = await res.text().catch(() => "");
-    console.error("waitlist insert failed", res.status, detail.slice(0, 500));
-    return NextResponse.json({ error: `Couldn't save (code ${res.status}).` }, { status: 502 });
+  const saved = await guardarEnLista({
+    email,
+    niche: masterclass ? `Masterclass${wa ? ` · WhatsApp ${wa}` : ""}`.slice(0, 80) : String(body?.niche ?? "").slice(0, 80),
+    ads_per_month: String(body?.ads_per_month ?? "").slice(0, 20),
+    ...extra,
+  });
+  if (!saved.ok) {
+    if (saved.status === 503) return NextResponse.json({ error: "Sign-ups open very soon." }, { status: 503 });
+    console.error("waitlist insert failed", saved.status, saved.detail);
+    return NextResponse.json({ error: `Couldn't save (code ${saved.status}).` }, { status: 502 });
   }
   // the same Lead the browser pixel sent (same id), from the server
   await sendMeta({ name: "Lead", eventId: typeof body?.eventId === "string" ? body.eventId : undefined, email, content: masterclass ? "Masterclass" : extra.plan ? `Reserva ${extra.plan}` : "Lista de espera" }, visitorFrom(req));

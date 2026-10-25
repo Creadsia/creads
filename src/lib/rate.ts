@@ -44,8 +44,13 @@ const BUCKETS = {
   freeScript: [24 * 60 * 60, 5], // scripts per day for accounts without a plan
   freeAll: [24 * 60 * 60, 1500], // free searches and scripts for everyone together per day (AI bill ceiling)
   assistAll: [24 * 60 * 60, 6000], // ... for everyone together per day (a hard ceiling on the AI bill)
+  hooksIp: [24 * 60 * 60, 3], // free hook generator (/generador-de-hooks, no account) per connection per day
+  hooksAll: [24 * 60 * 60, 800], // ... for everyone together per day (about US$0.03 each: a ceiling of ~US$25 a day)
+  leadIp: [60 * 60, 10], // free-tool leads (Meta template download) per connection per hour
 } as const;
 export type Bucket = keyof typeof BUCKETS;
+/** [window in seconds, max tries] of a bucket. */
+export const bucketLimit = (b: Bucket): readonly [number, number] => BUCKETS[b];
 
 /** True while `key` stays within its bucket's limit (counts this attempt). */
 // Guarding passwords, codes and new accounts matters more than convenience: if the counter is down,
@@ -110,6 +115,9 @@ const MSG: Record<Bucket, string> = {
   freeScript: "Hiciste tus 5 guiones gratis de hoy. Mañana tienes 5 más, o elige un plan (desde US$25 al mes) y crea sin límite.",
   freeAll: "Lo gratis está con mucha demanda hoy. Vuelve mañana o elige un plan (desde US$25 al mes).",
   assistAll: "El asistente está con mucha demanda. Revisa el Centro de ayuda o escribe a hola@creadsia.com.",
+  hooksIp: "Usaste tus 3 usos gratis de hoy. Mañana tienes 3 más, o crea tu cuenta en Creads y convierte tus hooks en imágenes y videos.",
+  hooksAll: "El generador está con mucha demanda hoy. Vuelve mañana o crea tu cuenta en Creads.",
+  leadIp: "Demasiados intentos. Espera un rato y vuelve a probar.",
   assistDay: "Llegaste al máximo de preguntas de hoy. Mañana sigo ayudándote; mientras, revisa el Centro de ayuda o escribe a hola@creadsia.com.",
 };
 
