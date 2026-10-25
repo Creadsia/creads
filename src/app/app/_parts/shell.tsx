@@ -12,6 +12,7 @@ import { Guides, HelpButton } from "./tour";
 import { fmtCredits } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 import CreditsPopup from "./credits-popup";
+import TrialPopup from "./trial-popup";
 import { openUpgrade } from "./buy";
 import { MoneyText } from "../../money";
 
@@ -355,6 +356,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
       <Assistant />
       <Guides />
       {!user.owner && <CreditsPopup />}
+      {!user.owner && <TrialPopup />}
     </div>
   );
 }
