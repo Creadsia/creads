@@ -1,16 +1,16 @@
 "use client";
 
-import { secondsOf } from "@/lib/credit-math";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, clpFor, hasLaunch } from "@/lib/catalog";
+import { ANNUAL_PCT, FUNDADOR, PRUEBA, clpFor } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import { Money, MoneyText } from "./money";
 import Garantia from "./garantia";
 
-// The plans, front and center: the launch price is the big number, the regular price is crossed out,
-// and every button goes straight to checkout (/empezar) with that plan already chosen.
+// The plans, front and center (owner's plan, 25 Oct 2026): Pack Prueba first, then Testea, Escala (highlighted,
+// with the founder price and its real counter) and Agencia, shown as images or videos a month. Every button goes
+// straight to checkout (/empezar) with that plan already chosen.
 
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
@@ -18,16 +18,13 @@ export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan
 export default function Pricing({ t, lang, rate = 950, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
+  const [quedan, setQuedan] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
-  // money as the visitor reads it: pesos in Spanish (that's what Mercado Pago charges), dollars in English
   // pesos for visitors in Chile, US$ for the rest (see ./money)
   const money = (n: number) => <Money usd={n} rate={rate} en={!es} />;
-  // a yearly plan per month = the yearly total ÷ 12 (so 12 × the monthly figure is what they pay)
-  const perMonthOfYear = (usdYear: number) => money(Math.round((usdYear / 12) * 100) / 100);
-  // without automatic renewal (temporary payment setup) the FAQ must not promise it
-  // plans on sale (Ultra is kept for anyone who has it, not sold)
+  // plans on sale (older plans are kept for the people who have them, not sold)
   const shown = t.plans.filter((p) => !("hidden" in p && p.hidden));
-  const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes y créditos» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans and credits\" with one click. There are no automatic charges." } : f));
+  const faq = renews ? t.payFaq : t.payFaq.map((f, i) => (i === 2 ? { q: es ? "¿El plan mensual se renueva solo?" : "Does the monthly plan renew by itself?", a: es ? "Por ahora no: pagas un mes a la vez y, si quieres seguir, renuevas desde «Planes» con un clic. No hay cobros automáticos." : "Not for now: you pay one month at a time and renew from \"Plans\" with one click. There are no automatic charges." } : f));
 
   // Meta "ViewContent": the visitor saw the plans (once per visit)
   useEffect(() => {
@@ -37,88 +34,83 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
     io.observe(el);
     return () => io.disconnect();
   }, []);
+  // the founder places left: a real count from the orders (owner's plan, 25 Oct 2026)
+  useEffect(() => { fetch("/api/fundador").then((r) => r.json()).then((d) => setQuedan(typeof d?.quedan === "number" ? d.quedan : null)).catch(() => {}); }, []);
 
   return (
     <div ref={box} className="flex flex-col gap-5">
-      {/* the offer, impossible to miss (only while there is one) */}
-      {HAS_OFFER && <div className="stage relative flex flex-col gap-4 overflow-hidden rounded-3xl border border-line bg-black p-5 text-white sm:flex-row sm:items-center sm:gap-6 sm:px-6 sm:py-4">
-        <span aria-hidden="true" className="pointer-events-none absolute -top-24 -left-10 h-64 w-64 rounded-full opacity-50 blur-[80px]" style={{ background: "var(--grad)" }} />
-        <span className="chroma relative font-display text-5xl leading-none font-semibold sm:text-[3.4rem]">−{LAUNCH_PCT}%</span>
-        <span className="relative flex min-w-0 flex-1 flex-col gap-1">
-          <span className="w-fit rounded-md bg-rec px-2 py-0.5 text-xs font-bold">{t.offerTag}</span>
-          <b className="text-lg leading-snug sm:text-xl"><MoneyText text={t.offer} rate={rate} /></b>
-          <span className="text-sm text-white/70"><MoneyText text={t.offerNote} rate={rate} /></span>
-        </span>
-        <div role="radiogroup" aria-label={es ? "Forma de pago" : "Billing"} className="relative inline-flex w-fit shrink-0 rounded-xl border border-white/20 bg-white/5 p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div role="radiogroup" aria-label={es ? "Forma de pago" : "Billing"} className="inline-flex w-fit rounded-xl border border-line bg-surface p-1">
           {([[false, t.monthly], [true, t.yearly]] as const).map(([val, label]) => (
             <button key={String(val)} type="button" role="radio" aria-checked={yearly === val} onClick={() => setYearly(val)}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${yearly === val ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
-              {label}{val && <span className="ml-1.5 text-xs text-good">{t.yearlyBadge}</span>}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${yearly === val ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>
+              {label}{val && <span className="ml-1.5 text-xs text-good">−{ANNUAL_PCT}%</span>}
             </button>
           ))}
         </div>
-      </div>}
+        <p className="text-sm text-muted">{es ? "Un solo saldo al mes: lo gastas en imágenes o videos, como quieras." : "One balance a month: spend it on images or videos, as you like."}</p>
+      </div>
 
-      {/* plans: the cards on sale, everything about each plan from top to bottom, built to pick one and pay */}
-      <div className={`mx-auto grid w-full gap-5 md:items-start ${shown.length >= 3 ? "max-w-6xl md:grid-cols-3" : "max-w-4xl md:grid-cols-2"}`}>
+      {/* Pack Prueba: the way in */}
+      <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <b className="font-display text-lg font-semibold">{es ? "Pack Prueba" : "Trial Pack"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
+          <span className="text-sm text-muted">{es ? "Tu primera tanda: hasta 12 imágenes o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "Your first batch: up to 12 images or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
+        </div>
+        <a href="/registro" className="shrink-0 rounded-xl bg-ink px-5 py-3 text-center font-semibold text-bg">{es ? <>Haz tu primera tanda por {money(PRUEBA.usd)}</> : <>Make your first batch for {money(PRUEBA.usd)}</>}</a>
+      </div>
+
+      {/* plans */}
+      <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-3 md:items-start">
         {shown.map((p) => {
-          const featured = p.id === "plus";
-          const credits = Number(String(p.credits).replace(/\D/g, ""));
-          const secs = secondsOf(credits); // shown in seconds of video (Persona IA), credits stay underneath
-          const promo = !yearly && hasLaunch(p.id);
-          const monthNow = yearly ? (p.yearly * 12) / 12 : promo ? LAUNCH_PRICE : p.price;
+          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number };
+          const featured = Boolean(plan.featured);
+          const founder = !yearly && p.id === FUNDADOR.plan && quedan !== null && quedan > 0;
+          const now = yearly ? p.yearly : founder ? FUNDADOR.usd : p.price;
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
-                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] lg:order-none"
+                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] md:order-none"
                 : "border border-line bg-surface"}`}>
               {featured && (
                 <div className="flex items-center justify-center gap-2 bg-[image:var(--grad)] px-4 py-2 text-sm font-bold text-white">
                   <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="m10 1.8 2.5 5.1 5.6.8-4 4 1 5.6L10 14.6l-5.1 2.7 1-5.6-4-4 5.6-.8L10 1.8Z" /></svg>
-                  {t.popular} · {t.bestValue}
+                  {es ? "Plan estrella" : "Most popular"}
                 </div>
               )}
-
               <div className="flex flex-col gap-4 p-5">
                 <div className="flex flex-col gap-1">
                   <h3 className="text-xl font-extrabold">{p.name}</h3>
                   <p className="text-sm text-muted">{p.for}</p>
                 </div>
-
-                {/* price */}
                 <div className="flex flex-col gap-1.5">
-                  {(yearly || promo) && (
+                  {(yearly || founder) && (
                     <div className="flex flex-wrap items-center gap-2">
                       <s className="text-muted">{money(p.price)}{t.perMonth}</s>
-                      <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? t.yearlyBadge : `−${LAUNCH_PCT}% ${t.firstMonth}`}</span>
+                      <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? `−${ANNUAL_PCT}%` : es ? "Precio fundador" : "Founder price"}</span>
                     </div>
                   )}
                   <p className="flex flex-wrap items-baseline gap-x-1.5">
-                    <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{yearly ? perMonthOfYear(p.yearly * 12) : money(monthNow)}</span>
-                    <span className="text-muted">{yearly || !promo ? t.perMonth : ` ${t.firstMonth}`}</span>
+                    <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{money(now)}</span>
+                    <span className="text-muted">{t.perMonth}</span>
                   </p>
-                  {/* Mercado Pago charges pesos: the amount a Chilean SMB will actually see (launch audit, 23 Oct 2026) */}
-                  {es && !yearly && <p className="p-usd text-sm font-semibold">≈ ${clpFor(monthNow, rate).toLocaleString("es-CL")} CLP al mes</p>}
+                  {es && !yearly && <p className="p-usd text-sm font-semibold">≈ ${clpFor(now, rate).toLocaleString("es-CL")} CLP al mes</p>}
                   <p className="text-sm text-muted">
-                    {yearly ? <>{money(p.yearly * 12)} {t.yearlyTotal}</> : promo ? <>{t.then} {money(p.price)}{t.perMonth}</> : t.billedMonthly} · {t.cancel}
+                    {founder ? (es ? <>Los primeros {FUNDADOR.months} meses, luego {money(p.price)}. Quedan {quedan} de {FUNDADOR.cupos} cupos.</> : <>First {FUNDADOR.months} months, then {money(p.price)}. {quedan} of {FUNDADOR.cupos} places left.</>)
+                      : yearly ? <>{money(Math.round(p.yearly * 12 * 100) / 100)} {t.yearlyTotal}</> : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
-
-                {/* what the money turns into */}
                 <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
                   <div className="flex flex-col gap-0.5 p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{credits.toLocaleString("es-CL")}</b>
-                    <span className="text-xs text-muted">{es ? "créditos al mes" : "credits a month"}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">{plan.imagenes}</b>
+                    <span className="text-xs text-muted">{es ? "imágenes al mes" : "images a month"}</span>
                   </div>
                   <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-lg font-semibold leading-tight tabular-nums">≈ {Math.max(1, Math.floor(secs / 15))} {es ? "anuncios" : "ads"}</b>
-                    <span className="text-xs text-muted">{es ? `de 15 s al mes (≈ ${secs} s de video)` : `of 15 s a month (≈ ${secs} s of video)`}</span>
+                    <b className="font-display text-xl font-semibold tabular-nums">{es ? "o" : "or"} {plan.videos}</b>
+                    <span className="text-xs text-muted">{es ? "videos con avatar de 10 s" : "10 s avatar videos"}</span>
                   </div>
-                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">
-                    {es ? "Videos, imágenes y voces se pagan con los mismos créditos." : "Videos, images and voices use the same credits."}
-                  </div>
+                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">{es ? "O la mezcla que quieras: es un solo saldo." : "Or any mix: it's one balance."}</div>
                 </div>
-
                 <div className="flex flex-col gap-2">
                   <a href={startHref(p.id, yearly)}
                     className={`rounded-xl px-5 py-3 text-center text-base font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
@@ -126,39 +118,15 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                   </a>
                   <p className="text-center text-xs text-muted">{t.cardNote}</p>
                 </div>
+                <ul className="flex flex-col gap-2 border-t border-line pt-4 text-sm">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good" aria-hidden="true"><svg viewBox="0 0 20 20" className="h-3 w-3"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-
-              {/* everything it includes */}
-              <details className="group border-t border-line">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 text-sm font-semibold hover:bg-surface-2/60">
-                  {t.includes}
-                  <span aria-hidden="true" className="text-lg leading-none text-muted transition-transform group-open:rotate-45">+</span>
-                </summary>
-              <div className="flex flex-col gap-4 px-5 pb-5">
-                {t.compare.groups.map((g) => (
-                  <div key={g.title} className="flex flex-col gap-2.5">
-                    <span className="text-xs font-semibold text-muted">{g.title}</span>
-                    <ul className="flex flex-col gap-2 text-sm">
-                      {g.rows.map(([row, ...vals]) => {
-                        const v = vals[shown.indexOf(p)];
-                        const off = v === "no";
-                        return (
-                          <li key={row} className={`flex items-center justify-between gap-3 ${off ? "text-muted/60" : ""}`}>
-                            <span className="flex items-center gap-2.5">
-                              {off
-                                ? <span className="grid h-5 w-5 shrink-0 place-items-center text-muted/50" aria-hidden="true">—</span>
-                                : <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good" aria-hidden="true"><svg viewBox="0 0 20 20" className="h-3 w-3"><path d="M5 10.5l3.2 3L15 7" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span>}
-                              <span>{row}{off ? <span className="sr-only"> ({es ? "no incluido" : "not included"})</span> : null}</span>
-                            </span>
-                            {v !== "yes" && !off && <b className="shrink-0 text-right font-semibold tabular-nums">{v}</b>}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-              </details>
             </article>
           );
         })}
@@ -194,7 +162,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
               const price = Number(p.replace(/[^\d.]/g, ""));
               return (
                 <div key={c} className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
-                  <span className="font-semibold">+{credits.toLocaleString("es-CL")} {es ? "créditos" : "credits"}</span>
+                  <span className="font-semibold">+{Math.floor(credits / 10).toLocaleString("es-CL")} {es ? "imágenes" : "images"}</span>
                   <span className="font-display text-2xl font-semibold">{money(price)}</span>
                   <a href={`/app/planes?plan=pack-${credits}`} className="mt-auto rounded-lg border border-line bg-surface px-3 py-2 text-center text-sm font-semibold hover:border-accent-text">{t.topups.buy}</a>
                 </div>
