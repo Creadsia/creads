@@ -310,11 +310,11 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 <thead>
                   <tr className="bg-surface-2 text-xs sm:text-sm">
                     <th scope="col" className="p-3 sm:p-4"><span className="sr-only">Comparación</span></th>
+                    <th scope="col" className="bg-ink p-3 font-semibold text-bg sm:p-4">Creads</th>
                     <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Diseñador freelance</th>
                     <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Creador UGC</th>
                     <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Agencia</th>
                     <th scope="col" className="p-3 font-semibold text-muted sm:p-4">ChatGPT o Canva</th>
-                    <th scope="col" className="bg-ink p-3 font-semibold text-bg sm:p-4">Creads</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line bg-surface">
@@ -326,8 +326,8 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                   ].map(([k, ...v]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
+                      <td className="bg-good/[0.06] p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{v[4]}</span></td>
                       {v.slice(0, 4).map((x, i) => <td key={i} className="p-3 text-muted sm:p-4">{x}</td>)}
-                      <td className="p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{v[4]}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -434,17 +434,17 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
         <section className={gutter}>
           <div className={`${wrap} relative grid items-center gap-8 overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-10 sm:px-10 md:grid-cols-[1.3fr_0.7fr]`}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-20 blur-[90px]" style={{ background: "var(--grad)" }} />
-            <div className="relative flex flex-col items-start gap-4">
+            <div className="relative flex min-w-0 flex-col items-start gap-4">
               <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próxima tanda puede estar corriendo hoy.</h2>
               <p className="text-muted">Pega el link de tu producto, elige tus ángulos y descarga 10 anuncios listos para Meta.</p>
               <Cta>Haz tu primera tanda por {pack}</Cta>
               <InsigniasPago compact />
               <SoporteLinea />
             </div>
-            <div className="relative mx-auto flex items-end">
-              <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-32 -rotate-6 sm:w-36" />
-              <DemoPhone {...DEMOS.creads} className="relative z-10 w-40 sm:w-44" />
-              <DemoPhone {...DEMOS.cocina} className="relative z-0 -ml-6 w-32 rotate-6 sm:w-36" />
+            <div className="relative mx-auto flex min-w-0 max-w-full items-end">
+              <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-24 -rotate-6 sm:w-36" />
+              <DemoPhone {...DEMOS.creads} className="relative z-10 w-32 sm:w-44" />
+              <DemoPhone {...DEMOS.cocina} className="relative z-0 -ml-6 w-24 rotate-6 sm:w-36" />
             </div>
           </div>
         </section>
