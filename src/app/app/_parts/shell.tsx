@@ -59,6 +59,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     group: "Crear",
     items: [
       { href: "/app/tanda", label: "Imágenes", icon: I.image },
+      { href: "/app/laboratorio", label: "Imagen a medida", icon: I.image, full: true },
       { href: "/app/video-producto", label: "Video de producto", icon: I.film },
       { href: "/app/automatico", label: "Video con avatar", icon: I.spark },
     ],
@@ -82,7 +83,6 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
       { href: "/app/crear", label: "Video paso a paso", icon: I.create },
       { href: "/app/guiones", label: "Guiones", icon: I.pen },
       { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, full: true },
-      { href: "/app/laboratorio", label: "Imagen suelta", icon: I.image, full: true },
       { href: "/app/voces", label: "Voces", icon: I.mic },
       { href: "/app/avatares", label: "Avatares", icon: I.user },
       { href: "/app/productos", label: "Productos", icon: I.box },
