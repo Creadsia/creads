@@ -11,6 +11,8 @@ import { cargarMarca, guardarMarca, marcaBrief } from "@/lib/marca";
 import { conLogo } from "@/lib/logo";
 import { IDEAS } from "@/lib/ideas";
 import { esRubro } from "@/lib/hooks-biblioteca";
+import { tandaCompleta } from "@/lib/correos-activacion";
+import { correosComportamiento, enviarEmbudo } from "@/lib/embudo-envio";
 import {
   type Angulo, type Pieza, type Producto, type Tanda, TIPOS, type TipoAngulo,
   actualizarPieza, angulosPrompt, variacionesPrompt, cargarTanda, fetchPublic, guardarTanda, leerPagina, listarTandas, tandaId, tandaPrompt,
@@ -76,6 +78,11 @@ export async function POST(req: Request) {
       if (typeof b.ganador === "boolean") patch.ganador = b.ganador || undefined;
       if (typeof b.error === "string") patch.error = str(b.error, 300) || undefined;
       const out = await actualizarPieza(ws, t.id, n, patch);
+      // «Tu tanda está lista» (behaviour emails, once per person): the image that completed the batch
+      if (correosComportamiento() && b.url !== undefined && tandaCompleta(out) && !tandaCompleta(t)) {
+        await enviarEmbudo(s.user, "tanda-lista", s.user.id, { vars: { n: String(out!.piezas.length), producto: out!.producto.nombre || "tu producto", id: out!.id } })
+          .catch((e) => console.error("tanda lista email", e instanceof Error ? e.message : e));
+      }
       return NextResponse.json({ ok: true, url: patch.f916 ?? patch.f45 ?? null, tanda: out ?? null });
     }
 

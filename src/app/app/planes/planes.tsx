@@ -10,6 +10,7 @@ import { capture } from "../../posthog";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
 import { Money } from "../../money";
+import CasoFundadorCheck from "../_parts/caso-fundador";
 
 // Plans and credits: choose a plan or a top-up, see exactly what you'll pay, pick how to pay.
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
@@ -42,6 +43,7 @@ export default function Planes() {
   const [item, setItem] = useState<ItemId | null>(null);
   const method: MethodId = "mercadopago";
   const [busy, setBusy] = useState(false);
+  const [casoFundador, setCasoFundador] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState<{ id: string; label: string; total: number; method: MethodId } | null>(null);
 
@@ -137,7 +139,7 @@ export default function Planes() {
     if (!item) return;
     setBusy(true); setErr("");
     const eventId = newEventId();
-    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method, eventId }) }).catch(() => null);
+    const r = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method, eventId, ...(item === PRUEBA.id ? { casoFundador } : {}) }) }).catch(() => null);
     if (!r) { setBusy(false); return setErr("No pudimos conectarnos. Revisa tu conexión e intenta de nuevo."); }
     const d = await r.json().catch(() => ({}));
     setBusy(false);
@@ -355,6 +357,7 @@ export default function Planes() {
             <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes saldo para <b>{fmtSaldo(q.period === "anual" ? q.credits / 12 : q.credits)}</b>{q.period === "anual" ? " cada mes, por 12 meses" : q.period === "mensual" ? " este mes" : ""}.</p>
             {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? <>Pago de un mes, sin renovación automática. Desde el segundo mes: {money(m)}.</> : (q.fundador ?? 0) > 0 ? <>Meses 2 y 3: {money(FUNDADOR.usd)}. Desde el mes 4: {money(m)}. Cancela cuando quieras.</> : <>Se renueva solo cada mes: {money(m)}. Cancela cuando quieras.</>}</p>; })()}
             <Garantia compact />
+            {q.item === PRUEBA.id && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} />}
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? <>Pagar {money(q.total)} con Mercado Pago</> : <>Ir a pagar {money(q.total)}</>}</button>
             <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>
             {pay?.online && pay.renews !== false && q.period === "mensual" && <p className="text-xs text-muted">Para la suscripción, entra a Mercado Pago con el mismo correo de tu cuenta Creads.</p>}

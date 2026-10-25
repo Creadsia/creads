@@ -9,6 +9,7 @@ import { createPreference, createSubscription, getPreapproval, mpReady, oneTimeO
 import { reconcileSubscription } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
 import { registrarEvento } from "@/lib/eventos";
+import { inscribirCaso } from "@/lib/casos";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,11 @@ export async function POST(req: Request) {
     const visitor = visitorFrom(req);
     const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q, visitor });
     await registrarEvento("checkout", { cuenta: ws, correo: s.user.email, item: q.item, plan: q.label, total_usd: q.total, pedido: order.id, fuente: visitor.src ?? null });
+    // «Caso fundador»: the optional box at the Pack Prueba checkout (stored with date and exact text; never blocks the payment)
+    if (q.item === PRUEBA.id && b?.casoFundador === true) {
+      const saved = inscribirCaso({ userId: s.user.id, ws, email: s.user.email, name: s.user.name, pedido: order.id }).catch((e) => console.error("caso fundador", e instanceof Error ? e.message : e));
+      await Promise.race([saved, new Promise((r) => setTimeout(r, 6000))]);
+    }
     await sendMeta({ name: "InitiateCheckout", eventId: typeof b?.eventId === "string" ? b.eventId : undefined, email: s.user.email, value: q.total, content: q.label }, visitor);
 
     let redirect: string | null = null;

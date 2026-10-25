@@ -8,6 +8,7 @@ import { capture } from "../../posthog";
 import { IDEAS, type Idea } from "@/lib/ideas";
 import { TIPO_LABEL, type Angulo, type Pieza, type Producto, type Tanda, type TipoAngulo } from "@/lib/tanda-tipos";
 import { RUBRO_INFO, type Rubro, esRubro } from "@/lib/hooks-biblioteca";
+import CasoFundadorCheck from "../_parts/caso-fundador";
 
 // «Primera tanda»: link of the product → 6 selling angles → 10 ad images, each in 4:5 and 9:16, ZIP by placement.
 
@@ -51,6 +52,7 @@ export default function PrimeraTanda() {
   const [idea, setIdea] = useState<Idea | null>(null);
   const { price, covers, info } = useCredits();
   const [pagando, setPagando] = useState(false);
+  const [casoFundador, setCasoFundador] = useState(false);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -124,7 +126,7 @@ export default function PrimeraTanda() {
   async function comprarPack(t: Tanda) {
     setPagando(true); setErr("");
     try {
-      const r = await fetch("/api/pagos", { method: "POST", headers: H, body: JSON.stringify({ item: "pack-prueba", method: "mercadopago", volver: `/app/tanda?id=${t.id}` }) });
+      const r = await fetch("/api/pagos", { method: "POST", headers: H, body: JSON.stringify({ item: "pack-prueba", method: "mercadopago", volver: `/app/tanda?id=${t.id}`, casoFundador }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo preparar el pago.");
       capture("pack_checkout", { desde: "tanda" });
@@ -286,6 +288,7 @@ export default function PrimeraTanda() {
               : alcanza ? <span className="text-xs text-muted">Usa {price(MODEL_USD * 20, "imagen")} de tu saldo (10 anuncios en 2 formatos). Si una imagen falla, no se cobra.</span>
               : <span className="text-xs text-muted">Pack Prueba: pago único de US$9, hasta 12 imágenes o 1 video. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>}
           </div>
+          {!alcanza && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
         </div>
       )}
 
@@ -301,6 +304,7 @@ export default function PrimeraTanda() {
               <a href={`/api/tanda/meta?id=${tanda.id}`} className={`${ghostCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos} title="Para importar en el Administrador de anuncios de Meta: todo parte en pausa">Descargar archivo para Meta (CSV)</a>
             </div>
           </div>
+          {!corriendo && listos < total && info && !covers(MODEL_USD * 2) && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])}
               onGanador={() => post<{ tanda: Tanda | null }>({ accion: "pieza", id: tanda.id, n: p.n, formato: "4:5", ganador: !p.ganador }).then((o) => o.tanda && setTanda(o.tanda)).catch(() => {})}
