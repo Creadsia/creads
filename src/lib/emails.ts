@@ -506,3 +506,47 @@ export function regaloReminderEmail(to: string, name: string | null, unsub: stri
     text: plain([hello(name), "", "Tienes créditos cargados para tu primer anuncio en video y todavía no los usas. Entra a Automático, cuéntale qué vendes y en 5 minutos lo tienes.", "", `Hacer mi anuncio: ${link}`, "", `No recibir más estos correos: ${unsub}`]),
   };
 }
+
+/** The customer's ad finished while they were away (owner, 25 Oct 2026: «que salga todo perfecto»). */
+export function adReadyEmail(to: string, name: string | null, o: { titulo?: string | null }): Email {
+  const link = `${SITE}/app/automatico`;
+  return {
+    to, tag: "anuncio-listo",
+    subject: "Tu anuncio está listo 🎬",
+    html: layout({
+      preview: "Revisado y listo para publicar en Instagram, Facebook y TikTok.",
+      title: "Tu anuncio está listo",
+      paragraphs: [
+        esc(hello(name)),
+        `Terminamos tu anuncio${o.titulo ? ` «${esc(o.titulo)}»` : ""}. Ya pasó la revisión de calidad y está listo para descargar y publicar.`,
+        "Si quieres cambiar una palabra de los subtítulos o hacer otra versión con otro gancho, pídeselo a Creads en el mismo chat.",
+      ],
+      cta: { label: "Ver mi anuncio", href: link },
+      after: ["Si algo no te gustó, responde este correo y lo revisamos contigo."],
+    }),
+    text: plain([hello(name), "", "Tu anuncio está listo, revisado y para descargar.", "", `Verlo: ${link}`]),
+  };
+}
+
+/** The day before the free trial's first charge: plain, so nobody is surprised (fewer disputes). */
+export function trialEndingEmail(to: string, name: string | null, o: { fecha: string; plan: string; clp: number; ads: number }): Email {
+  const planes = `${SITE}/app/planes`;
+  const monto = `$${Math.round(o.clp).toLocaleString("es-CL")}`;
+  return {
+    to, tag: "prueba-termina",
+    subject: `Mañana termina tu prueba gratis de Creads IA`,
+    html: layout({
+      preview: `El ${o.fecha} se cobra el plan ${o.plan} (${monto} al mes). Si no quieres seguir, cancélalo hoy.`,
+      title: "Mañana termina tu prueba gratis",
+      paragraphs: [
+        esc(hello(name)),
+        o.ads > 0 ? "Ya probaste Creads con tus créditos de regalo. ¡Bien!" : "Todavía no haces tu primer anuncio: aún estás a tiempo, te toma unos 5 minutos en Automático.",
+        `El <b>${esc(o.fecha)}</b> Mercado Pago cobra el plan <b>${esc(o.plan)}: ${monto} al mes</b>, con 500 créditos nuevos cada mes. No tienes que hacer nada para seguir.`,
+        "Si prefieres no seguir, cancela hoy en «Planes» con un clic y no se te cobra nada.",
+      ],
+      cta: { label: "Ver mi prueba y mi plan", href: planes },
+      after: ["¿Dudas? Responde este correo y te ayudamos."],
+    }),
+    text: plain([hello(name), "", `Mañana (${o.fecha}) se cobra el plan ${o.plan}: ${monto} al mes. Para no seguir, cancela hoy en Planes: ${planes}`]),
+  };
+}

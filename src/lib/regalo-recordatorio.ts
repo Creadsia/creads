@@ -39,11 +39,15 @@ export async function pendientes(horas = 20): Promise<Pendiente[]> {
 
 export async function enviarRecordatorios(horas = 20): Promise<{ enviados: number; regalos: number }> {
   let enviados = 0, regalos = 0;
-  // with the card trial the gift can't be loaded by email: this reminder would promise something that isn't there
-  if (tarjetaObligatoria()) return { enviados, regalos };
   for (const p of await pendientes(horas)) {
-    const g = await darRegalo(p.ws, p.email).catch(() => null);
-    if (g?.ok) regalos++;
+    if (tarjetaObligatoria()) {
+      // card trial: only accounts whose gift is already loaded (the reminder promises credits that are there)
+      const has = await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(p.ws)}&ref=eq.${encodeURIComponent(`regalo:${p.ws}`)}&select=id&limit=1`).catch(() => []);
+      if (!has.length) continue;
+    } else {
+      const g = await darRegalo(p.ws, p.email).catch(() => null);
+      if (g?.ok) regalos++;
+    }
     await writePrivateJSON(mark(p.ws), { at: new Date().toISOString() });
     if (await sendEmail(regaloReminderEmail(p.email, p.name, unsubLink(SITE, p.email)))) enviados++;
   }

@@ -3,12 +3,11 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-// «Agrega tu tarjeta» as soon as a new account enters the studio (owner, 25 Oct 2026). Shown to accounts that
-// haven't added their card for the free trial; «Ahora no» hides it for this visit (it comes back next time).
+// «Agrega tu tarjeta» for accounts that haven't added their card for the free trial, at the moment it matters:
+// after Automático shows their scripts, or when something needs credits (owner, 25 Oct 2026).
 // The terms are said plainly: nothing charged today, the date and amount of the first charge, how to cancel.
 
 interface Info { activa: boolean; dias?: number; plan?: string; clp?: number; estado?: string }
-const KEY = "creads-trial-popup";
 const enDias = (d: number) => new Date(Date.now() + d * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
 
 export default function TrialPopup() {
@@ -19,15 +18,20 @@ export default function TrialPopup() {
   const [err, setErr] = useState("");
   const btn = useRef<HTMLButtonElement>(null);
 
+  const [motivo, setMotivo] = useState<"guion" | "credito">("guion");
   useEffect(() => {
-    // coming back from Mercado Pago, the box in Automático checks the card: don't cover it
-    if (new URLSearchParams(window.location.search).get("prueba")) return;
-    try { if (sessionStorage.getItem(KEY)) return; } catch {}
-    fetch("/api/prueba").then((r) => r.json()).then((d: Info) => {
-      setInfo(d);
-      if (d?.activa && d.estado === "sin-tarjeta") setOpen(true);
-    }).catch(() => null);
+    fetch("/api/prueba").then((r) => r.json()).then((d: Info) => setInfo(d)).catch(() => null);
   }, []);
+  // it opens at the moment it makes sense (owner, 25 Oct 2026): when Automático has shown the customer's
+  // scripts and the video comes next, or when something needs credits; never just for entering
+  useEffect(() => {
+    const ok = () => info?.activa && info.estado === "sin-tarjeta";
+    const guion = () => { if (ok()) { setMotivo("guion"); setOpen(true); } };
+    const credito = () => { if (ok()) { setMotivo("credito"); setOpen(true); } };
+    window.addEventListener("creads:prueba", guion);
+    window.addEventListener("creads:sin-creditos", credito);
+    return () => { window.removeEventListener("creads:prueba", guion); window.removeEventListener("creads:sin-creditos", credito); };
+  }, [info]);
   useEffect(() => { if (path.startsWith("/app/planes")) setOpen(false); }, [path]);
   useEffect(() => {
     if (!open) return;
@@ -37,10 +41,7 @@ export default function TrialPopup() {
     return () => window.removeEventListener("keydown", esc);
   }); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function later() {
-    try { sessionStorage.setItem(KEY, "1"); } catch {}
-    setOpen(false);
-  }
+  function later() { setOpen(false); }
   async function agregar() {
     setBusy(true); setErr("");
     const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => null);
@@ -66,8 +67,8 @@ export default function TrialPopup() {
             <button type="button" onClick={later} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink">✕</button>
           </div>
           <div className="flex flex-col gap-1.5">
-            <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">Activa tu prueba gratis de {dias} días</h2>
-            <p className="text-[15px] leading-snug text-muted">Agrega tu tarjeta y te cargamos <b className="text-ink">200 créditos de regalo</b> al tiro para hacer tu primer anuncio.</p>
+            <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">{motivo === "guion" ? "Tu guion está listo. Ahora, tu video" : `Activa tu prueba gratis de ${dias} días`}</h2>
+            <p className="text-[15px] leading-snug text-muted">{motivo === "guion" ? <>Activa tu prueba gratis de {dias} días y usa tus <b className="text-ink">200 créditos de regalo</b> para grabarlo con una persona, voz y edición.</> : <>Agrega tu tarjeta y te cargamos <b className="text-ink">200 créditos de regalo</b> al tiro para hacer tu primer anuncio.</>}</p>
           </div>
           <ul className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-3.5 text-sm">
             <li>✓ <b>Hoy no se cobra nada.</b></li>
@@ -75,7 +76,7 @@ export default function TrialPopup() {
             <li>✓ Si no, cancelas antes en Planes con un clic y no pagas nada.</li>
           </ul>
           <button ref={btn} type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)] disabled:opacity-60">
-            {busy ? "Abriendo Mercado Pago…" : "Agregar tarjeta y empezar gratis"}
+            {busy ? "Abriendo Mercado Pago…" : motivo === "guion" ? "Hacer mi video gratis" : "Agregar tarjeta y empezar gratis"}
           </button>
           {err && <p className="text-sm text-bad" role="alert">{err}</p>}
           <p className="text-center text-xs text-muted">Pagas seguro con Mercado Pago: Creads nunca ve tu tarjeta.</p>

@@ -91,6 +91,9 @@ export async function GET(req: Request) {
   // sign-ups that never used their gift ad (once each, a day after signing up)
   const regalo = await import("@/lib/regalo-recordatorio").then((m) => m.enviarRecordatorios(20)).catch((e) => { console.error("regalo recordatorio", e instanceof Error ? e.message : e); return null; });
   if (regalo?.enviados) console.warn("recordatorios de regalo", regalo);
+  // card trials charged tomorrow: one plain notice the day before
+  const finPrueba = await import("@/lib/prueba").then((m) => m.avisarFinPrueba()).catch((e) => { console.error("fin prueba", e instanceof Error ? e.message : e); return 0; });
+  if (finPrueba) console.warn("avisos de fin de prueba", finPrueba);
   // subscription charges whose Mercado Pago notice never arrived (last 40 days): looked up and applied once
   const since = new Date(Date.now() - 40 * 86_400_000).toISOString();
   const subs40 = await sbRest<{ id: string }[]>(`orders?mp->>kind=eq.subscription&status=in.(pendiente,pagado)&created_at=gte.${encodeURIComponent(since)}&select=id&limit=500`).catch(() => []);

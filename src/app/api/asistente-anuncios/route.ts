@@ -12,7 +12,10 @@ import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
 import { SHOWN_PLANS, clpFor } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
-import { PRUEBA_DIAS, tarjetaObligatoria } from "@/lib/regalo";
+import { PRUEBA_DIAS, hasPaid, tarjetaObligatoria } from "@/lib/regalo";
+import { sbRest } from "@/lib/supabase";
+
+const regaloDado = async (ws: string) => (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(`regalo:${ws}`)}&select=id&limit=1`).catch(() => [])).length > 0;
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -95,7 +98,10 @@ export async function POST(req: Request) {
   const cachedTools = tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: ephemeral } : t));
   const system: { type: "text"; text: string; cache_control?: typeof ephemeral }[] = [{ type: "text", text: RECETA, cache_control: ephemeral }];
   // card trial: a new account with no credits gets its gift by adding a card (the card box is above the chat)
-  if (tarjetaObligatoria()) system.push({ type: "text", text: `PRUEBA CON TARJETA: si el cliente tiene 0 créditos y nunca pagó, sus 200 créditos de regalo se cargan cuando activa su prueba gratis de ${PRUEBA_DIAS} días en el recuadro de arriba («Agregar tarjeta y empezar gratis»): agrega su tarjeta en Mercado Pago, hoy no se cobra nada, y si no cancela antes, al terminar la prueba se cobra el plan Básico cada mes. Díselo así de claro, sin presionar, y nunca le pidas datos de tarjeta en el chat.` });
+  // card trial: the conversation is free (questions, angles, the two scripts); the card is asked for at the
+  // moment the customer has seen their scripts and wants the video (owner, 25 Oct 2026)
+  const sinTarjeta = tarjetaObligatoria() && ws !== "main" && !(await hasPaid(ws).catch(() => true)) && !(await regaloDado(ws));
+  if (sinTarjeta) system.push({ type: "text", text: `PRUEBA CON TARJETA (este cliente aún no la activa, tiene 0 créditos): conversa y trabaja gratis como siempre (preguntas, ángulo, los dos guiones), pero NO llames herramientas que gastan créditos (crear anuncio, imagen, avatar, demo) ni creads_saldo. Cuando ya le mostraste sus guiones (o pide el video), dile en una o dos frases que para hacer su video con sus 200 créditos de regalo active su prueba gratis de ${PRUEBA_DIAS} días: agrega su tarjeta en Mercado Pago, hoy no se cobra nada, y si no cancela antes, al terminar se cobra el plan Básico cada mes. Termina ESE mensaje con la marca exacta [[TARJETA]] (abre la ventana para agregarla). Nunca pidas datos de tarjeta en el chat. Cuando vuelva con la prueba activa, sigue donde quedaron con el guion que eligió.` });
   // prices in the customer's money (owner, 24 Oct 2026): pesos in Chile, US$ elsewhere
   if (await inChile(req)) {
     const rate = await usdClpRate().catch(() => 950);
@@ -111,7 +117,7 @@ export async function POST(req: Request) {
     return { role: m.role, content: blocks };
   });
   const added: Msg[] = []; // what the page appends to its history (pictures as notes)
-  const ui = { images: [] as string[], ads: [] as string[] };
+  const ui = { images: [] as string[], ads: [] as string[], tarjeta: false };
   let pendingNote = false;
 
   try {
@@ -139,6 +145,8 @@ export async function POST(req: Request) {
       // tool calls only count when the reply finished asking for them (a reply cut at the token limit is dropped)
       const content = raw.filter((x) => x.type === "text" ? String(x.text ?? "").trim() : x.type !== "tool_use" || finished);
       if (!content.length) { added.push({ role: "assistant", content: [{ type: "text", text: "Se me cortó la respuesta. Escribe «continúa» y sigo donde quedé." }] }); break; }
+      // «[[TARJETA]]»: the moment to ask for the card; the page opens the trial window and never shows the mark
+      for (const x of content) if (x.type === "text" && String(x.text).includes("[[TARJETA]]")) { ui.tarjeta = true; x.text = String(x.text).replace(/\s*\[\[TARJETA\]\]\s*/g, " ").trim(); }
       msgs.push({ role: "assistant", content });
       added.push({ role: "assistant", content: content.filter((x) => x.type === "text" || x.type === "tool_use") });
       const uses = content.filter((x) => x.type === "tool_use");

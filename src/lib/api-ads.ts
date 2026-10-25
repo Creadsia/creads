@@ -1,11 +1,12 @@
 import { readPrivateJSON, updatePrivateJSON, writePrivateJSON } from "./supabase";
-import { SITE } from "./emails";
+import { SITE, adReadyEmail } from "./emails";
+import { sendEmail } from "./providers/email";
 import { FORMATS, SOLD_FORMATS } from "./formats";
 import { videoProviders } from "./providers";
 import { type AdJob, type Studio, runStep } from "./ad-runner";
 import { once } from "./marketing";
 import { pickModel } from "./autoprod";
-import { createServiceSession, endSession } from "./auth";
+import { createServiceSession, endSession, getUserById } from "./auth";
 
 // «Hazme un anuncio» for the public API (and any system with an API key): a script in, a finished video out,
 // made by the same pipeline as «Crear anuncio» and charged to the key's account. Each job is a small private
@@ -122,6 +123,11 @@ export async function advanceAd(job: ApiAd, studio: Studio): Promise<ApiAd> {
   const next: ApiAd = { ...job, ...patch, checkedAt: now, ...(Object.keys(patch).length ? { updatedAt: now } : {}) };
   await writePrivateJSON(file(job.ws, job.id), next);
   if (DONE.has(next.estado)) await markClosed(job.ws, job.id);
+  // finished: an email too, so a customer who closed the tab comes back for it (once per ad)
+  if (next.estado === "listo" && job.estado !== "listo" && (await once(`adlisto:${job.id}`, 30 * 86400))) {
+    const u = await getUserById(job.userId).catch(() => null);
+    if (u?.email && !/@creadsia\.com$/i.test(u.email)) await sendEmail(adReadyEmail(u.email, u.name ?? null, { titulo: next.titulo })).catch(() => false);
+  }
   return next;
 }
 

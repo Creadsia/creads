@@ -4,6 +4,11 @@ import { cancelSubscription, createSubscription, getPreapproval, SITE } from "./
 import { PRUEBA_DIAS, darRegalo, hasPaid } from "./regalo";
 import { sendMeta, type Visitor } from "./meta";
 import { phoneAlert } from "./phone-alert";
+import { sbRest } from "./supabase";
+import { trialEndingEmail } from "./emails";
+import { sendEmail } from "./providers/email";
+import { once } from "./marketing";
+import { getOrder } from "./billing";
 import { usdClpRate } from "./usd-clp";
 
 // «Prueba gratis con tarjeta» (owner, 25 Oct 2026): at sign-up the customer adds a card on Mercado Pago's own
@@ -67,4 +72,23 @@ export async function cancelarPrueba(o: Order) {
   await cancelSubscription(o.mp.id);
   await setOrderMp(o.id, { ...o.mp, cancelled: true });
   await cancelOrder(o.id).catch(() => null);
+}
+
+/** Daily: the day before the first charge, one plain email (date, plan, amount, how to cancel). */
+export async function avisarFinPrueba(): Promise<number> {
+  const manana = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+  const rows = await sbRest<{ id: string }[]>(`orders?status=eq.pendiente&mp->>trial=eq.${manana}&select=id&limit=500`).catch(() => []);
+  let n = 0;
+  for (const r of rows) {
+    const o = await getOrder(r.id).catch(() => null);
+    if (!o?.mp?.trial || o.mp.cancelled || !o.email) continue;
+    const pre = await getPreapproval(o.mp.id).catch(() => null);
+    if (pre?.status !== "authorized") continue;
+    if (!(await once(`prueba-fin:${o.id}`, 30 * 86400))) continue;
+    const ads = (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(o.ws)}&kind=eq.charge&select=id&limit=50`).catch(() => [])).length;
+    const fecha = new Date(`${o.mp.trial}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
+    const plan = PLANS.find((p) => p.id === o.item)?.name ?? "Básico";
+    if (await sendEmail(trialEndingEmail(o.email, null, { fecha, plan, clp: o.mp.clp, ads }))) n++;
+  }
+  return n;
 }

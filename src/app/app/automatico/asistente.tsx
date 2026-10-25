@@ -57,6 +57,19 @@ export default function Asistente() {
     try { localStorage.setItem(KEY, JSON.stringify({ history: history.slice(-60), ads })); } catch {}
   }, [history, ads]);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [history.length, busy, ads]);
+  // back from Mercado Pago with the trial on: the conversation picks up where it stopped (the chosen script)
+  const [seguir, setSeguir] = useState(false);
+  useEffect(() => {
+    const on = () => setSeguir(true);
+    window.addEventListener("creads:prueba-ok", on);
+    return () => window.removeEventListener("creads:prueba-ok", on);
+  }, []);
+  useEffect(() => {
+    if (!seguir || busy || !history.length) return;
+    setSeguir(false);
+    send("Listo, ya activé mi prueba gratis. Sigamos con mi anuncio.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seguir, busy, history.length]);
 
   async function send(content: string, base = history) {
     if (!content.trim() || busy) return;
@@ -67,6 +80,7 @@ export default function Asistente() {
     setBusy(false);
     refreshCredits(); // images and ads made in this turn spent credits: the balance (and the credits pop-up) follow
     if (Array.isArray(d.messages) && d.messages.length) setHistory([...next, ...d.messages]);
+    if (d.ui?.tarjeta) window.dispatchEvent(new Event("creads:prueba"));
     if (Array.isArray(d.ui?.ads) && d.ui.ads.length) setAds((a) => [...a, ...d.ui.ads.filter((id: string) => !a.some((x) => x.id === id)).map((id: string) => ({ id, estado: "cola" }))]);
     if (!res || !res.ok) setErr(d.error || "No pude responder. Revisa tu conexión e intenta de nuevo.");
   }
@@ -80,7 +94,7 @@ export default function Asistente() {
         const r = await fetch(`/api/v1/anuncios/${a.id}`).then((x) => (x.ok ? x.json() : null)).catch(() => null);
         if (r?.anuncio) setAds((all) => all.map((x) => (x.id === a.id ? { ...x, ...r.anuncio } : x)));
       }
-    }, 20_000);
+    }, 10_000);
     return () => clearInterval(t);
   }, [ads]);
   useEffect(() => {
@@ -183,7 +197,7 @@ export default function Asistente() {
                 <AfterFirstAd />
               </>
             ) : a.estado !== "error" ? (
-              <span className="text-xs text-muted">{a.paso ?? "En cola"} · tarda unos 6 a 8 minutos. Te aviso aquí mismo cuando esté y lo reviso antes de mostrártelo.</span>
+              <Progreso estado={a.estado} paso={a.paso} />
             ) : <span className="text-xs text-bad">{a.error}</span>}
           </div>
         ))}
@@ -254,6 +268,34 @@ function AfterFirstAd() {
         <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : <MoneyText text="Básico · US$25/mes" />}</button>
       </div>
       <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver todas las opciones</button>
+    </div>
+  );
+}
+
+// the ad being made, step by step (owner, 25 Oct 2026: the customer sees it move and knows it's not stuck)
+const PASOS: [string, string[]][] = [
+  ["Guion y escenas", ["cola", "escenas"]],
+  ["Grabando a tu persona", ["generando"]],
+  ["Revisión de calidad", ["revisando"]],
+  ["Edición y subtítulos", ["armando"]],
+];
+function Progreso({ estado, paso }: { estado: string; paso?: string | null }) {
+  const at = Math.max(0, PASOS.findIndex(([, e]) => e.includes(estado)));
+  const pct = Math.round(((at + 0.5) / (PASOS.length + 0.5)) * 100);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Avance del anuncio">
+        <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${pct}%`, background: "var(--grad)" }} />
+      </div>
+      <ol className="flex flex-col gap-1 text-xs">
+        {PASOS.map(([label], i) => (
+          <li key={label} className={`flex items-center gap-2 ${i < at ? "text-good" : i === at ? "font-semibold text-ink" : "text-muted"}`}>
+            <span aria-hidden="true" className="w-4 text-center">{i < at ? "✓" : i === at ? "●" : "○"}</span>
+            {label}{i === at && paso && !/^En cola$/.test(paso) ? <span className="font-normal text-muted"> · {paso}</span> : null}
+          </li>
+        ))}
+      </ol>
+      <span className="text-xs text-muted">Tarda unos 6 a 8 minutos. Puedes cerrar esta página: te avisamos por correo cuando esté listo, ya revisado.</span>
     </div>
   );
 }

@@ -36,6 +36,7 @@ export default function PruebaTarjeta() {
             // the card can take a few seconds to show as accepted
             if (d.estado === "pendiente" && n < 5) return void setTimeout(() => check(n + 1), 3000);
             setVuelta(d.estado ?? "no"); refreshCredits(); load();
+            if (d.estado === "ok") window.dispatchEvent(new Event("creads:prueba-ok"));
           })
           .catch(() => setVuelta("pendiente"));
       check(0);
@@ -65,7 +66,8 @@ export default function PruebaTarjeta() {
       Prueba gratis activa. El <b className="text-ink">{fecha(info.cobro)}</b> se cobra el plan {info.plan} (${info.clp?.toLocaleString("es-CL")} al mes) salvo que canceles antes en <a href="/app/planes" className="underline">Planes</a>.
     </p>
   );
-  if (info.estado !== "sin-tarjeta") return null;
+  // before the card, the conversation comes first: the window opens after the scripts (trial-popup)
+  if (info.estado !== "sin-tarjeta" || !(vuelta === "pendiente" || vuelta === "cancelado")) return null;
   const dias = info.dias ?? 7;
   return (
     <section className="relative mb-4 flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-4 [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box] sm:p-5" aria-labelledby="prueba-t">

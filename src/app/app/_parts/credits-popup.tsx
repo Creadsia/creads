@@ -51,12 +51,12 @@ export default function CreditsPopup() {
 
   useEffect(() => {
     watch402();
-    const on = () => { if (!path.startsWith("/app/planes")) setOpen("agotado"); };
+    const on = () => { if (!path.startsWith("/app/planes") && sinTarjeta === false) setOpen("agotado"); };
     const up = () => setOpen("mejorar"); // the «Mejorar» button and the finished gift ad
     window.addEventListener("creads:sin-creditos", on);
     window.addEventListener("creads:upgrade", up);
     return () => { window.removeEventListener("creads:sin-creditos", on); window.removeEventListener("creads:upgrade", up); };
-  }, [path]);
+  }, [path, sinTarjeta]);
 
   useEffect(() => {
     if (!info || info.unlimited || info.owner || path.startsWith("/app/planes") || sinTarjeta !== false) return;
