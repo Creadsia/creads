@@ -74,11 +74,11 @@ const FONTS = path.join(process.cwd(), "assets", "fonts");
 const e = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 
 /** Burns the texts on the finished cut (one encode; the sound is copied). */
-export async function pasadaTextos(dir: string, bytes: Uint8Array | Buffer, ass: string) {
+export async function pasadaTextos(dir: string, bytes: Uint8Array | Buffer, ass: string, antes = "") {
   const input = path.join(dir, "ed-in.mp4"), out = path.join(dir, "ed-textos.mp4"), file = path.join(dir, "ed-textos.ass");
   await writeFile(input, bytes);
   await writeFile(file, ass);
-  await ff(["-y", "-v", "error", "-i", input, "-vf", `ass=filename='${e(file)}':fontsdir='${e(FONTS)}'`,
+  await ff(["-y", "-v", "error", "-i", input, "-vf", `${antes ? `${antes},` : ""}ass=filename='${e(file)}':fontsdir='${e(FONTS)}'`,
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", out], 240_000);
   return readFile(out);
 }
