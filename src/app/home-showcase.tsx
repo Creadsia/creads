@@ -53,7 +53,7 @@ export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: R
               <a href={c.href} className="stage relative flex aspect-[9/16] flex-col justify-between overflow-hidden rounded-[1.75rem]">
                 <LoopVideo src={c.video} poster={c.still ? posterOf(c.still, 384) : undefined} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
                 <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.6)_0%,transparent_26%,transparent_44%,rgba(0,0,0,0.92)_100%)]" />
-                <span className="relative flex items-center justify-between p-4 text-[11px] font-semibold text-white/85">
+                <span className="relative flex items-center justify-between p-4 text-[13px] font-semibold text-white/85">
                   <span className="flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 backdrop-blur-md"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[image:var(--grad)]" />{t.inCreads}</span>
                   <span className="font-mono text-white/60">{String(i + 1).padStart(2, "0")}/{String(t.items.length).padStart(2, "0")}</span>
                 </span>
@@ -63,7 +63,7 @@ export function ModelReel({ t, clips, moreHref }: { t: Content["reel"]; clips: R
                     {m.ver && <span className="grad-text block [text-shadow:none]">{m.ver}</span>}
                   </b>
                   <span className="flex flex-wrap gap-1.5">
-                    {m.specs.map((x) => <span key={x} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[11px] font-semibold backdrop-blur-md">{x}</span>)}
+                    {m.specs.map((x) => <span key={x} className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[13px] font-semibold backdrop-blur-md">{x}</span>)}
                   </span>
                   <span className="text-sm leading-snug text-white/80">{m.line}</span>
                   <span className="flex items-center justify-between gap-2 rounded-full bg-white py-1 pl-3.5 pr-1 text-[13px] font-bold text-black">
@@ -118,11 +118,11 @@ export function Versus({ t, ctaHref, cta }: { t: Content["diff"]; ctaHref: strin
               <tr key={row} className="border-b border-line last:border-0">
                 <th scope="row" className="hidden px-4 py-2.5 font-medium sm:table-cell">{row}</th>
                 <td className="px-4 py-2.5 align-top text-muted">
-                  <span className="block text-[11px] font-medium text-muted/80 sm:hidden">{row}</span>
+                  <span className="block text-[13px] font-medium text-muted/80 sm:hidden">{row}</span>
                   <span className="flex items-start gap-1.5"><Cross className="mt-0.5 text-bad/80" />{them}</span>
                 </td>
                 <td className="bg-accent/[0.04] px-4 py-2.5 align-top font-semibold">
-                  <span className="block text-[11px] font-medium text-transparent sm:hidden" aria-hidden="true">.</span>
+                  <span className="block text-[13px] font-medium text-transparent sm:hidden" aria-hidden="true">.</span>
                   <span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{us}</span>
                 </td>
               </tr>
@@ -162,7 +162,7 @@ export function Formats({ t, media, href }: { t: Content["formats"]; media: Reco
                   )}
                 <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
                 <span className="relative flex flex-col gap-1 p-4 text-white">
-                  <span className="font-mono text-[11px] font-semibold tracking-wide text-white/75">{f.cuts}</span>
+                  <span className="font-mono text-[13px] font-semibold tracking-wide text-white/75">{f.cuts}</span>
                   <b className="font-display text-xl leading-tight font-semibold">{f.name}</b>
                   <span className="text-[13px] leading-snug text-white/75">{f.text}</span>
                 </span>

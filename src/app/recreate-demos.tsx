@@ -47,7 +47,7 @@ function Clip({ src, label, className = "", muted = true, playKey }: { src: stri
 
 function Tag({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
   return (
-    <span className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold leading-none ${strong ? "bg-[image:var(--grad)] text-white" : "bg-black/65 text-white/90 backdrop-blur-sm"}`}>
+    <span className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[13px] font-bold leading-none ${strong ? "bg-[image:var(--grad)] text-white" : "bg-black/65 text-white/90 backdrop-blur-sm"}`}>
       {children}
     </span>
   );
@@ -97,11 +97,11 @@ export default function RecreateDemos({ t, media }: { t: Content["recreate"]; me
               // eslint-disable-next-line @next/next/no-img-element
               <img src={d.photo} alt={t.photo} loading="lazy" className="h-14 w-14 shrink-0 rounded-xl bg-white/10 object-cover lg:h-28 lg:w-28 lg:rounded-2xl" />
             ) : (
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-dashed border-white/25 text-center text-[10px] leading-tight text-white/60 lg:h-28 lg:w-28 lg:rounded-2xl lg:text-xs">{t.noPhoto}</span>
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-dashed border-white/25 text-center text-[13px] leading-tight text-white/60 lg:h-28 lg:w-28 lg:rounded-2xl lg:text-xs">{t.noPhoto}</span>
             )}
             <span aria-hidden="true" className="text-lg text-white/50 lg:text-2xl">+</span>
             <p className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold text-white/55 lg:text-xs">{t.wrote}</span>
+              <span className="block text-[13px] font-semibold text-white/55 lg:text-xs">{t.wrote}</span>
               <span className="font-display text-base leading-snug sm:text-lg lg:text-[1.7rem] lg:leading-tight">«{tab.prompt}»</span>
             </p>
           </div>

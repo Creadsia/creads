@@ -149,7 +149,7 @@ test("onSale: only the plans of 25 Oct 2026 (monthly or yearly), the packs and t
   assert.equal(onSale("pack-prueba", "mensual"), true);
 });
 
-test("quote: founder price, Pack Prueba discount and yearly 5% off", async () => {
+test("quote: founder price, Pack Prueba discount and yearly «2 meses gratis» (round prices)", async () => {
   const { quote } = await import("../src/lib/catalog");
   const f = quote("escala", "mensual", { firstPurchase: true, fundador: true })!;
   assert.equal(f.total, 49);
@@ -161,7 +161,9 @@ test("quote: founder price, Pack Prueba discount and yearly 5% off", async () =>
   assert.equal(quote("testea", "mensual", { fundador: true })!.total, 29);
   assert.equal(quote("escala", "anual", { fundador: true })!.fundador, undefined);
   const y = quote("testea", "anual")!;
-  assert.equal(y.total, 330.6); // 27.55 × 12
+  assert.equal(y.total, 290); // Testea yearly: US$290 (pay 10, use 12)
+  assert.equal(quote("escala", "anual")!.total, 590);
+  assert.equal(quote("agencia", "anual")!.total, 1490);
   assert.equal(y.credits, 470 * 12);
   const p = quote("pack-prueba", "mensual", { discountPct: 50 })!;
   assert.equal(p.total, 9);

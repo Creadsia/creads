@@ -61,12 +61,12 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
         <div className="grid items-stretch gap-5 lg:grid-cols-[1fr_1.1fr_auto] lg:gap-6" role="tabpanel" aria-label={n.name}>
           {/* 1. what Spy finds */}
           <div key={`in-${n.k}`} className="niche-in flex flex-col gap-2.5">
-            <span className="flex items-center justify-between gap-2 text-sm font-semibold text-muted">{t.inLabel}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold">{t.example}</span></span>
+            <span className="flex items-center justify-between gap-2 text-sm font-semibold text-muted">{t.inLabel}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[13px] font-semibold">{t.example}</span></span>
             <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
               <div className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-[15px]">
                 <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-muted" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M12.5 12.5L16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
                 <span className="truncate">{n.query}</span>
-                <span className="ml-auto shrink-0 rounded-full bg-good/15 px-2 py-0.5 text-[11px] font-semibold text-good">{n.count} {t.found}</span>
+                <span className="ml-auto shrink-0 rounded-full bg-good/15 px-2 py-0.5 text-[13px] font-semibold text-good">{n.count} {t.found}</span>
               </div>
               <div className="flex gap-3 rounded-xl border border-line bg-surface-2 p-2.5">
                 <span className="relative aspect-[9/16] w-[72px] shrink-0 self-start overflow-hidden rounded-lg bg-black">
@@ -97,7 +97,7 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
           <ol key={`steps-${n.k}`} className="relative flex flex-1 flex-col justify-between gap-0.5 rounded-2xl border border-line bg-surface/80 p-2.5 backdrop-blur" aria-label={t.doing}>
             {t.steps.map((s, k) => (
               <li key={s} className="outcome-step flex items-center gap-3 rounded-xl px-2.5 py-1.5 text-[14px]" style={{ ["--i" as string]: k, ["--n" as string]: steps }}>
-                <span className="outcome-dot flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line font-mono text-[11px] text-muted">{k + 1}</span>
+                <span className="outcome-dot flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line font-mono text-[13px] text-muted">{k + 1}</span>
                 <span className="min-w-0 flex-1">{s}</span>
                 <Check className="text-good" />
               </li>
@@ -116,7 +116,7 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
                   <img key={n.k} src={posterOf(m.still ?? "", 640)} alt="" className="kenburns absolute inset-0 h-full w-full object-cover" />
                 )}
               <span key={`cap-${n.k}`} className="caption niche-in absolute inset-x-3 bottom-[22%] text-center text-[17px]">{n.hook}</span>
-              <figcaption className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/65 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+              <figcaption className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/65 px-2.5 py-1 text-[13px] font-semibold text-white backdrop-blur">
                 <Check className="h-3.5 w-3.5 text-good" /> {t.ready}
               </figcaption>
             </figure>

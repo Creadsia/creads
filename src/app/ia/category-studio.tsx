@@ -82,7 +82,7 @@ export default function CategoryStudio({ kind, models, examples }: { kind: "vide
           <div className="grid grid-cols-4 gap-1.5">
             {ASPECTS.map((a) => (
               <Chip key={a} on={fmt === a} disabled={!m.aspects.includes(a)} onClick={() => setAspect(a)}>
-                <span className="flex flex-col items-center"><span>{a}</span><span className="text-[10px] font-medium opacity-70">{NAME[a]}</span></span>
+                <span className="flex flex-col items-center"><span>{a}</span><span className="text-[13px] font-medium opacity-70">{NAME[a]}</span></span>
               </Chip>
             ))}
           </div>

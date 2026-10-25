@@ -19,7 +19,7 @@ export default function WhatsAppButton({ text, label = "¿Dudas? Escríbenos", p
       </svg>
       <span className="hidden flex-col leading-tight sm:flex">
         <span>{label}</span>
-        {p && <span className="text-[11px] font-medium opacity-90">{p}</span>}
+        {p && <span className="text-[13px] font-medium opacity-90">{p}</span>}
       </span>
     </a>
   );
@@ -37,7 +37,7 @@ export function SoporteLinea({ className = "", promesa }: { className?: string; 
       ¿Dudas?{" "}
       {href && <><a href={href} target="_blank" rel="noopener noreferrer" className="font-semibold text-ink underline-offset-2 hover:underline">Escríbenos por WhatsApp</a>{" o a "}</>}
       {!href && "Escríbenos a "}
-      <a href="mailto:hola@creadsia.com" className="font-semibold text-ink underline-offset-2 hover:underline">hola@creadsia.com</a>
+      <a href="mailto:hola@creadsia.com" className="inline-flex min-h-11 items-center font-semibold text-ink underline-offset-2 hover:underline">hola@creadsia.com</a>
       {p && <>. {p.replace(/\.$/, "")}.</>}
     </p>
   );

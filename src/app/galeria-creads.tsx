@@ -48,7 +48,7 @@ export default function GaleriaCreads({
           <li key={i.id} className="flex min-w-0 flex-col gap-2">
             <Tile i={i} />
             <div className="flex min-w-0 flex-col gap-0.5 px-0.5">
-              <span className="text-[11px] font-semibold tracking-wide text-muted uppercase">{i.tipoLabel} · {i.nichoLabel}</span>
+              <span className="text-[13px] font-semibold tracking-wide text-muted uppercase">{i.tipoLabel} · {i.nichoLabel}</span>
               {i.caption && <p className="text-sm leading-snug">{i.caption}</p>}
             </div>
           </li>

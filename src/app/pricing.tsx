@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { ANNUAL_PCT, FUNDADOR, PRUEBA, clpFor } from "@/lib/catalog";
+import { ANNUAL_LABEL, FUNDADOR, PRUEBA } from "@/lib/catalog";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import { Money, MoneyText } from "./money";
@@ -27,7 +27,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
   const [yearly, setYearly] = useState(false);
   const [quedan, setQuedan] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
-  // pesos for visitors in Chile, US$ for the rest (see ./money)
+  // prices in US dollars (see ./money); the pesos are said once, at checkout
   const money = (n: number) => <Money usd={n} rate={rate} en={!es} />;
   // plans on sale (older plans are kept for the people who have them, not sold)
   const shown = t.plans.filter((p) => !("hidden" in p && p.hidden));
@@ -50,8 +50,8 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <div role="radiogroup" aria-label={es ? "Forma de pago" : "Billing"} className="inline-flex w-fit rounded-xl border border-line bg-surface p-1">
           {([[false, t.monthly], [true, t.yearly]] as const).map(([val, label]) => (
             <button key={String(val)} type="button" role="radio" aria-checked={yearly === val} onClick={() => setYearly(val)}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${yearly === val ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>
-              {label}{val && <span className="ml-1.5 text-xs text-good">−{ANNUAL_PCT}%</span>}
+              className={`min-h-11 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${yearly === val ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>
+              {label}{val && <span className="ml-1.5 text-xs text-good">{ANNUAL_LABEL[es ? "es" : "en"]}</span>}
             </button>
           ))}
         </div>
@@ -63,9 +63,9 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <div className="flex flex-col gap-1">
           <b className="font-display text-lg font-semibold">{es ? "Tu primera tanda" : "Your first batch"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
           <span className="text-sm text-muted">{es ? "12 imágenes, 4 videos de producto o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "12 images, 4 product videos or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
-          <span className="text-xs text-muted">{PRUEBA.credits} {es ? "créditos" : "credits"} · {(es ? GARANTIA : GARANTIA_EN).pack}</span>
+          <span className="text-xs text-muted">{PRUEBA.credits} {es ? "créditos" : "credits"} · {es ? "7 días de garantía" : "7-day guarantee"}</span>
         </div>
-        <a href="/registro" className="shrink-0 rounded-xl bg-ink px-5 py-3 text-center font-semibold text-bg">{es ? <>Haz tu primera tanda por {money(PRUEBA.usd)}</> : <>Make your first batch for {money(PRUEBA.usd)}</>}</a>
+        <a href="/registro" className="shrink-0 rounded-xl bg-ink px-5 py-3 text-center font-semibold whitespace-nowrap text-bg">{es ? <>Empezar por {money(PRUEBA.usd)}</> : <>Start for {money(PRUEBA.usd)}</>}</a>
       </div>
 
       {/* plans */}
@@ -95,17 +95,16 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                   {(yearly || founder) && (
                     <div className="flex flex-wrap items-center gap-2">
                       <s className="text-muted">{money(p.price)}{t.perMonth}</s>
-                      <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? `−${ANNUAL_PCT}%` : es ? "Precio fundador" : "Founder price"}</span>
+                      <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? ANNUAL_LABEL[es ? "es" : "en"] : es ? "Precio fundador" : "Founder price"}</span>
                     </div>
                   )}
                   <p className="flex flex-wrap items-baseline gap-x-1.5">
                     <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{money(now)}</span>
                     <span className="text-muted">{t.perMonth}</span>
                   </p>
-                  {es && !yearly && <p className="p-usd text-sm font-semibold">≈ ${clpFor(now, rate).toLocaleString("es-CL")} CLP al mes</p>}
                   <p className="text-sm text-muted">
-                    {founder ? (es ? <>Los primeros {FUNDADOR.months} meses, luego {money(p.price)}. Quedan {quedan} de {FUNDADOR.cupos} cupos.</> : <>First {FUNDADOR.months} months, then {money(p.price)}. {quedan} of {FUNDADOR.cupos} places left.</>)
-                      : yearly ? <>{money(Math.round(p.yearly * 12 * 100) / 100)} {t.yearlyTotal}</> : t.billedMonthly} · {t.cancel}
+                    {founder ? (es ? <>Los primeros {FUNDADOR.months} meses, luego {money(p.price)}.{quedan! < FUNDADOR.cupos ? <> Quedan {quedan} de {FUNDADOR.cupos} cupos.</> : <> Solo para los primeros {FUNDADOR.cupos} clientes.</>}</> : <>First {FUNDADOR.months} months, then {money(p.price)}.{quedan! < FUNDADOR.cupos ? <> {quedan} of {FUNDADOR.cupos} places left.</> : <> Only for the first {FUNDADOR.cupos} customers.</>}</>)
+                      : yearly ? <>{money((p as typeof p & { yearlyTotal?: number }).yearlyTotal ?? p.yearly * 12)} {es ? "al año" : "a year"}</> : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
                 {/* the headline is a result, not credits (owner's plan): «31 videos de producto al mes» */}
@@ -123,7 +122,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                   <span className="flex items-center gap-1.5 text-xs text-muted">
                     {p.credits} {es ? "créditos al mes" : "credits a month"}
                     <details className="relative">
-                      <summary className="grid h-4 w-4 cursor-pointer list-none place-items-center rounded-full border border-line text-[10px] font-bold" aria-label={es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}>?</summary>
+                      <summary className="-m-3.5 grid h-11 w-11 cursor-pointer list-none place-items-center" aria-label={es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}><span className="grid h-5 w-5 place-items-center rounded-full border border-line text-[13px] font-bold">?</span></summary>
                       <span className="absolute bottom-6 left-1/2 z-20 w-60 -translate-x-1/2 rounded-lg border border-line bg-surface p-3 text-xs text-ink shadow-xl">
                         <b>{es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}</b> {es ? "Cada imagen sale en 3 formatos listos para subir. «Hasta 400 anuncios» corresponde al plan Agencia." : "Every image comes in 3 formats ready to upload. «Up to 400 ads» is the Agency plan."}
                       </span>
@@ -163,10 +162,9 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
 
       {/* why it's safe to pay */}
       <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5 sm:p-6">
-        {lang === "es" && <Garantia />}
+        {lang === "es" && !compact && <Garantia />}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PayBadges />
-          <span className="text-sm text-muted">{t.clpNote}</span>
         </div>
         <dl className="grid gap-4 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-4">
           {t.trust.map(([k, v]) => (

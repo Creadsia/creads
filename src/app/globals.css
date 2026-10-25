@@ -92,6 +92,9 @@
 }
 
 @theme inline {
+  /* smallest text on the site: 13px (owner, 25 Oct 2026: labels and small print were 11–12px) */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.15rem;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);

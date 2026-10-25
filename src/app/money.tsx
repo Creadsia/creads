@@ -1,12 +1,10 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { clpFor, usd as usdLabel } from "@/lib/catalog";
+import { usd as usdLabel } from "@/lib/catalog";
 
-// Prices in the visitor's money (owner, 24 Oct 2026): pesos for people in Chile, US$ for everyone else.
-// Both amounts are rendered and CSS shows one: <html data-cl> is set before the first paint from the
-// «creads_pais» cookie (src/middleware.ts), so static pages stay cached and nothing flickers. The pesos
-// use the same rate and rounding Mercado Pago charges (clpFor + /api/dolar).
+// Prices (owner, 25 Oct 2026): only in US dollars, everywhere on the site. The pesos Mercado Pago charges are
+// said once, next to the payment (checkout), not on the page. useUsdClp stays for that checkout note.
 
 let cached: number | null = null;
 let pending: Promise<number> | null = null;
@@ -28,16 +26,10 @@ export function useUsdClp(given?: number) {
 
 export const clpLabel = (n: number) => `$${n.toLocaleString("es-CL")}`;
 
-/** One price: «US$25» abroad, «$23.990» in Chile. `en` writes the dollars the English way. */
+/** One price, in dollars: «US$29». (`rate` is accepted for older callers and ignored.) */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Money({ usd, rate, en = false }: { usd: number; rate?: number; en?: boolean }) {
-  const r = useUsdClp(rate);
-  const dollars = en ? `US$${usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : usdLabel(usd);
-  return (
-    <>
-      <span className="p-usd">{dollars}</span>
-      <span className="p-clp">{r ? clpLabel(clpFor(usd, r)) : dollars}</span>
-    </>
-  );
+  return <>{en ? `US$${usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : usdLabel(usd)}</>;
 }
 
 /** A sentence with «US$…» amounts in it (copy written in dollars): each amount follows the visitor's money. */
@@ -55,6 +47,6 @@ export function MoneyText({ text, rate }: { text: string; rate?: number }) {
   );
 }
 
-/** Shown only in Chile / only outside Chile. */
-export const OnlyCL = ({ children }: { children: React.ReactNode }) => <span className="p-clp">{children}</span>;
-export const OnlyUSD = ({ children }: { children: React.ReactNode }) => <span className="p-usd">{children}</span>;
+/** Kept for older callers: the site is in dollars for everyone now. */
+export const OnlyCL = ({}: { children: React.ReactNode }) => null;
+export const OnlyUSD = ({ children }: { children: React.ReactNode }) => <>{children}</>;

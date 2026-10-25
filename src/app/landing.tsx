@@ -204,14 +204,14 @@ const MENU_MEDIA: Record<string, Ex[]> = {
 /** Small mock screens for the steps that are about the studio, not about a clip. */
 export function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
-    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[13px]">
       {[0, 1].map((i) => (
         <div key={i} className="flex gap-2 rounded-lg border border-line bg-surface-2 p-2">
           <span className="relative h-14 w-9 shrink-0 overflow-hidden rounded-md bg-ink/10">
             <Image src={i ? SCENES.realtor.src : SCENES.coach.src} alt="" fill sizes="40px" className="object-cover" />
           </span>
           <span className="flex min-w-0 flex-col gap-1">
-            <b className="truncate text-[12px]">{i ? "Seguros · 3 anuncios" : "Suplementos · 5 anuncios"}</b>
+            <b className="truncate text-[13px]">{i ? "Seguros · 3 anuncios" : "Suplementos · 5 anuncios"}</b>
             <span className="w-fit rounded bg-good/15 px-1.5 py-0.5 font-semibold text-good">{m.activo}</span>
             <span className="text-muted">{m.versiones}</span>
           </span>
@@ -222,7 +222,7 @@ export function SpyMock({ m }: { m: Content["flow"]["mock"] }) {
 }
 export function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
-    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[13px]">
       {m.parts.map(([k, v]) => (
         <div key={k} className="flex flex-col gap-0.5 rounded-lg border border-line bg-surface-2 px-2 py-1.5">
           <b className="text-accent-text">{k}</b>
@@ -234,7 +234,7 @@ export function BreakdownMock({ m }: { m: Content["flow"]["mock"] }) {
 }
 export function ScriptMock({ m }: { m: Content["flow"]["mock"] }) {
   return (
-    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[11px]">
+    <div className="flex h-full flex-col gap-2 rounded-xl border border-line bg-surface p-3 text-[13px]">
       <span className="w-fit rounded-md bg-accent/15 px-1.5 py-0.5 font-semibold text-accent-text">{m.nuevos}</span>
       <ul className="flex flex-col gap-1.5">
         {m.hooks.map((h, i) => <li key={h} className="flex gap-1.5 rounded-lg border border-line bg-surface-2 px-2 py-1.5"><b className="font-mono text-muted">{i + 1}</b><span>{h}</span></li>)}
@@ -252,13 +252,13 @@ export function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
     if (k === "crear") return (
       <figure className="relative h-full overflow-hidden rounded-xl bg-surface-2">
         <LoopVideo src={VIDEOS.coach!} poster={poster(SCENES.coach.src)} className="absolute inset-0 h-full w-full object-cover" />
-        <figcaption className="absolute inset-x-2 bottom-2 rounded-lg bg-black/65 px-2 py-1 text-center text-[11px] font-semibold text-white">✓ {t.mock.revisado}</figcaption>
+        <figcaption className="absolute inset-x-2 bottom-2 rounded-lg bg-black/65 px-2 py-1 text-center text-[13px] font-semibold text-white">✓ {t.mock.revisado}</figcaption>
       </figure>
     );
     return (
       <div className="flex h-full items-end justify-center gap-2 rounded-xl border border-line bg-surface p-3">
-        <span className="relative aspect-[9/16] h-[85%] overflow-hidden rounded-lg"><Image src={SCENES.valpo.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">9:16</b></span>
-        <span className="relative aspect-[4/5] h-[62%] overflow-hidden rounded-lg"><Image src={SCENES.serum.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">4:5</b></span>
+        <span className="relative aspect-[9/16] h-[85%] overflow-hidden rounded-lg"><Image src={SCENES.valpo.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[13px] text-white">9:16</b></span>
+        <span className="relative aspect-[4/5] h-[62%] overflow-hidden rounded-lg"><Image src={SCENES.serum.src} alt="" fill sizes="90px" className="object-cover" /><b className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[13px] text-white">4:5</b></span>
       </div>
     );
   };
@@ -312,7 +312,7 @@ export function MenuPanel({ k, t, href, mock }: { k: string; t: Content["menuEx"
         ) : media ? media.map((m) => (
           <figure key={m.label} className="relative h-56 overflow-hidden rounded-xl bg-surface-2">
             {m.src ? <LoopVideo src={m.src} poster={m.still ? poster(m.still) : undefined} className="absolute inset-0 h-full w-full object-cover" /> : <Image src={m.still!} alt="" fill sizes="200px" className="object-cover" />}
-            <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[11px] font-semibold text-white">{m.label}</figcaption>
+            <figcaption className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-1 text-[13px] font-semibold text-white">{m.label}</figcaption>
           </figure>
         )) : e.items.map((x) => (
           <div key={x} className="flex h-56 items-end rounded-xl border border-line bg-surface p-3 text-sm font-semibold">{x}</div>
@@ -354,7 +354,7 @@ function Ticker({ t }: { t: Content["bar"] }) {
     <ul className="flex shrink-0 items-center" aria-hidden={copy === 1 || undefined}>
       {t.items.map((it, i) => (
         <li key={i} className="flex items-center gap-2 px-5 whitespace-nowrap">
-          {it.tag && <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-extrabold leading-none text-black">{it.tag}</span>}
+          {it.tag && <span className="rounded-md bg-white px-1.5 py-0.5 text-[13px] font-extrabold leading-none text-black">{it.tag}</span>}
           <span><MoneyText text={it.text} /></span>
           <span aria-hidden="true" className="pl-5 text-white/50">✦</span>
         </li>
@@ -387,7 +387,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
   );
   /** The label at the bottom of every picture: what goes in → what comes out. */
   const cap = (txt: string) => (
-    <span className="absolute inset-x-2 bottom-2 hidden truncate rounded-md bg-black/70 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm sm:block">{txt}</span>
+    <span className="absolute inset-x-2 bottom-2 hidden truncate rounded-md bg-black/70 px-2 py-1 text-[13px] font-semibold text-white backdrop-blur-sm sm:block">{txt}</span>
   );
   const wave = (n: number, seed: number, cls: string, h = "h-10") => (
     <span className={`flex ${h} items-center gap-[3px]`}>
@@ -398,14 +398,14 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
   );
   const row = (label: string, body: React.ReactNode, dot: string) => (
     <span className="flex w-full items-center gap-2">
-      <span className="w-14 shrink-0 text-right text-[10px] font-semibold text-white/70">{label}</span>
+      <span className="w-14 shrink-0 text-right text-[13px] font-semibold text-white/70">{label}</span>
       <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot }} />
       {body}
     </span>
   );
   const frame = (ratio: string, label: string, w: string, tint: string) => (
     <span className={`flex ${ratio} ${w} flex-col items-center justify-end overflow-hidden rounded-md border border-white/20 pb-1`} style={{ background: `linear-gradient(170deg, ${tint}, #0d0e11 75%)` }}>
-      <span className="text-[9px] font-semibold text-white/85">{label}</span>
+      <span className="text-[13px] font-semibold text-white/85">{label}</span>
     </span>
   );
 
@@ -424,7 +424,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
           {still("sneaker", "50% 50%")}
           {/* right half: the same product on a transparency grid, as after removing the background */}
           <span className="absolute inset-y-0 right-0 w-1/2 border-l-2 border-white bg-[length:14px_14px]" style={{ backgroundImage: "conic-gradient(#d9d9de 25%, #fff 0 50%, #d9d9de 0 75%, #fff 0)" }} />
-          <span className="absolute top-2 left-[calc(50%+8px)] hidden rounded bg-black/70 sm:block px-1.5 py-0.5 text-[10px] font-bold text-white">PNG · 2×</span>
+          <span className="absolute top-2 left-[calc(50%+8px)] hidden rounded bg-black/70 sm:block px-1.5 py-0.5 text-[13px] font-bold text-white">PNG · 2×</span>
           {cap(L("Background removed, double quality", "Sin fondo y al doble de calidad"))}
         </>
       );
@@ -434,7 +434,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
           <span className="absolute inset-x-0 top-0 bottom-8 flex items-center justify-center gap-2 px-3">
             <span className="flex aspect-square w-[22%] flex-col items-center justify-center rounded-md border border-dashed border-white/40 text-white/80">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 8h3l2-2h6l2 2h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" /></svg>
-              <span className="text-[9px]">{L("Your photo", "Tu foto")}</span>
+              <span className="text-[13px]">{L("Your photo", "Tu foto")}</span>
             </span>
             <span className="text-white/60">→</span>
             {frame("aspect-[4/5]", "Feed", "w-[17%]", "#5b3fa6")}
@@ -447,12 +447,12 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
     case "edit":
       return (
         <>
-          <span className="absolute inset-x-3 top-3 line-clamp-2 rounded-xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[10px] leading-snug font-semibold text-black sm:text-[11px]">
+          <span className="absolute inset-x-3 top-3 line-clamp-2 rounded-xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[13px] leading-snug font-semibold text-black sm:text-[13px]">
             {L("“Make the background a beach at sunset”", "“Pon de fondo una playa al atardecer”")}
           </span>
           <span className="absolute inset-x-3 bottom-3 grid grid-cols-2 gap-1.5 sm:bottom-9">
-            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-zinc-500 to-zinc-700 p-1 text-[9px] font-semibold text-white">{L("Before", "Antes")}</span>
-            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-orange-400 via-pink-500 to-sky-700 p-1 text-[9px] font-semibold text-white">{L("After", "Después")}</span>
+            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-zinc-500 to-zinc-700 p-1 text-[13px] font-semibold text-white">{L("Before", "Antes")}</span>
+            <span className="flex h-9 items-end rounded-md bg-gradient-to-b from-orange-400 via-pink-500 to-sky-700 p-1 text-[13px] font-semibold text-white">{L("After", "Después")}</span>
           </span>
           {cap(L("Ask in words → edited photo", "Pídelo con palabras → foto editada"))}
         </>
@@ -464,11 +464,11 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
           <span className="absolute inset-x-0 top-2 bottom-9 flex items-center justify-center gap-3">
             <span className="relative flex aspect-[9/16] h-full flex-col justify-end overflow-hidden rounded-[12px] border-2 border-white/30 p-1.5" style={{ background: art === "phone" ? "linear-gradient(180deg,#3a4458,#12141a)" : "linear-gradient(180deg,#4a2360,#12141a)" }}>
               <span className="absolute top-1.5 left-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-rec" />
-              <span className="mx-auto mb-2 rounded bg-black/75 px-1 text-center font-display text-[9px] leading-tight font-black text-white">
+              <span className="mx-auto mb-2 rounded bg-black/75 px-1 text-center font-display text-[13px] leading-tight font-black text-white">
                 {art === "phone" ? <>{L("it cost", "costaba")} <span className="text-[#FFE100]">$34K</span></> : <>{L("wait for", "espera")} <span className="text-[#3DFF6E]">{L("it…", "esto…")}</span></>}
               </span>
             </span>
-            <span className="flex flex-col gap-1 text-[10px] text-white/80">
+            <span className="flex flex-col gap-1 text-[13px] text-white/80">
               <span>9:16</span>
               <span>{art === "phone" ? L("8 cuts", "8 cortes") : "Reels · TikTok"}</span>
               <span>{L("Subtitles", "Subtítulos")} ✓</span>
@@ -483,8 +483,8 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
           <span className="absolute inset-x-3 top-3 flex items-center gap-2">
             <span className="h-9 w-9 shrink-0 rounded-full bg-[image:var(--grad)] p-[2px]"><span className="block h-full w-full rounded-full bg-[#2a2b33]" /></span>
             <span className="flex min-w-0 flex-col">
-              <b className="truncate text-[11px] text-white">@sofia.creates ✓</b>
-              <span className="text-[10px] text-white/60">{L("7 posts this week", "7 posts esta semana")}</span>
+              <b className="truncate text-[13px] text-white">@sofia.creates ✓</b>
+              <span className="text-[13px] text-white/60">{L("7 posts this week", "7 posts esta semana")}</span>
             </span>
           </span>
           <span className="absolute inset-x-3 bottom-9 grid grid-cols-6 gap-1">
@@ -537,7 +537,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
         <>
           <span className="absolute inset-x-3 top-8 bottom-9 flex flex-wrap content-center items-center justify-center gap-1.5">
             {(es ? ["Whoosh", "Pop", "Lluvia", "Ding", "Aplausos", "Caja registradora"] : ["Whoosh", "Pop", "Rain", "Ding", "Applause", "Cash register"]).map((x) => (
-              <span key={x} className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-white">▶ {x}</span>
+              <span key={x} className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[13px] font-semibold text-white">▶ {x}</span>
             ))}
           </span>
           {cap(L("Describe a sound → get it", "Describe un sonido → lo tienes"))}
@@ -547,10 +547,10 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
       return (
         <>
           <span className="absolute inset-x-0 top-3 bottom-9 flex items-center justify-center gap-1">
-            <span className="flex aspect-[9/16] h-[66%] flex-col items-center justify-center rounded-md border-2 border-[#3DFF6E] bg-[#3DFF6E]/10 text-[9px] font-bold text-[#3DFF6E]">{L("Winner", "Ganador")}</span>
+            <span className="flex aspect-[9/16] h-[66%] flex-col items-center justify-center rounded-md border-2 border-[#3DFF6E] bg-[#3DFF6E]/10 text-[13px] font-bold text-[#3DFF6E]">{L("Winner", "Ganador")}</span>
             <span className="text-white/60">→</span>
             {["A", "B", "C", "D", "E"].map((x, i) => (
-              <span key={x} className="flex aspect-[9/16] h-[50%] items-end justify-center rounded-md border border-white/25 pb-0.5 text-[9px] font-bold text-white/80" style={{ background: `hsl(${255 + i * 18} 50% 28%)` }}>{x}</span>
+              <span key={x} className="flex aspect-[9/16] h-[50%] items-end justify-center rounded-md border border-white/25 pb-0.5 text-[13px] font-bold text-white/80" style={{ background: `hsl(${255 + i * 18} 50% 28%)` }}>{x}</span>
             ))}
           </span>
           {cap(L("1 winning ad → 5 new hooks", "1 anuncio ganador → 5 ganchos nuevos"))}
@@ -563,7 +563,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
             <span className="grid h-14 w-14 place-items-center rounded-full" style={{ background: "conic-gradient(#3DFF6E 0 87%, rgba(255,255,255,.12) 0)" }}>
               <span className="grid h-10 w-10 place-items-center rounded-full bg-[#121318] font-display text-base font-bold text-white">87</span>
             </span>
-            <span className="flex flex-col gap-0.5 text-[10px] text-white/85">
+            <span className="flex flex-col gap-0.5 text-[13px] text-white/85">
               <span>{L("Hook", "Gancho")} <b className="text-[#3DFF6E]">9/10</b></span>
               <span>{L("Offer", "Oferta")} <b className="text-[#3DFF6E]">8/10</b></span>
               <span>CTA <b className="text-[#FFE100]">6/10</b></span>
@@ -577,7 +577,7 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
         <>
           <span className="absolute inset-x-3 top-3 bottom-9 flex flex-col justify-center gap-1.5">
             {[["Meta", L("Mon 9:00", "Lun 9:00")], ["Instagram", L("Tue 18:00", "Mar 18:00")], ["TikTok", L("Wed 20:00", "Mié 20:00")]].map(([n, d]) => (
-              <span key={n} className="flex items-center justify-between rounded-md bg-white/10 px-2 py-1 text-[10px] text-white"><b>{n}</b><span className="text-white/70">{d}</span></span>
+              <span key={n} className="flex items-center justify-between rounded-md bg-white/10 px-2 py-1 text-[13px] text-white"><b>{n}</b><span className="text-white/70">{d}</span></span>
             ))}
           </span>
           {cap(L("Scheduled from Creads", "Programado desde Creads"))}
@@ -606,14 +606,14 @@ function ToolArt({ art, es }: { art: string; es: boolean }) {
               </span>
             ))}
           </span>
-          <span className="absolute top-2 left-2 rounded-lg rounded-bl-none bg-white px-2 py-0.5 text-[10px] font-bold text-black shadow">{L("“Get in, I'll show you”", "«Súbete po, te enseño»")}</span>
+          <span className="absolute top-2 left-2 rounded-lg rounded-bl-none bg-white px-2 py-0.5 text-[13px] font-bold text-black shadow">{L("“Get in, I'll show you”", "«Súbete po, te enseño»")}</span>
           {cap(L("Idea → animated short film", "Idea → mini película animada"))}
         </>
       );
     case "api":
       return (
         <>
-          <pre className="absolute inset-x-3 top-3 bottom-9 overflow-hidden rounded-md bg-white/5 p-2 font-mono text-[10px] leading-relaxed text-white/85">
+          <pre className="absolute inset-x-3 top-3 bottom-9 overflow-hidden rounded-md bg-white/5 p-2 font-mono text-[13px] leading-relaxed text-white/85">
             <code><span className="text-[#3DFF6E]">POST</span>{" /v1/ads\n{ \"script\": \"…\",\n  \"model\": \"veo-3.1\" }"}</code>
           </pre>
           {cap(L("Your tools and agents → Creads", "Tus herramientas y agentes → Creads"))}
@@ -676,7 +676,7 @@ export function SiteHeader({ t, onHome = true, current }: { t: Content; onHome?:
               {m.label}
               {m.badge && (
                 <span
-                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                  className={`rounded-md px-1.5 py-0.5 text-[13px] font-bold leading-none ${
                     m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"
                   }`}
                 >
@@ -732,7 +732,7 @@ export function SiteHeader({ t, onHome = true, current }: { t: Content; onHome?:
         <a key={m.label} href={m.href} aria-current={m.href === current ? "page" : undefined} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-muted aria-[current=page]:border-ink aria-[current=page]:text-ink">
           {m.label}
           {m.badge && (
-            <span className={`rounded px-1 py-0.5 text-[9px] font-bold leading-none ${m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"}`}>
+            <span className={`rounded px-1 py-0.5 text-[13px] font-bold leading-none ${m.badge.startsWith("-") ? "bg-rec text-white" : m.badge === "SOON" || m.badge === "PRONTO" ? "bg-surface-2 text-muted" : "bg-[image:var(--grad)] text-white"}`}>
               {m.badge}
             </span>
           )}
@@ -1066,16 +1066,16 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               <div className="relative rounded-3xl border border-line bg-surface/90 p-5 shadow-[0_40px_120px_-40px_rgba(255,43,214,0.45)] backdrop-blur sm:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-semibold"><Mark size={18} /> {t.affiliates.panel}</span>
-                  <span className="rounded-md bg-surface-2 px-2 py-1 text-[11px] text-muted">{t.affiliates.example}</span>
+                  <span className="rounded-md bg-surface-2 px-2 py-1 text-[13px] text-muted">{t.affiliates.example}</span>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5 font-mono text-[13px]">
                   <span className="truncate text-muted">creadsia.com/?ref=<span className="text-ink">tunombre</span></span>
-                  <span className="shrink-0 rounded-md bg-ink px-2 py-1 text-[11px] font-semibold text-bg">{t.affiliates.copy}</span>
+                  <span className="shrink-0 rounded-md bg-ink px-2 py-1 text-[13px] font-semibold text-bg">{t.affiliates.copy}</span>
                 </div>
                 <dl className="mt-4 grid grid-cols-3 gap-2">
                   {t.affiliates.stats.map(([k, v]) => (
                     <div key={k} className="min-w-0 rounded-xl bg-surface-2 p-2.5 sm:p-3">
-                      <dt className="truncate text-[11px] text-muted">{k}</dt>
+                      <dt className="truncate text-[13px] text-muted">{k}</dt>
                       <dd className="font-display text-base font-semibold whitespace-nowrap sm:text-xl">{v}</dd>
                     </div>
                   ))}

@@ -25,7 +25,7 @@ export default function Ejemplos() {
       <div role="radiogroup" aria-label="Rubro" className="scroll-row flex gap-2 overflow-x-auto pb-1">
         {([{ id: "todos", label: "Todos" }, ...RUBROS] as const).map((r) => (
           <button key={r.id} type="button" role="radio" aria-checked={rubro === r.id} onClick={() => { setRubro(r.id); setTodos(false); }}
-            className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${rubro === r.id ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>{r.label}</button>
+            className={`min-h-11 shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${rubro === r.id ? "border-ink bg-ink text-bg" : "border-line text-muted hover:text-ink"}`}>{r.label}</button>
         ))}
       </div>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:pb-8">
@@ -40,7 +40,7 @@ export default function Ejemplos() {
         ))}
       </ul>
       {filtradas.length > shown.length && (
-        <button type="button" onClick={() => setTodos(true)} className="self-center rounded-full border border-line px-5 py-2 text-sm font-semibold hover:bg-surface">Ver {filtradas.length - shown.length} más</button>
+        <button type="button" onClick={() => setTodos(true)} className="min-h-11 self-center rounded-full border border-line px-5 py-2 text-sm font-semibold hover:bg-surface">Ver {filtradas.length - shown.length} más</button>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HAS_OFFER, LAUNCH_PCT, LAUNCH_PRICE, PLANS, usd } from "@/lib/catalog";
+import { HAS_OFFER, LAUNCH_PRICE, PLANS, PRUEBA, usd } from "@/lib/catalog";
 import { newEventId, track } from "@/lib/track";
 import type { Content } from "@/content/en";
 import { startHref } from "./pricing";
@@ -112,7 +112,7 @@ export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Co
         <div className="relative flex flex-col gap-4 overflow-hidden p-6 sm:p-7">
           <span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full opacity-40 blur-[70px]" style={{ background: "var(--grad)" }} />
           <button type="button" onClick={() => setOpen(false)} aria-label={t.exitClose} className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2 hover:text-ink">×</button>
-          <span className="chroma relative font-display text-5xl leading-none font-semibold">−{LAUNCH_PCT}%</span>
+          <span className="chroma relative font-display text-5xl leading-none font-semibold" aria-hidden="true">US${PRUEBA.usd}</span>
           <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={t.exitTitle} rate={rate} /></h2>
           <p className="relative text-muted"><MoneyText text={t.exitLead} rate={rate} /></p>
           {state === "done" ? (

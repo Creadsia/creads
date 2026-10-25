@@ -28,7 +28,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
 
 export function Logo({ size = 36, href = "/" }: { size?: number; href?: string; gid?: string }) {
   return (
-    <a href={href} className="flex items-center gap-2.5" aria-label="Creads IA">
+    <a href={href} className="flex min-h-11 items-center gap-2.5" aria-label="Creads IA">
       <Mark size={size} className="h-[30px] w-[30px] sm:h-auto sm:w-auto" />
       <Wordmark />
     </a>

@@ -11,7 +11,10 @@ export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,
   name: p.name,
   monthly: p.price,
+  /** Yearly plan, «2 meses gratis» (owner, 25 Oct 2026): pay 10, use 12, round prices. Per month as shown… */
   yearlyPerMonth: p.yearly,
+  /** …and what is charged once for the 12 months (older plans: 12 × the monthly-equivalent price). */
+  yearlyTotal: Number((p as { yearlyTotal?: number }).yearlyTotal ?? 0) || Math.round(p.yearly * 12 * 100) / 100,
   credits: Number(String(p.credits).replace(/\D/g, "")),
   for: p.for,
   features: p.features,
@@ -55,9 +58,10 @@ export const LAUNCH_ITEMS: ItemId[] = [];
 /** The cheapest plan: Testea's monthly price. */
 export const LAUNCH_PRICE = PLANS.find((p) => p.id === "testea")?.monthly ?? 29;
 export const LAUNCH_PCT = 0;
-/** Yearly plans: 5% off (owner's plan, 25 Oct 2026), paid once for 12 months. */
+/** Yearly plans: «2 meses gratis» (pay 10 months, use 12: about 17% off), paid once for 12 months. */
 export const ANNUAL = true;
-export const ANNUAL_PCT = 5;
+export const ANNUAL_PCT = 17;
+export const ANNUAL_LABEL = { es: "2 meses gratis", en: "2 months free" } as const;
 /** Any offer to show (a cheaper first month or a yearly discount). */
 export const HAS_OFFER = LAUNCH_ITEMS.length > 0 || ANNUAL;
 export const hasLaunch = (item: string) => (LAUNCH_ITEMS as string[]).includes(item);
@@ -106,7 +110,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
     return { item, label: item === PRUEBA.id ? "Video de prueba (15 s)" : `${pack.credits.toLocaleString("es-CL")} créditos extra`, credits: pack.credits, subtotal: pack.usd, launch: 0, discount, total: r(pack.usd - discount), period: null };
   }
   const p = plan!;
-  const subtotal = period === "anual" ? p.yearlyPerMonth * 12 : p.monthly;
+  const subtotal = period === "anual" ? p.yearlyTotal : p.monthly;
   const launch = period === "mensual" && opts.firstPurchase && hasLaunch(item) ? r(Math.max(0, subtotal - LAUNCH_PRICE)) : 0;
   const discount = r(((subtotal - launch) * Math.min(100, Math.max(0, opts.discountPct ?? 0))) / 100);
   const fundador = period === "mensual" && opts.fundador && item === FUNDADOR.plan ? r(Math.max(0, p.monthly - FUNDADOR.usd)) : 0;

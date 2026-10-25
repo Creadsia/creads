@@ -137,7 +137,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex flex-wrap items-center gap-2">
                       <b className="text-lg">{isPlan ? (x as (typeof PLANS)[number]).name : `+${fmtCredits(x.credits)}`}</b>
-                      {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
+                      {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[13px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
                       {isPlan ? `Hasta ${fmtSaldo(x.credits)} al mes` : `${fmtSaldo(x.credits)} · se suman a tu plan`}
@@ -146,7 +146,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                   <span className="flex shrink-0 flex-col items-end">
                     {xq.launch > 0 && <s className="text-xs text-muted">{usd(xq.subtotal)}</s>}
                     <b className="font-display text-lg font-semibold">{usd(xq.total)}</b>
-                    <span className="text-[11px] text-muted">{xq.period === "anual" ? "por 12 meses" : xq.period === "mensual" ? "primer mes" : "una vez"}</span>
+                    <span className="text-[13px] text-muted">{xq.period === "anual" ? "por 12 meses" : xq.period === "mensual" ? "primer mes" : "una vez"}</span>
                   </span>
                 </button>
               );
@@ -185,7 +185,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               ) : (
                 <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
               )}
-              <p>Las recargas se compran después, desde «Planes», y se suman a tu plan. Los precios están en dólares; Mercado Pago cobra el equivalente en pesos chilenos al cambio del día y te envía el comprobante.</p>
+              <p>Las recargas se compran después, desde «Planes», y se suman a tu plan. Mercado Pago te envía el comprobante al correo.</p>
               <p>¿Dudas? Escríbenos a <span className="select-all text-ink">hola@creadsia.com</span>.</p>
             </div>
           </details>

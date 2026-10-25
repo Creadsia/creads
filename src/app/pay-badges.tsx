@@ -21,7 +21,7 @@ export default function PayBadges({ compact = false, metodos, garantias = false 
   const cards = ["Visa", "Mastercard", "Amex", ...(mp ? ["Redcompra"] : [])];
   const neutral = "rounded-md border border-line bg-surface px-2 py-1 text-ink";
   return (
-    <ul className={`flex flex-wrap items-center gap-1.5 ${compact ? "text-[11px]" : "text-xs"} font-semibold`} aria-label="Medios de pago">
+    <ul className={`flex flex-wrap items-center gap-1.5 ${compact ? "text-[13px]" : "text-xs"} font-semibold`} aria-label="Medios de pago">
       {mp && <li className="rounded-md bg-[#00b1ea] px-2 py-1 text-white">Mercado Pago</li>}
       {m.includes("stripe") && <li className={neutral}>Stripe</li>}
       {cards.map((x) => <li key={x} className={neutral}>{x}</li>)}
