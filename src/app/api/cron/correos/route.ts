@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { sbRest } from "@/lib/supabase";
-import { type Embudo, SITE, embudoEmail } from "@/lib/emails";
-import { optedOut, unsubLink } from "@/lib/unsub";
-import { once } from "@/lib/marketing";
-import { emailConfigured, sendEmail } from "@/lib/providers/email";
+import type { Embudo } from "@/lib/emails";
+import { optedOut } from "@/lib/unsub";
+import { emailConfigured } from "@/lib/providers/email";
+import { enviarEmbudo } from "@/lib/embudo-envio";
+import { hasPaidBefore, packParaDescontar } from "@/lib/billing";
+import { PRUEBA, PRUEBA_DESCUENTO_DIAS, usd } from "@/lib/catalog";
+import { fechaChile, tocaPackDia5, vencePack } from "@/lib/correos-activacion";
+import { tocaPedirTestimonio } from "@/lib/caso-fundador";
+import { cambiarCaso, listarCasos } from "@/lib/casos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -12,7 +17,9 @@ export const maxDuration = 300;
 // Every hour (vercel.json → crons): emails by behaviour (owner's plan, 25 Oct 2026). Off until the owner
 // approves the texts: CORREOS_COMPORTAMIENTO=1 in Vercel turns them on. Each email goes once per person.
 //   registered, nothing generated: 1 h and 24 h · generated, no payment: day 1, 3 and 5 ·
-//   checkout started and not paid: 1 h · (the welcome after paying is sent with the receipt, lib/settle.ts)
+//   checkout started and not paid: 1 h · Pack Prueba day 5: the discount's real deadline ·
+//   Pack Prueba day 14, only to those who ticked «Caso fundador»: the testimonial request
+//   (the welcome after paying is sent with the receipt, lib/settle.ts; «tu tanda está lista» by /api/tanda)
 
 function authorized(req: Request) {
   const secret = process.env.CRON_SECRET ?? "";
@@ -32,17 +39,21 @@ async function paid(ws: string) {
   const r = await sbRest<{ id: string }[]>(`orders?owner=eq.${encodeURIComponent(ws)}&status=eq.pagado&select=id&limit=1`).catch(() => []);
   return r.length > 0;
 }
+async function nameOf(email: string) {
+  const r = await sbRest<{ name: string | null }[]>(`users?email=eq.${encodeURIComponent(email.toLowerCase())}&select=name&limit=1`).catch(() => []);
+  return r[0]?.name ?? null;
+}
 
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   if (process.env.CORREOS_COMPORTAMIENTO !== "1") return NextResponse.json({ ok: true, apagado: true });
   if (!emailConfigured()) return NextResponse.json({ ok: false, error: "Falta configurar el correo." });
-  const out = await optedOut();
+  const bajas = await optedOut();
   const sent: Record<string, number> = {};
-  const send = async (u: { email: string; name: string | null }, tipo: Embudo, key: string) => {
-    if (out.has(u.email.toLowerCase())) return;
-    if (!(await once(`embudo:${tipo}:${key}`, 400 * 86400))) return; // already sent
-    if (await sendEmail(embudoEmail(u.email, u.name, tipo, unsubLink(SITE, u.email)))) sent[tipo] = (sent[tipo] ?? 0) + 1;
+  const send = async (u: { email: string; name: string | null }, tipo: Embudo, key: string, vars?: Record<string, string>) => {
+    const ok = await enviarEmbudo(u, tipo, key, { vars, bajas });
+    if (ok) sent[tipo] = (sent[tipo] ?? 0) + 1;
+    return ok;
   };
 
   // people who signed up in the last 6 days (enough for every step)
@@ -67,6 +78,28 @@ export async function GET(req: Request) {
   for (const o of orders) {
     if (o.mp?.trial || !o.email || (await paid(o.owner))) continue;
     await send({ email: o.email, name: null }, "checkout-1h", o.id);
+  }
+
+  // Pack Prueba, day 5: the discount on the first plan is still on (same check as /api/pagos), with its real deadline
+  const packs = await sbRest<{ id: string; owner: string; email: string; closed_at: string }[]>(`orders?item=eq.${PRUEBA.id}&status=eq.pagado&closed_at=lte.${ago(5 * 24)}&closed_at=gte.${ago(6 * 24)}&select=id,owner,email,closed_at&limit=500`).catch(() => []);
+  for (const o of packs) {
+    if (!o.email || !tocaPackDia5(o.closed_at)) continue;
+    if (await hasPaidBefore(o.owner)) continue;
+    const pack = await packParaDescontar(o.owner, PRUEBA_DESCUENTO_DIAS);
+    if (pack?.order !== o.id) continue;
+    const { fecha, hora } = fechaChile(vencePack(o.closed_at));
+    await send({ email: o.email, name: await nameOf(o.email) }, "pack-dia-5", o.owner, { monto: usd(pack.usd), fecha, hora });
+  }
+
+  // «Caso fundador», day 14 after the Pack Prueba payment: only people who ticked the box at checkout
+  const casos = (await listarCasos().catch(() => [])).filter((c) => c.estado === "inscrito");
+  for (const c of casos) {
+    const p = await sbRest<{ closed_at: string }[]>(`orders?owner=eq.${encodeURIComponent(c.ws)}&item=eq.${PRUEBA.id}&status=eq.pagado&select=closed_at&order=closed_at.asc&limit=1`).catch(() => []);
+    if (!tocaPedirTestimonio(c, p[0]?.closed_at)) continue;
+    if (await send({ email: c.email, name: c.name }, "caso-dia-14", c.userId)) {
+      const fecha = new Date().toISOString();
+      await cambiarCaso(c.userId, (cur) => (cur?.estado === "inscrito" ? { ...cur, estado: "pedido", pedidoEn: fecha, historial: [...cur.historial, { estado: "pedido", fecha, por: "correo" }] } : null)).catch(() => null);
+    }
   }
   return NextResponse.json({ ok: true, sent });
 }

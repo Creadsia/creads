@@ -7,7 +7,7 @@ export type PanelTab =
   | "oficina" | "equipo" | "lanzamiento"
   | "estadisticas" | "suscripciones" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "afiliados" | "modelos"
   | "marketing" | "campanas"
-  | "leads" | "contactar" | "clientes" | "registros"
+  | "leads" | "contactar" | "clientes" | "registros" | "casos"
   | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas";
 
 export interface Area {
@@ -30,7 +30,7 @@ export const AREAS: Area[] = [
     agents: ["finanzas"],
   },
   { id: "marketing", name: "Marketing", what: "Anuncios, campañas pagadas en Meta y contenido orgánico.", tabs: [["campanas", "Resultados de campañas"], ["marketing", "Estudio de marketing"]], agents: ["marketing", "creativos", "trafico", "organico"] },
-  { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["leads", "Nuevas cuentas"], ["contactar", "Clientes a contactar"], ["clientes", "Clientes y accesos"], ["registros", "Registros"]], agents: ["soporte"] },
+  { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["leads", "Nuevas cuentas"], ["contactar", "Clientes a contactar"], ["clientes", "Clientes y accesos"], ["registros", "Registros"], ["casos", "Casos fundador"]], agents: ["soporte"] },
   {
     id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores, seguridad y novedades de IA.",
     tabs: [["guardian", "Guardián (salud)"], ["errores", "Errores y alarmas"], ["calidad", "Calidad de videos"], ["saldos", "Saldos de proveedores"], ["estado", "Estado"], ["cuentas", "Cuentas de servicios"]],

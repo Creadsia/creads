@@ -590,7 +590,7 @@ export function trialEndingEmail(to: string, name: string | null, o: { fecha: st
 
 // ---------- funnel emails by behaviour (owner's plan, 25 Oct 2026). Sent only with CORREOS_COMPORTAMIENTO=1 ----------
 
-export type Embudo = "sin-generar-1h" | "sin-generar-24h" | "sin-pagar-1" | "sin-pagar-3" | "sin-pagar-5" | "checkout-1h" | "pago-bienvenida";
+export type Embudo = "sin-generar-1h" | "sin-generar-24h" | "sin-pagar-1" | "sin-pagar-3" | "sin-pagar-5" | "checkout-1h" | "pago-bienvenida" | "tanda-lista" | "pack-dia-5" | "caso-dia-14";
 
 const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; body: string[]; cta: { label: string; path: string } }> = {
   "sin-generar-1h": {
@@ -665,15 +665,51 @@ const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; 
     ],
     cta: { label: "Ir a mi estudio", path: "/app" },
   },
+  // block F (25 Oct 2026). {x} are filled per customer by embudoEmail's `vars`
+  "tanda-lista": {
+    subject: "Tu tanda está lista",
+    preview: "Tus anuncios ya están listos para descargar y subir a Meta.",
+    title: "Tu tanda está lista",
+    body: [
+      "Tus {n} anuncios de {producto} ya están listos, cada uno en 4:5 para el feed y en 9:16 para stories y reels.",
+      "Descarga el ZIP y súbelos a Meta con el mismo presupuesto cada uno: en pocos días los números te dicen cuál vende más. Cuando tengas un ganador, pide variaciones de ese.",
+    ],
+    cta: { label: "Ver mi tanda", path: "/app/tanda?id={id}" },
+  },
+  "pack-dia-5": {
+    subject: "Tu descuento de {monto} vence el {fecha}",
+    preview: "Si eliges un plan antes, lo que pagaste por el Pack Prueba se descuenta de tu primer mes.",
+    title: "Tu Pack Prueba todavía vale {monto}",
+    body: [
+      "Hace 5 días compraste el Pack Prueba. Si eliges un plan hasta el {fecha} a las {hora} (hora de Chile), esos {monto} se descuentan de tu primer mes.",
+      "Después de esa fecha el plan se cobra completo.",
+      "¿No sabes qué plan te conviene? Responde este correo y te ayudamos a elegir.",
+    ],
+    cta: { label: "Elegir mi plan", path: "/app/planes" },
+  },
+  "caso-dia-14": {
+    subject: "¿Nos cuentas cómo te fue?",
+    preview: "Tu experiencia ayuda a otros negocios a decidirse. Te toma 3 minutos.",
+    title: "¿Nos cuentas cómo te fue?",
+    body: [
+      "Hace dos semanas compraste el Pack Prueba y te sumaste a los casos fundadores de Creads. ¡Gracias!",
+      "Queremos saber cómo te fue: qué anuncios usaste y qué resultados viste. Si tienes una captura del Administrador de anuncios de Meta, súbela también.",
+      "Antes de mostrar cualquier cosa te pedimos permiso en el mismo formulario. Y si todavía no lanzas tu campaña, responde este correo y te ayudamos a armarla.",
+    ],
+    cta: { label: "Contar mi experiencia", path: "/app/caso" },
+  },
 };
 
-export function embudoEmail(to: string, name: string | null, tipo: Embudo, unsub?: string): Email {
+const fill = (s: string, vars?: Record<string, string>) => (vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => vars[k] ?? m) : s);
+
+export function embudoEmail(to: string, name: string | null, tipo: Embudo, unsub?: string, vars?: Record<string, string>): Email {
   const e = EMBUDO[tipo];
-  const href = `${SITE}${e.cta.path}`;
+  const href = `${SITE}${fill(e.cta.path, vars && Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, encodeURIComponent(v)])))}`;
+  const subject = fill(e.subject, vars), title = fill(e.title, vars), body = e.body.map((b) => fill(b, vars));
   return {
-    to, tag: `embudo-${tipo}`, subject: e.subject,
-    html: layout({ preview: e.preview, title: e.title, paragraphs: [esc(hello(name)), ...e.body.map(esc)], cta: { label: e.cta.label, href }, unsub }),
-    text: plain([hello(name), "", ...e.body, "", `${e.cta.label}: ${href}`, unsub && `\nNo quiero recibir más consejos: ${unsub}`]),
+    to, tag: `embudo-${tipo}`, subject, unsub,
+    html: layout({ preview: fill(e.preview, vars), title, paragraphs: [esc(hello(name)), ...body.map(esc)], cta: { label: e.cta.label, href }, unsub }),
+    text: plain([hello(name), "", ...body, "", `${e.cta.label}: ${href}`, unsub && `\nNo quiero recibir más consejos: ${unsub}`]),
   };
 }
 
