@@ -47,6 +47,7 @@ const DEMOS = {
 const PRODUCTO_DEMOS = [
   { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Salpicadura · licuadora" },
   { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "En su lugar · café" },
+  { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Giro 360 · sérum" },
 ];
 
 const PASOS = [
