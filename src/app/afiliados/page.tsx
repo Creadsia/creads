@@ -40,8 +40,10 @@ const FAQ = [
   ["¿Puedo hacer anuncios en Google con la marca Creads?", "No puedes pujar por «Creads» ni sus variantes en buscadores. Sí puedes hacer anuncios con tu propio contenido (reseñas, tutoriales, comparativas). El detalle está en los términos."],
 ] as const;
 
-const ejemplo = 50;
-const ejemploTotal = ejemplo * (P.pctTramo1 / 100) * P.mesesTramo1 + ejemplo * (P.pctTramo2 / 100) * (P.maxMeses - P.mesesTramo1);
+// the Escala plan (US$59 a month)
+const ejemplo = 59;
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const ejemploTotal = r2(ejemplo * (P.pctTramo1 / 100) * P.mesesTramo1 + ejemplo * (P.pctTramo2 / 100) * (P.maxMeses - P.mesesTramo1));
 
 export default function Afiliados() {
   return (
@@ -86,7 +88,7 @@ export default function Afiliados() {
               ))}
             </div>
             <p className="max-w-3xl rounded-2xl bg-surface-2 p-4 text-sm text-muted">
-              Ejemplo de cómo se calcula (no es una promesa de ingresos): un cliente que paga US${ejemplo} al mes durante un año te deja {P.mesesTramo1} × US${(ejemplo * P.pctTramo1) / 100} + {P.maxMeses - P.mesesTramo1} × US${(ejemplo * P.pctTramo2) / 100} = <b className="text-ink">US${ejemploTotal}</b>. Lo que ganes depende de cuántos clientes traigas y de cuánto tiempo sigan pagando.
+              Ejemplo de cómo se calcula (no es una promesa de ingresos): un cliente del plan Escala (US${ejemplo} al mes) que paga durante un año te deja {P.mesesTramo1} × US${r2((ejemplo * P.pctTramo1) / 100)} + {P.maxMeses - P.mesesTramo1} × US${r2((ejemplo * P.pctTramo2) / 100)} = <b className="text-ink">US${ejemploTotal}</b>. Lo que ganes depende de cuántos clientes traigas y de cuánto tiempo sigan pagando.
             </p>
           </div>
         </section>
