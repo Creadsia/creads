@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { AspectRatio, ImageProvider, ImageRequest } from "./types";
@@ -41,9 +41,15 @@ async function cut(bytes: Uint8Array, crop: string | null): Promise<{ bytes: Uin
   const { ff } = await import("../montage");
   const id = randomUUID();
   const a = path.join("/tmp", `gpti-${id}.png`), b = path.join("/tmp", `gpti-${id}-c.png`);
-  await writeFile(a, bytes);
-  await ff(["-y", "-v", "error", "-nostdin", "-i", a, "-vf", crop, "-frames:v", "1", b], 60_000);
-  return { bytes: new Uint8Array(await readFile(b)), mime: "image/png" };
+  // the server's /tmp is small and shared by every request on a warm instance: always clean up (a long batch
+  // filled it once, 25 Oct 2026: «no space left on device» after the images were already paid for)
+  try {
+    await writeFile(a, bytes);
+    await ff(["-y", "-v", "error", "-nostdin", "-i", a, "-vf", crop, "-frames:v", "1", b], 60_000);
+    return { bytes: new Uint8Array(await readFile(b)), mime: "image/png" };
+  } finally {
+    await Promise.all([rm(a, { force: true }), rm(b, { force: true })]).catch(() => {});
+  }
 }
 
 function gptImage(o: { id: string; label: string; model: string; quality: string; usd: number }): ImageProvider {
@@ -54,6 +60,8 @@ function gptImage(o: { id: string; label: string; model: string; quality: string
     configured: () => Boolean(process.env.OPENAI_API_KEY),
     async generate({ prompt, aspect, refs }: ImageRequest) {
       const { size, crop } = sizeFor(aspect);
+      // the sides (or top/bottom) are cut afterwards: ask for a safe margin so no word or button is lost
+      if (crop) prompt = `${prompt}\n\nComposition: the image will be trimmed ${size === "1536x1024" ? "at the top and bottom" : "on the left and right"} by about 10%, so keep every word, number, button and important object well inside the centre, never near ${size === "1536x1024" ? "the top or bottom edge" : "the side edges"}.`;
       let res: Response;
       if (refs?.length) {
         // with references (the face, the product): the edits endpoint takes them as images
