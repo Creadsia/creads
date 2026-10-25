@@ -188,3 +188,34 @@ export function cheaperSteps(models: CostoModelo[], spend: Partial<Record<Family
     tip("Borradores y vistas previas de imagen", "Nano Banana", 0.2, "nano-banana-2", "flux-3-klein", "FLUX 3 Klein es casi gratis: ideal para mostrar opciones antes de gastar en la imagen final."),
   ].filter((t): t is Tip => Boolean(t));
 }
+
+/** Real cost of each piece (provider list prices, Oct 2026; see the «costos-reales» doc) and what it charges. */
+export const PIEZAS = {
+  imagen: { usd: 0.18, creditos: 10, label: "imágenes (3 formatos)" },
+  producto: { usd: 0.57, creditos: 30, label: "videos de producto" },
+  avatar: { usd: 2.29, creditos: 120, label: "videos con avatar de 10 s" },
+} as const;
+
+export interface PlanPiezaRow {
+  plan: string; precio: number; neto: number;
+  /** cost if the whole balance goes to one kind of piece */
+  todo: Record<keyof typeof PIEZAS, { piezas: number; usd: number }>;
+  peor: keyof typeof PIEZAS; costoPeor: number; pctPeor: number; queda: number;
+}
+
+/**
+ * «Verifica con el costo real de cada pieza, no con los créditos» (owner's plan, 25 Oct 2026): for each plan on
+ * sale, the AI cost if the customer spends the whole balance on images, on product videos or on avatar videos,
+ * and what is left in the worst of those after IVA (19%) and Mercado Pago (≈4.4% + US$0.30).
+ */
+export function planesPorPieza(plans: { name: string; monthly: number; credits: number }[]): PlanPiezaRow[] {
+  return plans.map((p) => {
+    const neto = r2(p.monthly / 1.19 - (p.monthly * 0.044 + 0.3));
+    const todo = Object.fromEntries((Object.keys(PIEZAS) as (keyof typeof PIEZAS)[]).map((k) => {
+      const piezas = Math.floor(p.credits / PIEZAS[k].creditos);
+      return [k, { piezas, usd: r2(piezas * PIEZAS[k].usd) }];
+    })) as PlanPiezaRow["todo"];
+    const peor = (Object.keys(todo) as (keyof typeof PIEZAS)[]).reduce((a, k) => (todo[k].usd > todo[a].usd ? k : a), "imagen" as keyof typeof PIEZAS);
+    return { plan: p.name, precio: p.monthly, neto, todo, peor, costoPeor: todo[peor].usd, pctPeor: Math.round((todo[peor].usd / p.monthly) * 100), queda: r2(neto - todo[peor].usd) };
+  });
+}

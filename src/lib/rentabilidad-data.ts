@@ -1,8 +1,9 @@
+import { SHOWN_PLANS } from "./catalog";
 import { readPrivateJSON, sbAll } from "./supabase";
 import { DEFAULT_FINANZAS, type Finanzas, withCurrentPlans } from "./finance";
 import {
   type AdRow, type ChargeRow, type ClipRow, type Family, type PaidOrder,
-  cheaperSteps, customerSegment, internalSegment, leaks, planMargins, realCostPerCredit,
+  cheaperSteps, customerSegment, internalSegment, leaks, planMargins, planesPorPieza, realCostPerCredit,
 } from "./rentabilidad";
 
 // Reads the database for Panel → Rentabilidad (and the office's CEO General).
@@ -31,7 +32,7 @@ export async function rentabilidadReport(days: number) {
   return {
     days, since, updated: new Date().toISOString(),
     costoCredito: { usado: costPerCredit, real, supuesto: f.config.costoCredito },
-    clientes, interno, planes, fugas: fugas.slice(0, 3), otrasFugas: fugas.slice(3, 8),
+    clientes, interno, planes, porPieza: planesPorPieza(SHOWN_PLANS), fugas: fugas.slice(0, 3), otrasFugas: fugas.slice(3, 8),
     baratos: cheaperSteps(models, spend, days),
   };
 }

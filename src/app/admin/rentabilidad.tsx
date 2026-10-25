@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Leak, PlanRow, Segment, Tip } from "@/lib/rentabilidad";
+import { PIEZAS, type Leak, type PlanPiezaRow, type PlanRow, type Segment, type Tip } from "@/lib/rentabilidad";
 
 // Panel → Rentabilidad: real cost per finished ad, failures per provider, margin per plan at full use,
 // the biggest money leaks and cheaper models per step. All in US$, from the last N days.
@@ -9,7 +9,7 @@ import type { Leak, PlanRow, Segment, Tip } from "@/lib/rentabilidad";
 interface Data {
   days: number; updated: string;
   costoCredito: { usado: number; real: { usd: number; credits: number; base: number } | null; supuesto: number };
-  clientes: Segment; interno: Segment; planes: PlanRow[]; fugas: Leak[]; otrasFugas: Leak[]; baratos: Tip[];
+  clientes: Segment; interno: Segment; planes: PlanRow[]; porPieza?: PlanPiezaRow[]; fugas: Leak[]; otrasFugas: Leak[]; baratos: Tip[];
 }
 
 const card = "flex min-w-0 flex-col gap-3 rounded-2xl border border-line bg-surface p-4 sm:p-5";
@@ -111,6 +111,18 @@ export default function Rentabilidad() {
           rows={d.planes.map((p) => [<b key="p">{p.plan}</b>, p.caso, usd(p.precio), usd(p.costoIA), usd(p.iva), usd(p.comision), <b key="q" className={p.queda < 0 ? "text-bad" : "text-good"}>{usd(p.queda)}</b>, <span key="m" className={p.margen < 0 ? "text-bad" : ""}>{p.margen}%</span>])} />
         <p className="text-xs text-muted">Usa el costo real por crédito de arriba. IVA y comisión según «Costos fijos» del Panel; con Stripe la comisión puede cambiar. Es el peor caso: la mayoría de los clientes no usa el 100%.</p>
       </section>
+
+      {!!d.porPieza?.length && (
+        <section className={card} aria-labelledby="h-pieza">
+          <h3 id="h-pieza" className="text-lg font-bold">Costo real por plan, pieza por pieza</h3>
+          <Table empty="Sin planes." head={["Plan", "Precio", "Neto (sin IVA ni Mercado Pago)", "Todo en imágenes", "Todo en videos de producto", "Todo en avatar", "Peor caso", "Te queda"]}
+            rows={d.porPieza.map((p) => [<b key="p">{p.plan}</b>, usd(p.precio), usd(p.neto),
+              `${p.todo.imagen.piezas} → ${usd(p.todo.imagen.usd)}`, `${p.todo.producto.piezas} → ${usd(p.todo.producto.usd)}`, `${p.todo.avatar.piezas} → ${usd(p.todo.avatar.usd)}`,
+              <span key="w" className={p.pctPeor > 40 ? "text-bad" : p.pctPeor > 30 ? "text-warn" : ""}>{usd(p.costoPeor)} ({p.pctPeor}%)</span>,
+              <b key="q" className={p.queda < 0 ? "text-bad" : "text-good"}>{usd(p.queda)}</b>])} />
+          <p className="text-xs text-muted">Costo de lista de cada pieza: imagen en 3 formatos {usd(PIEZAS.imagen.usd)}, video de producto {usd(PIEZAS.producto.usd)}, video con avatar de 10 s {usd(PIEZAS.avatar.usd)}. «Peor caso» es la forma de gastar el saldo que más nos cuesta; regla: hasta 30% del precio (Agencia, excepción de lanzamiento). Comisión de Mercado Pago estimada en 4,4% + US$0,30.</p>
+        </section>
+      )}
 
       <section className={card} aria-labelledby="h-baratos">
         <h3 id="h-baratos" className="text-lg font-bold">Pasos que podrían usar un modelo más barato</h3>
