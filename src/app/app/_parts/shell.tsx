@@ -88,6 +88,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     group: "Herramientas",
     items: [
       { href: "/app/prompts", label: "Generador de prompts", icon: I.pen },
+      { href: "/app/hooks", label: "Hooks por rubro", icon: I.lib },
     ],
   },
   // Herramientas IA, Recrear video, Influencer IA and Historias are hidden since 21 Oct 2026 (owner and Benjamín:
