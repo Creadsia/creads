@@ -31,6 +31,7 @@ interface U { email: string; name: string | null; workspace: string }
 
 /** First-week tips (day 1, 3 and 7 after signing up), unless the person opted out. */
 async function activation(): Promise<number> {
+  if (process.env.CORREOS_COMPORTAMIENTO === "1") return 0; // replaced by the behaviour emails (cron/correos)
   let sent = 0;
   const out = await optedOut(); // can't read who opted out → no tips today (the caller logs it)
   for (const step of [1, 3, 7] as ActivationStep[]) {

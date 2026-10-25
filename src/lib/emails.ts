@@ -550,3 +550,95 @@ export function trialEndingEmail(to: string, name: string | null, o: { fecha: st
     text: plain([hello(name), "", `Mañana (${o.fecha}) se cobra el plan ${o.plan}: ${monto} al mes. Para no seguir, cancela hoy en Planes: ${planes}`]),
   };
 }
+
+// ---------- funnel emails by behaviour (owner's plan, 25 Oct 2026). Sent only with CORREOS_COMPORTAMIENTO=1 ----------
+
+export type Embudo = "sin-generar-1h" | "sin-generar-24h" | "sin-pagar-1" | "sin-pagar-3" | "sin-pagar-5" | "checkout-1h" | "pago-bienvenida";
+
+const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; body: string[]; cta: { label: string; path: string } }> = {
+  "sin-generar-1h": {
+    subject: "Tu primera tanda está a un link de distancia",
+    preview: "Pega el link de tu producto y Creads hace el resto.",
+    title: "Pega el link de tu producto",
+    body: [
+      "Ya tienes tu cuenta. Lo más rápido para ver de qué es capaz Creads: pega el link de tu producto o tu tienda.",
+      "Creads lee tu página, te propone 6 ángulos de venta (dolor, deseo, mecanismo, prueba social, creencia y oferta) y crea 10 anuncios en 4:5 y 9:16, listos para subir a Meta.",
+    ],
+    cta: { label: "Crear mi primera tanda", path: "/app/tanda" },
+  },
+  "sin-generar-24h": {
+    subject: "¿Te ayudo con tu primera tanda?",
+    preview: "Si no tienes página, basta con describir tu producto en dos frases.",
+    title: "Tu primera tanda en 3 minutos",
+    body: [
+      "Vimos que todavía no creas tu primera tanda de anuncios.",
+      "Si no tienes página web, no importa: describe tu producto en dos frases (qué es, a quién se lo vendes y su precio) y Creads propone los ángulos por ti.",
+      "Si algo no te quedó claro, responde este correo y te ayudamos.",
+    ],
+    cta: { label: "Hacer mi tanda ahora", path: "/app/tanda" },
+  },
+  "sin-pagar-1": {
+    subject: "Tus anuncios ya están listos para testear",
+    preview: "Súbelos a Meta y deja que los números decidan.",
+    title: "Siguiente paso: testea",
+    body: [
+      "Ya creaste tus primeros anuncios. Ahora súbelos a Meta con el mismo presupuesto cada uno y deja que los números elijan al ganador.",
+      "El anuncio que vende se quema en días. Gana el que testea más rápido: con un plan puedes crear tandas nuevas cada semana.",
+    ],
+    cta: { label: "Ver planes", path: "/app/planes" },
+  },
+  "sin-pagar-3": {
+    subject: "¿Cómo te fue con tus anuncios?",
+    preview: "Haz variaciones del que mejor funcionó.",
+    title: "¿Cuál funcionó mejor?",
+    body: [
+      "Si ya testeaste tus anuncios, el siguiente paso es hacer variaciones del que mejor funcionó: otro gancho, otra persona, otro formato.",
+      "Con un plan tienes saldo para imágenes y videos con avatar cada mes, y lo gastas como quieras.",
+    ],
+    cta: { label: "Elegir mi plan", path: "/app/planes" },
+  },
+  "sin-pagar-5": {
+    subject: "Un último dato antes de tu próxima campaña",
+    preview: "Testear 3 anuncios al mes no alcanza.",
+    title: "Testea 70 anuncios al mes, no 3",
+    body: [
+      "Las cuentas que crecen en Meta no adivinan: testean muchos ángulos y se quedan con los que venden.",
+      "Creads te da imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, listos para subir. Elige el plan que se ajuste a tu ritmo.",
+      "Si tienes dudas, responde este correo: lo lee una persona.",
+    ],
+    cta: { label: "Ver planes", path: "/app/planes" },
+  },
+  "checkout-1h": {
+    subject: "Tu plan quedó a medio camino",
+    preview: "Termina tu compra en un minuto.",
+    title: "¿Se cortó tu pago?",
+    body: [
+      "Empezaste a contratar un plan pero el pago no se completó.",
+      "Si fue un problema con la tarjeta, prueba con otra o con otro medio de pago. Si tienes una duda sobre el plan, responde este correo y te ayudamos.",
+    ],
+    cta: { label: "Terminar mi compra", path: "/app/planes" },
+  },
+  "pago-bienvenida": {
+    subject: "Bienvenido a Creads: así sacas el máximo",
+    preview: "Tu saldo ya está cargado.",
+    title: "Tu plan ya está activo",
+    body: [
+      "Gracias por confiar en Creads. Tu saldo ya está cargado y lo puedes gastar en imágenes o videos, como quieras.",
+      "Tres consejos para empezar: carga tu kit de marca (logo, colores y producto) una sola vez; haz una tanda por semana; y cuando un anuncio funcione, pide variaciones de ese.",
+    ],
+    cta: { label: "Ir a mi estudio", path: "/app" },
+  },
+};
+
+export function embudoEmail(to: string, name: string | null, tipo: Embudo, unsub?: string): Email {
+  const e = EMBUDO[tipo];
+  const href = `${SITE}${e.cta.path}`;
+  return {
+    to, tag: `embudo-${tipo}`, subject: e.subject,
+    html: layout({ preview: e.preview, title: e.title, paragraphs: [esc(hello(name)), ...e.body.map(esc)], cta: { label: e.cta.label, href }, unsub }),
+    text: plain([hello(name), "", ...e.body, "", `${e.cta.label}: ${href}`, unsub && `\nNo quiero recibir más consejos: ${unsub}`]),
+  };
+}
+
+/** The texts, for the owner to read and approve (Panel and docs). */
+export const EMBUDO_TEXTOS = EMBUDO;

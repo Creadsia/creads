@@ -73,6 +73,11 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));
   if (order.email) {
     await sendEmail(receiptEmail(order.email, { label: order.quote.label, credits: g.credits, amount: pay.amount, currency: pay.currency, orderId: order.id, paymentId: `${pay.id}` }));
+    // first payment of a plan: the welcome with what to do next (funnel emails, once approved by the owner)
+    if (process.env.CORREOS_COMPORTAMIENTO === "1" && g.months > 0 && !(order.payments ?? []).some((p) => p !== `${source}:${pay.id}`)) {
+      const { embudoEmail } = await import("./emails");
+      await sendEmail(embudoEmail(order.email, null, "pago-bienvenida")).catch(() => null);
+    }
   }
   // the owner hears about every sale right away (email to Creadsia's owner)
   try {

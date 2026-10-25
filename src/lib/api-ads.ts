@@ -82,6 +82,12 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
 export async function createAd(ws: string, userId: string, o: Exclude<ReturnType<typeof readOrder>, string>): Promise<ApiAd> {
   const now = new Date().toISOString();
   const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "cola", paso: "En cola", ...o };
+  // kit de marca: its colours for the edit unless this order chose its own
+  if (!job.look?.c1) {
+    const { cargarMarca, marcaLista } = await import("./marca");
+    const m = await cargarMarca(ws).catch(() => null);
+    if (m && marcaLista(m)) job.look = { ...(job.look ?? {}), c1: m.c1, c2: m.c2 };
+  }
   await writePrivateJSON(file(ws, job.id), job);
   await addToIndex(ws, job.id);
   await markOpen(ws, job.id);
