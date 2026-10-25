@@ -1,8 +1,8 @@
 "use client";
 
-import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtCredits, fmtSaldo } from "@/lib/credit-math";
 import { useEffect, useMemo, useState } from "react";
-import { ANNUAL, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { ANNUAL, ANNUAL_PCT, type ItemId, LAUNCH_PCT, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
 import { Money, OnlyUSD } from "../money";
 import { newEventId, track } from "@/lib/track";
 import { Logo } from "../brand";
@@ -16,7 +16,6 @@ import Garantia from "../garantia";
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 // shown in seconds of video (talking avatar); credits stay underneath
-const SECS = (credits: number) => secondsOf(credits);
 const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
 function Check({ className = "text-good" }: { className?: string }) {
@@ -31,7 +30,10 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   const [item, setItem] = useState<ItemId>(first);
   const [period, setPeriod] = useState<Period>(firstPeriod);
   const isPack = item.startsWith("pack-");
-  const q = useMemo(() => quote(item, period, { firstPurchase: true })!, [item, period]);
+  // the founder price (Escala, first 3 months) while places are left: the server applies the same rule
+  const [fundador, setFundador] = useState(false);
+  useEffect(() => { fetch("/api/fundador").then((r) => r.json()).then((d) => setFundador(typeof d?.quedan === "number" && d.quedan > 0)).catch(() => {}); }, []);
+  const q = useMemo(() => quote(item, period, { firstPurchase: true, fundador })!, [item, period, fundador]);
   const plan = PLANS.find((p) => p.id === item);
   const pack = PACKS.find((p) => p.id === item);
   const totalClp = clpFor(q.total, rate);
@@ -115,7 +117,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                 <button key={p} type="button" role="radio" aria-checked={period === p} onClick={() => setPeriod(p)}
                   className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left ${period === p ? "border-accent-text bg-surface" : "border-line text-muted"}`}>
                   <b className="text-sm text-ink">{p === "mensual" ? "Mensual" : "Anual"}</b>
-                  <span className="text-xs">{p === "mensual" ? `Emprende −${LAUNCH_PCT}% el primer mes` : "15% menos"}</span>
+                  <span className="text-xs">{p === "mensual" ? "Cancela cuando quieras" : `${ANNUAL_PCT}% menos`}</span>
                 </button>
               ))}
             </div>
@@ -124,9 +126,9 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           <div role="radiogroup" aria-label={isPack ? "Recarga" : "Plan"} className="flex flex-col gap-2">
             {(isPack ? PACKS : PLANS.filter((p) => !p.hidden)).map((x) => {
               const on = x.id === item;
-              const xq = quote(x.id, period, { firstPurchase: true })!;
+              const xq = quote(x.id, period, { firstPurchase: true, fundador })!;
               const isPlan = "monthly" in x;
-              const best = x.id === "plus";
+              const best = isPlan && Boolean((x as (typeof PLANS)[number]).featured);
               return (
                 <button key={x.id} type="button" role="radio" aria-checked={on} onClick={() => setItem(x.id)}
                   className={`relative flex items-center gap-4 rounded-2xl border p-4 text-left transition-colors ${on ? "border-transparent bg-surface [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] border-2" : "border-line bg-surface/60 hover:bg-surface"}`}>
@@ -137,7 +139,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                       {best && <span className="rounded-full bg-[image:var(--grad)] px-2 py-0.5 text-[11px] font-bold text-white">El más elegido</span>}
                     </span>
                     <span className="text-sm text-muted">
-                      {isPlan ? `${fmtCredits(x.credits)} al mes (≈ ${fmtSeconds(SECS(x.credits))} de video)` : `${fmtCredits(x.credits)} · se suman a tu plan`}
+                      {isPlan ? `Hasta ${fmtSaldo(x.credits)} al mes` : `${fmtSaldo(x.credits)} · se suman a tu plan`}
                     </span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end">
@@ -201,7 +203,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </span>
               {q.launch > 0 && <span className="w-fit rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Oferta de lanzamiento: −{LAUNCH_PCT}% el primer mes</span>}
               <span className="text-xs text-muted">
-                {q.period === "mensual" ? (renews ? <>Luego {usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.</> : <>Pago de un mes, sin cobro automático. Luego {usd(plan?.monthly ?? 0)}/mes si renuevas.</>) : q.period === "anual" ? `${fmtSeconds(SECS(q.credits))} de video para todo el año.` : `${fmtSeconds(SECS(pack?.credits ?? 0))} de video que se suman a tu plan y vencen con él.`}
+                {q.period === "mensual" ? (renews ? <>Luego {usd(plan?.monthly ?? 0)}/mes. Cancela cuando quieras.</> : <>Pago de un mes, sin cobro automático. Luego {usd(plan?.monthly ?? 0)}/mes si renuevas.</>) : q.period === "anual" ? `Hasta ${fmtSaldo(q.credits / 12)} cada mes, por 12 meses.` : `${fmtSaldo(pack?.credits ?? 0)} que se suman a tu plan y vencen con él.`}
               </span>
               <OnlyUSD><span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
               </span></OnlyUSD>

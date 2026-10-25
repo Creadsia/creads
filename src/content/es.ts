@@ -4,9 +4,9 @@ import type { Content } from "./en";
 export const es: Content = {
   lang: "es",
   meta: {
-    title: "Creads IA · Tus anuncios en video e imágenes, listos para vender",
+    title: "Creads IA · Testea 70 anuncios al mes, no 3",
     description:
-      "Espía lo que le funciona a tu competencia, crea tu guion de venta y recibe anuncios en video con voz latina, subtítulos e imágenes para tu marca. Sin grabar ni agencia.",
+      "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Tu primera tanda por US$9.",
   },
   nav: {
     studios: "Estudios",
@@ -171,14 +171,14 @@ export const es: Content = {
     trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Saldo disponible al aprobarse el pago"],
   },
   nudge: {
-    bar: "Tu primer anuncio de regalo",
-    barCta: "Probar gratis",
+    bar: "Tu primera tanda de anuncios por US$9",
+    barCta: "Empezar",
     strip: "Todos los modelos y estudios de esta página, desde",
     stripCta: "Ver planes",
-    exitTitle: "Antes de irte: tus anuncios desde US$25 al mes",
+    exitTitle: "Antes de irte: tu primera tanda por US$9",
     exitLead: "Déjanos tu correo y te mandamos ejemplos de anuncios y cómo hacer el primero en minutos.",
     exitCta: "Enviarme ejemplos",
-    exitPlans: "Probar gratis, sin tarjeta",
+    exitPlans: "Hacer mi primera tanda",
     exitClose: "No, gracias",
     exitDone: "Listo, te escribimos pronto con ejemplos.",
   },
