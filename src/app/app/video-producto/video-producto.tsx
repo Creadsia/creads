@@ -27,6 +27,21 @@ export default function VideoProducto() {
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const [videos, setVideos] = useState<Video[]>([]);
+  const [biblio, setBiblio] = useState<{ id: string; url: string }[] | null>(null);
+
+  // settings can come in the link (from the gallery, the batch or the connector): ?foto=…&estilo=…&titular=…
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const f = q.get("foto"), e = q.get("estilo"), t = q.get("titular"), d = q.get("descripcion");
+    if (f && f.startsWith("/api/media/")) setFoto(f.slice(0, 600));
+    if (e && ESTILOS_VIDEO.some((x) => x.id === e)) setEstilo(e as EstiloVideo);
+    if (t) setTitular(t.slice(0, 60));
+    if (d) setDescripcion(d.slice(0, 300));
+  }, []);
+  async function abrirBiblioteca() {
+    const d = await fetch("/api/data/images").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    setBiblio(((d?.rows ?? []) as { id: string; url: string }[]).filter((x) => x.url).slice(0, 48));
+  }
 
   async function subir(file?: File) {
     if (!file) return;
@@ -73,6 +88,7 @@ export default function VideoProducto() {
             <label className={`${ghostCls} cursor-pointer text-center`}>{foto ? "Cambiar foto" : "Subir foto"}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => subir(e.target.files?.[0])} />
             </label>
+            <button type="button" onClick={abrirBiblioteca} className="text-xs font-semibold text-muted underline hover:text-ink">Elegir de mis imágenes</button>
           </div>
           <div className="flex flex-col gap-3">
             <fieldset className="flex flex-col gap-2">
@@ -94,6 +110,23 @@ export default function VideoProducto() {
             </label>
           </div>
         </div>
+        {biblio && (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Tus imágenes</span>
+            {biblio.length ? (
+              <ul className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+                {biblio.map((b) => (
+                  <li key={b.id}>
+                    <button type="button" onClick={() => { setFoto(b.url); setBiblio(null); }} className="block aspect-square w-full overflow-hidden rounded-lg border border-line hover:border-accent">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={b.url} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : <span className="text-xs text-muted">Todavía no tienes imágenes creadas.</span>}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <button type="submit" disabled={!foto || Boolean(busy)} className={btnCls}>Crear video de producto</button>
           {busy ? <span className="flex items-center gap-2 text-sm text-muted"><Spinner /> {busy}</span> : <span className="text-xs text-muted">Usa ≈ 3 imágenes de tu saldo. Si falla, vuelve solo.</span>}
