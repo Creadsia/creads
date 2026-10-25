@@ -169,6 +169,25 @@ Rules:
 Return JSON only: {"piezas": [{"tipo": "dolor|deseo|mecanismo|prueba_social|creencia|oferta", "titular": "the headline", "estilo": "a-h", "prompt": "..."}]} with exactly ${o.n} items.`;
 }
 
+/** «Haz 10 variaciones de este»: new ads around a winner, same angle and offer, other hooks and scenes. */
+export function variacionesPrompt(o: { pieza: Pieza; producto: Producto; n: number; brief: string; idioma: "es" | "en"; conFoto: boolean }) {
+  return `This paid social ad is WINNING (it got the best results of its test). Write ${o.n} variations to keep testing around it.
+
+WINNER: angle [${o.pieza.tipo}], headline "${o.pieza.titular}"
+Its image prompt: """${o.pieza.prompt}"""
+PRODUCT: ${o.producto.nombre}. ${o.producto.descripcion}${o.producto.precio ? ` Price: ${o.producto.precio}.` : ""}
+${o.brief ? `BRAND KIT\n${o.brief}\n` : ""}
+Rules:
+- Keep what makes it win: the same angle and the same offer. Change ONE or TWO things per variation: the headline wording, the person, the setting, the framing, the colours or the format (selfie, sign, typographic, before/after…). Never ${o.n} near-copies, never a copy of the winner.
+- About half keep the winner's headline idea with new words; the rest try sharper hooks for the same angle.
+- Headlines go IN the image, in double quotes inside the prompt, max 7 words, spelled exactly, in ${LANG(o.idioma)}.
+- Prompts in English, detailed. ${o.conFoto ? "A photo of the real product is attached: say «the product from the reference photo» and keep it exactly as it is." : ""}
+- Keep faces, product and text inside the central safe area (shown as 4:5 and 9:16).
+- No celebrities, no other brands, no fake reviews or numbers, no income or medical promises.
+
+Return JSON only: {"piezas": [{"tipo": "${o.pieza.tipo}", "titular": "...", "estilo": "what changed, 2-4 words", "prompt": "..."}]} with exactly ${o.n} items.`;
+}
+
 // ---------- storage ----------
 
 const file = (ws: string, id: string) => `tandas/${ws}/${id}.json`;

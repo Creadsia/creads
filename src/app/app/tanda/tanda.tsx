@@ -144,6 +144,20 @@ export default function PrimeraTanda() {
     } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear la tanda."); setBusy(""); }
   }
 
+  /** «Haz 10 variaciones de este»: a new batch around a winner (writing them is free; the images use balance). */
+  async function variar(t: Tanda, n: number) {
+    setErr(""); setBusy("Escribiendo 10 variaciones del ganador…");
+    try {
+      const d = await post<{ tanda: Tanda }>({ accion: "variar", id: t.id, n, cuantas: 10 });
+      capture("tanda_variaciones", { desde: t.id });
+      setTanda(d.tanda); setEstado({}); setBusy("");
+      window.history.replaceState(null, "", `/app/tanda?id=${d.tanda.id}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (!covers(MODEL_USD * 2)) return comprarPack(d.tanda);
+      await generar(d.tanda);
+    } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear las variaciones."); setBusy(""); }
+  }
+
   const listos = tanda ? tanda.piezas.reduce((a, p) => a + (p.f45 ? 1 : 0) + (p.f916 ? 1 : 0), 0) : 0;
   const total = tanda ? tanda.piezas.length * 2 : 0;
   const corriendo = Object.values(estado).some((v) => v === "creando" || v === "esperando");
@@ -240,7 +254,7 @@ export default function PrimeraTanda() {
       {paso === "tanda" && tanda && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted">{tanda.producto.nombre} · {listos} de {total} imágenes listas{corriendo ? " · creando…" : ""}</p>
+            <p className="text-sm text-muted">{tanda.producto.nombre}{tanda.origen ? ` · variaciones del anuncio #${tanda.origen.n}` : ""} · {listos} de {total} imágenes listas{corriendo ? " · creando…" : ""}{busy ? ` · ${busy}` : ""}</p>
             <div className="flex flex-wrap gap-2">
               {!corriendo && listos < total && (info && !covers(MODEL_USD * 2)
                 ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : "Crear por US$9 (Pack Prueba)"}</button>
@@ -250,7 +264,9 @@ export default function PrimeraTanda() {
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])} />)}
+            {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])}
+              onGanador={() => post<{ tanda: Tanda | null }>({ accion: "pieza", id: tanda.id, n: p.n, formato: "4:5", ganador: !p.ganador }).then((o) => o.tanda && setTanda(o.tanda)).catch(() => {})}
+              onVariar={() => variar(tanda, p.n)} busy={Boolean(busy)} />)}
           </div>
           <p className="text-xs text-muted">Siguiente paso: sube la carpeta feed-4x5 a los anuncios de feed y stories-reels-9x16 a los de stories y reels. Testea todos con el mismo presupuesto y quédate con los 2 o 3 que mejor venden. ¿Quieres ahorrarte armar los anuncios uno por uno? Sube las imágenes a la biblioteca de tu cuenta publicitaria e importa el archivo para Meta (Exportar e importar → Importar anuncios en bloque): se crean en pausa, con el mismo nombre de cada imagen. El ZIP trae un LEEME con los pasos.</p>
           <button type="button" onClick={() => { setTanda(null); setPaso("link"); window.history.replaceState(null, "", "/app/tanda"); }} className={`${ghostCls} self-start`}>Hacer otra tanda</button>
@@ -276,11 +292,13 @@ export default function PrimeraTanda() {
   );
 }
 
-function PiezaCard({ p, estado, onRetry }: { p: Pieza; estado: Record<string, string>; onRetry: (f: "4:5" | "9:16") => void }) {
+function PiezaCard({ p, estado, onRetry, onGanador, onVariar, busy }: { p: Pieza; estado: Record<string, string>; onRetry: (f: "4:5" | "9:16") => void; onGanador: () => void; onVariar: () => void; busy: boolean }) {
+  const lista = Boolean(p.f45 || p.f916);
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-3">
-      <header className="flex items-baseline justify-between gap-2">
+    <article className={`flex flex-col gap-3 rounded-2xl border bg-surface p-3 ${p.ganador ? "border-good" : "border-line"}`}>
+      <header className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-muted">#{p.n} · {TIPO_LABEL[p.tipo]}</span>
+        {lista && <button type="button" onClick={onGanador} aria-pressed={Boolean(p.ganador)} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${p.ganador ? "bg-good/15 text-good" : "border border-line text-muted hover:text-ink"}`}>{p.ganador ? "★ Ganador" : "☆ Marcar ganador"}</button>}
       </header>
       <p className="font-display text-sm font-bold leading-snug">«{p.titular}»</p>
       <div className="grid grid-cols-[4fr_9fr] items-end gap-2">
@@ -307,6 +325,7 @@ function PiezaCard({ p, estado, onRetry }: { p: Pieza; estado: Record<string, st
         })}
       </div>
       {p.nota && <p className="rounded-lg bg-amber-500/10 px-2 py-1 text-xs text-amber-300">Revisión: {p.nota}</p>}
+      {p.ganador && <button type="button" onClick={onVariar} disabled={busy} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">Haz 10 variaciones de este</button>}
     </article>
   );
 }

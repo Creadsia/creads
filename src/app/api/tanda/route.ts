@@ -12,7 +12,7 @@ import { conLogo } from "@/lib/logo";
 import { esRubro } from "@/lib/hooks-biblioteca";
 import {
   type Angulo, type Pieza, type Producto, type Tanda, TIPOS, type TipoAngulo,
-  actualizarPieza, angulosPrompt, cargarTanda, fetchPublic, guardarTanda, leerPagina, listarTandas, tandaId, tandaPrompt,
+  actualizarPieza, angulosPrompt, variacionesPrompt, cargarTanda, fetchPublic, guardarTanda, leerPagina, listarTandas, tandaId, tandaPrompt,
 } from "@/lib/tanda";
 
 export const maxDuration = 90;
@@ -72,6 +72,7 @@ export async function POST(req: Request) {
         patch.error = undefined;
       }
       if (typeof b.nota === "string") patch.nota = str(b.nota, 200) || undefined;
+      if (typeof b.ganador === "boolean") patch.ganador = b.ganador || undefined;
       if (typeof b.error === "string") patch.error = str(b.error, 300) || undefined;
       const out = await actualizarPieza(ws, t.id, n, patch);
       return NextResponse.json({ ok: true, url: patch.f916 ?? patch.f45 ?? null, tanda: out ?? null });
@@ -130,6 +131,23 @@ export async function POST(req: Request) {
       const t: Tanda = { id: tandaId(), createdAt: now, updatedAt: now, idioma, producto: prod, angulos: ang, piezas };
       await guardarTanda(ws, t);
       return NextResponse.json({ tanda: t });
+    }
+
+    if (b?.accion === "variar") {
+      const t = await cargarTanda(ws, String(b.id));
+      const pieza = t?.piezas.find((p) => p.n === Number(b.n));
+      if (!t || !pieza) return NextResponse.json({ error: "No encontramos ese anuncio." }, { status: 404 });
+      const n = Math.min(10, Math.max(1, Math.round(Number(b.cuantas) || 10)));
+      const raw = await textAI.complete({ prompt: variacionesPrompt({ pieza, producto: t.producto, n, brief: marcaBrief(marca), idioma: t.idioma, conFoto: Boolean(t.producto.foto) }), json: true, maxTokens: 6000 });
+      const out = parseJSON<{ piezas?: Record<string, unknown>[] }>(raw);
+      const piezas: Pieza[] = (Array.isArray(out?.piezas) ? out.piezas : []).map((p, i) => ({
+        n: i + 1, tipo: pieza.tipo, titular: str(p?.titular, 90), estilo: str(p?.estilo, 40), prompt: typeof p?.prompt === "string" ? p.prompt.trim().slice(0, 2000) : "",
+      })).filter((p) => p.prompt.length > 30).slice(0, n);
+      if (!piezas.length) throw new Error("No salieron variaciones.");
+      const now = new Date().toISOString();
+      const nueva: Tanda = { id: tandaId(), createdAt: now, updatedAt: now, idioma: t.idioma, producto: t.producto, angulos: t.angulos.filter((a) => a.tipo === pieza.tipo), piezas, origen: { tanda: t.id, n: pieza.n } };
+      await guardarTanda(ws, nueva);
+      return NextResponse.json({ tanda: nueva });
     }
 
     return NextResponse.json({ error: "Acción desconocida." }, { status: 400 });

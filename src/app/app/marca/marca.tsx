@@ -15,11 +15,25 @@ const TONO_LABEL: Record<(typeof TONOS)[number], string> = { cercano: "Cercano",
 
 export default function KitMarca() {
   const [m, setM] = useState<Marca | null>(null);
+  const [lista, setLista] = useState<{ activa: number; marcas: { n: number; nombre: string }[]; max: number }>({ activa: 1, marcas: [], max: 1 });
+  const tomar = (d: { marca?: Marca; activa?: number; marcas?: { n: number; nombre: string }[]; max?: number }) => {
+    setM(d?.marca ?? { ...MARCA_VACIA });
+    setLista({ activa: d?.activa ?? 1, marcas: d?.marcas ?? [], max: d?.max ?? 1 });
+  };
+  async function cambiar(body: unknown) {
+    setBusy("Cambiando…"); setMsg("");
+    try {
+      const r = await fetch("/api/marca", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "No se pudo cambiar de marca.");
+      tomar(d);
+    } catch (e) { setMsg(e instanceof Error ? e.message : "No se pudo cambiar de marca."); } finally { setBusy(""); }
+  }
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    fetch("/api/marca").then((r) => r.json()).then((d) => setM(d?.marca ?? { ...MARCA_VACIA })).catch(() => setM({ ...MARCA_VACIA }));
+    fetch("/api/marca").then((r) => r.json()).then(tomar).catch(() => setM({ ...MARCA_VACIA }));
   }, []);
   if (!m) return <p className="flex items-center gap-2 text-sm text-muted"><Spinner /> Cargando tu kit…</p>;
   const p = m.producto;
@@ -37,13 +51,22 @@ export default function KitMarca() {
       const r = await fetch("/api/marca", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ marca: m }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo guardar.");
-      setM(d.marca); setMsg("Guardado. Tus próximas tandas usan este kit.");
+      tomar(d); setMsg("Guardado. Tus próximas tandas usan este kit.");
     } catch (err) { setMsg(err instanceof Error ? err.message : "No se pudo guardar."); } finally { setBusy(""); }
   }
 
   return (
     <>
       <PageHead title="Kit de marca" lead="Cárgalo una vez: tu logo, colores, tono y producto se aplican a todos tus anuncios." />
+      <div className="flex flex-wrap items-center gap-2" aria-label="Tus marcas">
+        {lista.marcas.map((x) => (
+          <button key={x.n} type="button" onClick={() => x.n !== lista.activa && cambiar({ accion: "activar", n: x.n })} aria-pressed={x.n === lista.activa}
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${x.n === lista.activa ? "border-accent bg-accent/10" : "border-line text-muted hover:text-ink"}`}>{x.nombre}</button>
+        ))}
+        {lista.marcas.length < lista.max
+          ? <button type="button" onClick={() => cambiar({ accion: "nueva" })} className="rounded-full border border-dashed border-line px-3 py-1.5 text-sm text-muted hover:text-ink">+ Agregar marca</button>
+          : lista.max === 1 && <span className="text-xs text-muted">Con el plan Agencia puedes tener hasta 3 marcas, cada una con su kit.</span>}
+      </div>
       <form onSubmit={guardar} className="flex flex-col gap-4">
         <section className={cardCls}>
           <h2 className="font-display text-lg font-bold">Tu marca</h2>

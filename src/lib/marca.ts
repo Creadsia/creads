@@ -8,7 +8,14 @@ import { ownsMedia } from "./media";
 import { MARCA_VACIA, type Marca, TONOS, type Tono } from "./marca-tipos";
 export * from "./marca-tipos";
 
-const file = (ws: string) => `marca/${ws}.json`;
+// Up to 3 brands with the Agencia plan (owner's plan, 25 Oct 2026, P2): slot 1 is the original file, slots 2
+// and 3 sit next to it; the brand in use is remembered per workspace.
+const file = (ws: string, n = 1) => (n <= 1 ? `marca/${ws}.json` : `marca/${ws}-${n}.json`);
+const activaFile = (ws: string) => `marca/${ws}-activa.json`;
+export const MAX_MARCAS = 3;
+// workspaces.plan keeps the plan's name («Agencia»); the id also counts
+export const marcasPermitidas = (plan: string | null | undefined, owner = false) => (owner || ["agencia", "agency"].includes(String(plan ?? "").toLowerCase()) ? MAX_MARCAS : 1);
+const slot = (n: unknown) => Math.min(MAX_MARCAS, Math.max(1, Math.round(Number(n) || 1)));
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const hex = (v: unknown, d: string) => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : d);
 const httpUrl = (v: unknown) => { const s = str(v, 500); return /^https?:\/\/[^\s]+$/i.test(s) ? s : ""; };
@@ -33,14 +40,33 @@ export function limpiarMarca(v: unknown, ws: string): Marca {
   };
 }
 
-export async function cargarMarca(ws: string): Promise<Marca> {
-  const m = await readPrivateJSON<Marca>(file(ws)).catch(() => null);
+export async function marcaActiva(ws: string) {
+  return slot((await readPrivateJSON<{ n: number }>(activaFile(ws)).catch(() => null))?.n ?? 1);
+}
+export async function activarMarca(ws: string, n: number) {
+  await writePrivateJSON(activaFile(ws), { n: slot(n) });
+}
+
+/** The brand in use (or slot n). */
+export async function cargarMarca(ws: string, n?: number): Promise<Marca> {
+  const k = n ? slot(n) : await marcaActiva(ws);
+  const m = await readPrivateJSON<Marca>(file(ws, k)).catch(() => null);
   return m ? { ...MARCA_VACIA, ...m, producto: { ...MARCA_VACIA.producto, ...(m.producto ?? {}) } } : { ...MARCA_VACIA, producto: { ...MARCA_VACIA.producto } };
 }
 
-export async function guardarMarca(ws: string, m: Marca) {
+export async function guardarMarca(ws: string, m: Marca, n?: number) {
   const out = { ...m, updatedAt: new Date().toISOString() };
-  await writePrivateJSON(file(ws), out);
+  await writePrivateJSON(file(ws, n ? slot(n) : await marcaActiva(ws)), out);
+  return out;
+}
+
+/** The brands of the workspace (slot and name), up to `max`. */
+export async function listarMarcas(ws: string, max: number) {
+  const out: { n: number; nombre: string }[] = [];
+  for (let n = 1; n <= Math.min(max, MAX_MARCAS); n++) {
+    const m = await readPrivateJSON<Marca>(file(ws, n)).catch(() => null);
+    if (m || n === 1) out.push({ n, nombre: m?.nombre || (n === 1 ? "Mi marca" : `Marca ${n}`) });
+  }
   return out;
 }
 

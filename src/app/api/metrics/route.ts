@@ -108,7 +108,7 @@ export async function GET(req: Request) {
     const pagando = ws.filter((w) => w.active && w.plan && w.paid_until && w.paid_until >= today);
     const porPlan: Record<string, number> = {};
     for (const w of pagando) porPlan[w.plan!] = (porPlan[w.plan!] ?? 0) + 1;
-    const mrrUsd = pagando.reduce((a, w) => a + (PLANS.find((p) => p.id === w.plan)?.monthly ?? 0), 0);
+    const mrrUsd = pagando.reduce((a, w) => a + (PLANS.find((p) => p.id === w.plan || p.name === w.plan)?.monthly ?? 0), 0);
     const pruebasAbiertas = orders.filter((o) => o.status === "pendiente" && o.mp?.trial && !o.mp.cancelled && o.mp.trial >= today).length;
 
     const detalle = q.get("detalle") === "1" ? await detail(r, since, ws, orders, today).catch(() => ({ error: "No se pudo leer el detalle." })) : undefined;
