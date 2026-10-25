@@ -33,7 +33,14 @@ export const ESTILOS: Record<string, string> = {
   directo: "clear and informative: headlines that state the benefit, the offer or the data plainly",
 };
 
-export function proPrompt(script: string, words: { w: string; s: number; e: number }[], lang: "es" | "en", hint?: EditHint) {
+/** How the editor writes the closing card's own words (the headlines copy what is said). */
+const CARD_STYLE: Record<string, string> = {
+  "es-CL": "Spanish; Chilean wording is fine",
+  es: "neutral Latin American Spanish, no regional slang",
+  en: "American English",
+};
+
+export function proPrompt(script: string, words: { w: string; s: number; e: number }[], lang: "es" | "en", hint?: EditHint, variant?: "es-CL" | "es" | "en") {
   const timed = words.map((w) => `${w.w}@${w.s.toFixed(2)}`).join(" ");
   return `You are the editor of a fast, punchy vertical video ad (Reels/TikTok). Plan the on-screen headlines ("golpes") and the closing card.
 
@@ -52,7 +59,7 @@ Rules for "golpes":
 - Spell perfectly (accents included); brand and product names exactly as written in the brief or script. No emojis, no hashtags.
 - If the brief says what to avoid, avoid it.
 
-Closing card ("cierre"): "titulo" = the brand, product or website the script asks people to visit (max 24 characters; if the script names none, a 2–4 word call to action), "linea" = one short call to action (max 40 characters).${hint?.titulo ? ` Use exactly this title: "${hint.titulo}".` : ""}${hint?.linea ? ` Use exactly this line: "${hint.linea}".` : ""}
+Closing card ("cierre"): "titulo" = the brand, product or website the script asks people to visit (max 24 characters; if the script names none, a 2–4 word call to action), "linea" = one short call to action (max 40 characters), written in ${CARD_STYLE[variant ?? lang] ?? (lang === "es" ? "Spanish" : "English")}.${hint?.titulo ? ` Use exactly this title: "${hint.titulo}".` : ""}${hint?.linea ? ` Use exactly this line: "${hint.linea}".` : ""}
 
 Return JSON: {"golpes":[{"texto":"...","desde":0.1,"hasta":1.6}],"cierre":{"titulo":"...","linea":"..."}}`;
 }

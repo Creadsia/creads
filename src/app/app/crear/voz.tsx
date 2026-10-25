@@ -5,6 +5,7 @@ import { type FormatId, formatById, takesOwnVoice } from "@/lib/formats";
 import { refreshCredits } from "../_parts/use-credits";
 import { type Row, btnCls, cardCls, ghostCls, inputCls, useTable } from "../_parts/ui";
 import type { Cut } from "./crear";
+import type { AdLang } from "@/lib/ad-lang";
 
 // Step 3 of «Crear anuncio»: the voice comes before the video. The customer picks who talks and with
 // which voice, records every cut (ElevenLabs), Creads listens to each take and checks it says exactly the
@@ -61,7 +62,7 @@ export function splitLong(cuts: Cut[]): Cut[] {
 export const tooLongCut = (cuts: Cut[], veo = false) => cuts.findIndex((c) => words(c.texto) / 2.2 + 1.5 > (veo ? 8 : 10));
 
 export default function Voz({ format, lang, cuts, value, onChange, onBack, onNext, onCuts }: {
-  format: FormatId; lang: "en" | "es-CL"; cuts: Cut[]; value: VoiceChoice; onChange: (v: VoiceChoice) => void; onBack: () => void; onNext: () => void;
+  format: FormatId; lang: AdLang; cuts: Cut[]; value: VoiceChoice; onChange: (v: VoiceChoice) => void; onBack: () => void; onNext: () => void;
   onCuts: (c: Cut[]) => void;
 }) {
   const f = formatById(format);
@@ -117,7 +118,8 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
   const set = (p: Partial<VoiceChoice>) => onChange({ ...value, ...p });
   const avatar = avatars.rows?.find((a) => a.id === value.avatarId);
   const gender = value.gender ?? genderOf(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`) ?? "male";
-  const accent = value.accent ?? "es-CL";
+  // español neutro starts on Mexican voices (the accent comes from the voice; any other can be picked)
+  const accent = value.accent ?? (lang === "es" ? "es-MX" : "es-CL");
   const mineList: AccentVoice[] = voices.filter((v) => v.category === "cloned").map((v) => ({ ref: v.id, name: v.name, gender: "", age: "", preview: v.preview, mine: true }));
   const shown: AccentVoice[] = accent === "mine" ? mineList : (accents.find((a) => a.locale === accent)?.voices ?? []).filter((v) => !v.gender || v.gender === gender);
   // until the customer picks, the voice follows the presenter: their own voice, else the first matching one

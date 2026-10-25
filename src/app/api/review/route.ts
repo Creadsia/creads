@@ -13,15 +13,18 @@ import { parseJSON } from "@/lib/providers/claude";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { compare, type Word } from "@/lib/textmatch";
 import { publicError } from "@/lib/public-error";
-import { fetchableUrl, saveMedia } from "@/lib/media";
+import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
+import { sttLang } from "@/lib/ad-lang";
+import { type LookFinding, applyLook, lookPrompt } from "@/lib/review-look";
 
 export const maxDuration = 300;
 
 interface ClipRow { id: string; idx: number; text: string; url: string | null; status: string; prompt: string }
-export interface Review { clipId: string; url: string; idx: number; sim: number; heard: string; issues: string[]; severe: boolean; words: Word[]; dur: number; look?: string }
+export interface Review { clipId: string; url: string; idx: number; sim: number; heard: string; issues: string[]; severe: boolean; words: Word[]; dur: number; look?: string; redraw?: boolean }
 
 // Automatic review of every finished clip: listens to it (did it say the script?) and looks at it
-// (same person, clothes and place as the others?). Severe problems are worth an automatic redo.
+// (same person, clothes and place as the others? the customer's own product?). Severe problems are worth an
+// automatic redo; a wrong product or a changed outfit also gets its first frame drawn again («redraw»).
 export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
     const clips = ((await db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as unknown as ClipRow[]).filter((c) => c.status === "done" && c.url);
     if (!clips.length) return NextResponse.json({ error: "Todavía no hay cortes listos." }, { status: 400 });
     const settings = (ad.settings ?? {}) as Record<string, unknown>;
-    const lang = settings.lang === "es-CL" ? "es" : "en";
+    const lang = sttLang(typeof settings.lang === "string" ? settings.lang : "en"); // es-CL and es → "es"
     const format = String(ad.format || "ugc");
     const dir = await workdir(adId);
 
@@ -57,35 +60,33 @@ export async function POST(req: Request) {
       }),
     );
 
-    // 2) look at the stills together: obvious mismatches between clips
-    if (textAI.configured() && clips.length > 1) {
+    // 2) look at the stills together: obvious mismatches between clips, the same person and clothes from one
+    // cut to the next, and (when the customer gave its photo) the same product in every cut
+    const productRef = (settings.product as { image_url?: unknown } | null)?.image_url;
+    const hasProduct = typeof productRef === "string" && ownsMedia(productRef, s.user.workspace);
+    if (textAI.configured() && (clips.length > 1 || hasProduct)) {
       const urls: string[] = [];
-      for (const c of clips) {
-        const f = path.join(dir, `s${c.idx}.jpg`);
-        const bytes = await readFile(f).catch(() => null);
-        if (bytes) urls.push(await fetchableUrl(await saveMedia(s.user.workspace, "review", bytes, "image/jpeg"), s.user.workspace, 900));
+      const shown: Review[] = []; // the cut behind each image (a still that couldn't be taken is skipped)
+      for (const [i, c] of clips.entries()) {
+        const bytes = await readFile(path.join(dir, `s${c.idx}.jpg`)).catch(() => null);
+        if (!bytes) continue;
+        urls.push(await fetchableUrl(await saveMedia(s.user.workspace, "review", bytes, "image/jpeg"), s.user.workspace, 900));
+        shown.push(results[i]);
       }
       const f = formatById(format);
       try {
-        const look = parseJSON<{ cortes?: { corte: number; problema: string; grave: boolean }[] }>(
-          await textAI.complete({
-            json: true,
-            images: urls,
-            prompt: `Eres el editor de un anuncio en video hecho con IA (formato: ${f.name}). Las imágenes son una foto del medio de cada corte, en orden (imagen 1 = corte 1).
-LO QUE DICE CADA CORTE:
-${clips.map((c, i) => `CORTE ${i + 1}: "${c.text}"`).join("\n")}
-${format === "ronda" ? "Es una RONDA: a propósito sale una persona distinta en cada corte. Revisa que el lugar, la hora del día y la luz sean el mismo ambiente." : f.speakers?.length === 2 ? "Aparecen dos personas: cada una debe verse igual (cara, pelo, ropa) en todos los cortes." : f.narr ? "Es voz en off: nadie debería hablar a cámara." : "Debe ser la MISMA persona, con la MISMA ropa, en todos los cortes."}
-Busca SOLO errores OBVIOS que un espectador notaría: cara, pelo o ropa distinta a la del resto (cuando debería ser igual); manos o cuerpos deformes; texto, logos o números legibles en pantalla; algo que contradice lo que dice el corte; formato equivocado (por ejemplo una selfie cuando debería ser con camarógrafo).
-"grave": true solo si vale la pena rehacer el corte.
-Responde SOLO JSON: {"cortes":[{"corte":número,"problema":"en español, corto","grave":true}]} (lista vacía si no hay errores).`,
-          }),
-        );
-        for (const x of look.cortes ?? []) {
-          const r = results[Number(x.corte) - 1];
-          if (!r || !x.problema) continue;
-          r.look = x.problema;
-          r.issues.push(`imagen: ${x.problema}`);
-          if (x.grave) r.severe = true;
+        const withProduct = hasProduct && shown.length > 0;
+        // the product photo goes LAST, so image N is still cut N
+        if (withProduct) urls.push(await fetchableUrl(productRef, s.user.workspace, 900));
+        if (shown.length > 1 || withProduct) {
+          const look = parseJSON<{ cortes?: LookFinding[] }>(
+            await textAI.complete({
+              json: true,
+              images: urls,
+              prompt: lookPrompt({ formatName: f.name, format, twoPeople: f.speakers?.length === 2, narr: Boolean(f.narr), texts: shown.map((r) => clips.find((c) => c.id === r.clipId)?.text ?? ""), hasProduct: withProduct }),
+            }),
+          );
+          applyLook(shown, look.cortes ?? [], { hasProduct: withProduct, format, personaFromFirst: Boolean(settings.persona) });
         }
       } catch { /* the visual check is a bonus; the audio check already ran */ }
     }

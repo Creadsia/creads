@@ -45,7 +45,11 @@ Reply ONLY JSON: {"prompt":"the full new prompt","cambios":"en español, 1 frase
       }),
     );
     if (!r?.prompt || !r.prompt.includes(String(clip.text).slice(0, 20))) throw new Error("La IA cambió las palabras del corte; intenta de nuevo.");
-    const row = await db.update("clips", id, { prompt: r.prompt });
+    // «redraw» (the review saw another product, or the person's clothes changed): the opening frame had the
+    // mistake, so it's drawn again on the redo (only frames drawn automatically: never a story's keyframe,
+    // a talking avatar's picture or a «persona real» cut)
+    const drawn = ad?.format !== "historia" && !/^ad:(talk|actor)$/.test(String(clip.kind ?? ""));
+    const row = await db.update("clips", id, { prompt: r.prompt, ...(b?.redraw === true && drawn && clip.image_url ? { image_url: null } : {}) });
     return NextResponse.json({ clip: row, cambios: r.cambios });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo corregir el corte.") }, { status: 502 });

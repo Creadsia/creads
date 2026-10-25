@@ -151,23 +151,50 @@ export function genderOfText(t: string): "male" | "female" | "" {
   return "";
 }
 
-/** The voice an ad gets when nobody chose one (API, connectors): the avatar's own, else a matching Chilean voice. */
+/**
+ * The accent of the voice an ad gets when nobody chose one: Chilean for «es-CL», Mexican for «es» (español
+ * neutro: the widest-understood accent), none for English (an American library voice, see usEnglish).
+ */
+export const defaultAccent = (lang: string): string | null => (lang === "es-CL" ? "es-CL" : lang === "es" || lang.startsWith("es-") ? "es-MX" : null);
+
+/** A library voice with an American accent (ElevenLabs' own labels), of the given gender if known. */
+export function usEnglish(v: Voice, gender: "male" | "female" | ""): boolean {
+  if (isPrivate(v)) return false;
+  const l = v.labels ?? {};
+  if (!/american|\bus\b|u\.s\./i.test(l.accent ?? "")) return false;
+  if (/^(es|pt|fr|de|it)/i.test(l.language ?? "")) return false;
+  return !gender || (l.gender ?? "").toLowerCase() === gender;
+}
+
+/** The same presenter always gets the same voice of the list (and different presenters different ones). */
+export function seededPick<T>(list: T[], seed: string): T | undefined {
+  if (!list.length) return undefined;
+  let h = 0;
+  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return list[h % list.length];
+}
+
+/** The voice an ad gets when nobody chose one (API, connectors): the avatar's own, else a matching voice for the ad's language. */
 export async function defaultVoice(ws: string, avatar: { voice_id?: unknown; description?: unknown; name?: unknown } | null, lang: string): Promise<string | null> {
   if (typeof avatar?.voice_id === "string" && avatar.voice_id) {
     // a library voice saved on the avatar (from Automático) is added to the account the first time
     if (avatar.voice_id.startsWith("lib:")) { const id = await resolveVoice(ws, avatar.voice_id).catch(() => null); if (id) return id; }
     else if (await canUseVoice(ws, avatar.voice_id)) return avatar.voice_id;
   }
-  if (lang !== "es-CL") return null;
   const g = genderOfText(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`);
-  const cl = (await accentVoices()).filter((v) => v.accent === "es-CL" && (!g || v.gender === g));
-  if (!cl.length) return null;
   // not always the same voice (owner, 22 Oct 2026: «ocupa todo el rato lo de Cornejo»): each presenter gets
-  // its own Chilean voice, the same one every time for that presenter
+  // its own voice, the same one every time for that presenter
   const seed = String(avatar?.name ?? avatar?.description ?? Math.random());
-  let h = 0;
-  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return resolveVoice(ws, cl[h % cl.length].ref);
+  const accent = defaultAccent(lang);
+  if (!accent) {
+    // English (US affiliates): an American library voice of the same gender
+    if (lang !== "en") return null;
+    const us = (await voicesFor(ws)).filter((v) => usEnglish(v, g));
+    return seededPick(us, seed)?.id ?? null;
+  }
+  const list = (await accentVoices()).filter((v) => v.accent === accent && (!g || v.gender === g));
+  const pick = seededPick(list, seed);
+  return pick ? resolveVoice(ws, pick.ref) : null;
 }
 
 /**

@@ -1,4 +1,6 @@
 import { type FormatId, formatById } from "./formats";
+import { type AdLang, placeHint, spokenEn } from "./ad-lang";
+import { PRODUCT_EXACT, PRODUCT_GENERIC } from "./ad-continuity";
 
 // The scene director, ported from the prototype (FORMAT_LOCK, FMT_DIR, fmtDirectorPrompt, the UGC director
 // prompt and genPrompt0). Step 1: Claude directs every cut (where, framing, action). Step 2: each cut gets
@@ -31,7 +33,8 @@ export interface Direction {
 
 export interface SceneContext {
   format: FormatId;
-  lang: "en" | "es-CL";
+  /** «es-CL» Chilean Spanish, «es» neutral Latin American Spanish, «en» American English. */
+  lang: AdLang;
   aspect: "9:16" | "16:9" | "1:1" | "4:5";
   avatar?: { description: string; hasPhoto: boolean } | null;
   place?: string;
@@ -154,11 +157,15 @@ export function directorPrompt(ctx: SceneContext, cuts: CutIn[]): string {
     })
     .join("\n");
   // the customer reads the scene in their own language; the model gets the English prompt
-  const es = ctx.lang === "es-CL" ? `,"es":"1 o 2 frases en español natural (Chile) para el cliente: dónde está, cómo es la toma y qué hace en este corte"` : "";
+  const es = ctx.lang === "es-CL" ? `,"es":"1 o 2 frases en español natural (Chile) para el cliente: dónde está, cómo es la toma y qué hace en este corte"`
+    : ctx.lang === "es" ? `,"es":"1 o 2 frases en español neutro (sin modismos) para el cliente: dónde está, cómo es la toma y qué hace en este corte"` : "";
   const shape = `Reply ONLY JSON array: [{"label":"1","framing":"shot type (different from the previous cut)","movement":"camera and subject movement","setting":"${onePlace ? "the SAME exact location in every cut" : "exact location"}","action":"what happens, synced to specific words: 'On \\"...\\" ...'","broll":"${onePlace ? "always empty" : "optional cutaway or empty"}","emotion":"tone","style":""${es}}]`;
   const producer = dir ? `THE PRODUCER'S DIRECTION FOR THE WHOLE VIDEO (written in Spanish — follow it in every cut where it applies; top priority after the locked words): "${dir}"` : "";
-  const product = ctx.product ? `PRODUCT the presenter shows in the video: ${ctx.product.description || ctx.product.name}. Show it clearly whenever the words talk about it.` : "";
-  const chile = ctx.lang === "es-CL" ? "The video is in Chilean Spanish and happens in Chile: Chilean homes, streets and details." : "";
+  const product = ctx.product
+    ? `PRODUCT the presenter shows in the video: ${ctx.product.description || ctx.product.name}.${ctx.product.hasPhoto ? " There is a photo of the real product: describe it only as \"the product from the reference photo\" (never invent another design, colour or brand)." : ""} Show it clearly whenever the words talk about it.`
+    : "NO PRODUCT PHOTO: if a product is seen, describe it as a plain unbranded generic one (never a real brand, logo or brand design).";
+  const chile = ctx.lang === "es-CL" ? "The video is in Chilean Spanish and happens in Chile: Chilean homes, streets and details."
+    : ctx.lang === "es" ? "The video is in neutral Latin American Spanish and happens in an ordinary Latin American city: no country-specific flags, signs or landmarks." : "";
 
   if (ctx.format !== "ugc" && ctx.format !== "comentario") {
     return `You are directing a realistic lead-gen video ad made with AI in the format "${f.en}". It must look real and believable, not like a polished commercial.
@@ -315,8 +322,10 @@ Reminder: the person says ONLY: "${c.texto}"`;
   const extra: string[] = [];
   if (ctx.product) {
     extra.push(
-      `PRODUCT${ctx.product.hasPhoto ? " (must look EXACTLY like the product reference image: same design, colors, shape and proportions; never redesign, simplify or swap it)" : ""}: ${ctx.product.description || ctx.product.name}. When this line talks about the product, the person holds it up or points to it so it is clearly visible to the camera; otherwise it stays visible next to them in the scene. Only ONE of this product, never duplicated, never distorted, no extra text on it.`,
+      `PRODUCT${ctx.product.hasPhoto ? ` (must be ${PRODUCT_EXACT}; its own label and logo are the only allowed logo on screen)` : ""}: ${ctx.product.description || ctx.product.name}. When this line talks about the product, the person holds it up or points to it so it is clearly visible to the camera; otherwise it stays visible next to them in the scene. Only ONE of this product, never duplicated, never distorted, no extra text on it.`,
     );
+  } else {
+    extra.push(PRODUCT_GENERIC); // no photo: never a real brand's product (owner's test: a famous brand's shoe)
   }
   if (ctx.rules?.length) extra.push(`LESSONS FROM PAST VIDEOS (avoid these mistakes):\n- ${ctx.rules.slice(0, 10).join("\n- ")}`);
   if (extra.length) {
@@ -324,8 +333,11 @@ Reminder: the person says ONLY: "${c.texto}"`;
     p = i > 0 ? `${p.slice(0, i)}\n${extra.join("\n")}${p.slice(i)}` : `${p}\n${extra.join("\n")}`;
   }
   if (ctx.lang === "es-CL") {
-    p = p.replace(/American English/g, "Chilean Spanish (español de Chile, natural Chilean accent and intonation)") +
+    p = p.replace(/American English/g, spokenEn("es-CL")) +
       "\nLANGUAGE: the person speaks Chilean Spanish (español de Chile) with a natural Chilean accent, exactly the words written above. The place looks like Chile (Chilean homes and streets).";
+  } else if (ctx.lang === "es") {
+    p = p.replace(/American English/g, spokenEn("es")) +
+      "\nLANGUAGE: the person speaks neutral Latin American Spanish (español neutro), clear and natural, exactly the words written above, no regional slang. The place looks Latin American (no country-specific flags, signs or landmarks).";
   }
   return p;
 }
@@ -345,7 +357,7 @@ Setting: ${d.setting || ctx.place || "a real home, natural daylight"} (exactly a
 Shot: ${d.framing || "handheld, chest-up"}.
 Moment: the instant before they start talking: ${d.action ? d.action.replace(/On "[^"]*"/g, "").slice(0, 300) : "a natural relaxed expression, mouth closed"}.
 ${FORMAT_LOCK[ctx.format] ? FORMAT_LOCK[ctx.format]!.split("\n").slice(0, 3).join(" ") : "Selfie framing: the phone is the camera, held at arm's length."}
-${ctx.product ? `The product is visible in the scene${ctx.product.hasPhoto ? ", exactly like the product reference image" : ""}: ${ctx.product.description || ctx.product.name}.` : ""}
-${ctx.lang === "es-CL" ? "The place looks like Chile." : ""}
-Natural light, real skin texture, no beauty filter, no text, no captions, no logos, no watermark.`;
+${ctx.product ? `The product is visible in the scene${ctx.product.hasPhoto ? `: ${PRODUCT_EXACT}` : ""}: ${ctx.product.description || ctx.product.name}.` : PRODUCT_GENERIC}
+${placeHint(ctx.lang)}
+Natural light, real skin texture, no beauty filter, no text, no captions, ${ctx.product?.hasPhoto ? "no logos other than the product's own label," : "no logos,"} no watermark.`;
 }

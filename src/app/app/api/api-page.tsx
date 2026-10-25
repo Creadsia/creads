@@ -118,7 +118,7 @@ export default function ApiPage() {
         </ol>
         <pre className="overflow-x-auto rounded-lg border border-line bg-surface-2 p-3 font-mono text-xs leading-relaxed">{curl1}</pre>
         <pre className="overflow-x-auto rounded-lg border border-line bg-surface-2 p-3 font-mono text-xs leading-relaxed">{curl2}</pre>
-        <p className="text-sm text-muted">Formatos: ugc, entrevista, podcast, noticiero, ronda, comentario. Idioma: <code className="font-mono">es-CL</code> o <code className="font-mono">en</code>. Opcional: <code className="font-mono">modelo</code>, <code className="font-mono">titulo</code>. Las herramientas (imágenes, mi personaje en un video, editar video) también responden con la clave en <code className="font-mono">/api/tools/…</code>.</p>
+        <p className="text-sm text-muted">Formatos: ugc, entrevista, podcast, noticiero, ronda, comentario. Idioma: <code className="font-mono">es-CL</code> (chileno), <code className="font-mono">es</code> (español neutro: el acento lo pone la voz) o <code className="font-mono">en</code> (inglés de EE. UU.). Opcional: <code className="font-mono">modelo</code>, <code className="font-mono">titulo</code>, <code className="font-mono">voz</code> y <code className="font-mono">producto</code> (el enlace de una foto de tu producto en Creads: sale ese mismo producto en todas las escenas). Las herramientas (imágenes, mi personaje en un video, editar video) también responden con la clave en <code className="font-mono">/api/tools/…</code>.</p>
       </section>
     </div>
   );

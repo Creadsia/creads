@@ -7,6 +7,7 @@ import { type AdJob, type Studio, runStep } from "./ad-runner";
 import { once } from "./marketing";
 import { pickModel } from "./autoprod";
 import { createServiceSession, endSession, getUserById } from "./auth";
+import { type AdLang, avisoText, readLang } from "./ad-lang";
 
 // «Hazme un anuncio» for the public API (and any system with an API key): a script in, a finished video out,
 // made by the same pipeline as «Crear anuncio» and charged to the key's account. Each job is a small private
@@ -40,13 +41,37 @@ const addToIndex = (ws: string, id: string) => updatePrivateJSON<string[]>(index
 /** Formats the API makes: the ones where people talk on camera (narrated formats need a voice choice). */
 export const API_FORMATS = FORMATS.filter((f) => !f.narr && SOLD_FORMATS.includes(f.id)).map((f) => f.id);
 
-export function readOrder(b: Record<string, unknown>): { guion: string; formato: string; idioma: "es-CL" | "en"; modelo?: string; titulo: string; sello: boolean; avatarId?: string; voz?: string; edicion: "pro" | "simple"; indicaciones?: string; look?: { plantilla?: string; c1?: string; c2?: string }; subtitulos?: boolean; velocidad?: number; aviso?: string; lugares?: string } | string {
+/** A media link of the account as the caller may send it (absolute or not): «/api/media/ws/…», or "" if it isn't one. */
+export function mediaLinkOf(x: unknown): string {
+  if (typeof x !== "string") return "";
+  const i = x.indexOf("/api/media/");
+  if (i < 0) return "";
+  const ref = x.slice(i).split(/[?#]/)[0];
+  return ref.length <= 600 && !ref.includes("..") ? ref : "";
+}
+
+export interface Order {
+  guion: string; formato: string; idioma: AdLang; modelo?: string; titulo: string; sello: boolean; avatarId?: string; voz?: string; edicion: "pro" | "simple"; indicaciones?: string;
+  look?: { plantilla?: string; c1?: string; c2?: string }; subtitulos?: boolean; velocidad?: number; aviso?: string; lugares?: string;
+  /** The customer's product photo (a media link of the account; the route checks it's theirs). */
+  producto?: string;
+  /** The caller named the ad: the cut step doesn't rename it. */
+  tituloPropio?: boolean;
+}
+
+export function readOrder(b: Record<string, unknown>): Order | string {
   const guion = typeof b.guion === "string" ? b.guion.trim() : "";
   if (guion.length < 20) return "Manda el guion en «guion» (al menos 20 caracteres).";
   if (guion.length > 4000) return "El guion es muy largo (máximo 4.000 caracteres).";
   const formato = typeof b.formato === "string" ? b.formato : "ugc";
   if (!API_FORMATS.includes(formato as (typeof API_FORMATS)[number])) return `Formato no disponible por API. Usa uno de: ${API_FORMATS.join(", ")}.`;
-  const idioma = b.idioma === "en" ? "en" : "es-CL";
+  // «es-CL» (Chilean), «es» (español neutro: the accent comes from the voice) or «en» (American English)
+  const idioma = readLang(b.idioma, "es-CL");
+  let producto: string | undefined;
+  if (b.producto !== undefined && b.producto !== null && b.producto !== "") {
+    producto = mediaLinkOf(b.producto);
+    if (!producto) return "La foto del producto no es válida: usa el enlace de una imagen de tu cuenta (/api/media/…, por ejemplo de creads_crear_imagen o subida en Creads).";
+  }
   let modelo: string | undefined;
   if (b.modelo !== undefined && b.modelo !== null && b.modelo !== "") {
     // «persona-real» (the avatar's own filmed video with the new voice on its lips) is allowed too: it needs
@@ -56,7 +81,8 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
     if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter(usable).map((x) => x.id).join(", ")}.`;
     modelo = p.id;
   }
-  const titulo = (typeof b.titulo === "string" && b.titulo.trim() ? b.titulo.trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);
+  const tituloPropio = typeof b.titulo === "string" && Boolean(b.titulo.trim());
+  const titulo = (tituloPropio ? String(b.titulo).trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);
   let avatarId: string | undefined;
   if (b.avatar !== undefined && b.avatar !== null && b.avatar !== "") {
     if (typeof b.avatar !== "string" || !/^[0-9a-f-]{36}$/i.test(b.avatar)) return "El avatar no es válido: usa el id de uno de tus avatares (GET /api/v1/avatares).";
@@ -72,10 +98,10 @@ export function readOrder(b: Record<string, unknown>): { guion: string; formato:
   // by an AI person: owner, 23 Oct 2026, Automático must always be able to make it, clearly labelled)
   const vel = Number(b.velocidad);
   const velocidad = isFinite(vel) && vel > 1 ? Math.min(1.2, Math.round(vel * 100) / 100) : undefined;
-  const aviso = b.dramatizacion === true ? (idioma === "en" ? "Dramatization · AI actor" : "Dramatización · actor IA") : undefined;
+  const aviso = b.dramatizacion === true ? avisoText(idioma) : undefined;
   const lugares = typeof b.lugares === "string" && b.lugares.trim() ? b.lugares.replace(/\s+/g, " ").trim().slice(0, 500) : undefined;
   if (modelo === "persona-real" && !avatarId) return "«persona-real» necesita un avatar con su video (creads_crear_avatar con «video»).";
-  return { ...(voz ? { voz } : {}), ...(velocidad ? { velocidad } : {}), ...(aviso ? { aviso } : {}), ...(lugares ? { lugares } : {}), guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(b.subtitulos === false ? { subtitulos: false } : {}), ...(typeof b.indicaciones === "string" && b.indicaciones.trim() ? { indicaciones: b.indicaciones.trim().slice(0, 600) } : {}),
+  return { ...(voz ? { voz } : {}), ...(velocidad ? { velocidad } : {}), ...(aviso ? { aviso } : {}), ...(lugares ? { lugares } : {}), ...(producto ? { producto } : {}), ...(tituloPropio ? { tituloPropio: true } : {}), guion, formato, idioma, modelo, titulo, sello: b.sello === true, edicion: b.edicion === "simple" ? "simple" : "pro", ...(b.subtitulos === false ? { subtitulos: false } : {}), ...(typeof b.indicaciones === "string" && b.indicaciones.trim() ? { indicaciones: b.indicaciones.trim().slice(0, 600) } : {}),
     ...(typeof b.plantilla === "string" || typeof b.color === "string" ? { look: { plantilla: typeof b.plantilla === "string" ? b.plantilla.slice(0, 20) : undefined, c1: typeof b.color === "string" ? b.color.slice(0, 7) : undefined, c2: typeof b.color2 === "string" ? b.color2.slice(0, 7) : undefined } } : {}), ...(avatarId ? { avatarId } : {}) };
 }
 
@@ -171,7 +197,7 @@ export async function sweepOpenAds(maxMs = 240_000): Promise<{ moved: number; do
 
 /** What the caller sees (absolute link to the video; it opens with the same API key). */
 export const publicAd = (j: ApiAd) => ({
-  id: j.id, estado: j.estado, paso: j.paso ?? null, titulo: j.titulo, formato: j.formato, idioma: j.idioma, modelo: j.modelo ?? null, avatar: j.avatarId ?? null,
+  id: j.id, estado: j.estado, paso: j.paso ?? null, titulo: j.titulo, formato: j.formato, idioma: j.idioma, modelo: j.modelo ?? null, avatar: j.avatarId ?? null, producto: j.producto ? `${SITE}${j.producto}` : null,
   video_url: j.videoUrl ? (j.videoUrl.startsWith("http") ? j.videoUrl : `${SITE}${j.videoUrl}`) : null,
   error: j.error ?? null, creado: j.createdAt, actualizado: j.updatedAt,
   // the same ad in the studio (to open it in the video editor)
@@ -179,7 +205,7 @@ export const publicAd = (j: ApiAd) => ({
 });
 
 /** A finished ad made outside the pipeline (the «Demo con presentador» montage): saved already «listo». */
-export async function saveFinishedAd(ws: string, userId: string, o: { titulo: string; guion: string; idioma: "es-CL" | "en"; videoUrl: string; formato: string; demo?: ApiAd["demo"] }): Promise<ApiAd> {
+export async function saveFinishedAd(ws: string, userId: string, o: { titulo: string; guion: string; idioma: AdLang; videoUrl: string; formato: string; demo?: ApiAd["demo"] }): Promise<ApiAd> {
   const now = new Date().toISOString();
   const job: ApiAd = { id: `ad_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`, ws, userId, createdAt: now, updatedAt: now, estado: "listo", paso: "Video terminado", sello: false, edicion: "simple", ...o };
   await writePrivateJSON(file(ws, job.id), job);

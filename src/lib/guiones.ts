@@ -2,7 +2,7 @@
 // Shared by the API (prompts) and the studio (labels, colors, lessons). The prompts carry the
 // prototype's "Jordan" direct-response method (10 hook types, 10% better per line, no invented facts).
 
-export type ScriptLang = "es-CL" | "en";
+export type ScriptLang = "es-CL" | "es" | "en";
 /** sessionStorage key: a script handed from the Generador to "Crear anuncio". */
 export const TO_CREAR_KEY = "creads-guion-to-crear";
 /** localStorage key: the script being worked on in «Crear guion» (Crear anuncio picks it up). */
@@ -11,6 +11,7 @@ export const DRAFT_KEY = "creads-guion-draft";
 export const FROM_SPY_KEY = "creads-guion-from-spy";
 export const SCRIPT_LANGS: { id: ScriptLang; label: string; spoken: string }[] = [
   { id: "es-CL", label: "Español (Chile)", spoken: "español de Chile hablado y natural (chileno, sin exagerar modismos), tuteando" },
+  { id: "es", label: "Español neutro", spoken: "español latino neutro hablado y natural, tuteando, SIN modismos de ningún país (nada de «po», «cachai», «che», «vos», «güey», «chido», «vale»): que lo entienda cualquier latinoamericano" },
   { id: "en", label: "Inglés (EE. UU.)", spoken: "natural spoken US English, the way a real person says it to camera" },
 ];
 

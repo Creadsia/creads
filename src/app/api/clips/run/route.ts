@@ -14,6 +14,7 @@ import { canUseVoice } from "@/lib/voices";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { refusesFrame } from "@/lib/formats";
 import { actorOffset } from "@/lib/avatar-video";
+import { usesPersona, withPersonRef, withoutPersonRef } from "@/lib/ad-continuity";
 import { download, ff, probe, workdir } from "@/lib/montage";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
@@ -33,6 +34,7 @@ interface Settings {
   lipsync?: "pro" | null; // ads: the most natural lip-sync (sync.so sync-3)
   audios?: (string | null)[]; // ads: the approved recording of each cut (step «Voz»)
   secs?: (number | null)[]; // ads: seconds chosen per cut
+  persona?: { description?: string } | null; // ads without an avatar: the automatic person (same in every cut)
 }
 
 /** Starts (or restarts) the generation of one clip. Spends money: the studio asks before calling it. */
@@ -111,9 +113,12 @@ export async function POST(req: Request) {
     const asked = talking || actor ? talkSecs : chosen ? chosen : story ? storyClipSeconds(shotPlan, Boolean(ownVoice)) : ownVoice ? voiceSecs : Math.min(15, Math.max(4, Math.ceil(words / 2.7) + 1));
     // charge (and ask) for what the model really makes: its nearest allowed length
     const seconds = provider.id.startsWith("veo") ? asked : billedSeconds(asked, provider.durations);
+    // «Persona del anuncio» (no avatar): every cut gets an opening frame; the first cut's frame is the face
+    // reference of the others, so face, hair and clothes stay the same (like an avatar does)
+    const persona = usesPersona({ persona: Boolean(st.persona), face: Boolean(face), story: Boolean(story), talking, actor, noFaces: Boolean(provider.noFaces) });
     // Charge before spending anything (the opening frame below already costs).
-    const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod);
-    const needsFrame = !takesRefs && Boolean(face || prod) && !clip.image_url && !(talking && Number(clip.idx) > 0) && !actor;
+    const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod) && !persona;
+    const needsFrame = !takesRefs && Boolean(face || prod || persona) && !clip.image_url && !(talking && Number(clip.idx) > 0) && !actor;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
     // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
     const nb2 = findImage("nano-banana-2");
@@ -137,18 +142,39 @@ export async function POST(req: Request) {
         else await new Promise((r) => setTimeout(r, 3000));
       }
     }
-    if (TAKES_REFS.has(provider.id) && (face || prod)) {
+    // the automatic person: a later cut waits for the first cut's frame (drawn a moment earlier) and uses it
+    // as the face, like an avatar's photo
+    let personaFace = "";
+    if (persona && !image && Number(clip.idx) === 0) {
+      // the first cut drawn again (a redo): copy the person from a later cut that already has its frame
+      const rows = (await db.list("clips", `ad_id=eq.${ad.id}&order=idx.asc&select=idx,image_url`)) as { idx?: number; image_url?: string | null }[];
+      const other = rows.find((r) => Number(r.idx) > 0 && r.image_url);
+      if (other?.image_url) personaFace = await fetchableUrl(String(other.image_url), ws);
+    }
+    if (persona && !image && Number(clip.idx) > 0) {
+      for (let t = 0; t < 30 && !personaFace; t++) {
+        const first = (await db.list("clips", `ad_id=eq.${ad.id}&idx=eq.0&select=image_url,status`))[0] as { image_url?: string | null; status?: string } | undefined;
+        if (first?.image_url) personaFace = await fetchableUrl(String(first.image_url), ws);
+        else if (!first || first.status === "failed" || first.status === "done") break; // it won't draw one now
+        else await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+    if (takesRefs) {
       refs = [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])];
-    } else if ((face || prod) && !image && !actor) {
+    } else if ((face || prod || persona) && !image && !actor) {
       // Models that animate a still: first draw the opening frame from the photos (Nano Banana 2; Pro if it fails).
-      const framePrompt = st.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
+      const person = face || personaFace;
+      let framePrompt = st.frames?.[Number(clip.idx)] || String(clip.prompt).slice(0, 1500);
+      if (persona) framePrompt = personaFace ? withPersonRef(framePrompt) : withoutPersonRef(framePrompt); // no frame to copy: the description alone
       const frameReq = {
         prompt: framePrompt,
         aspect,
-        refs: [...(face ? [{ url: face, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])],
+        refs: [...(person ? [{ url: person, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])],
       };
       const ff = await frameModel.generate(frameReq).catch((e) => (frameModel === nanoBananaPro ? Promise.reject(e) : nanoBananaPro.generate(frameReq)));
       image = await saveMedia(ws, "frames", ff.bytes, ff.mime);
+      // the first cut's frame is the others' reference: saved right away so they don't wait for the video job
+      if (persona && Number(clip.idx) === 0) await db.update("clips", id, { image_url: image }).catch(() => {});
     }
     if (image && !refs.length && !actor) refs = [{ url: await fetchableUrl(image, ws), role: "first_frame" }];
     if (actor) {

@@ -3,7 +3,9 @@ import { needsCredits } from "@/lib/credits";
 import { SESSION_ENDED } from "@/lib/access";
 import { userFromRequest } from "@/lib/auth";
 import { tooMany } from "@/lib/rate";
-import { type FormatId, FORMATS, formatById, rondaPrompt, splitRules } from "@/lib/formats";
+import { type FormatId, FORMATS, rondaPrompt } from "@/lib/formats";
+import { cutsPrompt } from "@/lib/cuts-prompt";
+import { readLang } from "@/lib/ad-lang";
 import { textAI } from "@/lib/providers";
 import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
@@ -25,30 +27,7 @@ interface CutsAnswer {
   cortes: Cut[];
 }
 
-// Ported from the prototype's splitScript + fmtSplitRules + rondaSplit.
-function buildPrompt(script: string, o: { format: FormatId; cap: number; maxSec: number; lang: "en" | "es-CL"; comment?: { question: string; user: string } }) {
-  const f = formatById(o.format);
-  const minW = Math.round(o.maxSec * 1.5), maxW = Math.round(o.maxSec * 2.7);
-  const spoken = o.lang === "es-CL" ? "español de Chile, natural y hablado (chileno, sin exagerar modismos)" : "inglés hablado natural de EE. UU.";
-  const other = o.lang === "es-CL" ? "inglés" : "español";
-  const rules = splitRules({ format: o.format, cap: o.cap, comment: o.comment });
-  const speakers = f.speakers?.length ? `,"speaker":"${f.speakers.join("|")}"` : "";
-  return `Divide este guion de anuncio en video (formato: ${f.name} · ${f.en}) en CORTES para grabarlo con IA.
-GUION:
-"""
-${script.slice(0, 9000)}
-"""
-Reglas:
-- El video se habla en ${spoken}. Si el guion está en otro idioma, primero pásalo a ese idioma con el mismo sentido ("traducido": true). Si ya está en ese idioma, NO lo reescribas ("traducido": false), salvo lo que pida el formato.
-- Cada corte dura como máximo ${o.maxSec} segundos: entre ${minW} y ${maxW} palabras habladas, y termina en una pausa natural (fin de frase o de idea).
-- Máximo ${o.cap} cortes. Si el guion es más largo, condénsalo sin perder el hook, la oferta ni la llamada a la acción.
-- Los cortes van EN ORDEN y juntos cubren todo el guion. "texto" son las palabras exactas que se dicen en ese corte.
-- "tipo": Hook, Dolor, Agitación, Mecanismo, Prueba, Oferta, CTA o Transición. El primer corte es el Hook.
-- "traduccion": el mismo corte en ${other}, natural.
-- "mostrar": qué se ve mientras se dice, en español y concreto (lugar, gesto, objeto).
-${f.narr ? "- Es voz en off: nadie habla a cámara; \"mostrar\" describe la escena real que acompaña la frase.\n" : ""}${rules ? `\n${rules}\n(En este formato SÍ puedes reescribir el guion como se indica.)\n` : ""}
-Responde SOLO JSON: {"titulo":"nombre corto en español","traducido":false,"cortes":[{"tipo":"Hook","texto":"","traduccion":"","mostrar":""${speakers}}]}`;
-}
+// The split prompt lives in src/lib/cuts-prompt.ts (ported from the prototype's splitScript + fmtSplitRules).
 
 interface RondaAnswer {
   titulo: string;
@@ -71,7 +50,7 @@ export async function POST(req: Request) {
   const format = (FORMATS.some((f) => f.id === body?.format) ? body.format : "ugc") as FormatId;
   const cap = Math.min(8, Math.max(1, Math.round(Number(body?.cap) || 8)));
   const maxSec = [8, 10, 15].includes(Number(body?.maxSec)) ? Number(body.maxSec) : 8;
-  const lang = body?.lang === "es-CL" ? "es-CL" : "en";
+  const lang = readLang(body?.lang, "en");
   const comment = body?.comment && typeof body.comment === "object" ? { question: String(body.comment.question ?? "").slice(0, 200), user: String(body.comment.user ?? "").slice(0, 40) } : undefined;
 
   try {
@@ -93,7 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ titulo: r.titulo || "Ronda", traducido: true, cortes });
     }
 
-    const answer = parseJSON<CutsAnswer>(await textAI.complete({ prompt: buildPrompt(script, { format, cap, maxSec, lang, comment }), json: true }));
+    const answer = parseJSON<CutsAnswer>(await textAI.complete({ prompt: cutsPrompt(script, { format, cap, maxSec, lang, comment }), json: true }));
     if (!Array.isArray(answer.cortes) || !answer.cortes.length) throw new Error("La IA no devolvió cortes.");
     answer.cortes = answer.cortes.filter((c) => c?.texto).slice(0, cap);
     return NextResponse.json(answer);
