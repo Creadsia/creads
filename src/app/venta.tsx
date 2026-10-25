@@ -43,6 +43,12 @@ const DEMOS = {
   cocina: { src: "/demos/cocina.mp4", poster: "/demos/cocina.jpg", label: "Vida sana" },
 };
 
+// Product videos made with «Video de producto» (photo of the product → scene → 6 s motion + headline).
+const PRODUCTO_DEMOS = [
+  { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Salpicadura · licuadora" },
+  { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "En su lugar · café" },
+];
+
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
   { title: "Elige tus ángulos de venta", text: "Te propone 6: dolor, deseo, mecanismo, prueba social, creencia y oferta. Marcas los que quieres testear." },
@@ -195,6 +201,15 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
                 {(["dent", "doc", "cafe", "creads", "gym", "rubia", "bano", "cocina"] as const).map((k) => (
                   <DemoPhone key={k} {...DEMOS[k]} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <h3 className="text-lg font-bold">Videos de producto para ecommerce</h3>
+              <p className="max-w-2xl text-sm text-muted">Sube la foto de tu producto, elige un estilo y en minutos tienes un video de 6 segundos con tu titular. Sin personas, sin grabar.</p>
+              <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
+                {PRODUCTO_DEMOS.map((d) => (
+                  <DemoPhone key={d.src} {...d} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
                 ))}
               </div>
             </div>
