@@ -7,6 +7,13 @@ import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import { Money, MoneyText } from "./money";
 import Garantia from "./garantia";
+import { GARANTIA, GARANTIA_EN } from "@/lib/garantia-textos";
+
+/** What every plan includes (owner's plan, 25 Oct 2026). */
+const INCLUIDO = {
+  es: ["Kit de marca: logo, colores y tono", "Ángulos de venta y hooks gratis", "Cada imagen en feed 4:5, stories 9:16 y cuadrado", "ZIP ordenado por ubicación", "Archivo de importación masiva para Meta", "Biblioteca de hooks por nicho", "Editor que no gasta saldo", "Español e inglés"],
+  en: ["Brand kit: logo, colours and tone", "Free sales angles and hooks", "Every image in feed 4:5, stories 9:16 and square", "ZIP sorted by placement", "Meta bulk-import file", "Hooks library by niche", "Editor that doesn't use your balance", "English and Spanish"],
+};
 
 // The plans, front and center (owner's plan, 25 Oct 2026): Pack Prueba first, then Testea, Escala (highlighted,
 // with the founder price and its real counter) and Agencia, shown as images or videos a month. Every button goes
@@ -51,11 +58,12 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <p className="text-sm text-muted">{es ? "Un solo saldo al mes: lo gastas en imágenes o videos, como quieras." : "One balance a month: spend it on images or videos, as you like."}</p>
       </div>
 
-      {/* Pack Prueba: the way in */}
+      {/* Pack Prueba («Tu primera tanda»): the way in */}
       <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
-          <b className="font-display text-lg font-semibold">{es ? "Pack Prueba" : "Trial Pack"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
-          <span className="text-sm text-muted">{es ? "Tu primera tanda: hasta 12 imágenes o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "Your first batch: up to 12 images or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
+          <b className="font-display text-lg font-semibold">{es ? "Tu primera tanda" : "Your first batch"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
+          <span className="text-sm text-muted">{es ? "12 imágenes, 4 videos de producto o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "12 images, 4 product videos or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
+          <span className="text-xs text-muted">{PRUEBA.credits} {es ? "créditos" : "credits"} · {(es ? GARANTIA : GARANTIA_EN).pack}</span>
         </div>
         <a href="/registro" className="shrink-0 rounded-xl bg-ink px-5 py-3 text-center font-semibold text-bg">{es ? <>Haz tu primera tanda por {money(PRUEBA.usd)}</> : <>Make your first batch for {money(PRUEBA.usd)}</>}</a>
       </div>
@@ -63,7 +71,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
       {/* plans */}
       <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-3 md:items-start">
         {shown.map((p) => {
-          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number; productos?: number };
+          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number; productos?: number; destaca?: "imagenes" | "productos" };
           const featured = Boolean(plan.featured);
           const founder = !yearly && p.id === FUNDADOR.plan && quedan !== null && quedan > 0;
           const now = yearly ? p.yearly : founder ? FUNDADOR.usd : p.price;
@@ -100,23 +108,34 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                       : yearly ? <>{money(Math.round(p.yearly * 12 * 100) / 100)} {t.yearlyTotal}</> : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
-                <div className={`grid grid-cols-2 overflow-hidden rounded-2xl border ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
-                  <div className="flex flex-col gap-0.5 p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{plan.imagenes}</b>
-                    <span className="text-xs text-muted">{es ? "imágenes al mes" : "images a month"}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5 border-l border-line p-3">
-                    <b className="font-display text-xl font-semibold tabular-nums">{es ? "o" : "or"} {plan.videos}</b>
-                    <span className="text-xs text-muted">{es ? "videos con avatar de 10 s" : "10 s avatar videos"}</span>
-                  </div>
-                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">{es ? <>O {plan.productos} videos de producto. O la mezcla que quieras: es un solo saldo.</> : <>Or {plan.productos} product videos. Or any mix: it&apos;s one balance.</>}</div>
+                {/* the headline is a result, not credits (owner's plan): «31 videos de producto al mes» */}
+                <div className={`flex flex-col gap-1.5 rounded-2xl border p-4 ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
+                  <b className="font-display text-[1.35rem] leading-tight font-semibold">
+                    {plan.destaca === "imagenes"
+                      ? (es ? <>{plan.imagenes} imágenes al mes</> : <>{plan.imagenes} images a month</>)
+                      : (es ? <>{plan.productos} videos de producto al mes</> : <>{plan.productos} product videos a month</>)}
+                  </b>
+                  <span className="text-sm text-muted">
+                    {plan.destaca === "imagenes"
+                      ? (es ? <>o {plan.productos} videos de producto, o {plan.videos} videos con avatar, o la mezcla que quieras</> : <>or {plan.productos} product videos, or {plan.videos} avatar videos, or any mix</>)
+                      : (es ? <>o {plan.imagenes} imágenes, o {plan.videos} videos con avatar, o la mezcla que quieras</> : <>or {plan.imagenes} images, or {plan.videos} avatar videos, or any mix</>)}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-muted">
+                    {p.credits} {es ? "créditos al mes" : "credits a month"}
+                    <details className="relative">
+                      <summary className="grid h-4 w-4 cursor-pointer list-none place-items-center rounded-full border border-line text-[10px] font-bold" aria-label={es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}>?</summary>
+                      <span className="absolute bottom-6 left-1/2 z-20 w-60 -translate-x-1/2 rounded-lg border border-line bg-surface p-3 text-xs text-ink shadow-xl">
+                        <b>{es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}</b> {es ? "Cada imagen sale en 3 formatos listos para subir. «Hasta 400 anuncios» corresponde al plan Agencia." : "Every image comes in 3 formats ready to upload. «Up to 400 ads» is the Agency plan."}
+                      </span>
+                    </details>
+                  </span>
                 </div>
                 <div className="flex flex-col gap-2">
                   <a href={startHref(p.id, yearly)}
                     className={`rounded-xl px-5 py-3 text-center text-base font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
                     {t.cta} {p.name}
                   </a>
-                  <p className="text-center text-xs text-muted">{t.cardNote}</p>
+                  <p className="text-center text-xs text-muted">{(es ? GARANTIA : GARANTIA_EN).boton}</p>
                 </div>
                 <ul className="flex flex-col gap-2 border-t border-line pt-4 text-sm">
                   {p.features.map((f) => (
@@ -130,6 +149,16 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
             </article>
           );
         })}
+      </div>
+
+      {/* included in every plan */}
+      <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:p-6">
+        <h3 className="font-bold">{es ? "Incluido en todos los planes" : "Included in every plan"}</h3>
+        <ul className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          {INCLUIDO[es ? "es" : "en"].map((x) => (
+            <li key={x} className="flex items-start gap-2"><span className="mt-0.5 text-good" aria-hidden="true">✓</span>{x}</li>
+          ))}
+        </ul>
       </div>
 
       {/* why it's safe to pay */}

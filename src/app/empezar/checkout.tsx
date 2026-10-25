@@ -9,6 +9,7 @@ import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import PayBadges from "../pay-badges";
 import GoogleButton from "../google-button";
+import { GARANTIA } from "@/lib/garantia-textos";
 import Garantia from "../garantia";
 
 // One page from "I want this plan" to Mercado Pago: pick the plan, create the account, pay.
@@ -248,13 +249,14 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </p>
             )}
 
-            <Garantia compact />
+            <Garantia compact que="plan" />
             <button type="submit" disabled={Boolean(busy)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : <>Crear cuenta y pagar {usd(q.total)}</>}
             </button>
+            <p className="text-center text-xs font-semibold text-good">{GARANTIA.boton}</p>
             <p className="text-center text-xs text-muted">
-              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.
+              Al crear tu cuenta aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a> y la <a href="/privacidad" target="_blank" className="underline">Política de privacidad</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, tu primer pago tiene 7 días de garantía (ver arriba), y en otras compras, si no has usado nada y nos escribes dentro de 10 días, te devolvemos el pago.
             </p>
 
             <div className="flex flex-col items-center gap-2 text-center">

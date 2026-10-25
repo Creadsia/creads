@@ -4,7 +4,7 @@ import type { Content } from "./en";
 export const es: Content = {
   lang: "es",
   meta: {
-    title: "Creads IA · Testea 70 anuncios al mes, no 3",
+    title: "Creads IA · Hasta 400 anuncios al mes, sin diseñador",
     description:
       "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Tu primera tanda por US$9.",
   },
@@ -524,9 +524,9 @@ export const es: Content = {
         imagenes: 47,
         productos: 15,
         videos: 3,
+        destaca: "productos",
         for: "Para empezar a testear en serio: varias tandas al mes sin gastar de más.",
         features: [
-          "Hasta 47 imágenes, 3 videos con avatar de 10 s o 15 videos de producto al mes (o la mezcla que quieras)",
           "Tandas desde el link de tu producto: 6 ángulos y 10 anuncios",
           "Kit de marca: logo, colores y tono en todo",
           "Descarga por ubicación: feed 4:5 y stories 9:16",
@@ -541,11 +541,11 @@ export const es: Content = {
         yearly: 56.05,
         credits: "950",
         imagenes: 95,
-        productos: 30,
+        productos: 31,
         videos: 7,
+        destaca: "productos",
         for: "Para quien invierte en Meta todas las semanas y necesita ángulos nuevos sin parar.",
         features: [
-          "Hasta 95 imágenes, 7 videos con avatar de 10 s o 30 videos de producto al mes (o la mezcla que quieras)",
           "Todo lo de Testea",
           "Videos UGC con avatares que hablan y tu voz clonada",
           "Espiar anuncios de tu competencia y guiones con IA",
@@ -557,13 +557,13 @@ export const es: Content = {
         name: "Agencia",
         price: 149,
         yearly: 141.55,
-        credits: "2.440",
-        imagenes: 244,
-        productos: 78,
-        videos: 19,
+        credits: "4.000",
+        imagenes: 400,
+        productos: 133,
+        videos: 31,
+        destaca: "imagenes",
         for: "Para agencias y media buyers que testean para varias marcas.",
         features: [
-          "Hasta 244 imágenes, 19 videos con avatar de 10 s o 78 videos de producto al mes (o la mezcla que quieras)",
           "Todo lo de Escala",
           "Hasta 3 marcas, cada una con su kit",
           "Ayuda directa por WhatsApp",

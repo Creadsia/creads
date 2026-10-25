@@ -28,7 +28,10 @@ export function orderGrant(o: Order) {
   const plan = PLANS.find((p) => p.id === o.item);
   if (!plan) throw new Error(`plan desconocido: ${o.item}`);
   const months = o.period === "anual" ? 12 : 1;
-  return { credits: plan.credits * months, months, plan: plan.name };
+  // the balance promised when the subscription started (plan_version), so a later change of plans
+  // never lowers — or raises — what an existing subscriber gets on each renewal
+  const perMonth = Number(o.quote?.monthlyCredits) > 0 ? Number(o.quote.monthlyCredits) : plan.credits;
+  return { credits: perMonth * months, months, plan: plan.name };
 }
 
 /**

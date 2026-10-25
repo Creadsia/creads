@@ -77,7 +77,15 @@ export interface Quote {
   pack?: number;
   /** order id of the pack whose price was discounted (used once) */
   packOrder?: string;
+  /** The plan conditions this order was sold under (owner's plan, 25 Oct 2026): a subscriber keeps the price
+   * and the monthly balance of their version while the subscription lasts, even if the plans change later. */
+  planVersion?: string;
+  /** Credits a month promised by this order (plans only); renewals give this, not the current catalog. */
+  monthlyCredits?: number;
 }
+
+/** Version of the plans on sale. Bump it when prices or balances change; existing subscribers keep theirs. */
+export const PLAN_VERSION = "2026-10-25";
 
 /** The amount to pay for an item, in US$ (rounded to cents). */
 /** Whether an item can be bought now: retired plans (Ultra) and the annual payment are not on sale. */
@@ -107,6 +115,7 @@ export function quote(item: ItemId, period: Period, opts: { discountPct?: number
     item, label: `Plan ${p.name} · ${period === "anual" ? "anual" : "mensual"}${fundador ? " · precio fundador" : ""}`, credits: p.credits * (period === "anual" ? 12 : 1),
     subtotal, launch, discount, total: r(subtotal - launch - discount - fundador - packOff), period,
     ...(fundador ? { fundador } : {}), ...(packOff > 0 ? { pack: packOff, packOrder: opts.pack!.order } : {}),
+    planVersion: PLAN_VERSION, monthlyCredits: p.credits,
   };
 }
 

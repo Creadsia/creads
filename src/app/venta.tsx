@@ -11,7 +11,33 @@ import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
 import { Money, MoneyText } from "./money";
 import Ejemplos from "./ejemplos";
+import { GARANTIA } from "@/lib/garantia-textos";
 import Muro from "./muro";
+import GaleriaCreads from "./galeria-creads";
+import Contadores from "./contadores";
+import { InsigniasPago } from "./pay-badges";
+import { SoporteLinea } from "./whatsapp";
+import type { Contador, GaleriaPublicaItem, Novedad } from "@/lib/confianza";
+import type { TestimonioPublico } from "@/lib/casos";
+
+/** Real data for the trust blocks (owner's plan, 25 Oct 2026): every block hides itself when its list is empty. */
+export interface Confianza { galeria: GaleriaPublicaItem[]; contadores: Contador[]; testimonios: TestimonioPublico[]; novedades: Novedad[]; roadmap: boolean }
+const SIN_DATOS: Confianza = { galeria: [], contadores: [], testimonios: [], novedades: [], roadmap: false };
+
+/** «Así se gasta tu saldo»: what each piece uses (the same numbers as the app charges). */
+const GASTO = [
+  ["Imagen con texto, en feed 4:5, stories 9:16 y cuadrado", "10 créditos"],
+  ["La misma imagen con Nano Banana Pro (mayor calidad)", "20 créditos"],
+  ["Video de producto de 6 s (escena + movimiento + titular)", "30 créditos"],
+  ["Video con avatar que habla, 10 s", "unos 120 créditos"],
+  ["Ángulos, hooks y editar textos, subtítulos, logo o música", "Gratis"],
+] as const;
+
+/** Before / after: the plain product photo and what Creads made from it (all real outputs). */
+const ANTES_DESPUES = [
+  { foto: "/antes-despues/zap-foto.jpg", producto: "Zapatillas", imagen: "/ejemplos/stride-flash.jpg", video: { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "" } },
+  { foto: "/antes-despues/aud-foto.jpg", producto: "Audífonos", imagen: "/ejemplos/aural-ficha.jpg", video: { src: "/demos/prod-audifonos.mp4", poster: "/demos/prod-audifonos.jpg", label: "" } },
+];
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
 // affiliates and media buyers, info-product sellers); small businesses come second. One promise: test many
@@ -72,7 +98,7 @@ const FAQ = [
   ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para hasta 95 imágenes o 7 videos con avatar de 10 s, o una mezcla. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
   ["¿Para qué tipo de negocio sirve?", "Para quien ya invierte en anuncios de Meta y necesita testear ángulos nuevos todo el tiempo: tiendas online, afiliados y media buyers, infoproductos. También para pymes que quieren anuncios propios sin agencia."],
   ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges en cada tanda. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
-  ["¿Qué pasa si mi primera tanda no me sirve?", "Escríbenos a hola@creadsia.com dentro de 10 días: la rehacemos o te devolvemos el pago."],
+  ["¿Qué pasa si mi primera tanda no me sirve?", `${GARANTIA.pack} Y si te suscribes: ${GARANTIA.planes.charAt(0).toLowerCase()}${GARANTIA.planes.slice(1)} ${GARANTIA.labios} ${GARANTIA.contacto}`],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago. En Chile pagas en pesos al cambio del día. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
   ["¿Puedo cancelar?", "Sí, cuando quieras, desde tu cuenta y con un clic. Sin permanencia: sigues usando tu plan hasta la fecha que pagaste."],
 ] as const;
@@ -90,7 +116,7 @@ function Cta({ children, href = START, sub }: { children: React.ReactNode; href?
   );
 }
 
-export default function Venta({ t, rate = 950, renews = true }: { t: Content; rate?: number; renews?: boolean }) {
+export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DATOS }: { t: Content; rate?: number; renews?: boolean; confianza?: Confianza }) {
   const pack = <Money usd={PRUEBA.usd} rate={rate} />;
   return (
     <div className="overflow-x-clip pb-20 lg:pb-0">
@@ -121,7 +147,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
             <div className="flex min-w-0 flex-col gap-5">
               <p className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">El anuncio que vende se quema en días. Gana el que testea más rápido.</p>
               <h1 className="font-display text-[2.5rem] leading-[1.02] font-semibold sm:text-[3.8rem]">
-                Testea 70 anuncios al mes. <span className="chroma">No 3.</span>
+                Hasta 400 anuncios al mes. <span className="chroma mt-2 block text-[0.55em] leading-tight">Sin diseñador, sin grabar.</span>
               </h1>
               <p className="max-w-[52ch] text-lg text-muted">
                 Imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca y listos para subir a Meta.
@@ -131,8 +157,9 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 <a href="#como" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo funciona</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["6 ángulos de venta desde el link de tu producto", "Feed 4:5 y stories 9:16, con tu logo", "Garantía en tu primera tanda", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check /><MoneyText text={x} rate={rate} /></li>)}
+                {["6 ángulos de venta desde el link de tu producto", "Feed 4:5, stories 9:16 y cuadrado, con tu logo", "7 días de garantía", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check /><MoneyText text={x} rate={rate} /></li>)}
               </ul>
+              <p className="text-xs text-muted">«Hasta 400 anuncios» es el plan Agencia: 400 imágenes al mes, cada una en 3 formatos listos para subir.</p>
             </div>
 
             <div className="flex min-w-0 flex-col items-center gap-3">
@@ -200,6 +227,41 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
+        {/* 2c · Before / after: your photo → your ads */}
+        <section className={gutter} aria-labelledby="antes-title">
+          <div className={`${wrap} flex flex-col gap-6`}>
+            <div className="flex max-w-2xl flex-col gap-2">
+              <h2 id="antes-title" className={h2}>De una foto a tus anuncios</h2>
+              <p className="text-muted">A la izquierda, la foto del producto que subiste. A la derecha, lo que Creads hizo con ella.</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              {ANTES_DESPUES.map((a) => (
+                <div key={a.producto} className="grid items-center gap-4 rounded-3xl border border-line bg-surface p-4 sm:p-5 md:grid-cols-[0.8fr_auto_2fr]">
+                  <figure className="flex flex-col gap-2">
+                    <div className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-white">
+                      <Image src={a.foto} alt={`Foto original: ${a.producto.toLowerCase()}`} fill sizes="(min-width: 768px) 260px, 90vw" className="object-contain" />
+                    </div>
+                    <figcaption className="text-sm font-semibold text-muted">Tu foto · {a.producto}</figcaption>
+                  </figure>
+                  <span aria-hidden="true" className="mx-auto font-display text-3xl text-muted md:rotate-0">→</span>
+                  <div className="grid grid-cols-2 items-start gap-3 sm:gap-4">
+                    <figure className="flex flex-col gap-2">
+                      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-line">
+                        <Image src={a.imagen} alt={`Anuncio de ${a.producto.toLowerCase()} hecho con Creads`} fill sizes="(min-width: 768px) 280px, 45vw" className="object-cover" />
+                      </div>
+                      <figcaption className="text-sm font-semibold text-muted">Anuncio de imagen</figcaption>
+                    </figure>
+                    <div className="flex flex-col gap-2">
+                      <DemoPhone {...a.video} className="mx-auto w-full max-w-[220px]" />
+                      <span className="text-center text-sm font-semibold text-muted">Video de producto</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* 3 · Real examples */}
         <section id="ejemplos" className={`scroll-mt-20 ${gutter}`} aria-labelledby="ejemplos-title">
           <div className={`${wrap} flex flex-col gap-8`}>
@@ -224,37 +286,43 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
+        {confianza.galeria.length > 0 && (
+          <section className={gutter} aria-label="Hecho con Creads">
+            <div className={wrap}><GaleriaCreads items={confianza.galeria} /></div>
+          </section>
+        )}
+
         {/* 4 · Comparison */}
         <section className={gutter} aria-labelledby="compara-title">
           <div className={`${wrap} flex flex-col gap-6`}>
             <div className="flex max-w-2xl flex-col gap-2">
-              <h2 id="compara-title" className={h2}>10 anuncios para testear, cuatro caminos</h2>
+              <h2 id="compara-title" className={h2}>10 anuncios para testear, cinco caminos</h2>
               <p className="text-muted">Para encontrar un anuncio ganador necesitas probar muchos. Así se compara cada forma de hacerlos.</p>
             </div>
+            {confianza.contadores.length > 0 && <Contadores datos={confianza.contadores} />}
             <div className="overflow-x-auto rounded-3xl border border-line">
-              <table className="w-full min-w-[640px] text-left text-sm sm:text-[15px]">
+              <table className="w-full min-w-[760px] text-left text-sm sm:text-[15px]">
                 <thead>
                   <tr className="bg-surface-2 text-xs sm:text-sm">
                     <th scope="col" className="p-3 sm:p-4"><span className="sr-only">Comparación</span></th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">A mano</th>
+                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Diseñador freelance</th>
+                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Creador UGC</th>
                     <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Agencia</th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Canva o ChatGPT</th>
+                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">ChatGPT o Canva</th>
                     <th scope="col" className="bg-ink p-3 font-semibold text-bg sm:p-4">Creads</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line bg-surface">
                   {[
-                    ["Tiempo", "Uno o dos días", "Días o semanas", "Horas de prueba y error", "Minutos"],
-                    ["Ángulos de venta", "Los que se te ocurran", "Los del brief", "Tienes que pedirlos tú", "6 propuestos desde tu página"],
-                    ["Feed y stories", "Rehacer cada tamaño", "Según lo que contrates", "Ajustar a mano", "4:5 y 9:16 de una vez"],
-                    ["Videos con persona", "Grabarte tú", "Actores o creadores", "No", "Avatares que hablan"],
-                    ["Tu marca", "Tú la aplicas", "Sí", "Tú la aplicas", "Kit de marca en todo"],
-                    ["Costo", "Tu tiempo", "Se cobra cada pieza", "Suscripción + tu tiempo", `Desde ${usd(cheapest.monthly)} al mes`],
+                    ["Tiempo", "Días por cada pedido", "Una o dos semanas por video", "Semanas", "Horas de prueba y error", "Minutos"],
+                    ["Coordinación", "Brief, revisiones y correcciones", "Buscarlo, enviar producto, revisar", "Reuniones y aprobaciones", "Tú haces todo", "Pegas un link"],
+                    ["Formatos", "Cada tamaño se pide aparte", "Uno, el que grabe", "Según lo contratado", "Ajustar cada tamaño a mano", "4:5, 9:16 y cuadrado de una vez"],
+                    ["Variaciones", "Cada una es otro pedido", "Otra grabación", "Se cotizan aparte", "Una por una", "10 nuevas del ganador en un clic"],
                   ].map(([k, ...v]) => (
                     <tr key={k}>
                       <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
-                      {v.slice(0, 3).map((x, i) => <td key={i} className="p-3 text-muted sm:p-4">{x}</td>)}
-                      <td className="p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" /><MoneyText text={v[3]} rate={rate} /></span></td>
+                      {v.slice(0, 4).map((x, i) => <td key={i} className="p-3 text-muted sm:p-4">{x}</td>)}
+                      <td className="p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{v[4]}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -271,19 +339,32 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <p className="text-muted">Imágenes o videos, tú decides cada mes. Sin permanencia. Escala a <Money usd={FUNDADOR.usd} rate={rate} /> los primeros {FUNDADOR.months} meses para los primeros {FUNDADOR.cupos} clientes.</p>
             </div>
             <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact />
+            <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:p-6">
+              <h3 className="font-bold">Así se gasta tu saldo</h3>
+              <dl className="divide-y divide-line text-sm">
+                {GASTO.map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-4 py-2.5">
+                    <dt>{k}</dt>
+                    <dd className={`shrink-0 font-semibold tabular-nums ${v === "Gratis" ? "text-good" : ""}`}>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-xs text-muted">Antes de crear siempre ves cuánto usa. Si algo no se genera, el saldo vuelve solo.</p>
+            </div>
           </div>
         </section>
 
         {/* 6 · Guarantee */}
         <section className={gutter} aria-labelledby="garantia-title">
           <div className={`${wrap} flex flex-col gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-8`}>
-            <h2 id="garantia-title" className={h2}>Tu primera tanda, garantizada</h2>
+            <h2 id="garantia-title" className={h2}>7 días de garantía</h2>
             <p className="max-w-2xl text-muted">Calidad es lo que nos importa: cada anuncio pasa por una revisión antes de llegar a ti.</p>
-            <ul className="grid gap-3 md:grid-cols-3">
+            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               {[
-                ["La rehacemos o te devolvemos el pago", "Si tu primera tanda no te sirve, escríbenos a hola@creadsia.com dentro de 10 días y eliges."],
-                ["Revisión en cada imagen", "Creads revisa el texto y los detalles de cada anuncio y te avisa si algo no quedó bien."],
-                ["Si algo falla, no pagas", "Si una imagen o un video no se genera, el saldo vuelve solo a tu cuenta."],
+                ["En tu plan", GARANTIA.planes],
+                ["En tu primera tanda", GARANTIA.pack],
+                ["Labios que no calzan", GARANTIA.labios],
+                ["Revisión en cada pieza", "Creads revisa el texto y los detalles de cada anuncio antes de entregártelo. Si algo no se genera, el saldo vuelve solo a tu cuenta."],
               ].map(([k, v]) => (
                 <li key={k} className="flex flex-col gap-1 rounded-2xl border border-good/30 bg-good/[0.06] p-4">
                   <b className="flex items-center gap-2"><Check />{k}</b>
@@ -293,6 +374,25 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
             </ul>
           </div>
         </section>
+
+        {confianza.testimonios.length > 0 && (
+          <section className={gutter} aria-labelledby="testimonios-title">
+            <div className={`${wrap} flex flex-col gap-6`}>
+              <h2 id="testimonios-title" className={h2}>Lo que dicen quienes ya testean con Creads</h2>
+              <ul className="grid gap-4 md:grid-cols-3">
+                {confianza.testimonios.slice(0, 6).map((x) => (
+                  <li key={x.nombre + x.texto.slice(0, 20)} className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- signed link from private storage */}
+                    {x.imagen && <img src={x.imagen} alt={`Captura compartida por ${x.nombre}`} className="w-full rounded-xl border border-line" loading="lazy" />}
+                    <blockquote className="text-[15px]">«{x.texto}»</blockquote>
+                    <p className="text-sm"><b>{x.nombre}</b> <span className="text-muted">· {x.rubro}</span></p>
+                    {x.beneficio && <p className="text-xs text-muted">Recibió {x.beneficio} por compartir su experiencia.</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
 
         {/* 7 · Founder: Benjamín (owner, 25 Oct 2026: Gastón prefers not to appear). Photo: /public/fundador.jpg */}
         <section className={gutter} aria-labelledby="fundador-title">
@@ -333,6 +433,8 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próxima tanda puede estar corriendo hoy.</h2>
               <p className="text-muted">Pega el link de tu producto, elige tus ángulos y descarga 10 anuncios listos para Meta.</p>
               <Cta>Haz tu primera tanda por {pack}</Cta>
+              <InsigniasPago compact />
+              <SoporteLinea />
             </div>
             <div className="relative mx-auto flex items-end">
               <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-32 -rotate-6 sm:w-36" />
@@ -350,12 +452,15 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           <a href="/plantilla-meta" className="hover:text-ink">Plantilla para Meta Ads</a>
         </nav>
         <div className={`${wrap} flex flex-col gap-4 py-10 text-sm text-muted sm:flex-row sm:items-center sm:justify-between`}>
-          <span>© {new Date().getFullYear()} Creads IA · hola@creadsia.com</span>
+          <span>© {new Date().getFullYear()} Creads IA · Chile · <a href="mailto:hola@creadsia.com" className="hover:text-ink">hola@creadsia.com</a></span>
           <span className="flex flex-wrap gap-4">
+            {confianza.novedades.length > 0 && <a href="/novedades" className="hover:text-ink">Novedades</a>}
+            {confianza.roadmap && <a href="/roadmap" className="hover:text-ink">Roadmap</a>}
             <a href="/afiliados" className="hover:text-ink">Programa de afiliados</a>
             <a href="/en" className="hover:text-ink" hrefLang="en" lang="en">English</a>
             <a href="/terminos" className="hover:text-ink">Términos y condiciones</a>
             <a href="/privacidad" className="hover:text-ink">Política de privacidad</a>
+            <a href="/terminos#garantia" className="hover:text-ink">Política de reembolso</a>
           </span>
         </div>
       </footer>

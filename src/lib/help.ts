@@ -1,3 +1,4 @@
+import { GARANTIA } from "./garantia-textos";
 // The help center: short answers to what customers ask most, each with a link to where it's done.
 // The same articles feed the in-app assistant (src/app/api/asistente), so a fix here fixes both.
 // Safe for the browser. Keep answers short, in tú, and true to how the product works today.
@@ -100,7 +101,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "devolucion", cat: "creditos",
     q: "¿Me pueden devolver el pago?",
-    a: "Si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago. Si ya usaste créditos, no aplica, porque el servicio se entrega al instante.",
+    a: `Sí. ${GARANTIA.pack} ${GARANTIA.planes} ${GARANTIA.labios} Para otras compras (recargas o meses siguientes), si no has usado nada de esa compra y nos escribes dentro de 10 días, también te devolvemos el pago.`,
     link: { label: "Ver términos", href: "/terminos" },
     tags: "reembolso devolucion plata dinero retracto",
   },
