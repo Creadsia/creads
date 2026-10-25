@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { track } from "@/lib/track";
 import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import GoogleButton from "../google-button";
+import TarjetaMP, { PUBLIC_KEY } from "../tarjeta-mp";
 import { MoneyText } from "../money";
 
 // The free sign-up form: name, email, password. Then straight into Automático; the welcome email has the
@@ -29,6 +30,9 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ text: string; field?: string; exists?: boolean } | null>(null);
   const next = "/app/automatico?bienvenida=1";
+  const [paso, setPaso] = useState<"cuenta" | "tarjeta">("cuenta");
+  const [monto, setMonto] = useState(0);
+  useEffect(() => { if (tarjeta) fetch("/api/prueba/resumen").then((r) => r.json()).then((d) => setMonto(d.clp ?? 0)).catch(() => null); }, [tarjeta]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +47,12 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
     }
     if (d.eventId) track("CompleteRegistration", { content_name: "Cuenta gratis" }, d.eventId);
     await new Promise((res) => setTimeout(res, 400)); // let the pixel send it before leaving
+    // card trial: the card form right here (Mercado Pago's secure fields); without the public key, Mercado Pago's page
+    if (tarjeta && PUBLIC_KEY) { setBusy(false); setPaso("tarjeta"); return; }
+    if (tarjeta) {
+      const p = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then((r) => r.json()).catch(() => null);
+      if (p?.redirect) { window.location.href = p.redirect; return; }
+    }
     window.location.href = next;
   }
 
@@ -64,6 +74,15 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
           <p className="text-lg text-muted">Crea tu cuenta y mira con tus propios ojos cómo queda un anuncio de tu negocio antes de pagar nada.</p>
         </section>
 
+        {paso === "tarjeta" ? (
+          <section className="flex flex-col gap-4 self-start rounded-2xl lg:col-start-2 lg:row-span-2 lg:row-start-1 border border-line bg-surface p-5 sm:p-6" aria-labelledby="paso-tarjeta">
+            <span className="text-xs font-semibold text-muted">Paso 2 de 2</span>
+            <h2 id="paso-tarjeta" className="font-display text-xl font-semibold">Agrega tu tarjeta para empezar gratis</h2>
+            <Resumen />
+            <TarjetaMP monto={monto || 1} onListo={() => { window.location.href = next; }} fallback={<a href={next} className="rounded-xl bg-ink px-4 py-3.5 text-center text-base font-semibold text-bg">Continuar</a>} />
+            <p className="text-xs text-muted">Tus datos van directo a Mercado Pago: Creads nunca ve tu tarjeta. Hoy no se cobra nada.</p>
+          </section>
+        ) : (
         <form onSubmit={submit} className="flex flex-col gap-4 self-start rounded-2xl lg:col-start-2 lg:row-span-2 lg:row-start-1 border border-line bg-surface p-5 sm:p-6" aria-labelledby="crear-cuenta">
           <h2 id="crear-cuenta" className="font-display text-xl font-semibold">Crea tu cuenta gratis</h2>
           {google && (
@@ -98,11 +117,13 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
               {err.text} {err.exists && <a href="/app" className="font-semibold underline">Entrar</a>}
             </p>
           )}
+          {tarjeta && <Resumen />}
           <button type="submit" disabled={busy} className="rounded-xl bg-ink px-4 py-3.5 text-base font-semibold text-bg disabled:opacity-50">
-            {busy ? "Creando tu cuenta…" : "Crear mi cuenta gratis"}
+            {busy ? (tarjeta ? "Abriendo el pago seguro…" : "Creando tu cuenta…") : tarjeta ? "Continuar · agregar tarjeta (hoy $0)" : "Crear mi cuenta gratis"}
           </button>
-          <p className="text-xs text-muted">{tarjeta ? "Después agregas tu tarjeta en Mercado Pago: hoy no se cobra nada." : "Sin tarjeta."} Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
+          <p className="text-xs text-muted">{tarjeta ? "En el siguiente paso agregas tu tarjeta (Mercado Pago): hoy no se cobra nada." : "Sin tarjeta."} Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
         </form>
+        )}
           <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
             <li className="flex gap-2"><Check /><span><b>200 créditos de regalo</b>: alcanzan para tu primer anuncio en video (unos 12 segundos), listo para publicar.{tarjeta && " Se cargan al agregar tu tarjeta (hoy no se cobra nada)."}</span></li>
             <li className="flex gap-2"><Check /><span><b>Espía anuncios</b> de tu competencia: 5 búsquedas gratis al día.</span></li>
@@ -110,6 +131,25 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
             <li className="flex gap-2"><Check /><span>{tarjeta ? <MoneyText text="Si te gusta, a los 7 días sigues con el plan Básico (US$25 al mes). Si no, cancelas antes con un clic y no pagas nada." /> : <MoneyText text="Cuando te guste, eliges un plan desde US$25 al mes. Sin permanencia." />}</span></li>
           </ul>
       </main>
+    </div>
+  );
+}
+
+// the checkout summary next to the form (owner, 25 Oct 2026: «que aparezca al lado el checkout»)
+function Resumen() {
+  const [info, setInfo] = useState<{ dias: number; plan: string; clp: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/prueba/resumen").then((r) => r.json()).then(setInfo).catch(() => null);
+  }, []);
+  const dias = info?.dias ?? 7;
+  const fecha = new Date(Date.now() + dias * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-3.5 text-sm">
+      <b>Tu prueba gratis de {dias} días</b>
+      <div className="flex justify-between gap-3"><span>Hoy</span><b>$0</b></div>
+      <div className="flex justify-between gap-3"><span>Créditos de regalo</span><b>200</b></div>
+      <div className="flex justify-between gap-3"><span>Desde el {fecha} · Plan {info?.plan ?? "Básico"}</span><b>{info ? `$${info.clp.toLocaleString("es-CL")}/mes` : "…"}</b></div>
+      <span className="text-xs text-muted">Cancelas cuando quieras antes del cobro, con un clic. Pagas seguro con Mercado Pago.</span>
     </div>
   );
 }

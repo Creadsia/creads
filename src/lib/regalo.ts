@@ -40,15 +40,21 @@ export async function hasPaid(ws: string) {
 export const tarjetaObligatoria = () => process.env.REGALO_CON_TARJETA !== "0";
 export const PRUEBA_DIAS = 7;
 
+/** Has this workspace received its gift credits (with the card trial on, that means the card was added)? */
+export async function regaloDado(ws: string) {
+  return (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(`regalo:${ws}`)}&select=id&limit=1`).catch(() => [])).length > 0;
+}
+
 export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" | "tarjeta" };
 
 /** Gives the gift once (the credit ledger's unique ref makes a second try a no-op). */
 export async function darRegalo(ws: string, email: string, o: { conTarjeta?: boolean } = {}): Promise<RegaloResult> {
   if (tarjetaObligatoria() && !o.conTarjeta) return { ok: false, why: "tarjeta" };
-  if (!regaloEmailOk(email)) return { ok: false, why: "correo" };
+  // with a card on file the trial is a real customer: no throwaway-inbox or monthly-cap limits
+  if (!o.conTarjeta && !regaloEmailOk(email)) return { ok: false, why: "correo" };
   if (await hasPaid(ws)) return { ok: false, why: "pagado" };
   const n = await regalosDelMes();
-  if (n >= regaloTope()) return { ok: false, why: "tope" };
+  if (!o.conTarjeta && n >= regaloTope()) return { ok: false, why: "tope" };
   // once per account: a marker file first (so two clicks at once can't both pass), then the ledger
   const mark = `regalo/ws-${ws.replace(/[^\w-]/g, "_")}.json`;
   if (await readPrivateJSON(mark).catch(() => null)) return { ok: false, why: "ya" };

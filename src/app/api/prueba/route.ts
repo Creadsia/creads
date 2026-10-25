@@ -5,8 +5,8 @@ import { getOrder } from "@/lib/billing";
 import { PLANS, clpFor } from "@/lib/catalog";
 import { mpReady } from "@/lib/mercadopago";
 import { visitorFrom } from "@/lib/meta";
-import { PRUEBA_DIAS, hasPaid, tarjetaObligatoria } from "@/lib/regalo";
-import { PRUEBA_PLAN, activarPrueba, empezarPrueba, pruebaAbierta, tuvoPrueba } from "@/lib/prueba";
+import { PRUEBA_DIAS, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
+import { PRUEBA_PLAN, activarPrueba, empezarPrueba, empezarPruebaConTarjeta, pruebaAbierta, tuvoPrueba } from "@/lib/prueba";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +19,12 @@ export async function GET(req: Request) {
   const on = tarjetaObligatoria() && mpReady();
   if (!on || s.user.workspace === "main") return NextResponse.json({ activa: false });
   const ws = s.user.workspace;
-  const [paid, abierta, tuvo, rate] = await Promise.all([hasPaid(ws), pruebaAbierta(ws), tuvoPrueba(ws), usdClpRate().catch(() => 950)]);
+  const [paid, abierta, tuvo, dado, rate] = await Promise.all([hasPaid(ws), pruebaAbierta(ws), tuvoPrueba(ws), regaloDado(ws), usdClpRate().catch(() => 950)]);
   const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
   return NextResponse.json({
     activa: true, dias: PRUEBA_DIAS, plan: plan.name, clp: clpFor(plan.monthly, rate), usd: plan.monthly,
-    estado: paid ? "pagado" : abierta ? "en-prueba" : tuvo ? "usada" : "sin-tarjeta", cobro: abierta?.mp?.trial ?? null,
+    // the gift only loads with the card: no gift = no card yet (accounts from before the card trial keep their gift)
+    estado: paid ? "pagado" : !dado ? "sin-tarjeta" : abierta ? "en-prueba" : tuvo ? "usada" : "regalo-previo", cobro: abierta?.mp?.trial ?? null,
   });
 }
 
@@ -46,6 +47,16 @@ export async function POST(req: Request) {
     const abierta = await pruebaAbierta(ws);
     if (abierta && (await activarPrueba(abierta)) === "ok") return NextResponse.json({ error: "Tu prueba ya está activa." }, { status: 409 });
     if (!abierta && (await tuvoPrueba(ws))) return NextResponse.json({ error: "Ya usaste tu prueba gratis. Elige un plan para seguir.", planes: true }, { status: 409 });
+    // the card typed inside Creads (Mercado Pago's secure fields): authorized here, no leaving the page
+    if (typeof b?.card_token === "string" && /^[\w-]{16,64}$/.test(b.card_token)) {
+      if (abierta) await import("@/lib/prueba").then((m) => m.cancelarPrueba(abierta)).catch(() => null);
+      const estado = await empezarPruebaConTarjeta({ ws, email: s.user.email }, b.card_token, visitorFrom(req)).catch((e) => {
+        console.error("prueba tarjeta", e instanceof Error ? e.message : e);
+        return "error" as const;
+      });
+      if (estado === "ok") return NextResponse.json({ estado });
+      return NextResponse.json({ error: estado === "error" ? "Mercado Pago no aceptó esa tarjeta. Revisa los datos o prueba con otra." : "Mercado Pago está revisando tu tarjeta: espera unos segundos y recarga." }, { status: estado === "error" ? 402 : 202 });
+    }
     const r = await empezarPrueba({ ws, email: s.user.email }, visitorFrom(req));
     return NextResponse.json({ redirect: r.url });
   } catch (err) {

@@ -12,10 +12,7 @@ import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
 import { SHOWN_PLANS, clpFor } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
-import { PRUEBA_DIAS, hasPaid, tarjetaObligatoria } from "@/lib/regalo";
-import { sbRest } from "@/lib/supabase";
-
-const regaloDado = async (ws: string) => (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(`regalo:${ws}`)}&select=id&limit=1`).catch(() => [])).length > 0;
+import { PRUEBA_DIAS, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;

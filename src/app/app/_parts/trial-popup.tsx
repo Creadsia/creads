@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import TarjetaMP from "../../tarjeta-mp";
 
-// «Agrega tu tarjeta» for accounts that haven't added their card for the free trial, at the moment it matters:
-// after Automático shows their scripts, or when something needs credits (owner, 25 Oct 2026).
-// The terms are said plainly: nothing charged today, the date and amount of the first charge, how to cancel.
+// «Tarjeta para registrarse» (owner, 25 Oct 2026: «igual que ChatGPT o Higgsfield»): a new account can't use the
+// studio until it adds its card for the free trial. Full screen, no close; only «Ver planes» (to pay a plan
+// directly) and «Salir». The terms are said plainly: nothing today, the date and amount of the first charge.
 
 interface Info { activa: boolean; dias?: number; plan?: string; clp?: number; estado?: string }
 const enDias = (d: number) => new Date(Date.now() + d * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
@@ -13,35 +14,24 @@ const enDias = (d: number) => new Date(Date.now() + d * 86400_000).toLocaleDateS
 export default function TrialPopup() {
   const path = usePathname() ?? "";
   const [info, setInfo] = useState<Info | null>(null);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const btn = useRef<HTMLButtonElement>(null);
 
-  const [motivo, setMotivo] = useState<"guion" | "credito">("guion");
   useEffect(() => {
-    fetch("/api/prueba").then((r) => r.json()).then((d: Info) => setInfo(d)).catch(() => null);
+    let alive = true;
+    const vuelta = new URLSearchParams(window.location.search).get("prueba");
+    // back from Mercado Pago: the card can take a few seconds to show as accepted
+    const load = (n: number) => fetch("/api/prueba").then((r) => r.json()).then((d: Info) => {
+      if (!alive) return;
+      if (vuelta && d?.estado === "sin-tarjeta" && n < 8) return void setTimeout(() => load(n + 1), 3000);
+      setInfo(d);
+    }).catch(() => null);
+    load(0);
+    const ok = () => load(8);
+    window.addEventListener("creads:prueba-ok", ok);
+    return () => { alive = false; window.removeEventListener("creads:prueba-ok", ok); };
   }, []);
-  // it opens at the moment it makes sense (owner, 25 Oct 2026): when Automático has shown the customer's
-  // scripts and the video comes next, or when something needs credits; never just for entering
-  useEffect(() => {
-    const ok = () => info?.activa && info.estado === "sin-tarjeta";
-    const guion = () => { if (ok()) { setMotivo("guion"); setOpen(true); } };
-    const credito = () => { if (ok()) { setMotivo("credito"); setOpen(true); } };
-    window.addEventListener("creads:prueba", guion);
-    window.addEventListener("creads:sin-creditos", credito);
-    return () => { window.removeEventListener("creads:prueba", guion); window.removeEventListener("creads:sin-creditos", credito); };
-  }, [info]);
-  useEffect(() => { if (path.startsWith("/app/planes")) setOpen(false); }, [path]);
-  useEffect(() => {
-    if (!open) return;
-    btn.current?.focus();
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") later(); };
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function later() { setOpen(false); }
   async function agregar() {
     setBusy(true); setErr("");
     const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => null);
@@ -51,36 +41,41 @@ export default function TrialPopup() {
     if (d.planes) window.location.href = "/app/planes";
     else setErr(d.error || "No se pudo abrir Mercado Pago. Intenta de nuevo.");
   }
+  async function salir() {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    window.location.href = "/";
+  }
 
-  if (!open || !info) return null;
+  if (!info?.activa || info.estado !== "sin-tarjeta" || path.startsWith("/app/planes")) return null;
   const dias = info.dias ?? 7;
   return (
-    <div className="fixed inset-0 z-[85] flex items-end justify-center sm:items-center sm:p-4 print:hidden" role="dialog" aria-modal="true" aria-labelledby="trial-t">
-      <button type="button" aria-label="Cerrar" onClick={later} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-      <div className="relative w-full overflow-hidden rounded-t-3xl border border-line bg-surface pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl sm:max-w-md sm:rounded-3xl sm:pb-0">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 backdrop-blur-sm sm:items-center sm:p-4 print:hidden" role="dialog" aria-modal="true" aria-labelledby="trial-t">
+      <div className="relative max-h-[100dvh] w-full overflow-y-auto rounded-t-3xl border border-line bg-surface pb-[max(16px,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[92dvh] sm:max-w-md sm:rounded-3xl sm:pb-0">
         <span aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-48 w-72 -translate-x-1/2 rounded-full opacity-50 blur-[70px]" style={{ background: "var(--grad)" }} />
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--grad)" }} />
-        <span aria-hidden="true" className="mx-auto mt-2.5 block h-1 w-10 rounded-full bg-line sm:hidden" />
-        <div className="relative flex flex-col gap-4 px-5 pt-4 pb-3 sm:px-6 sm:pt-6">
-          <div className="flex items-start justify-between gap-3">
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(255,43,214,0.8)]" aria-hidden="true">🎁</span>
-            <button type="button" onClick={later} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink">✕</button>
-          </div>
+        <div className="relative flex flex-col gap-4 px-5 pt-6 pb-3 sm:px-6">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(255,43,214,0.8)]" aria-hidden="true">🎁</span>
           <div className="flex flex-col gap-1.5">
-            <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">{motivo === "guion" ? "Tu guion está listo. Ahora, tu video" : `Activa tu prueba gratis de ${dias} días`}</h2>
-            <p className="text-[15px] leading-snug text-muted">{motivo === "guion" ? <>Activa tu prueba gratis de {dias} días y usa tus <b className="text-ink">200 créditos de regalo</b> para grabarlo con una persona, voz y edición.</> : <>Agrega tu tarjeta y te cargamos <b className="text-ink">200 créditos de regalo</b> al tiro para hacer tu primer anuncio.</>}</p>
+            <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">Último paso: activa tu prueba gratis de {dias} días</h2>
+            <p className="text-[15px] leading-snug text-muted">Agrega tu tarjeta en Mercado Pago y entras al tiro con <b className="text-ink">200 créditos de regalo</b> para tu primer anuncio.</p>
           </div>
           <ul className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-3.5 text-sm">
-            <li>✓ <b>Hoy no se cobra nada.</b></li>
-            <li>✓ Si te gusta, el <b>{enDias(dias)}</b> sigue el plan {info.plan}: <b>${info.clp?.toLocaleString("es-CL")} al mes</b>.</li>
-            <li>✓ Si no, cancelas antes en Planes con un clic y no pagas nada.</li>
+            <li className="flex justify-between gap-3"><span>Hoy</span><b>$0</b></li>
+            <li className="flex justify-between gap-3"><span>Créditos de regalo</span><b>200</b></li>
+            <li className="flex justify-between gap-3"><span>Desde el {enDias(dias)} · Plan {info.plan}</span><b>${info.clp?.toLocaleString("es-CL")}/mes</b></li>
+            <li className="text-muted">Cancelas cuando quieras en Planes, antes del cobro, con un clic.</li>
           </ul>
-          <button ref={btn} type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)] disabled:opacity-60">
-            {busy ? "Abriendo Mercado Pago…" : motivo === "guion" ? "Hacer mi video gratis" : "Agregar tarjeta y empezar gratis"}
-          </button>
+          <TarjetaMP monto={info.clp ?? 1} onListo={() => { window.location.href = "/app/automatico?bienvenida=1"; }} fallback={
+            <button type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)] disabled:opacity-60">
+              {busy ? "Abriendo Mercado Pago…" : "Agregar tarjeta · hoy $0"}
+            </button>
+          } />
           {err && <p className="text-sm text-bad" role="alert">{err}</p>}
           <p className="text-center text-xs text-muted">Pagas seguro con Mercado Pago: Creads nunca ve tu tarjeta.</p>
-          <button type="button" onClick={later} className="py-1 text-sm font-semibold text-muted hover:text-ink">Ahora no</button>
+          <div className="flex justify-center gap-4 pb-1 text-sm font-semibold text-muted">
+            <a href="/app/planes" className="hover:text-ink">Prefiero elegir un plan</a>
+            <button type="button" onClick={salir} className="hover:text-ink">Salir</button>
+          </div>
         </div>
       </div>
     </div>

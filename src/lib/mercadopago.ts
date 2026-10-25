@@ -68,6 +68,25 @@ export async function createSubscription(o: { orderId: string; title: string; fi
   return { id: r.id, url: testMode() && r.sandbox_init_point ? r.sandbox_init_point : r.init_point };
 }
 
+/**
+ * The same monthly subscription, but with the card the customer typed inside Creads (Mercado Pago's own secure
+ * card fields give us a one-time token; we never see the card). Authorized right away; the first charge on startDate.
+ */
+export async function createSubscriptionWithCard(o: { orderId: string; title: string; clp: number; email: string; cardToken: string; startDate: string }) {
+  return mp<{ id: string; status: string }>("/preapproval", {
+    method: "POST",
+    body: JSON.stringify({
+      reason: o.title,
+      external_reference: o.orderId,
+      payer_email: o.email,
+      card_token_id: o.cardToken,
+      auto_recurring: { frequency: 1, frequency_type: "months", start_date: o.startDate, transaction_amount: o.clp, currency_id: "CLP" },
+      back_url: `${SITE}/app/automatico`,
+      status: "authorized",
+    }),
+  });
+}
+
 export interface MpPayment { id: number; status: string; transaction_amount: number; currency_id: string; fee_details?: { amount: number; type?: string }[]; transaction_details?: { net_received_amount?: number }; external_reference?: string | null; metadata?: Record<string, unknown>; payer?: { email?: string } }
 export const getPayment = (id: string) => mp<MpPayment>(`/v1/payments/${encodeURIComponent(id)}`);
 

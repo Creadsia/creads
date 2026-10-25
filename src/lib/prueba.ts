@@ -1,6 +1,6 @@
 import { type Order, addOrder, cancelOrder, ordersOf, setOrderMp, workspaceRow } from "./billing";
 import { PLANS, clpFor, quote } from "./catalog";
-import { cancelSubscription, createSubscription, getPreapproval, SITE } from "./mercadopago";
+import { cancelSubscription, createSubscription, createSubscriptionWithCard, getPreapproval, SITE } from "./mercadopago";
 import { PRUEBA_DIAS, darRegalo, hasPaid } from "./regalo";
 import { sendMeta, type Visitor } from "./meta";
 import { phoneAlert } from "./phone-alert";
@@ -49,6 +49,21 @@ export async function empezarPrueba(u: { ws: string; email: string }, visitor?: 
   });
   await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp: clp, trial: start.toISOString().slice(0, 10) });
   return { url: sub.url, order: order.id, clp, cobro: start.toISOString().slice(0, 10) };
+}
+
+/** The trial with the card typed inside Creads: authorized at once, the gift loads right away. */
+export async function empezarPruebaConTarjeta(u: { ws: string; email: string }, cardToken: string, visitor?: Visitor) {
+  const w = await workspaceRow(u.ws);
+  const rate = await usdClpRate().catch(() => 950);
+  const q = quote(PRUEBA_PLAN, "mensual", { firstPurchase: false })!;
+  const order = await addOrder({ ws: u.ws, wsName: w.name, email: u.email, item: q.item, period: q.period, method: "mercadopago", quote: q, visitor });
+  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
+  const clp = clpFor(plan.monthly, rate);
+  const start = fechaCobro();
+  const sub = await createSubscriptionWithCard({ orderId: order.id, title: `Creads IA · Plan ${plan.name} (prueba gratis ${PRUEBA_DIAS} días)`, clp, email: u.email, cardToken, startDate: start.toISOString() });
+  await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp: clp, trial: start.toISOString().slice(0, 10) });
+  const o = await getOrder(order.id);
+  return o ? activarPrueba(o) : "pendiente";
 }
 
 /** The card was accepted (subscription authorized): load the gift, once. Safe to call many times. */
