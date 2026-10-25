@@ -51,54 +51,43 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
 }
 
 type Item = { href: string; label: string; icon: string; owner?: boolean; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
-// The menu follows how a campaign is made: spy what works → write the script → make the ad (its
-// formats include animated stories). The brand is set up once; standalone AI tools come last.
+// The menu (owner's brief, 25 Oct 2026): Inicio · Crear (Imágenes, Video de producto, Video con avatar) · Editor ·
+// Mis anuncios · Marcas · Ideas · Saldo y plan · Ayuda. Everything else lives under «Más herramientas».
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   {
-    group: "Haz tu anuncio",
+    group: "Crear",
     items: [
-      { href: "/app/tanda", label: "Tanda desde tu link", icon: I.image, badge: "Nuevo" },
-      { href: "/app/ideas", label: "Galería de ideas", icon: I.lib },
-      { href: "/app/automatico", label: "Automático (conversando)", icon: I.spark },
-      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true, optional: true },
-      { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
-      { href: "/app/crear?paso=voz", label: "Grabar la voz", icon: I.mic, step: 3 },
-      { href: "/app/crear", label: "Escenas, video y edición", icon: I.create, step: 4 },
+      { href: "/app/tanda", label: "Imágenes", icon: I.image },
+      { href: "/app/video-producto", label: "Video de producto", icon: I.film },
+      { href: "/app/automatico", label: "Video con avatar", icon: I.spark },
     ],
   },
   {
-    group: "Tu marca",
-    hint: "Se configura una vez",
     items: [
-      { href: "/app/marca", label: "Kit de marca", icon: I.box },
-      { href: "/app/voces", label: "Voces", icon: I.mic, step: 1 },
-      { href: "/app/avatares", label: "Avatares", icon: I.user, step: 2 },
-      { href: "/app/productos", label: "Productos", icon: I.box, step: 3, optional: true },
+      { href: "/app/editor", label: "Editor", icon: I.create },
+      { href: "/app/biblioteca", label: "Mis anuncios", icon: I.lib },
+      { href: "/app/marca", label: "Marcas", icon: I.box },
+      { href: "/app/ideas", label: "Ideas", icon: I.pen },
+      { href: "/app/planes", label: "Saldo y plan", icon: I.card },
+      { href: "/app/ayuda", label: "Ayuda", icon: I.help },
     ],
   },
   {
-    group: "Biblioteca",
+    group: "Más herramientas",
+    more: true,
     items: [
       { href: "/app/videos", label: "En producción", icon: I.film },
-      { href: "/app/biblioteca", label: "Anuncios terminados", icon: I.lib },
-      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true, owner: true },
-    ],
-  },
-  {
-    group: "Herramientas",
-    items: [
-      { href: "/app/prompts", label: "Generador de prompts", icon: I.pen },
       { href: "/app/hooks", label: "Hooks por rubro", icon: I.lib },
-    ],
-  },
-  // Herramientas IA, Recrear video, Influencer IA and Historias are hidden since 21 Oct 2026 (owner and Benjamín:
-  // Creads sells UGC ads and images); their pages stay in the code and open only by their address.
-  {
-    group: "Imágenes",
-    items: [
-      { href: "/app/laboratorio", label: "Imágenes para anuncios", icon: I.image, full: true },
-      { href: "/app/video-producto", label: "Video de producto", icon: I.film, badge: "Nuevo" },
+      { href: "/app/crear", label: "Video paso a paso", icon: I.create },
+      { href: "/app/guiones", label: "Guiones", icon: I.pen },
+      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, full: true },
+      { href: "/app/laboratorio", label: "Imagen suelta", icon: I.image, full: true },
+      { href: "/app/voces", label: "Voces", icon: I.mic },
+      { href: "/app/avatares", label: "Avatares", icon: I.user },
+      { href: "/app/productos", label: "Productos", icon: I.box },
+      { href: "/app/prompts", label: "Generador de prompts", icon: I.pen },
+      { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true, owner: true },
     ],
   },
 ];
@@ -127,7 +116,7 @@ function BackButton({ path }: { path: string }) {
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
 function navFor(user: ShellUser) {
-  const account: Item[] = [{ href: "/app/planes", label: "Planes", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }, { href: "/app/ayuda", label: "Centro de ayuda", icon: I.help }];
+  const account: Item[] = [{ href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
   // giving access is the owner's alone
   if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
@@ -180,13 +169,11 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
  * Phones (owner, 24 Oct 2026: almost every customer arrives on a phone): an app-style tab bar with the four
  * places people use most and «Más» for the full menu.
  */
-function MobileTabs({ path, user, onMore, moreOpen }: { path: string; user: ShellUser; onMore: () => void; moreOpen: boolean }) {
+function MobileTabs({ path, onMore, moreOpen }: { path: string; onMore: () => void; moreOpen: boolean }) {
   const tabs = [
     { href: "/app", label: "Inicio", icon: I.home, on: path === "/app" },
-    { href: "/app/automatico", label: "Automático", icon: I.spark, on: path.startsWith("/app/automatico") },
-    user.access === "full"
-      ? { href: "/app/laboratorio", label: "Imágenes", icon: I.image, on: path.startsWith("/app/laboratorio") }
-      : { href: "/app/crear", label: "Crear", icon: I.create, on: path.startsWith("/app/crear") },
+    { href: "/app/tanda", label: "Crear", icon: I.create, on: ["/app/tanda", "/app/video-producto", "/app/automatico", "/app/crear", "/app/laboratorio"].some((p) => path.startsWith(p)) },
+    { href: "/app/editor", label: "Editor", icon: I.film, on: path.startsWith("/app/editor") },
     { href: "/app/biblioteca", label: "Mis anuncios", icon: I.lib, on: path.startsWith("/app/biblioteca") || path.startsWith("/app/videos") },
   ];
   return (
@@ -328,7 +315,7 @@ export default function Shell({ children, user }: { children: React.ReactNode; u
           <AccountMenu user={user} />
         </div>
       </header>
-      <MobileTabs path={path} user={user} onMore={() => setOpen(true)} moreOpen={open} />
+      <MobileTabs path={path} onMore={() => setOpen(true)} moreOpen={open} />
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <button type="button" aria-label="Cerrar menú" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/40" />

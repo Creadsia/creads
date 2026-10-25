@@ -4,112 +4,120 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHead, SetupNotice, cardCls } from "./ui";
 import { useCredits } from "./use-credits";
-import { adsOf, fmtCredits, fmtSaldo, fmtSeconds, secondsOf } from "@/lib/credit-math";
 
-type Counts = Record<"avatars" | "products" | "scripts" | "ads" | "images", number | null>;
-interface ClipRow { id: string; kind: string | null; model: string | null; url: string | null; status: string; created_at: string; prompt?: string | null }
+// Inicio (owner's brief, 25 Oct 2026 — «interfaz interna ordenada»): what the balance still makes, in pieces;
+// one big «Crear nueva tanda»; the three ways to create; what's being made and the latest ads; and ONE
+// suggested next step. A 3-step welcome guide replaces all that on the first visit (no ads yet).
 
-const DAY = 86_400_000;
-const dayKey = (d: Date) => d.toISOString().slice(0, 10);
-const WEEKDAY = ["D", "L", "M", "M", "J", "V", "S"];
-const kindLabel = (k: string | null) => (k === "gen:image" ? "Imagen" : k?.startsWith("tool:") ? "Herramienta" : k === "gen:video" ? "Video" : "Corte de anuncio");
+interface ClipRow { id: string; kind: string | null; url: string | null; status: string; created_at: string }
+interface AdRow { id: string; title: string | null; format: string | null; status: string }
+
 const isVideo = (u: string | null) => Boolean(u && /\.(mp4|webm|mov)(\?|$)/i.test(u));
+/** Credits each piece uses (the same numbers as the plans page). */
+const PIEZA = { imagen: 10, producto: 30, avatar: 120 } as const;
 
-interface Step { n: number; title: string; text: string; href: string; cta: string; done: boolean; optional?: boolean }
+const CREAR = [
+  { href: "/app/tanda", title: "Imágenes", text: "10 anuncios desde el link de tu producto, en 4:5, 9:16 y cuadrado.", ico: "🖼️" },
+  { href: "/app/video-producto", title: "Video de producto", text: "Tu producto en movimiento, 6 segundos, sin grabar.", ico: "🎬" },
+  { href: "/app/automatico", title: "Video con avatar", text: "Una persona que habla de tu producto, con voz y subtítulos.", ico: "🗣️" },
+] as const;
 
 export default function Home({ full = true }: { full?: boolean }) {
-  const [c, setC] = useState<Counts | null>(null);
-  const [voices, setVoices] = useState<number | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [working, setWorking] = useState<{ id: string; title: string | null; format: string | null; status: string }[]>([]);
+  const [ads, setAds] = useState<AdRow[] | null>(null);
   const [clips, setClips] = useState<ClipRow[] | null>(null);
+  const [tandas, setTandas] = useState<number | null>(null);
+  const [marca, setMarca] = useState<boolean | null>(null);
+  const [missing, setMissing] = useState(false);
   const { info } = useCredits();
 
   useEffect(() => {
-    const tables = ["avatars", "products", "scripts", "ads", "images"] as const;
-    Promise.all(tables.map((t) => fetch(`/api/data/${t}?count=1`).then(async (r) => ({ t, ok: r.ok, d: await r.json().catch(() => ({})) })).catch(() => ({ t, ok: false, d: {} as Record<string, unknown> }))))
-      .then((all) => {
-        if (all.some((x) => !x.ok)) setMissing(true);
-        setC(Object.fromEntries(all.map((x) => [x.t, x.ok ? Number(x.d.count ?? 0) : null])) as Counts);
-      });
-    // ads still being made: a way back to them right from the start page
-    fetch("/api/data/ads").then((r) => (r.ok ? r.json() : null)).then((d) => setWorking(((d?.rows ?? []) as { id: string; title: string | null; format: string | null; status: string }[]).filter((a) => a.status !== "done" && a.status !== "draft").slice(0, 3))).catch(() => {});
-    fetch("/api/data/clips").then((r) => (r.ok ? r.json() : null)).then((d) => setClips(((d?.rows ?? []) as ClipRow[]))).catch(() => {});
-    fetch("/api/voices").then((r) => (r.ok ? r.json() : null)).then((d) => setVoices(d ? (d.voices ?? []).filter((v: { category?: string }) => v.category === "cloned").length : 0)).catch(() => setVoices(0));
+    fetch("/api/data/ads").then((r) => { if (!r.ok) setMissing(true); return r.ok ? r.json() : null; }).then((d) => setAds((d?.rows ?? []) as AdRow[])).catch(() => setAds([]));
+    fetch("/api/data/clips").then((r) => (r.ok ? r.json() : null)).then((d) => setClips((d?.rows ?? []) as ClipRow[])).catch(() => setClips([]));
+    fetch("/api/tanda").then((r) => (r.ok ? r.json() : null)).then((d) => setTandas(Array.isArray(d?.tandas) ? d.tandas.length : 0)).catch(() => setTandas(0));
+    fetch("/api/marca").then((r) => (r.ok ? r.json() : null)).then((d) => setMarca(Boolean(d?.marca?.nombre?.trim()))).catch(() => setMarca(false));
   }, []);
 
-  // The order a new customer works in: brand first (once), then script → ad.
-  const steps: Step[] = !c ? [] : [
-    { n: 1, title: "Crea tu voz", text: "Graba o sube unos minutos de audio y la IA clona tu voz. Si prefieres, usa una voz de la biblioteca.", href: "/app/voces", cta: "Crear voz", done: (voices ?? 0) > 0, optional: true },
-    { n: 2, title: "Crea tu avatar", text: "Una foto de la cara de quien habla, con su voz. Se hace una vez y sirve para todos tus anuncios.", href: "/app/avatares", cta: "Crear avatar", done: (c.avatars ?? 0) > 0 },
-    { n: 3, title: "Agrega tu producto", text: "Si vendes algo físico, sube su foto para que aparezca en los videos.", href: "/app/productos", cta: "Agregar producto", done: (c.products ?? 0) > 0, optional: true },
-    { n: 4, title: "Crea tu guion", text: "Busca un anuncio que esté funcionando en tu nicho (en «Espiar anuncios»), pégalo y mejóralo con la IA: hooks, ángulos y cada línea.", href: "/app/guiones", cta: "Crear guion", done: (c.scripts ?? 0) > 0 || (c.ads ?? 0) > 0 },
-    { n: 5, title: "Crea tu anuncio", text: "Pega el guion, elige tu avatar y genera. Creads revisa cada corte y lo arma con voz y subtítulos.", href: "/app/crear", cta: "Crear anuncio", done: (c.ads ?? 0) > 0 },
-  ];
-  const required = steps.filter((x) => !x.optional);
-  const starting = steps.length > 0 && required.some((x) => !x.done);
-  const doneCount = steps.filter((x) => x.done).length;
-  const nextStep = steps.find((x) => !x.done && !x.optional) ?? null;
+  const loaded = ads !== null && clips !== null && tandas !== null;
+  const done = (clips ?? []).filter((x) => x.status === "done" && x.url);
+  const working = (ads ?? []).filter((a) => a.status !== "done" && a.status !== "draft").slice(0, 3);
+  const firstTime = loaded && (tandas ?? 0) === 0 && done.length === 0 && (ads ?? []).length === 0;
 
+  const balance = info?.unlimited ? null : info?.balance ?? null;
+  const piezas = balance == null ? null : { imagen: Math.floor(balance / PIEZA.imagen), producto: Math.floor(balance / PIEZA.producto), avatar: Math.floor(balance / PIEZA.avatar) };
+  const until = info?.paidUntil ? new Date(info.paidUntil).toLocaleDateString("es-CL", { day: "numeric", month: "long" }) : null;
+
+  // one suggestion, the most useful next thing for this account
+  const siguiente = !loaded ? null
+    : marca === false ? { title: "Arma tu kit de marca", text: "Logo, colores y tono una sola vez: todo lo que crees sale con tu marca.", href: "/app/marca", cta: "Armar mi kit" }
+    : (tandas ?? 0) === 0 ? { title: "Haz tu primera tanda", text: "Pega el link de tu producto y en minutos tienes 10 anuncios para testear.", href: "/app/tanda", cta: "Crear tanda" }
+    : !done.some((x) => isVideo(x.url)) ? { title: "Suma un video de producto", text: "Los videos cortos del producto en movimiento suelen ganarle a la imagen fija en reels.", href: "/app/video-producto", cta: "Hacer un video" }
+    : { title: "Multiplica tu ganador", text: "Marca el anuncio que mejor te funcionó y pide 10 variaciones con hooks nuevos.", href: "/app/tanda", cta: "Ver mis tandas" };
 
   return (
     <>
-      <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Empieza por tu primera tanda: pega el link de tu producto y en minutos tienes 10 anuncios para testear en Meta." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
+      <PageHead title={firstTime ? "Bienvenido a Creads" : "Inicio"} lead={firstTime ? "Tres pasos y tienes tus primeros anuncios listos para Meta." : "Crea, revisa lo que está en producción y descarga lo terminado."} />
       {missing && <SetupNotice />}
-      {/* «Primera tanda» (25 Oct 2026): the fastest way to many ads to test */}
-      <form action="/app/tanda" method="get" className="flex flex-col gap-3 rounded-2xl border-2 border-transparent p-4 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:p-5">
-        <label htmlFor="tanda-url" className="font-display text-xl font-semibold">Pega el link de tu producto</label>
-        <p className="text-sm text-muted">Creads lee tu página, te propone 6 ángulos de venta y crea 10 anuncios en 4:5 y 9:16, listos para subir a Meta.</p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input id="tanda-url" name="url" type="url" required placeholder="https://tutienda.com/producto" className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-3 text-base text-ink" />
-          <button type="submit" className="rounded-xl bg-[image:var(--grad)] px-5 py-3 text-[15px] font-semibold text-white">Crear mi tanda</button>
-        </div>
-      </form>
-      {/* the two ways to make an ad, first thing on the page */}
-      <section aria-label="Crea tu anuncio" className="grid gap-3 md:grid-cols-2">
-        <Link href="/app/automatico" className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] transition-transform hover:-translate-y-0.5">
-          <span className="flex items-center justify-between gap-2">
-            <b className="font-display text-2xl font-semibold">Automático</b>
-            <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold">Video UGC</span>
-          </span>
-          <p className="text-[15px] text-muted">Conversas con Creads: te pregunta lo necesario, escribe el guion, crea a la persona en tu negocio, hace el video, lo revisa palabra por palabra y te lo entrega listo.</p>
-          <ol className="hidden flex-wrap gap-1.5 text-xs font-semibold sm:flex">
-            {["Preguntas", "Guion", "Persona", "Video", "Revisión", "Listo"].map((x, i) => <li key={x} className="rounded-full bg-surface-2 px-2.5 py-1">{i + 1}. {x}</li>)}
+
+      {firstTime ? (
+        <section className={cardCls} aria-labelledby="bienvenida" data-tour="primeros-pasos">
+          <h2 id="bienvenida" className="font-display text-lg font-bold">Así funciona</h2>
+          <ol className="grid gap-3 md:grid-cols-3">
+            {[
+              ["Pega el link de tu producto", "Creads lee qué vendes, a quién y la foto del producto. Si no tienes página, lo describes en dos frases."],
+              ["Elige tus ángulos", "Te propone ángulos de venta con sus hooks. Marcas los que quieres testear. No gasta saldo."],
+              ["Descarga o edita", "Recibes tus anuncios en 4:5, 9:16 y cuadrado, en un ZIP y con el archivo para importarlos en Meta."],
+            ].map(([t, x], i) => (
+              <li key={t} className="flex flex-col gap-1.5 rounded-xl border border-line p-4">
+                <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-full bg-[image:var(--grad)] text-sm font-bold text-white">{i + 1}</span>
+                <b className="text-[15px]">{t}</b>
+                <span className="text-sm text-muted">{x}</span>
+              </li>
+            ))}
           </ol>
-          <span className="mt-auto w-full rounded-xl bg-[image:var(--grad)] px-4 py-3 text-center text-[15px] font-semibold text-white sm:w-fit sm:py-2.5 sm:text-sm">Hacer mi anuncio conversando</span>
-        </Link>
-        <Link href="/app/crear" className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted sm:p-5">
-          <span className="flex items-center justify-between gap-2 sm:block">
-            <b className="font-display text-xl font-semibold sm:text-2xl">Manual</b>
-            <span aria-hidden="true" className="text-muted sm:hidden">Paso a paso ›</span>
-          </span>
-          <p className="hidden text-[15px] text-muted sm:block">Tú controlas cada paso: espiar, guion, voz, escenas, videos, correcciones y edición. Para quien quiere decidir cada detalle.</p>
-          <ol className="hidden flex-wrap gap-1.5 text-xs font-semibold text-muted sm:flex">
-            {["Espiar", "Guion", "Voz", "Escenas", "Videos", "Edición"].map((x, i) => <li key={x} className="rounded-full border border-line px-2.5 py-1">{i + 1}. {x}</li>)}
-          </ol>
-          <span className="mt-auto hidden w-fit rounded-xl border border-line px-4 py-2.5 text-sm font-semibold sm:inline">Hacerlo paso a paso →</span>
-        </Link>
-      </section>
-      {/* phones: the shortcuts people use most, as app tiles */}
-      <nav aria-label="Atajos" className="grid grid-cols-4 gap-2 sm:hidden">
-        {[["/app/laboratorio", "🖼️", "Imágenes"], ["/app/avatares", "🧑", "Avatares"], ["/app/spy", "🔎", "Espiar"], ["/app/guiones", "✍️", "Guiones"]].map(([href, ico, label]) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-1 rounded-2xl border border-line bg-surface px-1 py-3 text-xs font-semibold active:scale-[0.98]">
-            <span aria-hidden="true" className="text-xl">{ico}</span>{label}
+          <Link href="/app/tanda" className="w-full rounded-xl bg-[image:var(--grad)] px-5 py-3.5 text-center text-base font-semibold text-white sm:w-fit">Empezar mi primera tanda</Link>
+        </section>
+      ) : (
+        <>
+          {/* balance, in pieces */}
+          <section aria-label="Tu saldo" className="rounded-2xl bg-[image:var(--grad)] p-[1px]">
+            <div className="flex flex-col gap-4 rounded-[15px] bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm text-muted">Te quedan{info?.plan ? ` · Plan ${info.plan}` : ""}</span>
+                {info?.unlimited ? <b className="font-display text-2xl font-bold">Sin límite</b> : piezas ? (
+                  <b className="font-display text-xl leading-snug font-bold sm:text-2xl">{piezas.imagen} imágenes <span className="text-muted">o</span> {piezas.producto} videos de producto <span className="text-muted">o</span> {piezas.avatar} videos con avatar</b>
+                ) : <b className="font-display text-2xl">—</b>}
+                {until && !info?.unlimited && <span className="text-[13px] text-muted">Tu plan se renueva el {until}. {balance} créditos.</span>}
+              </div>
+              <Link href="/app/planes" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-line px-4 font-semibold hover:bg-surface-2">Saldo y plan</Link>
+            </div>
+          </section>
+
+          <Link href="/app/tanda" className="flex min-h-14 items-center justify-center rounded-2xl bg-[image:var(--grad)] px-5 py-4 text-center font-display text-lg font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">Crear nueva tanda</Link>
+        </>
+      )}
+
+      {/* the three ways to create */}
+      <nav aria-label="Crear" className="grid gap-3 sm:grid-cols-3">
+        {CREAR.filter((c) => full || c.href !== "/app/tanda").map((c) => (
+          <Link key={c.href} href={c.href} className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted">
+            <span aria-hidden="true" className="text-2xl">{c.ico}</span>
+            <span className="flex flex-col gap-0.5"><b>{c.title}</b><span className="text-sm text-muted">{c.text}</span></span>
           </Link>
         ))}
       </nav>
+
       {working.length > 0 && (
-        <section aria-label="Anuncios en producción" className="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
+        <section aria-label="En producción" className="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <b className="text-sm">{working.length === 1 ? "Tienes un anuncio en producción" : `Tienes ${working.length} anuncios en producción`}</b>
-            <Link href="/app/videos" className="text-sm font-semibold text-accent-text underline">Ver todos</Link>
+            <Link href="/app/videos" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline">Ver todos</Link>
           </div>
           <ul className="flex flex-col gap-1.5">
             {working.map((a) => (
               <li key={a.id}>
-                <Link href={a.format === "historia" ? `/app/historias?id=${a.id}` : `/app/videos/${a.id}`} className="flex items-center justify-between gap-3 rounded-xl bg-surface px-3 py-2.5 text-sm hover:bg-surface-2">
+                <Link href={a.format === "historia" ? `/app/historias?id=${a.id}` : `/app/videos/${a.id}`} className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-surface px-3 py-2.5 text-sm hover:bg-surface-2">
                   <span className="min-w-0 truncate font-semibold">{a.title || "Anuncio sin título"}</span>
-                  <span className="shrink-0 text-xs font-semibold text-accent-text">{a.status === "failed" ? "Tiene cortes con error · " : a.status === "review" ? "Listo para revisar · " : "Generando · "}Volver →</span>
+                  <span className="shrink-0 text-[13px] font-semibold text-accent-text">{a.status === "failed" ? "Tiene cortes con error" : a.status === "review" ? "Listo para revisar" : "Generando"}</span>
                 </Link>
               </li>
             ))}
@@ -117,149 +125,26 @@ export default function Home({ full = true }: { full?: boolean }) {
         </section>
       )}
 
-      {starting ? (
-        <section className={cardCls} aria-labelledby="pasos" data-tour="primeros-pasos">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="pasos" className="font-display text-lg font-bold">Primeros pasos</h2>
-            <span className="text-sm text-muted">{doneCount} de {steps.length} listos</span>
+      {siguiente && !firstTime && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="siguiente">
+          <div className="flex flex-col gap-1">
+            <span className="text-[13px] font-semibold text-accent-text">Siguiente paso sugerido</span>
+            <h2 id="siguiente" className="font-display text-lg font-bold">{siguiente.title}</h2>
+            <p className="text-sm text-muted">{siguiente.text}</p>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden="true">
-            <div className="h-full rounded-full bg-[image:var(--grad)] transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
-          </div>
-          <ol className="flex flex-col gap-2">
-            {steps.map((x) => {
-              const isNext = nextStep?.n === x.n;
-              return (
-                <li key={x.n} className={`flex flex-wrap items-center gap-3 rounded-xl border p-3 sm:flex-nowrap ${isNext ? "border-accent-text/50 bg-accent/5" : "border-line"}`}>
-                  <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${x.done ? "bg-good/15 text-good" : isNext ? "bg-[image:var(--grad)] text-white" : "bg-surface-2 text-muted"}`}>{x.done ? "✓" : x.n}</span>
-                  <span className="flex min-w-0 flex-1 basis-[calc(100%-3rem)] flex-col sm:basis-auto">
-                    <span className="flex flex-wrap items-center gap-2"><b className={`text-sm ${x.done ? "text-muted line-through" : ""}`}>{x.title}</b>{x.optional && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">Opcional</span>}</span>
-                    {!x.done && <span className="text-xs text-muted">{x.text}</span>}
-                    <span className="sr-only">{x.done ? "Listo" : "Pendiente"}</span>
-                  </span>
-                  {!x.done && <Link href={x.href} className={`ml-11 shrink-0 rounded-lg px-3 py-2 text-center text-sm font-semibold sm:ml-0 ${isNext ? "bg-accent text-accent-ink" : "border border-line text-muted hover:text-ink"}`}>{x.cta}</Link>}
-                </li>
-              );
-            })}
-          </ol>
-          {full && <p className="text-xs text-muted">¿Necesitas imágenes para tus anuncios? Créalas en <Link href="/app/laboratorio" className="font-semibold text-accent-text underline">Imágenes para anuncios</Link>.</p>}
-        </section>
-      ) : (
-        c && <Dashboard c={c} clips={clips} working={working.length} full={full} balance={info?.unlimited ? null : info?.balance ?? null} plan={info?.plan ?? null} paidUntil={info?.paidUntil ?? null} unlimited={!!info?.unlimited} rate={info?.rate} />
-      )}
-
-      {full && !starting && c && (
-        <section className={cardCls} aria-labelledby="quick">
-          <h2 id="quick" className="font-display text-lg font-bold">Imágenes para tus anuncios</h2>
-          <p className="text-sm text-muted">Con la misma idea de tu video, crea varias imágenes para el feed (4:5) con tu avatar o tu producto.</p>
-          <Link href="/app/laboratorio" className="w-fit rounded-full border border-line px-3 py-1.5 text-sm font-semibold hover:border-muted">Crear imágenes</Link>
+          <Link href={siguiente.href} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-ink px-4 font-semibold text-bg">{siguiente.cta}</Link>
         </section>
       )}
-    </>
-  );
-}
 
-/** The studio's start page once the account is set up: what you have, what you made this week, what's next. */
-function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimited, rate }: {
-  c: Counts; clips: ClipRow[] | null; working: number; full: boolean; balance: number | null; plan: string | null; paidUntil: string | null; unlimited: boolean; rate?: number;
-}) {
-  const now = new Date();
-  const days = Array.from({ length: 7 }, (_, i) => new Date(now.getTime() - (6 - i) * DAY));
-  const done = (clips ?? []).filter((x) => x.status === "done");
-  const perDay = days.map((d) => done.filter((x) => x.created_at.slice(0, 10) === dayKey(d)).length);
-  const week = perDay.reduce((a, b) => a + b, 0);
-  const top = Math.max(1, ...perDay);
-  const recent = done.filter((x) => x.url).slice(0, 6);
-  // what the balance still makes: a 30 s ad ≈ 46 credits economic, ≈ 154 with Veo Fast / Seedance
-  const secs = balance == null ? null : secondsOf(balance, rate);
-  const ads = secs == null ? null : { eco: adsOf(secs), rec: Math.floor(secs / 120) };
-  const until = paidUntil ? new Date(paidUntil).toLocaleDateString("es-CL", { day: "numeric", month: "long" }) : null;
-
-  const stats: [string, number | null, string][] = [
-    ["Anuncios", c.ads, "/app/biblioteca"],
-    ["En producción", working, "/app/videos"],
-    ["Guiones", c.scripts, "/app/guiones"],
-    ["Imágenes", c.images, "/app/biblioteca"],
-    ["Avatares", c.avatars, "/app/avatares"],
-  ];
-
-  return (
-    <>
-      <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
-        {/* credits */}
-        <section aria-label="Tus créditos" className="rounded-2xl bg-[image:var(--grad)] p-[1px]">
-          <div className="flex h-full flex-col justify-between gap-4 rounded-[15px] bg-surface p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm text-muted">Te quedan{plan ? ` · Plan ${plan}` : ""}</span>
-                <b className="font-display text-3xl font-bold tabular-nums">{unlimited ? "Sin límite" : balance == null ? "—" : fmtSaldo(balance)}</b>
-                {until && !unlimited && <span className="text-xs text-muted">Tu plan se renueva el {until}</span>}
-              </div>
-              <Link href="/app/planes" className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">Recargar</Link>
-            </div>
-            {ads && (
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.eco}</b><span className="block text-xs text-muted">anuncios de 30 s con avatar que habla</span></div>
-                <div className="rounded-xl bg-surface-2 p-3"><b className="font-display text-2xl tabular-nums">≈ {ads.rec}</b><span className="block text-xs text-muted">con Veo 3.1 (máxima calidad)</span></div>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* this week */}
-        <section aria-label="Tu semana" className="flex flex-col justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm text-muted">Esta semana</span>
-            <span className="text-sm"><b className="font-display text-2xl tabular-nums">{clips ? week : "—"}</b> {week === 1 ? "creación" : "creaciones"}</span>
-          </div>
-          <div className="flex h-24 items-end gap-2" role="img" aria-label={`Creaciones por día en los últimos 7 días: ${perDay.join(", ")}`}>
-            {perDay.map((n, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-[10px] tabular-nums text-muted">{n || ""}</span>
-                <span className="w-full rounded-t-md" style={{ height: `${Math.max(6, (n / top) * 64)}px`, background: i === 6 ? "var(--grad)" : n ? "var(--accent-text)" : "var(--surface-2)", opacity: i === 6 || !n ? 1 : 0.55 }} />
-                <span className="text-[10px] text-muted">{WEEKDAY[days[i].getDay()]}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-muted">{week === 0 ? "Tu primera creación de la semana está a un clic." : week >= 10 ? "¡Vas con todo! Prueba tus mejores ganchos en varias versiones." : "Cada versión nueva es otra oportunidad de encontrar el anuncio ganador."}</p>
-        </section>
-      </div>
-
-      {/* next ad */}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
-        <div className="flex max-w-xl flex-col gap-1">
-          <h2 className="font-display text-lg font-bold">Haz tu próximo anuncio</h2>
-          <p className="text-sm text-muted">Mira qué está funcionando en tu nicho, conviértelo en un guion mejor y créalo en el formato que quieras.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {full && <Link href="/app/spy" className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">1 · Espiar</Link>}
-          <Link href="/app/guiones" className="rounded-xl border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">{full ? "2" : "1"} · Crear guion</Link>
-          <Link href="/app/crear" className="rounded-xl bg-[image:var(--grad)] px-4 py-2.5 text-sm font-semibold text-white">{full ? "3" : "2"} · Crear anuncio</Link>
-        </div>
-      </section>
-
-      {/* numbers */}
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5" aria-label="Tu cuenta">
-        {stats.map(([label, n, href]) => (
-          <li key={label}>
-            <Link href={href} className="flex flex-col gap-0.5 rounded-xl border border-line bg-surface px-4 py-3 transition-colors hover:border-accent/60">
-              <b className="font-display text-2xl tabular-nums">{n == null ? "—" : n}</b>
-              <span className="text-sm text-muted">{label}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      {/* last made */}
-      {recent.length > 0 && (
+      {done.length > 0 && (
         <section aria-labelledby="recientes" className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 id="recientes" className="font-display text-lg font-bold">Lo último que hiciste</h2>
-            <Link href="/app/biblioteca" className="text-sm text-accent-text">Ver todo →</Link>
+            <h2 id="recientes" className="font-display text-lg font-bold">Tus últimos anuncios</h2>
+            <Link href="/app/biblioteca" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text">Ver todos</Link>
           </div>
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {recent.map((x) => (
-              <li key={x.id} className="flex flex-col gap-1">
+            {done.slice(0, 6).map((x) => (
+              <li key={x.id}>
                 <a href={x.url!} target="_blank" rel="noopener" className="relative block aspect-[9/16] overflow-hidden rounded-xl border border-line bg-surface-2">
                   {isVideo(x.url)
                     ? <video src={`${x.url}#t=0.5`} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />
@@ -268,7 +153,6 @@ function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimite
                       <img src={x.url!} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                     )}
                 </a>
-                <span className="truncate text-xs text-muted">{kindLabel(x.kind)}{x.model ? ` · ${x.model}` : ""}</span>
               </li>
             ))}
           </ul>
