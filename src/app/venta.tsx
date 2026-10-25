@@ -11,6 +11,7 @@ import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
 import { Money, MoneyText } from "./money";
 import Ejemplos from "./ejemplos";
+import Muro from "./muro";
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
 // affiliates and media buyers, info-product sellers); small businesses come second. One promise: test many
@@ -43,12 +44,18 @@ const DEMOS = {
   cocina: { src: "/demos/cocina.mp4", poster: "/demos/cocina.jpg", label: "Vida sana" },
 };
 
-// Product videos made with «Video de producto» (photo of the product → scene → 6 s motion + headline).
+// Product videos made with «Video de producto» (photo of the product → scene → 6 s motion), no text on top.
 const PRODUCTO_DEMOS = [
-  { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Salpicadura · licuadora" },
-  { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "En su lugar · café" },
-  { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Giro 360 · sérum" },
+  { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Licuadora portátil" },
+  { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Sérum" },
+  { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "Café" },
+  { src: "/demos/prod-audifonos.mp4", poster: "/demos/prod-audifonos.jpg", label: "Audífonos" },
 ];
+/** The product reel: several product videos cut fast, to the beat. */
+const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto hechos con Creads" };
+const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
+/** Everything that moves on the wall: product videos and UGC, mixed. */
+const MURO_VIDEOS = [PRODUCTO_DEMOS[0], DEMOS.dent, PRODUCTO_DEMOS[3], DEMOS.gym, PRODUCTO_DEMOS[1], DEMOS.rubia, PRODUCTO_DEMOS[2], DEMOS.cafe, DEMOS.bano, DEMOS.doc, DEMOS.cocina];
 
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
@@ -159,8 +166,18 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                   <video src={DEMO_VIDEO} controls playsInline preload="metadata" className="aspect-video w-full rounded-3xl border border-line bg-black" aria-label="Demo de Creads (2 minutos)" />
                   <figcaption className="text-center text-sm text-muted">Demo de 2 minutos, con sonido: de un link a 10 anuncios.</figcaption>
                 </figure>
-              ) : <TandaMock />}
+              ) : (
+                <div className="relative w-full max-w-[460px] py-6">
+                  <TandaMock />
+                  <DemoPhone {...PRODUCTO_DEMOS[0]} label="" className="float pointer-events-none absolute -top-6 -left-6 z-10 hidden w-24 sm:block lg:-left-14 lg:w-28 [--fd:8s] [--r:-8deg]" />
+                  <DemoPhone {...DEMOS.dent} label="" className="float pointer-events-none absolute -right-6 -bottom-8 z-10 hidden w-24 sm:block lg:-right-14 lg:w-28 [--fd:9s] [--fdl:-3s] [--r:7deg]" />
+                </div>
+              )}
             </div>
+          </div>
+          {/* the wall: real outputs moving */}
+          <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] pb-10 sm:pb-14" aria-label="Lo que se hace con Creads" role="region">
+            <Muro videos={MURO_VIDEOS} />
           </div>
         </section>
 
@@ -184,6 +201,29 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
+        {/* 2b · Product videos: the reel big, phones floating around */}
+        <section className={`stage relative overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="producto-title">
+          <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[120px]" />
+          <div className={`${wrap} relative grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]`}>
+            <div className="flex flex-col gap-4">
+              <h2 id="producto-title" className={h2}>Tu producto, en <span className="chroma">movimiento</span></h2>
+              <p className="max-w-[46ch] text-lg text-muted">Sube una foto de tu producto y elige un estilo. En minutos tienes un video de 6 segundos que parece de estudio: sin modelos, sin grabar, sin editar.</p>
+              <ul className="flex flex-wrap gap-2">
+                {["Salpicadura", "Giro 360", "Flotando", "Macro", "Unboxing", "En su lugar"].map((x) => (
+                  <li key={x} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm font-semibold">{x}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted">Tecnología, moda, belleza, comida, suplementos: sirve para cualquier producto que se venda por foto.</p>
+              <div className="self-start"><Cta href="/app/video-producto" sub="Usa el mismo saldo de tu plan.">Haz el video de tu producto</Cta></div>
+            </div>
+            <div className="relative mx-auto flex h-[520px] w-full max-w-[520px] items-center justify-center sm:h-[600px]">
+              <DemoPhone {...PRODUCTO_DEMOS[1]} label="" className="float absolute top-6 left-0 w-32 opacity-90 sm:w-40 [--fd:9s] [--r:-9deg]" />
+              <DemoPhone {...PRODUCTO_DEMOS[2]} label="" className="float absolute right-0 bottom-6 w-32 opacity-90 sm:w-40 [--fd:8s] [--fdl:-4s] [--r:8deg]" />
+              <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} big className="relative z-10 w-56 sm:w-64" />
+            </div>
+          </div>
+        </section>
+
         {/* 3 · Real examples */}
         <section id="ejemplos" className={`scroll-mt-20 ${gutter}`} aria-labelledby="ejemplos-title">
           <div className={`${wrap} flex flex-col gap-8`}>
@@ -202,15 +242,6 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
                 {(["dent", "doc", "cafe", "creads", "gym", "rubia", "bano", "cocina"] as const).map((k) => (
                   <DemoPhone key={k} {...DEMOS[k]} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <h3 className="text-lg font-bold">Videos de producto para ecommerce</h3>
-              <p className="max-w-2xl text-sm text-muted">Sube la foto de tu producto, elige un estilo y en minutos tienes un video de 6 segundos con tu titular. Sin personas, sin grabar.</p>
-              <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
-                {PRODUCTO_DEMOS.map((d) => (
-                  <DemoPhone key={d.src} {...d} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
                 ))}
               </div>
             </div>
