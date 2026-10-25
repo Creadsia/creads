@@ -364,15 +364,15 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
         <section className={gutter}>
           <div className={`${wrap} relative grid items-center gap-8 overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-10 sm:px-10 md:grid-cols-[1.3fr_0.7fr]`}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-20 blur-[90px]" style={{ background: "var(--grad)" }} />
-            <div className="relative flex flex-col items-start gap-4">
+            <div className="relative flex min-w-0 flex-col items-start gap-4">
               <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próximo anuncio puede estar publicado hoy.</h2>
               <p className="text-muted">Empieza con {emprende.name} por <Money usd={emprende.monthly} rate={rate} /> al mes. Si no te sirve, cancelas con un clic.</p>
               <Cta>Hacer mi primer anuncio</Cta>
             </div>
-            <div className="relative mx-auto flex items-end">
-              <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-32 -rotate-6 sm:w-36" />
-              <DemoPhone {...DEMOS.creads} className="relative z-10 w-40 sm:w-44" />
-              <DemoPhone {...DEMOS.cocina} className="relative z-0 -ml-6 w-32 rotate-6 sm:w-36" />
+            <div className="relative mx-auto flex min-w-0 max-w-full items-end">
+              <DemoPhone {...DEMOS.bano} className="relative z-0 -mr-6 w-24 -rotate-6 sm:w-36" />
+              <DemoPhone {...DEMOS.creads} className="relative z-10 w-32 sm:w-44" />
+              <DemoPhone {...DEMOS.cocina} className="relative z-0 -ml-6 w-24 rotate-6 sm:w-36" />
             </div>
           </div>
         </section>
