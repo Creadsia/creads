@@ -9,7 +9,7 @@ const err = (error: string, error_description: string, status = 400) => NextResp
 
 // The one-time code (with its PKCE secret) for an access token of the user's account.
 export async function POST(req: Request) {
-  const limited = await tooMany("oauth", clientIp(req));
+  const limited = await tooMany("oauthRegister", clientIp(req));
   if (limited) return err("slow_down", "Demasiados intentos. Intenta en una hora.", 429);
   const type = req.headers.get("content-type") ?? "";
   const raw = type.includes("application/json") ? ((await req.json().catch(() => null)) ?? {}) : Object.fromEntries(new URLSearchParams(await req.text().catch(() => "")));

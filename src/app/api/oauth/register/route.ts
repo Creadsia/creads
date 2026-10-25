@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 // Dynamic client registration (RFC 7591): Claude, ChatGPT or any MCP client registers itself here.
 export async function POST(req: Request) {
-  const limited = await tooMany("oauth", clientIp(req));
+  const limited = await tooMany("oauthRegister", clientIp(req));
   if (limited) return new NextResponse(limited.body, { status: 429, headers: CORS });
   const b = (await req.json().catch(() => null)) ?? {};
   const r = registerClient(b.client_name, b.redirect_uris);

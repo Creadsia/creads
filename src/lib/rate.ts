@@ -30,6 +30,9 @@ const BUCKETS = {
   apiKeys: [60 * 60, 20], // API keys made per person per hour
   human: [24 * 60 * 60, 5], // «hablar con una persona» requests per person per day
   oauth: [60 * 60, 60], // connector sign-ups and token exchanges per connection per hour
+  // client registration comes from the AI apps' shared servers (claude.ai, ChatGPT) for every customer at once,
+  // and it stores nothing (the client id is signed): a much higher ceiling (owner's reconnect failed, 25 Oct 2026)
+  oauthRegister: [60 * 60, 2000],
   spy: [10 * 60, 30], // ad-library searches and transcripts per person in 10 min (each is a paid call)
   spyDay: [24 * 60 * 60, 200], // ... and per day
   assist: [10 * 60, 25], // messages to the in-app assistant per person in 10 min
@@ -75,6 +78,7 @@ const MSG: Record<Bucket, string> = {
   apiKeys: "Hiciste muchas claves en poco rato. Intenta en una hora.",
   human: "Ya nos llegó tu mensaje: te respondemos por correo lo antes posible.",
   oauth: "Demasiados intentos de conexión. Intenta en una hora.",
+  oauthRegister: "Demasiados intentos de conexión. Intenta en unos minutos.",
   loginEmail: "Demasiados intentos. Espera 15 minutos y vuelve a probar.",
   loginAccount: "Demasiados intentos para esta cuenta. Espera 15 minutos y vuelve a probar.",
   recoverAll: "Demasiados intentos. Espera una hora.",
