@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHead, Spinner, btnCls, cardCls, ghostCls, inputCls, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { TIPO_LABEL, type Angulo, type Pieza, type Producto, type Tanda, type TipoAngulo } from "@/lib/tanda-tipos";
+import { RUBRO_INFO, type Rubro, esRubro } from "@/lib/hooks-biblioteca";
 
 // «Primera tanda»: link of the product → 6 selling angles → 10 ad images, each in 4:5 and 9:16, ZIP by placement.
 
@@ -44,6 +45,7 @@ export default function PrimeraTanda() {
   const [tanda, setTanda] = useState<Tanda | null>(null);
   const [estado, setEstado] = useState<Record<string, "esperando" | "creando" | "listo" | "error">>({});
   const [anteriores, setAnteriores] = useState<Tanda[]>([]);
+  const [rubro, setRubro] = useState<Rubro | null>(null);
   const { price, covers, info } = useCredits();
   const [pagando, setPagando] = useState(false);
 
@@ -59,6 +61,8 @@ export default function PrimeraTanda() {
     }
     const u = q.get("url");
     if (u && /^https?:\/\//i.test(u)) setUrl(u.slice(0, 600));
+    const r = q.get("rubro"); // from «Hooks por rubro»: hints the angles and the example description
+    if (esRubro(r)) setRubro(r);
     fetch(`/api/tanda${id ? `?id=${encodeURIComponent(id)}` : ""}`).then((r) => r.json()).then((d) => {
       if (d?.tanda) { setTanda(d.tanda); setPaso("tanda"); }
       if (Array.isArray(d?.tandas)) setAnteriores(d.tandas);
@@ -69,7 +73,7 @@ export default function PrimeraTanda() {
     e?.preventDefault();
     setErr(""); setBusy("Leyendo tu página y pensando ángulos de venta…");
     try {
-      const d = await post<{ producto: Producto; angulos: Angulo[] }>({ accion: "leer", ...(sinLink ? { descripcion } : { url }), idioma });
+      const d = await post<{ producto: Producto; angulos: Angulo[] }>({ accion: "leer", ...(sinLink ? { descripcion } : { url }), idioma, ...(rubro ? { rubro } : {}) });
       setProducto(d.producto); setAngulos(d.angulos); setElegidos(new Set(d.angulos.map((_, i) => i))); setPaso("angulos");
     } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos leer tu producto."); }
     finally { setBusy(""); }
@@ -162,8 +166,15 @@ export default function PrimeraTanda() {
           ) : (
             <label className="flex flex-col gap-1.5 text-sm font-semibold">
               ¿Qué vendes y a quién?
-              <textarea required minLength={15} rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej: Faja postparto de algodón para mamás que quieren volver a su ropa sin dolor. Cuesta $24.990 con envío gratis." className={inputCls} />
+              <textarea required minLength={15} rows={4} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder={rubro ? RUBRO_INFO[rubro].ejemplo : "Ej: Faja postparto de algodón para mamás que quieren volver a su ropa sin dolor. Cuesta $24.990 con envío gratis."} className={inputCls} />
             </label>
+          )}
+          {rubro && (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span className="rounded-full border border-line px-2.5 py-1 font-semibold text-ink">Rubro: {RUBRO_INFO[rubro].label.es}</span>
+              Los ángulos se van a pensar para este rubro.
+              <button type="button" className="underline underline-offset-2 hover:text-ink" onClick={() => setRubro(null)}>Quitar</button>
+            </p>
           )}
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <button type="button" className="text-muted underline underline-offset-2 hover:text-ink" onClick={() => setSinLink(!sinLink)}>{sinLink ? "Tengo un link" : "No tengo página: lo describo"}</button>
@@ -231,12 +242,13 @@ export default function PrimeraTanda() {
                 ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : "Crear por US$9 (Pack Prueba)"}</button>
                 : <button type="button" onClick={() => generar(tanda)} className={ghostCls}>Crear las que faltan</button>)}
               <a href={`/api/tanda/zip?id=${tanda.id}`} className={`${btnCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos}>Descargar ZIP (feed 4:5 + stories 9:16)</a>
+              <a href={`/api/tanda/meta?id=${tanda.id}`} className={`${ghostCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos} title="Para importar en el Administrador de anuncios de Meta: todo parte en pausa">Descargar archivo para Meta (CSV)</a>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])} />)}
           </div>
-          <p className="text-xs text-muted">Siguiente paso: sube la carpeta feed-4x5 a los anuncios de feed y stories-reels-9x16 a los de stories y reels. Testea todos con el mismo presupuesto y quédate con los 2 o 3 que mejor venden.</p>
+          <p className="text-xs text-muted">Siguiente paso: sube la carpeta feed-4x5 a los anuncios de feed y stories-reels-9x16 a los de stories y reels. Testea todos con el mismo presupuesto y quédate con los 2 o 3 que mejor venden. ¿Quieres ahorrarte armar los anuncios uno por uno? Sube las imágenes a la biblioteca de tu cuenta publicitaria e importa el archivo para Meta (Exportar e importar → Importar anuncios en bloque): se crean en pausa, con el mismo nombre de cada imagen. El ZIP trae un LEEME con los pasos.</p>
           <button type="button" onClick={() => { setTanda(null); setPaso("link"); window.history.replaceState(null, "", "/app/tanda"); }} className={`${ghostCls} self-start`}>Hacer otra tanda</button>
         </div>
       )}

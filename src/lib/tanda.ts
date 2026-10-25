@@ -7,6 +7,7 @@ import { readPrivateJSON, updatePrivateJSON, writePrivateJSON } from "./supabase
 // in 4:5 (feed) and 9:16 (stories/reels), ready to download as a ZIP by placement.
 
 import type { Angulo, Pieza, Producto, Tanda } from "./tanda-tipos";
+import { type Rubro, rubroPrompt } from "./hooks-biblioteca";
 export * from "./tanda-tipos";
 
 // ---------- reading the product page (safely: public addresses only) ----------
@@ -111,7 +112,7 @@ export async function leerPagina(raw: string): Promise<Pagina> {
 
 const LANG = (l: "es" | "en") => (l === "en" ? "English (United States)" : "Spanish (neutral Latin American, «tú», never «vos»)");
 
-export function angulosPrompt(o: { pagina?: Pagina; descripcion?: string; brief: string; idioma: "es" | "en" }) {
+export function angulosPrompt(o: { pagina?: Pagina; descripcion?: string; brief: string; idioma: "es" | "en"; rubro?: Rubro }) {
   const src = o.pagina
     ? `PRODUCT PAGE (${o.pagina.url})\nTitle: ${o.pagina.titulo}\nDescription: ${o.pagina.descripcion}\nPrice: ${o.pagina.precio || "not shown"}\nPage text: """${o.pagina.texto}"""`
     : `THE ADVERTISER DESCRIBES THEIR PRODUCT: """${o.descripcion}"""`;
@@ -125,7 +126,7 @@ export function angulosPrompt(o: { pagina?: Pagina; descripcion?: string; brief:
 
 ${src}
 
-${o.brief ? `BRAND KIT\n${o.brief}\n` : ""}
+${o.brief ? `BRAND KIT\n${o.brief}\n` : ""}${o.rubro ? `${rubroPrompt(o.rubro)}\n` : ""}
 Rules: write everything for the buyer in ${LANG(o.idioma)}. No promises of income or medical results, nothing misleading, no real brands other than the advertiser's.
 
 Return JSON only:
@@ -193,9 +194,4 @@ export async function actualizarPieza(ws: string, id: string, n: number, patch: 
   });
 }
 
-// ---------- ZIP names ----------
-
-const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "anuncio";
-/** «feed-4x5/03-dolor-tu-espalda-no-aguanta-mas.jpg» */
-export const zipName = (p: Pieza, f: "4x5" | "9x16", ext: string) =>
-  `${f === "4x5" ? "feed-4x5" : "stories-reels-9x16"}/${String(p.n).padStart(2, "0")}-${p.tipo.replace("_", "-")}-${slug(p.titular)}-${f}.${ext}`;
+// ZIP names (zipName, extDe) live in tanda-tipos.ts so the browser and the Meta CSV builder share them.

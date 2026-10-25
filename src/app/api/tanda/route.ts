@@ -9,6 +9,7 @@ import { FEATURE_UNAVAILABLE } from "@/lib/public-error";
 import { sinVoseo } from "@/lib/image-batch";
 import { cargarMarca, guardarMarca, marcaBrief } from "@/lib/marca";
 import { conLogo } from "@/lib/logo";
+import { esRubro } from "@/lib/hooks-biblioteca";
 import {
   type Angulo, type Pieza, type Producto, type Tanda, TIPOS, type TipoAngulo,
   actualizarPieza, angulosPrompt, cargarTanda, fetchPublic, guardarTanda, leerPagina, listarTandas, tandaId, tandaPrompt,
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 // «Primera tanda» (P0, 25 Oct 2026). Reading the page and writing the angles and prompts is free; each image
 // is generated (and charged) on its own by /api/generate/image, then reported back here with {accion:"pieza"}.
 //   GET                    → the workspace's batches (newest first)       GET ?id=… → one batch
-//   {accion:"leer", url | descripcion, idioma}            → product + 6 angles (dolor, deseo, mecanismo…)
+//   {accion:"leer", url | descripcion, idioma, rubro?}    → product + 6 angles (dolor, deseo, mecanismo…)
 //   {accion:"crear", producto, angulos, idioma, n}        → a new batch with n pieces (prompt + headline each)
 //   {accion:"pieza", id, n, formato, url?, nota?, error?} → saves a finished image (logo of the kit added)
 
@@ -88,7 +89,8 @@ export async function POST(req: Request) {
       if (!url && descripcion.length < 15) return NextResponse.json({ error: "Pega el link de tu producto o cuéntanos qué vendes (una o dos frases)." }, { status: 400 });
       const pagina = url ? await leerPagina(url) : undefined;
       if (pagina && pagina.texto.length < 80 && !pagina.descripcion) return NextResponse.json({ error: "No pudimos leer el contenido de esa página (puede que se arme con JavaScript). Describe tu producto en dos frases y seguimos." }, { status: 422 });
-      const raw = await textAI.complete({ prompt: angulosPrompt({ pagina, descripcion, brief: marcaBrief(marca), idioma }), json: true, maxTokens: 2500 });
+      const rubro = esRubro(b.rubro) ? b.rubro : undefined;
+      const raw = await textAI.complete({ prompt: angulosPrompt({ pagina, descripcion, brief: marcaBrief(marca), idioma, rubro }), json: true, maxTokens: 2500 });
       const out = parseJSON<{ producto?: unknown; angulos?: unknown }>(raw);
       const prod = producto(out?.producto, ws, pagina?.url ?? "");
       if (!prod.precio && pagina?.precio) prod.precio = pagina.precio;
