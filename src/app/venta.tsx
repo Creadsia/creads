@@ -163,6 +163,22 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
+        {/* Gallery «Hecho con Creads» (owner, 25 Oct 2026: silent): real ads by type of business */}
+        <section id="galeria" className={`scroll-mt-20 ${gutter}`} aria-labelledby="galeria-title">
+          <div className={`${wrap} flex flex-col gap-5`}>
+            <div className="flex max-w-2xl flex-col gap-2">
+              <h2 id="galeria-title" className={h2}>Hecho con Creads</h2>
+              <p className="text-muted">Anuncios reales que salieron de Creads, para distintos rubros. Las personas no existen: las creó la IA.</p>
+            </div>
+            <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
+              {(["dent", "doc", "cafe", "creads", "gym", "rubia", "bano", "cocina"] as const).map((k) => (
+                <DemoPhone key={k} {...DEMOS[k]} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
+              ))}
+            </div>
+            <Cta href={FREE} sub={CON_TARJETA ? "7 días gratis. Hoy no se cobra nada." : "Sin tarjeta. Te regalamos 200 créditos."}>Crea el tuyo gratis</Cta>
+          </div>
+        </section>
+
         {/* 2 · Automático or Manual: the two ways to make an ad */}
         <section id="formas" className={`scroll-mt-20 ${gutter}`} aria-labelledby="formas-title">
           <div className={`${wrap} flex flex-col gap-6`}>
