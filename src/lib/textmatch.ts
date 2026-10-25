@@ -145,6 +145,14 @@ export function compare(script: string, words: Word[], lang: "en" | "es", clipDu
   };
   const ra = repeatsIn(a);
   const stutter = [...repeatsIn(b)].some((x) => !ra.has(x));
-  const severe = !words.length || sim < 0.8 || cut || (stutter && sim < 0.95);
+  // a phrase the script doesn't have (owner's E2E test, 25 Oct 2026: «Creads punto IA» said in the middle of a
+  // customer's English ad): 3+ extra words in a row, or our own brand when the script doesn't name it
+  let run = 0, maxRun = 0;
+  for (const w of b) { run = a.includes(w) ? 0 : run + 1; maxRun = Math.max(maxRun, run); }
+  const brand = (t: string[]) => t.some((w) => /^(c|k)re(a|e)(d|t)s?(ia)?$/.test(w));
+  const foreignBrand = brand(b) && !brand(a);
+  if (maxRun >= 3 && !issues.some((x) => x.startsWith("dice palabras de más"))) issues.push(`dice una frase que no está en el guion: ${extra.slice(0, 8).join(" ")}`);
+  if (foreignBrand) issues.push("nombra «Creads» y el guion no lo dice");
+  const severe = !words.length || sim < 0.8 || cut || (stutter && sim < 0.95) || maxRun >= 3 || foreignBrand;
   return { sim: Math.round(sim * 1000) / 1000, heard, issues, severe };
 }
