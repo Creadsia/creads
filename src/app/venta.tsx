@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { Content } from "@/content/en";
 import { FUNDADOR, PRUEBA, SHOWN_PLANS, usd } from "@/lib/catalog";
 import { Logo } from "./brand";
@@ -8,13 +10,14 @@ import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
 import { Money, MoneyText } from "./money";
+import Ejemplos from "./ejemplos";
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
 // affiliates and media buyers, info-product sellers); small businesses come second. One promise: test many
 // ads a month, not three. Order asked by the owner: hero with the promise and a 2-minute demo → how it works in
 // 3 steps → real examples → comparison → plans → guarantee → founder → questions → last call.
 // Everything shown as an example is a real Creads output: the videos in /public/demos (21 Oct 2026) and the
-// images in /public/ejemplos (the owner's own foundation-repair campaign, made with Creads, 25 Oct 2026).
+// images in /public/ejemplos (made with Creads on 25 Oct 2026: invented brands; see src/lib/ideas.ts).
 
 const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
 const wrap = "mx-auto w-full max-w-6xl";
@@ -24,6 +27,8 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 const START = "/registro";
 const cheapest = [...SHOWN_PLANS].sort((a, b) => a.monthly - b.monthly)[0];
 
+/** The founder's photo, when it's in /public (owner, 25 Oct 2026). */
+const FOTO_FUNDADOR = existsSync(path.join(process.cwd(), "public", "fundador.jpg"));
 /** The 2-minute demo with sound (recorded by the owner): set NEXT_PUBLIC_DEMO_VIDEO in Vercel. */
 const DEMO_VIDEO = process.env.NEXT_PUBLIC_DEMO_VIDEO ?? "";
 
@@ -82,9 +87,9 @@ function TandaMock() {
         ))}
       </div>
       <div className="grid grid-cols-4 gap-2">
-        {[1, 2, 3, 5, 6, 7, 8, 4].map((n) => (
+        {["pawease", "luma-noche", "techo", "aurea-serum", "quiz-sueno", "grano-alto", "bano-antes-despues", "flexdaily"].map((n) => (
           <div key={n} className="relative aspect-[4/5] overflow-hidden rounded-lg bg-surface-2">
-            <Image src={`/ejemplos/img-${n}.jpg`} alt="" fill sizes="110px" className="object-cover" />
+            <Image src={`/ejemplos/${n}.jpg`} alt="" fill sizes="110px" className="object-cover" />
           </div>
         ))}
       </div>
@@ -177,18 +182,12 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           <div className={`${wrap} flex flex-col gap-8`}>
             <div className="flex max-w-2xl flex-col gap-2">
               <h2 id="ejemplos-title" className={h2}>Ejemplos reales hechos con Creads</h2>
-              <p className="text-muted">Nada de maquetas: todo esto salió de Creads.</p>
+              <p className="text-muted">Nada de maquetas: todo esto salió de Creads. Y en tu cuenta tienes la galería completa de ideas para sacar más.</p>
             </div>
             <div className="flex flex-col gap-3">
               <h3 className="text-lg font-bold">Imágenes para testear</h3>
-              <p className="max-w-2xl text-sm text-muted">Variaciones de un mismo ángulo para una campaña real de reparación de cimientos en EE. UU., en inglés. Cambia el gancho, el formato y el estilo; la oferta se mantiene.</p>
-              <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible lg:grid-cols-8">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                  <div key={n} className="relative aspect-[4/5] w-[42vw] max-w-[180px] shrink-0 snap-start overflow-hidden rounded-xl border border-line bg-surface-2 sm:w-auto sm:max-w-none">
-                    <Image src={`/ejemplos/img-${n}.jpg`} alt={`Anuncio de imagen ${n} hecho con Creads`} fill sizes="(min-width: 1024px) 140px, (min-width: 640px) 25vw, 42vw" className="object-cover" />
-                  </div>
-                ))}
-              </div>
+              <p className="max-w-2xl text-sm text-muted">Formatos que se repiten en los anuncios que más escalan en ecommerce, afiliados, nutra y lead gen, en inglés y español. Las marcas son inventadas.</p>
+              <Ejemplos />
             </div>
             <div className="flex flex-col gap-3">
               <h3 className="text-lg font-bold">Videos UGC y avatares que hablan</h3>
@@ -272,16 +271,18 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
           </div>
         </section>
 
-        {/* 7 · Founder (text to be confirmed by Gastón; no invented figures) */}
+        {/* 7 · Founder: Benjamín (owner, 25 Oct 2026: Gastón prefers not to appear). Photo: /public/fundador.jpg */}
         <section className={gutter} aria-labelledby="fundador-title">
           <div className={`${wrap} grid gap-6 rounded-3xl border border-line bg-surface p-6 sm:p-8 md:grid-cols-[auto_1fr] md:items-center`}>
-            <div className="grid h-24 w-24 place-items-center rounded-full bg-[image:var(--grad)] font-display text-3xl font-semibold text-white" aria-hidden="true">G</div>
+            {FOTO_FUNDADOR
+              ? <Image src="/fundador.jpg" alt="Benjamín, fundador de Creads" width={112} height={112} className="h-28 w-28 rounded-full object-cover" />
+              : <div className="grid h-28 w-28 place-items-center rounded-full bg-[image:var(--grad)] font-display text-4xl font-semibold text-white" aria-hidden="true">B</div>}
             <div className="flex flex-col gap-3">
               <h2 id="fundador-title" className="font-display text-2xl font-semibold">Por qué hicimos Creads</h2>
               <p className="max-w-3xl text-muted">
-                Creads lo creó Gastón, que trabaja comprando medios en Meta. Lo armó para resolver su propio problema: cada semana necesitaba ángulos y creativos nuevos, y hacerlos a mano, con agencia o con herramientas sueltas tomaba demasiado tiempo. Hoy usa Creads para sus propias campañas, como las imágenes de arriba.
+                Soy Benjamín. Junto a mi equipo compramos medios en Meta todos los días y siempre chocábamos con lo mismo: el anuncio que funciona se cansa rápido y hacer ángulos nuevos a mano, con agencia o saltando entre herramientas tomaba demasiado. Hicimos Creads para resolver eso, y lo usamos en nuestras propias campañas.
               </p>
-              <p className="text-sm text-muted">¿Preguntas? Escríbele directo a hola@creadsia.com.</p>
+              <p className="text-sm text-muted">¿Preguntas? Escríbenos a hola@creadsia.com.</p>
             </div>
           </div>
         </section>

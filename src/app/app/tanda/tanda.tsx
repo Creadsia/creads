@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PageHead, Spinner, btnCls, cardCls, ghostCls, inputCls, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { capture } from "../../posthog";
+import { IDEAS, type Idea } from "@/lib/ideas";
 import { TIPO_LABEL, type Angulo, type Pieza, type Producto, type Tanda, type TipoAngulo } from "@/lib/tanda-tipos";
 import { RUBRO_INFO, type Rubro, esRubro } from "@/lib/hooks-biblioteca";
 
@@ -47,6 +48,7 @@ export default function PrimeraTanda() {
   const [estado, setEstado] = useState<Record<string, "esperando" | "creando" | "listo" | "error">>({});
   const [anteriores, setAnteriores] = useState<Tanda[]>([]);
   const [rubro, setRubro] = useState<Rubro | null>(null);
+  const [idea, setIdea] = useState<Idea | null>(null);
   const { price, covers, info } = useCredits();
   const [pagando, setPagando] = useState(false);
 
@@ -61,6 +63,8 @@ export default function PrimeraTanda() {
       window.history.replaceState(null, "", id ? `/app/tanda?id=${id}` : "/app/tanda");
     }
     const u = q.get("url");
+    const ideaId = q.get("idea");
+    if (ideaId) setIdea(IDEAS.find((i) => i.id === ideaId) ?? null);
     if (u && /^https?:\/\//i.test(u)) setUrl(u.slice(0, 600));
     const r = q.get("rubro"); // from «Hooks por rubro»: hints the angles and the example description
     if (esRubro(r)) setRubro(r);
@@ -135,7 +139,7 @@ export default function PrimeraTanda() {
     if (!producto) return;
     setErr(""); setBusy("Escribiendo tus 10 anuncios…");
     try {
-      const d = await post<{ tanda: Tanda }>({ accion: "crear", producto, angulos: angulos.filter((_, i) => elegidos.has(i)), idioma, n: 10 });
+      const d = await post<{ tanda: Tanda }>({ accion: "crear", producto, angulos: angulos.filter((_, i) => elegidos.has(i)), idioma, n: 10, ...(idea ? { idea: idea.id } : {}) });
       capture("tanda_creada", { angulos: elegidos.size, alcanza });
       setTanda(d.tanda); setPaso("tanda"); setBusy("");
       window.history.replaceState(null, "", `/app/tanda?id=${d.tanda.id}`);
@@ -174,6 +178,12 @@ export default function PrimeraTanda() {
 
       {err && <p role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{err}</p>}
 
+      {idea && paso !== "tanda" && (
+        <p className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
+          Formato elegido: <b>{idea.tipo}</b>. Tu tanda lo va a usar en la mayoría de los anuncios.
+          <button type="button" onClick={() => setIdea(null)} className="text-xs text-muted underline">Quitar</button>
+        </p>
+      )}
       {paso === "link" && (
         <form onSubmit={leer} className={cardCls}>
           {!sinLink ? (

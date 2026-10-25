@@ -9,6 +9,7 @@ import { FEATURE_UNAVAILABLE } from "@/lib/public-error";
 import { sinVoseo } from "@/lib/image-batch";
 import { cargarMarca, guardarMarca, marcaBrief } from "@/lib/marca";
 import { conLogo } from "@/lib/logo";
+import { IDEAS } from "@/lib/ideas";
 import { esRubro } from "@/lib/hooks-biblioteca";
 import {
   type Angulo, type Pieza, type Producto, type Tanda, TIPOS, type TipoAngulo,
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
       const ang = angulos(b.angulos);
       const n = Math.min(10, Math.max(1, Math.round(Number(b.n) || 10)));
       if (!prod.nombre || !ang.length) return NextResponse.json({ error: "Elige al menos un ángulo." }, { status: 400 });
-      const raw = await textAI.complete({ prompt: tandaPrompt({ producto: prod, angulos: ang, n, brief: marcaBrief(marca), idioma, conFoto: Boolean(prod.foto) }), json: true, maxTokens: 6000 });
+      const raw = await textAI.complete({ prompt: tandaPrompt({ producto: prod, angulos: ang, n, brief: marcaBrief(marca), idioma, conFoto: Boolean(prod.foto), formatoIdea: IDEAS.find((i) => i.id === b.idea)?.brief }), json: true, maxTokens: 6000 });
       const out = parseJSON<{ piezas?: Record<string, unknown>[] }>(raw);
       const piezas: Pieza[] = (Array.isArray(out?.piezas) ? out.piezas : []).map((p, i) => ({
         n: i + 1, tipo: tipo(p?.tipo), titular: str(p?.titular, 90), estilo: str(p?.estilo, 4), prompt: typeof p?.prompt === "string" ? p.prompt.trim().slice(0, 2000) : "",

@@ -145,7 +145,7 @@ const ESTILOS = [
   "offer card: the product with a clear price/deal badge (only real deals), the hook as a headline",
 ];
 
-export function tandaPrompt(o: { producto: Producto; angulos: Angulo[]; n: number; brief: string; idioma: "es" | "en"; conFoto: boolean }) {
+export function tandaPrompt(o: { producto: Producto; angulos: Angulo[]; n: number; brief: string; idioma: "es" | "en"; conFoto: boolean; formatoIdea?: string }) {
   return `You write image-generation prompts for a batch of ${o.n} paid social ads (Meta feed and stories) to TEST against each other.
 
 PRODUCT: ${o.producto.nombre}. ${o.producto.descripcion}${o.producto.precio ? ` Price: ${o.producto.precio}.` : ""}
@@ -155,7 +155,7 @@ ${o.brief ? `BRAND KIT\n${o.brief}\n` : ""}
 ANGLES TO USE (spread the ${o.n} ads across them as evenly as possible, in this order):
 ${o.angulos.map((a, i) => `${i + 1}. [${a.tipo}] ${a.titulo} — hook: "${a.gancho}"`).join("\n")}
 
-VISUAL STYLES (use a different one for consecutive ads, so the batch looks varied):
+${o.formatoIdea ? `AD FORMAT CHOSEN BY THE ADVERTISER (use it for at least 6 of the ${o.n} ads, adapted to each angle; {producto} = the product): ${o.formatoIdea}\n\n` : ""}VISUAL STYLES (use a different one for consecutive ads, so the batch looks varied):
 ${ESTILOS.map((s, i) => `${String.fromCharCode(97 + i)}) ${s}`).join("\n")}
 
 Rules:
