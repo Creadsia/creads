@@ -75,6 +75,8 @@ const nextConfig: NextConfig = {
     "/api/inspiracion": ["./node_modules/ffmpeg-static/ffmpeg"],
     // GPT Image draws 2:3, the ad formats (9:16, 4:5) are cut from it
     "/api/generate/image": ["./node_modules/ffmpeg-static/ffmpeg"],
+    // «Primera tanda»: the brand's logo is put on each finished image
+    "/api/tanda": ["./node_modules/ffmpeg-static/ffmpeg"],
     "/api/historias/montar": ffmpegFiles,
     "/api/historias/dialogos": ["./node_modules/ffmpeg-static/ffmpeg"],
     // voice samples are cleaned up (any audio or video → mono mp3) before cloning

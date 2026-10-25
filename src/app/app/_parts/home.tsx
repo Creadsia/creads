@@ -54,14 +54,23 @@ export default function Home({ full = true }: { full?: boolean }) {
 
   return (
     <>
-      <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Tu primer anuncio va de regalo. Lo más rápido: hazlo conversando con Automático." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
+      <PageHead title={starting ? "Bienvenido a Creads" : "Qué hacer hoy"} lead={starting ? "Empieza por tu primera tanda: pega el link de tu producto y en minutos tienes 10 anuncios para testear en Meta." : "Crea tus anuncios, revisa cómo avanzan y guarda los terminados."} />
       {missing && <SetupNotice />}
+      {/* «Primera tanda» (25 Oct 2026): the fastest way to many ads to test */}
+      <form action="/app/tanda" method="get" className="flex flex-col gap-3 rounded-2xl border-2 border-transparent p-4 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:p-5">
+        <label htmlFor="tanda-url" className="font-display text-xl font-semibold">Pega el link de tu producto</label>
+        <p className="text-sm text-muted">Creads lee tu página, te propone 6 ángulos de venta y crea 10 anuncios en 4:5 y 9:16, listos para subir a Meta.</p>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input id="tanda-url" name="url" type="url" required placeholder="https://tutienda.com/producto" className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-3 py-3 text-base text-ink" />
+          <button type="submit" className="rounded-xl bg-[image:var(--grad)] px-5 py-3 text-[15px] font-semibold text-white">Crear mi tanda</button>
+        </div>
+      </form>
       {/* the two ways to make an ad, first thing on the page */}
       <section aria-label="Crea tu anuncio" className="grid gap-3 md:grid-cols-2">
         <Link href="/app/automatico" className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] transition-transform hover:-translate-y-0.5">
           <span className="flex items-center justify-between gap-2">
             <b className="font-display text-2xl font-semibold">Automático</b>
-            <span className="rounded-full bg-[image:var(--grad)] px-2.5 py-0.5 text-xs font-bold text-white">Recomendado</span>
+            <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold">Video UGC</span>
           </span>
           <p className="text-[15px] text-muted">Conversas con Creads: te pregunta lo necesario, escribe el guion, crea a la persona en tu negocio, hace el video, lo revisa palabra por palabra y te lo entrega listo.</p>
           <ol className="hidden flex-wrap gap-1.5 text-xs font-semibold sm:flex">

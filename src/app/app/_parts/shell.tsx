@@ -58,6 +58,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
   {
     group: "Haz tu anuncio",
     items: [
+      { href: "/app/tanda", label: "Tanda desde tu link", icon: I.image, badge: "Nuevo" },
       { href: "/app/automatico", label: "Automático (conversando)", icon: I.spark },
       { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, step: 1, full: true, optional: true },
       { href: "/app/guiones", label: "Crear guion", icon: I.pen, step: 2 },
@@ -69,6 +70,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     group: "Tu marca",
     hint: "Se configura una vez",
     items: [
+      { href: "/app/marca", label: "Kit de marca", icon: I.box },
       { href: "/app/voces", label: "Voces", icon: I.mic, step: 1 },
       { href: "/app/avatares", label: "Avatares", icon: I.user, step: 2 },
       { href: "/app/productos", label: "Productos", icon: I.box, step: 3, optional: true },
