@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Quality } from "@/lib/calidad";
+import CalidadImagenes from "./calidad-imagenes";
 
 // Plataforma → Calidad de videos: how «Mi personaje en un video» really turns out (clean on the first try,
 // redone free by the review, delivered with a warning, failed), the problems the reviews found, why
@@ -30,6 +31,7 @@ export default function Calidad() {
 
   return (
     <div className="flex flex-col gap-4">
+      <CalidadImagenes />
       <section className={card}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

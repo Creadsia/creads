@@ -77,6 +77,8 @@ const nextConfig: NextConfig = {
     "/api/inspiracion": ["./node_modules/ffmpeg-static/ffmpeg"],
     // GPT Image draws 2:3, the ad formats (9:16, 4:5) are cut from it
     "/api/generate/image": ["./node_modules/ffmpeg-static/ffmpeg"],
+    // «Control» de imágenes: the headline, button and logo are burnt on each piece (needs the fonts too)
+    "/api/imagenes/control": ffmpegFiles,
     // «Primera tanda»: the brand's logo is put on each finished image
     "/api/tanda": ["./node_modules/ffmpeg-static/ffmpeg"],
     // «Video de producto»: the headline is burnt on the finished clip (needs the fonts too)
