@@ -1155,6 +1155,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
             <b className="mb-1">{t.footer.contact}</b>
             <span className="select-all text-muted">hola@creadsia.com</span>
             <a href={other} className="text-muted hover:text-ink">{t.nav.switchLabel}</a>
+            <a href="/afiliados" className="text-muted hover:text-ink">{t.lang === "es" ? "Programa de afiliados" : "Affiliate program (Spanish)"}</a>
             <a href="/terminos" className="text-muted hover:text-ink">{t.lang === "es" ? "Términos y condiciones" : "Terms (Spanish)"}</a>
             <a href="/privacidad" className="text-muted hover:text-ink">{t.lang === "es" ? "Política de privacidad" : "Privacy policy (Spanish)"}</a>
           </div>

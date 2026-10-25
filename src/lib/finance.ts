@@ -1,6 +1,8 @@
 // Internal finance book for the admin panel: types, starting data and the margin math.
 // Shared by the server (storage) and the browser (panel). No secrets ever go in here.
 
+import { PROGRAMA } from "./afiliados-calc";
+
 export type Moneda = "USD" | "CLP";
 
 export interface Movimiento {
@@ -65,7 +67,11 @@ export interface Config {
   ivaPct?: number; // VAT included in the price of sales to Chile (19), paid to the SII
   pctChile?: number; // % of sales that carry Chilean VAT
   planes: Plan[];
-  afiliado: { tipo: "recurrente" | "cpa"; pct: number; meses: number; cpa: number; vida: number };
+  /**
+   * Affiliate payout for the projections. Recurring: `pct` for the customer's months 1..`meses1`, then `pct2`
+   * until month `meses` (the real program, owner 25 Oct 2026: 30% months 1–3, 20% months 4–12; see afiliados-calc.ts).
+   */
+  afiliado: { tipo: "recurrente" | "cpa"; pct: number; meses: number; cpa: number; vida: number; meses1?: number; pct2?: number };
   proyeccion: Record<string, number> & { pctAfiliado: number; pctPromo?: number };
 }
 
@@ -159,7 +165,7 @@ export const DEFAULT_FINANZAS: Finanzas = {
       { id: "plus", nombre: "Negocio", mensual: 99, anual: 99, creditos: 3000 },
       { id: "studio", nombre: "Ultra", mensual: 129, anual: 109, creditos: 3000 },
     ],
-    afiliado: { tipo: "recurrente", pct: 30, meses: 12, cpa: 50, vida: 8 },
+    afiliado: { tipo: "recurrente", pct: PROGRAMA.pctTramo1, meses: PROGRAMA.maxMeses, meses1: PROGRAMA.mesesTramo1, pct2: PROGRAMA.pctTramo2, cpa: 50, vida: 8 },
     proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30, pctPromo: 100 },
   },
 };
@@ -202,6 +208,20 @@ export function planMonth(c: Config, p: Plan, o: { anual?: boolean; promo?: bool
   const iva = ivaOf(c, precio);
   const queda = precio - iva - modelos - stripe - afiliado;
   return { precio, iva, modelos, stripe, afiliado, queda, margen: precio ? (queda / precio) * 100 : 0 };
+}
+
+/** Affiliate % on the customer's month `i` (1-based) under the book's settings (defaults: the real program). */
+export function afPctMes(a: Config["afiliado"], i: number) {
+  if (a.tipo !== "recurrente" || i < 1 || i > a.meses) return 0;
+  return i <= (a.meses1 ?? PROGRAMA.mesesTramo1) ? a.pct : (a.pct2 ?? PROGRAMA.pctTramo2);
+}
+
+/** What the affiliate takes over a customer's whole life (`vida` monthly payments of `precio`). */
+export function afTotal(a: Config["afiliado"], precio: number) {
+  if (a.tipo !== "recurrente") return a.cpa;
+  let t = 0;
+  for (let i = 1; i <= a.vida; i++) t += (precio * afPctMes(a, i)) / 100;
+  return t;
 }
 
 /** Monthly projection for a number of subscribers per plan, before fixed costs. */

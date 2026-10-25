@@ -4,7 +4,8 @@ import { useState } from "react";
 import type { Content } from "@/content/en";
 import { newEventId, track } from "@/lib/track";
 
-// Sign-up for the affiliate program (saved in the waitlist with plan "afiliado").
+// Interest in the affiliate program from the home page (saved in the waitlist with plan "afiliado"). The real
+// application is at /app/afiliados (explained at /afiliados).
 export default function AffiliateForm({ t, form, lang }: { t: Content["affiliates"]; form: Content["form"]; lang: "en" | "es" }) {
   const [email, setEmail] = useState("");
   const [channel, setChannel] = useState(t.channels[0]);
@@ -42,6 +43,7 @@ export default function AffiliateForm({ t, form, lang }: { t: Content["affiliate
         {state === "sending" ? form.sending : t.submit}
       </button>
       {state === "error" && <p className="text-sm text-bad" role="alert">{form.error}</p>}
+      <a href="/afiliados" className="text-sm font-semibold text-muted underline hover:text-ink">{lang === "es" ? "Ver cómo funciona el programa y postular" : "How the program works (Spanish)"}</a>
     </form>
   );
 }

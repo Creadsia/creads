@@ -223,6 +223,24 @@ export function renewalFailedEmail(to: string, name: string | null, o: { plan: s
   };
 }
 
+/** Affiliate program: the application was approved; their link and code. */
+export function affiliateApprovedEmail(to: string, name: string | null, code: string): Email {
+  const link = `${SITE}/?ref=${encodeURIComponent(code)}`;
+  return {
+    to, tag: "afiliado-aprobado",
+    subject: "Ya eres afiliado de Creads",
+    html: layout({
+      preview: "Tu enlace y tu código ya funcionan.",
+      title: "Ya eres afiliado de Creads",
+      paragraphs: [esc(hello(name)), "Aprobamos tu postulación al programa de afiliados. Desde ahora, quien entre por tu enlace o escriba tu código al crear su cuenta queda asociado a ti."],
+      rows: [["Tu enlace", link], ["Tu código", code]],
+      cta: { label: "Ver mi panel de afiliado", href: `${SITE}/app/afiliados` },
+      after: ["En tu panel completa tus datos de pago (PayPal, Wise o transferencia). Antes de compartir tu enlace, lee los términos del programa: " + `${SITE}/afiliados/terminos`],
+    }),
+    text: plain([hello(name), "", "Aprobamos tu postulación al programa de afiliados de Creads.", `Tu enlace: ${link}`, `Tu código: ${code}`, "", `Tu panel: ${SITE}/app/afiliados`, `Términos: ${SITE}/afiliados/terminos`]),
+  };
+}
+
 /** The balance is about to run out (less than one ad left): a heads-up before a job is refused. */
 export function lowBalanceEmail(to: string, name: string | null, o: { seconds: number; credits?: number; until: string | null }): Email {
   const left = o.credits != null ? fmtCredits(o.credits) : fmtSeconds(Math.max(0, Math.floor(o.seconds)));

@@ -17,6 +17,7 @@ import Equipo from "@/app/app/equipo/equipo";
 import Guardian from "./guardian";
 import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
+import AfiliadosAdmin from "./afiliados";
 import {
   type Config,
   type CostoFijo,
@@ -25,6 +26,8 @@ import {
   type Plan,
   type PlanMonth,
   DEFAULT_FINANZAS,
+  afPctMes,
+  afTotal,
   fijoMensual,
   planMonth,
   proyectar,
@@ -195,7 +198,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <div className="flex flex-col gap-4"><DesdeCero /><RetencionResumen /><AvisosCelular /><Estadisticas cfg={data?.config} /></div> : tab === "suscripciones" ? <Retencion /> : tab === "leads" ? <Leads /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "campanas" ? <Campanas /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <div className="flex flex-col gap-4"><DesdeCero /><RetencionResumen /><AvisosCelular /><Estadisticas cfg={data?.config} /></div> : tab === "suscripciones" ? <Retencion /> : tab === "leads" ? <Leads /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "campanas" ? <Campanas /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "afiliados" ? <AfiliadosAdmin /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
@@ -426,9 +429,10 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
   const af = c.planes.map((p) => {
     const base = planMonth(c, p, {});
     const pagoMes = a.tipo === "recurrente" ? (base.precio * a.pct) / 100 : 0;
-    const total = a.tipo === "recurrente" ? pagoMes * Math.min(a.meses, a.vida) : a.cpa;
+    const pagoMes2 = a.tipo === "recurrente" ? (base.precio * afPctMes(a, (a.meses1 ?? 3) + 1)) / 100 : 0;
+    const total = afTotal(a, base.precio);
     const bruto = base.queda * a.vida;
-    return { p, pagoMes, total, bruto, neto: bruto - total, ok: bruto - total > 0 && bruto * 0.5 > total };
+    return { p, pagoMes, pagoMes2, total, bruto, neto: bruto - total, ok: bruto - total > 0 && bruto * 0.5 > total };
   });
 
   return (
@@ -492,8 +496,10 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
           </Field>
           {a.tipo === "recurrente" ? (
             <>
-              <Field label="% por mes"><Num id="af-pct" value={a.pct} step={5} max={100} onChange={(v) => setCfg((x) => { x.afiliado.pct = v; })} /></Field>
-              <Field label="Durante (meses)"><Num id="af-meses" value={a.meses} min={1} max={60} onChange={(v) => setCfg((x) => { x.afiliado.meses = v; })} /></Field>
+              <Field label="% primeros meses"><Num id="af-pct" value={a.pct} step={5} max={100} onChange={(v) => setCfg((x) => { x.afiliado.pct = v; })} /></Field>
+              <Field label="Primeros meses"><Num id="af-m1" value={a.meses1 ?? 3} min={0} max={60} onChange={(v) => setCfg((x) => { x.afiliado.meses1 = v; })} /></Field>
+              <Field label="% después"><Num id="af-pct2" value={a.pct2 ?? 20} step={5} max={100} onChange={(v) => setCfg((x) => { x.afiliado.pct2 = v; })} /></Field>
+              <Field label="Hasta el mes"><Num id="af-meses" value={a.meses} min={1} max={60} onChange={(v) => setCfg((x) => { x.afiliado.meses = v; })} /></Field>
             </>
           ) : (
             <Field label="CPA (US$ por suscriptor)"><Num id="af-cpa" value={a.cpa} step={5} onChange={(v) => setCfg((x) => { x.afiliado.cpa = v; })} /></Field>
@@ -507,7 +513,7 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
               {af.map((x) => (
                 <tr key={x.p.id}>
                   <td className={td}><strong>{x.p.nombre}</strong></td>
-                  <td className={`${td} ${num} text-right`}>{a.tipo === "recurrente" ? `${fmtUsd(x.pagoMes, 2)}/mes` : `${fmtUsd(a.cpa)} una vez`}</td>
+                  <td className={`${td} ${num} text-right`}>{a.tipo === "recurrente" ? `${fmtUsd(x.pagoMes, 2)}/mes, luego ${fmtUsd(x.pagoMes2, 2)}` : `${fmtUsd(a.cpa)} una vez`}</td>
                   <td className={`${td} ${num} text-right`}>{fmtUsd(x.total)}</td>
                   <td className={`${td} ${num} text-right`}>{fmtUsd(x.bruto)}</td>
                   <td className={`${td} ${num} text-right font-bold ${x.neto > 0 ? "text-good" : "text-bad"}`}>{fmtUsd(x.neto)}</td>
