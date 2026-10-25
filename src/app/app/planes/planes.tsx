@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ANNUAL, ANNUAL_PCT, FUNDADOR, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, PRUEBA, type Period, clpFor, quote } from "@/lib/catalog";
+import { ANNUAL, FUNDADOR, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, PRUEBA, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { fmtSaldo } from "@/lib/credit-math";
@@ -269,7 +269,7 @@ export default function Planes() {
                   className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${period === p ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{p === "mensual" ? "Mensual" : "Anual"}</button>
               ))}
             </div>}
-            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? `${ANNUAL_PCT}% menos pagando el año` : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
+            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "2 meses gratis pagando el año" : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.filter((p) => !p.hidden || currentPlan === p.name).map((p) => {
