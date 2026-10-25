@@ -77,6 +77,37 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: "creads_video_producto", title: "Crear video de producto",
+    description: "Makes a short premium ecommerce video (6 s, vertical 9:16, no person talking): the real product from a photo of this account placed in a styled scene and animated (spin, macro push-in, splash, floating, unboxing or lifestyle), with an optional headline on top. Spends the account's credits (about 3 images' worth). Takes 1 to 3 minutes: then call creads_estado_video with the returned id every 30–60 seconds until it is «listo».",
+    inputSchema: { type: "object", properties: {
+      producto: { type: "string", maxLength: 600, description: "Link of the product photo (from creads_crear_imagen or an upload of this account). A clean photo of the product works best." },
+      estilo: { type: "string", enum: ["giro", "macro", "salpicadura", "flotando", "unboxing", "lifestyle"], default: "giro", description: "giro: spins on a pedestal. macro: slow push-in to a detail. salpicadura: water/fruit splash around it. flotando: floats with small elements. unboxing: hands open a box. lifestyle: in its place of use with slow camera move." },
+      titular: { type: "string", maxLength: 80, description: "Optional headline shown on top (max ~7 words), e.g. «Smoothies anywhere».", },
+      descripcion: { type: "string", maxLength: 400, description: "Optional: what the product is (name, type), to place it in the right scene." },
+    }, required: ["producto"], additionalProperties: false },
+    annotations: { title: "Crear video de producto", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    run: async (a, call) => {
+      const d = await call<{ video: { id: string; estilo: string } }>("/api/video-producto", { producto: mediaRef(str(a.producto, 600)), estilo: str(a.estilo, 20) || "giro", titular: str(a.titular, 80), descripcion: str(a.descripcion, 400) });
+      return { text: `Video de producto en camino (${d.video.estilo}). Id: ${d.video.id}. Revísalo con creads_estado_video en 1 a 3 minutos.`, data: { id: d.video.id } };
+    },
+  },
+  {
+    name: "creads_estado_video", title: "Ver video de producto",
+    description: "Shows the progress of a product video ordered with creads_video_producto. When «listo», returns the video link and a direct download link valid for an hour.",
+    inputSchema: { type: "object", properties: { id: { type: "string", pattern: "^vp_[a-z0-9]{8,20}$" } }, required: ["id"], additionalProperties: false },
+    annotations: { title: "Ver video de producto", readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    run: async (a, call, origin, ctx) => {
+      const d = await call<{ video: { id: string; estado: string; url?: string; escena?: string; error?: string } }>(`/api/video-producto?id=${encodeURIComponent(str(a.id, 30))}`);
+      const v = d.video;
+      if (v.estado === "listo" && v.url) {
+        const descarga = await ctx.link(v.url).catch(() => null);
+        return { text: `Video listo: ${abs(origin, v.url)}${descarga ? `\nDescarga directa (1 hora): ${descarga}` : ""}`, data: { estado: v.estado, url: abs(origin, v.url), ...(descarga ? { descarga } : {}) } };
+      }
+      if (v.estado === "error") return { text: `El video falló y el saldo volvió a la cuenta: ${v.error ?? "error del modelo"}.`, data: { estado: v.estado } };
+      return { text: "Todavía se está creando. Vuelve a revisar en un minuto.", data: { estado: v.estado } };
+    },
+  },
+  {
     name: "creads_crear_anuncio", title: "Crear anuncio en video",
     description: `Orders a finished vertical video ad from a script: Creads picks the scenes, generates the clips, checks quality, redoes severe errors and assembles it with subtitles. Spends the account's credits. Takes a few minutes: then call creads_estado_anuncio with the returned id every 30–60 seconds until it is «listo». Formats: ${API_FORMATS.join(", ")} (ugc = a person talking to the camera).`,
     inputSchema: { type: "object", properties: {
