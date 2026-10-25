@@ -8,7 +8,7 @@ export const TIPO_LABEL: Record<TipoAngulo, string> = {
 
 export interface Producto { nombre: string; descripcion: string; precio: string; publico: string; beneficios: string[]; objeciones: string[]; foto: string; url: string }
 export interface Angulo { tipo: TipoAngulo; titulo: string; gancho: string; por_que: string }
-export interface Pieza { n: number; tipo: TipoAngulo; titular: string; estilo: string; prompt: string; /** the customer marked it as the winner of the test */ ganador?: boolean; f45?: string; f916?: string; nota?: string; error?: string }
+export interface Pieza { n: number; tipo: TipoAngulo; titular: string; estilo: string; prompt: string; /** the customer marked it as the winner of the test */ ganador?: boolean; /** «Video de producto» made from this piece */ video?: VideoPieza; f45?: string; f916?: string; nota?: string; error?: string }
 export interface Tanda { id: string; createdAt: string; updatedAt: string; idioma: "es" | "en"; /** variations of a winner: the batch and piece they come from */ origen?: { tanda: string; n: number }; producto: Producto; angulos: Angulo[]; piezas: Pieza[] }
 
 // ---------- file names of the ZIP (shared with the Meta bulk-import CSV, so names line up) ----------
@@ -25,3 +25,5 @@ export function extDe(ref: string, contentType = ""): "jpg" | "png" | "webp" {
   return contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
 }
 
+
+export interface VideoPieza { estado: "creando" | "listo" | "error"; estilo: string; modelo?: string; job?: string; escena?: string; url?: string; error?: string; cargo?: string }

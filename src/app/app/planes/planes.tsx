@@ -286,7 +286,7 @@ export default function Planes() {
                     <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(founder ? FUNDADOR.usd : perMonth)}</b><span className="text-sm text-muted">/mes</span>{founder && <s className="text-sm text-muted">{money(p.monthly)}</s>}</span>
                     <span className="text-xs text-muted">{founder ? <>Precio fundador los primeros {FUNDADOR.months} meses · quedan {pay?.fundador?.quedan} de {FUNDADOR.cupos} cupos</> : period === "anual" ? <>{money(p.yearlyPerMonth * 12)} al año</> : first !== null ? <>Primer mes {money(first)}</> : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Hasta <b>{p.imagenes} imágenes</b> o <b>{p.videos} videos</b> con avatar de 10 s al mes, o la mezcla que quieras{period === "anual" ? " (12 meses)" : ""}.</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Hasta <b>{p.imagenes} imágenes</b>, <b>{p.videos} videos</b> con avatar de 10 s o <b>{p.productos} videos de producto</b> al mes, o la mezcla que quieras{period === "anual" ? " (12 meses)" : ""}.</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>

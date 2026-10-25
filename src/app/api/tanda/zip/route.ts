@@ -26,6 +26,15 @@ export async function GET(req: Request) {
       files[zipName(p, f, extDe(ref, res.headers.get("content-type") ?? ""))] = new Uint8Array(await res.arrayBuffer());
     })());
   }
+  // «Videos de producto», next to the images
+  for (const p of t.piezas) {
+    const ref = p.video?.estado === "listo" ? p.video.url : null;
+    if (!ref) continue;
+    jobs.push((async () => {
+      const res = await fetch(await fetchableUrl(ref, ws, 600), { signal: AbortSignal.timeout(30_000) }).catch(() => null);
+      if (res?.ok) files[`videos-9x16/${String(p.n).padStart(2, "0")}-video-producto.mp4`] = new Uint8Array(await res.arrayBuffer());
+    })());
+  }
   await Promise.all(jobs);
   if (!Object.keys(files).length) return Response.json({ error: "Esta tanda todavía no tiene imágenes listas." }, { status: 404 });
   const csv = nombreCsv(t);

@@ -63,7 +63,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
       {/* plans */}
       <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-3 md:items-start">
         {shown.map((p) => {
-          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number };
+          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number; productos?: number };
           const featured = Boolean(plan.featured);
           const founder = !yearly && p.id === FUNDADOR.plan && quedan !== null && quedan > 0;
           const now = yearly ? p.yearly : founder ? FUNDADOR.usd : p.price;
@@ -109,7 +109,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                     <b className="font-display text-xl font-semibold tabular-nums">{es ? "o" : "or"} {plan.videos}</b>
                     <span className="text-xs text-muted">{es ? "videos con avatar de 10 s" : "10 s avatar videos"}</span>
                   </div>
-                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">{es ? "O la mezcla que quieras: es un solo saldo." : "Or any mix: it's one balance."}</div>
+                  <div className="col-span-2 border-t border-line px-3.5 py-2 text-xs text-muted">{es ? <>O {plan.productos} videos de producto. O la mezcla que quieras: es un solo saldo.</> : <>Or {plan.productos} product videos. Or any mix: it&apos;s one balance.</>}</div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <a href={startHref(p.id, yearly)}

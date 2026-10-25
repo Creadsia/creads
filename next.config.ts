@@ -77,6 +77,8 @@ const nextConfig: NextConfig = {
     "/api/generate/image": ["./node_modules/ffmpeg-static/ffmpeg"],
     // «Primera tanda»: the brand's logo is put on each finished image
     "/api/tanda": ["./node_modules/ffmpeg-static/ffmpeg"],
+    // «Video de producto»: the headline is burnt on the finished clip (needs the fonts too)
+    "/api/tanda/video": ffmpegFiles,
     "/api/historias/montar": ffmpegFiles,
     "/api/historias/dialogos": ["./node_modules/ffmpeg-static/ffmpeg"],
     // voice samples are cleaned up (any audio or video → mono mp3) before cloning

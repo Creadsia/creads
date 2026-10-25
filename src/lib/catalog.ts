@@ -22,6 +22,8 @@ export const PLANS = es.pricing.plans.map((p) => ({
   /** What the monthly balance is worth, as shown to customers («hasta 47 imágenes o 3 videos»). */
   imagenes: Number((p as { imagenes?: number }).imagenes ?? 0),
   videos: Number((p as { videos?: number }).videos ?? 0),
+  /** «Video de producto» (6 s, product in motion with the headline, ≈ 30 credits) */
+  productos: Number((p as { productos?: number }).productos ?? 0),
 }));
 /** The plans on sale (shown on the website and in «Planes»). */
 export const SHOWN_PLANS = PLANS.filter((p) => !p.hidden);

@@ -162,6 +162,34 @@ export default function PrimeraTanda() {
     } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear las variaciones."); setBusy(""); }
   }
 
+  /** «Video de producto»: a 6 s premium clip of the product with the headline, from this piece. */
+  async function video(t: Tanda, n: number) {
+    setErr("");
+    try {
+      const r = await fetch("/api/tanda/video", { method: "POST", headers: H, body: JSON.stringify({ id: t.id, n }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "No se pudo empezar el video.");
+      capture("tanda_video", { n });
+      refreshCredits();
+      if (d.tanda) setTanda(d.tanda);
+    } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo empezar el video."); }
+  }
+  // videos in progress: check every 8 s until they're ready
+  useEffect(() => {
+    if (!tanda) return;
+    const pend = tanda.piezas.filter((p) => p.video?.estado === "creando");
+    if (!pend.length) return;
+    const id = tanda.id;
+    const timer = setTimeout(async () => {
+      for (const p of pend) {
+        const d = await fetch(`/api/tanda/video?id=${id}&n=${p.n}`).then((r) => r.json()).catch(() => null);
+        if (d?.tanda) setTanda(d.tanda);
+        if (d?.video?.estado === "error") refreshCredits();
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [tanda]);
+
   const listos = tanda ? tanda.piezas.reduce((a, p) => a + (p.f45 ? 1 : 0) + (p.f916 ? 1 : 0), 0) : 0;
   const total = tanda ? tanda.piezas.length * 2 : 0;
   const corriendo = Object.values(estado).some((v) => v === "creando" || v === "esperando");
@@ -276,7 +304,7 @@ export default function PrimeraTanda() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])}
               onGanador={() => post<{ tanda: Tanda | null }>({ accion: "pieza", id: tanda.id, n: p.n, formato: "4:5", ganador: !p.ganador }).then((o) => o.tanda && setTanda(o.tanda)).catch(() => {})}
-              onVariar={() => variar(tanda, p.n)} busy={Boolean(busy)} />)}
+              onVariar={() => variar(tanda, p.n)} busy={Boolean(busy)} onVideo={() => video(tanda, p.n)} />)}
           </div>
           <p className="text-xs text-muted">Siguiente paso: sube la carpeta feed-4x5 a los anuncios de feed y stories-reels-9x16 a los de stories y reels. Testea todos con el mismo presupuesto y quédate con los 2 o 3 que mejor venden. ¿Quieres ahorrarte armar los anuncios uno por uno? Sube las imágenes a la biblioteca de tu cuenta publicitaria e importa el archivo para Meta (Exportar e importar → Importar anuncios en bloque): se crean en pausa, con el mismo nombre de cada imagen. El ZIP trae un LEEME con los pasos.</p>
           <button type="button" onClick={() => { setTanda(null); setPaso("link"); window.history.replaceState(null, "", "/app/tanda"); }} className={`${ghostCls} self-start`}>Hacer otra tanda</button>
@@ -302,7 +330,7 @@ export default function PrimeraTanda() {
   );
 }
 
-function PiezaCard({ p, estado, onRetry, onGanador, onVariar, busy }: { p: Pieza; estado: Record<string, string>; onRetry: (f: "4:5" | "9:16") => void; onGanador: () => void; onVariar: () => void; busy: boolean }) {
+function PiezaCard({ p, estado, onRetry, onGanador, onVariar, busy, onVideo }: { p: Pieza; estado: Record<string, string>; onRetry: (f: "4:5" | "9:16") => void; onGanador: () => void; onVariar: () => void; busy: boolean; onVideo: () => void }) {
   const lista = Boolean(p.f45 || p.f916);
   return (
     <article className={`flex flex-col gap-3 rounded-2xl border bg-surface p-3 ${p.ganador ? "border-good" : "border-line"}`}>
@@ -335,6 +363,20 @@ function PiezaCard({ p, estado, onRetry, onGanador, onVariar, busy }: { p: Pieza
         })}
       </div>
       {p.nota && <p className="rounded-lg bg-amber-500/10 px-2 py-1 text-xs text-amber-300">Revisión: {p.nota}</p>}
+      {lista && (
+        p.video?.estado === "listo" && p.video.url ? (
+          <div className="flex flex-col gap-1">
+            <video src={p.video.url} controls playsInline muted loop className="aspect-[9/16] w-full rounded-lg bg-black object-cover" />
+            <a href={dl(p.video.url)} className="text-xs font-semibold text-muted underline">Descargar video</a>
+          </div>
+        ) : p.video?.estado === "creando" ? (
+          <span className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted"><Spinner /> Creando el video de producto (1 a 3 minutos)…</span>
+        ) : (
+          <button type="button" onClick={onVideo} className="rounded-lg border border-line px-3 py-2 text-left text-xs font-semibold hover:border-accent">
+            🎬 Video de producto de 6 s · usa ≈ 3 imágenes de saldo{p.video?.estado === "error" ? " · falló, reintentar" : ""}
+          </button>
+        )
+      )}
       {p.ganador && <button type="button" onClick={onVariar} disabled={busy} className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-bg disabled:opacity-50">Haz 10 variaciones de este</button>}
     </article>
   );
