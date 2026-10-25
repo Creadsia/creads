@@ -9,6 +9,7 @@ import { ownsMedia } from "@/lib/media";
 import { takesOwnVoice } from "@/lib/formats";
 import { avatarVideo } from "@/lib/avatar-video";
 import { isOwner } from "@/lib/auth";
+import { readLang } from "@/lib/ad-lang";
 
 // Creates an ad and one clip per cut, ready to be generated (step 4 of "Crear anuncio").
 export async function POST(req: Request) {
@@ -32,11 +33,20 @@ export async function POST(req: Request) {
     // video model makes up (which stumbles on Spanish words and brand names). The studio sends the choice
     // ("" = the model's voice); the API and connectors default to the avatar's own voice.
     const format = String(b?.format ?? "ugc");
-    const lang = b?.lang === "es-CL" ? "es-CL" : "en";
+    const lang = readLang(b?.lang, "en");
+    // the customer's product photo sent with the order (API / Automático), when no saved product was chosen:
+    // it must be one of this account's own files
+    const productImage = !product && ownsMedia(b?.productImage, s.user.workspace) ? String(b.productImage) : null;
+    if (b?.productImage && !product && !productImage) return NextResponse.json({ error: "La foto del producto no es de tu cuenta. Súbela de nuevo." }, { status: 400 });
+    // «persona del anuncio»: without an avatar, one fixed person and outfit for every cut (its first frame is
+    // the face of the others: /api/clips/run)
+    const persona = !avatar && typeof b?.persona === "string" && b.persona.trim() ? b.persona.replace(/\s+/g, " ").trim().slice(0, 400) : null;
     const wanted = typeof b?.voiceId === "string" ? b.voiceId : null; // null = not chosen (API): the avatar's or a matching accent voice
     let voiceId: string | null = null;
     if (takesOwnVoice(format)) {
-      voiceId = wanted === null ? await defaultVoice(s.user.workspace, avatar, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
+      // the automatic person's description picks a voice of the same gender
+      const who = avatar ?? (persona ? { description: persona, name: persona } : null);
+      voiceId = wanted === null ? await defaultVoice(s.user.workspace, who, lang).catch(() => null) : wanted ? await resolveVoice(s.user.workspace, wanted) : null;
       if (wanted && !voiceId) return NextResponse.json({ error: "Esa voz no está disponible. Elige otra." }, { status: 400 });
     }
     // «Persona real»: the avatar's own filmed video gets the voice on its lips; it needs both
@@ -58,7 +68,8 @@ export async function POST(req: Request) {
         lang,
         niche: cleanNiche(b?.niche) || null,
         avatar: avatar ? { id: avatar.id, name: avatar.name, image_url: avatar.image_url, voice_id: avatar.voice_id, ...(video ? { video } : {}) } : null,
-        product: product ? { id: product.id, name: product.name, image_url: product.image_url } : null,
+        product: product ? { id: product.id, name: product.name, image_url: product.image_url } : productImage ? { id: null, name: "Producto", image_url: productImage } : null,
+        ...(persona ? { persona: { description: persona } } : {}),
         voiceId,
         // faster voice (1.0–1.2) when the customer asked for it
         ...(voiceId && typeof b?.voiceSpeed === "number" && b.voiceSpeed > 1 ? { voiceSpeed: Math.min(1.2, b.voiceSpeed) } : {}),

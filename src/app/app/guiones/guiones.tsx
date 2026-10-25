@@ -76,7 +76,7 @@ export default function Guiones() {
   useEffect(() => {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") as Draft | null;
-      if (d) { setScript(d.script || ""); setLang(d.lang === "en" ? "en" : "es-CL"); setNiche(d.niche || ""); setContext(d.context || ""); setVersions(Array.isArray(d.versions) ? d.versions.slice(0, 20) : []); setReference(d.reference?.text ? d.reference : null); }
+      if (d) { setScript(d.script || ""); setLang(d.lang === "en" || d.lang === "es" ? d.lang : "es-CL"); setNiche(d.niche || ""); setContext(d.context || ""); setVersions(Array.isArray(d.versions) ? d.versions.slice(0, 20) : []); setReference(d.reference?.text ? d.reference : null); }
       else { const n = localStorage.getItem("creads-niche"); if (n) setNiche(n); }
       // a winning ad brought from «Espiar anuncios»: it becomes the script to take apart (the previous one is kept as a version)
       const spy = JSON.parse(sessionStorage.getItem(FROM_SPY_KEY) || "null") as { text?: string; page?: string; voice?: boolean; video?: boolean; days?: number | null } | null;
@@ -239,7 +239,7 @@ export default function Guiones() {
           <h2 id="tu-guion" className="font-display text-lg font-bold">1 · Tu guion</h2>
           {saved.rows && saved.rows.length > 0 && (
             <select aria-label="Abrir un guion guardado" value="" className={inputCls}
-              onChange={(e) => { const s = saved.rows?.find((x) => x.id === e.target.value); if (s) { applyScript(s.text, s.title || "Guardado"); setLang(s.lang === "en" ? "en" : "es-CL"); } }}>
+              onChange={(e) => { const s = saved.rows?.find((x) => x.id === e.target.value); if (s) { applyScript(s.text, s.title || "Guardado"); setLang(s.lang === "en" || s.lang === "es" ? s.lang : "es-CL"); } }}>
               <option value="">Abrir un guion guardado…</option>
               {saved.rows.map((s) => <option key={s.id} value={s.id}>{s.favorite ? "★ " : ""}{s.title || s.text.slice(0, 40)}</option>)}
             </select>

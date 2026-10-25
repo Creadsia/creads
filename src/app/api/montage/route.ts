@@ -12,6 +12,7 @@ import type { Word } from "@/lib/textmatch";
 import { cutTimes, cleanPlan, proPass, proPrompt, resolveLook, type ProPlan } from "@/lib/pro-edit";
 import { textAI } from "@/lib/providers";
 import { parseJSON } from "@/lib/providers/claude";
+import { readLang, sttLang } from "@/lib/ad-lang";
 
 export const maxDuration = 300;
 
@@ -47,7 +48,8 @@ export async function POST(req: Request) {
     const settings = (ad.settings ?? {}) as { lang?: string; review?: { clipId: string; url?: string; words: Word[] }[]; aviso?: string };
     // the «Dramatización · actor IA» label: asked now, or kept from the first montage (subtitle edits rebuild it)
     const aviso = b?.quitarAviso === true ? "" : str(b?.aviso, 40) || str(settings.aviso, 40);
-    const lang = settings.lang === "es-CL" ? "es" : "en";
+    const lang = sttLang(settings.lang ?? "en"); // transcription and subtitles: es-CL and es → "es"
+    const variant = readLang(settings.lang, "en"); // the closing card's wording (Chilean, neutral or US)
     const aspect = String(ad.aspect || "9:16");
     const dir = await workdir(adId);
 
@@ -94,7 +96,7 @@ export async function POST(req: Request) {
       const fallback = { titulo: cierreHint.titulo || (lang === "es" ? "¡Pruébalo hoy!" : "Try it today!"), linea: cierreHint.linea || "" };
       let raw: unknown = null;
       if (textAI.configured() && script) {
-        raw = await textAI.complete({ prompt: proPrompt(script, timeline, lang, cierreHint), json: true, maxTokens: 900 })
+        raw = await textAI.complete({ prompt: proPrompt(script, timeline, lang, cierreHint, variant), json: true, maxTokens: 900 })
           .then((t) => parseJSON(t)).catch(() => null);
       }
       proPlan = cleanPlan(raw, offset, fallback);

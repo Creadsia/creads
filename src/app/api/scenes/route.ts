@@ -8,6 +8,8 @@ import { FORMATS, type FormatId } from "@/lib/formats";
 import { textAI } from "@/lib/providers";
 import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
 import { parseJSON } from "@/lib/providers/claude";
+import { readLang } from "@/lib/ad-lang";
+import { ownsMedia } from "@/lib/media";
 
 export const maxDuration = 120;
 
@@ -35,14 +37,17 @@ export async function POST(req: Request) {
     ]);
     const ctx: SceneContext = {
       format,
-      lang: b?.lang === "es-CL" ? "es-CL" : "en",
+      lang: readLang(b?.lang, "en"),
       aspect: (["9:16", "16:9", "1:1", "4:5"].includes(b?.aspect) ? b.aspect : "9:16") as SceneContext["aspect"],
       avatar: avatar
         ? { description: String(avatar.description || avatar.name || ""), hasPhoto: Boolean(avatar.image_url) }
         : typeof b?.avatarText === "string" && b.avatarText.trim()
           ? { description: b.avatarText.trim().slice(0, 400), hasPhoto: false }
           : null,
-      product: product ? { name: String(product.name), description: String(product.description || ""), hasPhoto: Boolean(product.image_url) } : null,
+      // a saved product, or the product photo sent with the order (API / Automático): one of this account's files
+      product: product
+        ? { name: String(product.name), description: String(product.description || ""), hasPhoto: Boolean(product.image_url) }
+        : ownsMedia(b?.productImage, s.user.workspace) ? { name: "the product shown in the product reference photo", hasPhoto: true } : null,
       place: typeof b?.place === "string" ? b.place.slice(0, 300) : "",
       direction: typeof b?.direction === "string" ? b.direction.slice(0, 1200) : "",
       rules: (rules as Record<string, unknown>[])

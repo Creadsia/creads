@@ -10,6 +10,7 @@ import { DRAFT_KEY, TO_CREAR_KEY } from "@/lib/guiones";
 import Escenas from "./escenas";
 import Voz, { type VoiceChoice, splitLong } from "./voz";
 import AdWork from "../_parts/ad-work";
+import { type AdLang, readLang } from "@/lib/ad-lang";
 
 // "Crear anuncio": the prototype's Taller (script → cuts → scenes → videos), step by step.
 
@@ -69,7 +70,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
   const [wantVoice, setWantVoice] = useState(false);
   // Spanish by default (Latin America); the script's own language wins (an English setting with a Spanish
   // script made the model speak Spanish with an American accent)
-  const [lang, setLang] = useState<"en" | "es-CL">("es-CL");
+  const [lang, setLang] = useState<AdLang>("es-CL");
   const [langNote, setLangNote] = useState("");
   const [format, setFormat] = useState<FormatId>("ugc");
   const [text, setText] = useState("");
@@ -95,7 +96,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
     try {
       const w = JSON.parse(localStorage.getItem(WORK_KEY) || "null");
       if (w && Date.now() - (w.at ?? 0) < 7 * 86_400_000 && (w.cuts?.length || w.text)) {
-        setText(w.text ?? ""); setLang(w.lang === "en" ? "en" : "es-CL"); if (w.format && SOLD_FORMATS.includes(w.format)) setFormat(w.format);
+        setText(w.text ?? ""); setLang(readLang(w.lang, "es-CL")); if (w.format && SOLD_FORMATS.includes(w.format)) setFormat(w.format);
         setTitle(w.title ?? ""); setCuts(w.cuts ?? []); setScriptId(w.scriptId ?? null); setAdId(w.adId ?? null);
         if (w.voice) setVoice(w.voice);
         setStep(Number.isInteger(w.step) ? w.step : 0); setResumed(true);
@@ -134,13 +135,13 @@ export default function Crear({ full = true }: { full?: boolean }) {
         // arriving from the menu: bring the script being worked on in «Crear guion», if there is one
         const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null") as { script?: string; lang?: string } | null;
         if (draft?.script && draft.script.trim().split(/\s+/).length >= 12) {
-          setText(draft.script.trim()); setLang(draft.lang === "en" ? "en" : "es-CL"); setFromGuion(true);
+          setText(draft.script.trim()); setLang(readLang(draft.lang, "es-CL")); setFromGuion(true);
         }
         return;
       }
       sessionStorage.removeItem(TO_CREAR_KEY);
       const d = JSON.parse(raw) as { text?: string; lang?: string; title?: string };
-      if (d.text) { setText(d.text); setLang(d.lang === "en" ? "en" : "es-CL"); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setAdId(null); setStep(0); setFromGuion(true); }
+      if (d.text) { setText(d.text); setLang(readLang(d.lang, "es-CL")); setTitle(d.title ?? ""); setScriptId(null); setCuts([]); setAdId(null); setStep(0); setFromGuion(true); }
     } catch {}
   }, []);
 
@@ -151,7 +152,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
   function openScript(id: string) {
     const s = scripts.rows?.find((x) => x.id === id);
     if (!s) return;
-    setText(s.text); setLang(s.lang === "es-CL" ? "es-CL" : "en"); pickFormat((s.format as FormatId) || "ugc");
+    setText(s.text); setLang(readLang(s.lang, "en")); pickFormat((s.format as FormatId) || "ugc");
     setTitle(s.title ?? ""); setScriptId(s.id); setSaved("");
     setAdId(null);
     if (s.cuts?.length) { setCuts(s.cuts); setStep(1); } else { setCuts([]); setStep(0); }
@@ -236,9 +237,10 @@ export default function Crear({ full = true }: { full?: boolean }) {
               <datalist id="niches">{NICHES.map((n) => <option key={n} value={n} />)}</datalist>
             </Field>
             <Field label="Idioma del video">
-              <select value={lang} onChange={(e) => setLang(e.target.value as "en" | "es-CL")} className={inputCls}>
+              <select value={lang} onChange={(e) => setLang(readLang(e.target.value, "es-CL"))} className={inputCls}>
                 <option value="en">Inglés (EE. UU.)</option>
-                <option value="es-CL">Español (Latinoamérica)</option>
+                <option value="es-CL">Español de Chile</option>
+                <option value="es">Español neutro (el acento lo pone la voz)</option>
               </select>
             </Field>
             </div>
@@ -250,7 +252,7 @@ export default function Crear({ full = true }: { full?: boolean }) {
             </p>
           )}
           {langNote && <p role="status" className="rounded-lg bg-accent/10 px-3 py-2 text-sm">{langNote}</p>}
-          <textarea data-tour="crear-guion" value={text} onChange={(e) => { setText(e.target.value); const g = guessLang(e.target.value); if (g && g !== lang) { setLang(g); setLangNote(g === "es-CL" ? "Tu guion está en español: dejamos el video en español." : "Your script is in English: the video is set to English."); } }} rows={8} aria-label="Guion"
+          <textarea data-tour="crear-guion" value={text} onChange={(e) => { setText(e.target.value); const g = guessLang(e.target.value); if (g && (g === "en") !== (lang === "en")) { setLang(g); setLangNote(g === "es-CL" ? "Tu guion está en español: dejamos el video en español." : "Your script is in English: the video is set to English."); } }} rows={8} aria-label="Guion"
             placeholder="Pega aquí el guion tal cual lo dice la persona del video (en inglés o en español)…" className={`${inputCls} leading-relaxed`} />
           <p className="-mt-2 text-xs text-muted">¿Quieres mejorarlo antes? Desármalo, pide 3 ángulos o 10 hooks en <a href="/app/guiones" className="font-semibold text-accent-text underline">Crear guion</a> (paso 1).</p>
 

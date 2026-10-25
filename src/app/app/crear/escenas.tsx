@@ -22,6 +22,8 @@ const MODEL_TAGS: Record<string, { pill: string; rank: number; note?: string }> 
   "veo-3.1": { pill: "Máxima calidad · caro", rank: 3, note: "Casi 3 veces el precio de Kling. Solo para el anuncio final." },
 };
 import type { Cut } from "./crear";
+import { type AdLang, placeHint } from "@/lib/ad-lang";
+import { PRODUCT_EXACT, PRODUCT_GENERIC } from "@/lib/ad-continuity";
 
 // Steps 3 and 4 of "Crear anuncio": direct the scenes, then generate every cut with the chosen model.
 
@@ -39,7 +41,7 @@ const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
 
 export default function Escenas({ step, setStep, format, lang, title, cuts, scriptId, niche, v, onVoiceStep, adId, setAdId, onNewScenes }: {
-  step: number; setStep: (n: number) => void; format: FormatId; lang: "en" | "es-CL"; title: string; cuts: Cut[]; scriptId: string | null; niche: string;
+  step: number; setStep: (n: number) => void; format: FormatId; lang: AdLang; title: string; cuts: Cut[]; scriptId: string | null; niche: string;
   v: VoiceChoice; onVoiceStep: () => void; adId: string | null; setAdId: (id: string) => void;
   /** New scene prompts = a new ad: the previous ad's videos must not show in «Videos». */
   onNewScenes?: () => void;
@@ -157,7 +159,7 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
 
   function framePrompt(i: number) {
     const d = scenes?.[i]?.dir ?? {};
-    return `Photorealistic ${aspect} still frame, the first frame of a real phone video clip (not a staged photo). ${avatar ? `The person from the first reference image (${oneLocation({ avatar: { description: "", hasPhoto: true }, direction }) ? "same face, hair and clothes" : "same face"}): ${avatar.description || avatar.name}.` : ""} Setting: ${d.setting || place || "a real home, natural light"}. Shot: ${d.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product ? ` The product is visible in the scene, exactly like the product reference image: ${product.description || product.name}.` : ""}${lang === "es-CL" ? " The place looks like Chile." : ""} Natural light, real skin texture, no text, no logos, no watermark.`;
+    return `Photorealistic ${aspect} still frame, the first frame of a real phone video clip (not a staged photo). ${avatar ? `The person from the first reference image (${oneLocation({ avatar: { description: "", hasPhoto: true }, direction }) ? "same face, hair and clothes" : "same face"}): ${avatar.description || avatar.name}.` : ""} Setting: ${d.setting || place || "a real home, natural light"}. Shot: ${d.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product ? ` The product is visible in the scene${product.image_url ? `: ${PRODUCT_EXACT}` : ""}: ${product.description || product.name}.` : ` ${PRODUCT_GENERIC}`}${placeHint(lang) ? ` ${placeHint(lang)}` : ""} Natural light, real skin texture, no text, ${product?.image_url ? "no logos other than the product's own label," : "no logos,"} no watermark.`;
   }
 
   async function generate() {
