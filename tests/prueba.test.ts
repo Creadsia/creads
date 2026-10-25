@@ -11,5 +11,5 @@ test("card trial: without a card the gift is not given (checked before anything 
   } finally {
     if (before === undefined) delete process.env.REGALO_CON_TARJETA; else process.env.REGALO_CON_TARJETA = before;
   }
-  assert.equal(tarjetaObligatoria(), before === "1");
+  assert.equal(tarjetaObligatoria(), before !== "0");
 });

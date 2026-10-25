@@ -35,11 +35,9 @@ export async function hasPaid(ws: string) {
 }
 
 /** «Prueba con tarjeta» (owner, 25 Oct 2026): the gift only after the customer adds a card on Mercado Pago (a
- *  7-day trial that becomes the Básico plan unless cancelled). Turned on with REGALO_CON_TARJETA=1 in Vercel. */
-export const tarjetaObligatoria = () =>
-  process.env.REGALO_CON_TARJETA === "1" ||
-  // its own preview link, to try it before turning it on for everyone
-  (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF === "prueba-tarjeta");
+ *  7-day trial that becomes the Básico plan unless cancelled). Off with REGALO_CON_TARJETA=0 in Vercel. */
+// On by default since 25 Oct 2026 (owner: «déjalo listo»); REGALO_CON_TARJETA=0 in Vercel turns it off.
+export const tarjetaObligatoria = () => process.env.REGALO_CON_TARJETA !== "0";
 export const PRUEBA_DIAS = 7;
 
 export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" | "tarjeta" };
