@@ -50,12 +50,15 @@ const PRODUCTO_DEMOS = [
   { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Sérum" },
   { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "Café" },
   { src: "/demos/prod-audifonos.mp4", poster: "/demos/prod-audifonos.jpg", label: "Audífonos" },
+  { src: "/demos/prod-celular.mp4", poster: "/demos/prod-celular.jpg", label: "Celular" },
+  { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "Zapatillas" },
+  { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "Perfume" },
 ];
 /** The product reel: several product videos cut fast, to the beat. */
 const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto hechos con Creads" };
 const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
 /** Everything that moves on the wall: product videos and UGC, mixed. */
-const MURO_VIDEOS = [PRODUCTO_DEMOS[0], DEMOS.dent, PRODUCTO_DEMOS[3], DEMOS.gym, PRODUCTO_DEMOS[1], DEMOS.rubia, PRODUCTO_DEMOS[2], DEMOS.cafe, DEMOS.bano, DEMOS.doc, DEMOS.cocina];
+const MURO_VIDEOS = [PRODUCTO_DEMOS[4], DEMOS.dent, PRODUCTO_DEMOS[5], DEMOS.gym, PRODUCTO_DEMOS[0], DEMOS.rubia, PRODUCTO_DEMOS[6], DEMOS.cafe, PRODUCTO_DEMOS[3], DEMOS.bano, PRODUCTO_DEMOS[1], DEMOS.doc, PRODUCTO_DEMOS[2], DEMOS.cocina];
 
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
@@ -167,10 +170,10 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                   <figcaption className="text-center text-sm text-muted">Demo de 2 minutos, con sonido: de un link a 10 anuncios.</figcaption>
                 </figure>
               ) : (
-                <div className="relative w-full max-w-[460px] py-6">
-                  <TandaMock />
-                  <DemoPhone {...PRODUCTO_DEMOS[0]} label="" className="float pointer-events-none absolute -top-6 -left-6 z-10 hidden w-24 sm:block lg:-left-14 lg:w-28 [--fd:8s] [--r:-8deg]" />
-                  <DemoPhone {...DEMOS.dent} label="" className="float pointer-events-none absolute -right-6 -bottom-8 z-10 hidden w-24 sm:block lg:-right-14 lg:w-28 [--fd:9s] [--fdl:-3s] [--r:7deg]" />
+                <div className="relative mx-auto w-full max-w-[460px] py-6">
+                  <div className="relative z-10"><TandaMock /></div>
+                  <DemoPhone {...PRODUCTO_DEMOS[4]} label="" className="float pointer-events-none absolute top-24 -left-16 z-0 hidden w-28 lg:block [--fd:8s] [--r:-10deg]" />
+                  <DemoPhone {...DEMOS.dent} label="" className="float pointer-events-none absolute -right-16 bottom-10 z-0 hidden w-28 lg:block [--fd:9s] [--fdl:-3s] [--r:9deg]" />
                 </div>
               )}
             </div>
@@ -217,9 +220,9 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               <div className="self-start"><Cta href="/app/video-producto" sub="Usa el mismo saldo de tu plan.">Haz el video de tu producto</Cta></div>
             </div>
             <div className="relative mx-auto flex h-[520px] w-full max-w-[520px] items-center justify-center sm:h-[600px]">
-              <DemoPhone {...PRODUCTO_DEMOS[1]} label="" className="float absolute top-6 left-0 w-32 opacity-90 sm:w-40 [--fd:9s] [--r:-9deg]" />
-              <DemoPhone {...PRODUCTO_DEMOS[2]} label="" className="float absolute right-0 bottom-6 w-32 opacity-90 sm:w-40 [--fd:8s] [--fdl:-4s] [--r:8deg]" />
-              <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} big className="relative z-10 w-56 sm:w-64" />
+              <DemoPhone {...PRODUCTO_DEMOS[5]} label="" className="float absolute top-16 left-0 w-32 opacity-90 sm:w-40 [--fd:9s] [--r:-9deg]" />
+              <DemoPhone {...PRODUCTO_DEMOS[6]} label="" className="float absolute right-0 bottom-6 w-32 opacity-90 sm:w-40 [--fd:8s] [--fdl:-4s] [--r:8deg]" />
+              <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} label="" big className="relative z-10 w-56 sm:w-64" />
             </div>
           </div>
         </section>
