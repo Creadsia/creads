@@ -6,7 +6,7 @@ export type AreaId = "direccion" | "lanzamiento" | "numeros" | "marketing" | "cl
 export type PanelTab =
   | "oficina" | "equipo" | "lanzamiento"
   | "estadisticas" | "suscripciones" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "afiliados" | "modelos"
-  | "marketing" | "campanas"
+  | "marketing" | "campanas" | "portada"
   | "leads" | "contactar" | "clientes" | "registros"
   | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas";
 
@@ -29,7 +29,7 @@ export const AREAS: Area[] = [
     tabs: [["estadisticas", "Estadísticas"], ["suscripciones", "Suscripciones y retención"], ["rentabilidad", "Rentabilidad"], ["resumen", "Proyección"], ["movs", "Movimientos"], ["fijos", "Costos fijos"], ["planes", "Planes y afiliados"], ["afiliados", "Afiliados"], ["modelos", "Costo por modelo"]],
     agents: ["finanzas"],
   },
-  { id: "marketing", name: "Marketing", what: "Anuncios, campañas pagadas en Meta y contenido orgánico.", tabs: [["campanas", "Resultados de campañas"], ["marketing", "Estudio de marketing"]], agents: ["marketing", "creativos", "trafico", "organico"] },
+  { id: "marketing", name: "Marketing", what: "Anuncios, campañas pagadas en Meta y contenido orgánico.", tabs: [["campanas", "Resultados de campañas"], ["marketing", "Estudio de marketing"], ["portada", "Portada (confianza)"]], agents: ["marketing", "creativos", "trafico", "organico"] },
   { id: "clientes", name: "Clientes", what: "Tus clientes, sus accesos, registros y la atención.", tabs: [["leads", "Nuevas cuentas"], ["contactar", "Clientes a contactar"], ["clientes", "Clientes y accesos"], ["registros", "Registros"]], agents: ["soporte"] },
   {
     id: "plataforma", name: "Plataforma", what: "Que todo funcione: errores, proveedores, seguridad y novedades de IA.",

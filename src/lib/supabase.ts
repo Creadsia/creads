@@ -90,6 +90,42 @@ export async function writePrivateJSON(path: string, data: unknown) {
   if (!res.ok) throw new Error(`Storage: no se pudo guardar ${path} (${res.status}).`);
 }
 
+/** Files in a folder of the private bucket (name relative to the folder, last change), up to `max`. */
+export async function listPrivateFiles(prefix: string, max = 10_000): Promise<{ name: string; updated_at: string | null }[]> {
+  await ensureBucket(PRIVATE, false);
+  const { url, key } = env();
+  const out: { name: string; updated_at: string | null }[] = [];
+  for (let offset = 0; offset < max; offset += 1000) {
+    const res = await fetch(`${url}/storage/v1/object/list/${PRIVATE}`, {
+      method: "POST",
+      headers: { ...sbHeaders(key), "content-type": "application/json" },
+      body: JSON.stringify({ prefix, limit: 1000, offset, sortBy: { column: "name", order: "asc" } }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`Storage: no se pudo listar ${prefix} (${res.status}).`);
+    const page = (await res.json()) as { name: string; id: string | null; updated_at?: string | null }[];
+    // folders come back with id null
+    out.push(...page.filter((f) => f.id !== null).map((f) => ({ name: f.name, updated_at: f.updated_at ?? null })));
+    if (page.length < 1000) return out;
+  }
+  throw new Error(`Storage: demasiados archivos en ${prefix}.`);
+}
+
+/** Exact number of rows of a PostgREST query (no rows are downloaded). */
+export async function countRows(table: string, query: string): Promise<number> {
+  const { url, key } = env();
+  const res = await fetch(`${url}/rest/v1/${table}?${query}${query ? "&" : ""}select=id&limit=1`, {
+    headers: { ...sbHeaders(key), prefer: "count=exact" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`Base de datos: no se pudo contar ${table} (${res.status}).`);
+  const total = Number((res.headers.get("content-range") ?? "").split("/")[1]);
+  if (!Number.isFinite(total)) throw new Error(`Base de datos: conteo inesperado de ${table}.`);
+  return total;
+}
+
 /** Rows from a database table through the REST API (server only). */
 export async function selectRows<T>(table: string, query: string): Promise<T[]> {
   const { url, key } = env();
