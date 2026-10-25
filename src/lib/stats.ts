@@ -47,7 +47,7 @@ export interface StatRow { day: string; dim: Dim; key: string; n: number }
 
 export interface Range { from: string; to: string } // inclusive days, YYYY-MM-DD (Chile)
 
-const addDays = (d: string, n: number) => { const x = new Date(`${d}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+export const addDays = (d: string, n: number) => { const x = new Date(`${d}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 export const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400_000) + 1;
 export const dayList = (r: Range) => Array.from({ length: Math.max(1, daysBetween(r.from, r.to)) }, (_, i) => addDays(r.from, i));
 /** The period of the same length right before. */
