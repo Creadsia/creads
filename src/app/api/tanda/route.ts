@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
+import { phCapture } from "@/lib/posthog-server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { freeOrLimited } from "@/lib/credits";
@@ -79,6 +81,7 @@ export async function POST(req: Request) {
       if (typeof b.error === "string") patch.error = str(b.error, 300) || undefined;
       const out = await actualizarPieza(ws, t.id, n, patch);
       // «Tu tanda está lista» (behaviour emails, once per person): the image that completed the batch
+      if (b.url !== undefined && tandaCompleta(out) && !tandaCompleta(t)) after(() => phCapture(s.user.id, "batch_ready", { tanda: t.id, piezas: out!.piezas.length }, `batch_ready-${t.id}`));
       if (correosComportamiento() && b.url !== undefined && tandaCompleta(out) && !tandaCompleta(t)) {
         await enviarEmbudo(s.user, "tanda-lista", s.user.id, { vars: { n: String(out!.piezas.length), producto: out!.producto.nombre || "tu producto", id: out!.id } })
           .catch((e) => console.error("tanda lista email", e instanceof Error ? e.message : e));
@@ -121,6 +124,7 @@ export async function POST(req: Request) {
       if (!marca.producto.nombre) {
         await guardarMarca(ws, { ...marca, producto: { nombre: prod.nombre, descripcion: prod.descripcion, url: prod.url, precio: prod.precio, foto: prod.foto, publico: prod.publico } }).catch(() => null);
       }
+      after(() => phCapture(s.user.id, "angles_generated", { angulos: ang.length, fuente: pagina ? "link" : "descripcion", idioma }));
       return NextResponse.json({ producto: prod, angulos: ang, leido: pagina ? { titulo: pagina.titulo, url: pagina.url } : null });
     }
 
@@ -138,6 +142,7 @@ export async function POST(req: Request) {
       const now = new Date().toISOString();
       const t: Tanda = { id: tandaId(), createdAt: now, updatedAt: now, idioma, producto: prod, angulos: ang, piezas };
       await guardarTanda(ws, t);
+      after(() => phCapture(s.user.id, "batch_started", { tanda: t.id, piezas: piezas.length, angulos: ang.length, idioma }, `batch_started-${t.id}`));
       return NextResponse.json({ tanda: t });
     }
 

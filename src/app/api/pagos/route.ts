@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { phCapture } from "@/lib/posthog-server";
+import { after } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { addOrder, fundadoresUsados, hasPaidBefore, ordersOf, packParaDescontar, setOrderMp, workspaceRow } from "@/lib/billing";
 import { FUNDADOR, type ItemId, METHODS, type MethodId, PLANS, PRUEBA, PRUEBA_DESCUENTO_DIAS, type Period, clpFor, onSale, quote } from "@/lib/catalog";
@@ -93,6 +95,7 @@ export async function POST(req: Request) {
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });
     const visitor = visitorFrom(req);
     const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q, visitor });
+    after(() => phCapture(s.user.id, "checkout_start", { item: q.item, plan: q.label, total_usd: q.total, pedido: order.id, fuente: visitor.src ?? null }, `checkout_start-${order.id}`));
     await registrarEvento("checkout", { cuenta: ws, correo: s.user.email, item: q.item, plan: q.label, total_usd: q.total, pedido: order.id, fuente: visitor.src ?? null });
     // «Caso fundador»: the optional box at the Pack Prueba checkout (stored with date and exact text; never blocks the payment)
     if (q.item === PRUEBA.id && b?.casoFundador === true) {

@@ -77,3 +77,16 @@ test("cohorts: share of each month's accounts that paid in later months", () => 
   assert.deepEqual(c[1], { month: "2026-09", size: 2, cells: [0.5, 1] });
   assert.equal(c[2].cells.length, 1);
 });
+
+test("owner's channels: explicit utm_source names and paid Meta", async () => {
+  const { sourceOf } = await import("../src/lib/stats");
+  assert.equal(sourceOf({ utm: "meta_ads" }), "meta_ads");
+  assert.equal(sourceOf({ utm: "facebook", medium: "paid" }), "meta_ads");
+  assert.equal(sourceOf({ utm: "instagram", medium: "cpc" }), "meta_ads");
+  assert.equal(sourceOf({ utm: "instagram" }), "instagram");
+  assert.equal(sourceOf({ utm: "tiktok" }), "tiktok");
+  assert.equal(sourceOf({ utm: "youtube" }), "youtube");
+  assert.equal(sourceOf({ utm: "comunidad" }), "comunidad");
+  assert.equal(sourceOf({ utm: "partner" }), "partner");
+  assert.equal(sourceOf({ utm: "outreach" }), "outreach");
+});

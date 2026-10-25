@@ -136,6 +136,11 @@ export default function PrimeraTanda() {
     setPagando(false);
   }
   const alcanza = covers(MODEL_USD * 20);
+  // «paywall_view»: the angles are free; this is the moment the Pack is asked for (once per visit to this step)
+  const [vioPaywall, setVioPaywall] = useState(false);
+  useEffect(() => {
+    if (paso === "angulos" && info && !alcanza && !vioPaywall) { setVioPaywall(true); capture("paywall_view", { lugar: "tanda", item: "pack-prueba" }); }
+  }, [paso, info, alcanza, vioPaywall]);
 
   async function crear() {
     if (!producto) return;

@@ -443,6 +443,7 @@ function Planes({ d, setCfg }: { d: Finanzas; setCfg: SetCfg }) {
         <h2 className="font-display text-xl font-bold">Margen por plan, por cliente</h2>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Costo real por crédito (US$)"><Num id="cc" value={c.costoCredito} step={0.001} onChange={(v) => setCfg((x) => { x.costoCredito = v; })} /></Field>
+          {Math.abs(c.costoCredito - 0.0193) > 1e-9 && <p className="w-full text-sm font-semibold text-bad" role="alert">Ojo: está en {c.costoCredito}. Los planes nuevos están calculados con 0,0193.</p>}
           <Field label="Límite diario cuentas nuevas, primeras 48 h (US$, 0 = sin límite)"><Num id="ln" value={c.limiteNuevas ?? 25} step={5} onChange={(v) => setCfg((x) => { x.limiteNuevas = v; })} /></Field>
           <Field label="% de créditos usados"><Num id="uso" value={c.uso} step={5} max={100} onChange={(v) => setCfg((x) => { x.uso = v; })} /></Field>
           <Field label="Comisión Stripe %"><Num id="stp" value={c.stripePct} step={0.1} onChange={(v) => setCfg((x) => { x.stripePct = v; })} /></Field>
@@ -1097,7 +1098,8 @@ function Pedidos({ reload }: { reload: () => void }) {
                 <span className="block text-xs text-muted">{o.email} · {METHOD_LABEL[o.method] ?? o.method} · {new Date(o.created).toLocaleString("es-CL")}</span>
               </span>
               {o.status === "pendiente" ? (
-                <span className="flex gap-2">
+                <span className="flex flex-wrap gap-2">
+                  {o.method === "mercadopago" && <PorQueNoPago id={o.id} />}
                   <button type="button" onClick={() => set(o, "pagado")} className={btn}>Marcar pagado</button>
                   <button type="button" onClick={() => set(o, "cancelado")} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink">Cancelar</button>
                 </span>
@@ -1118,6 +1120,21 @@ function Pedidos({ reload }: { reload: () => void }) {
   );
 }
 
+
+/** «¿Por qué no pagó?»: Mercado Pago's own answer for an unpaid checkout (read-only). */
+function PorQueNoPago({ id }: { id: string }) {
+  const [r, setR] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function ver() {
+    setBusy(true);
+    const d = await fetch(`/api/admin/pedidos/diagnostico?id=${encodeURIComponent(id)}`).then((x) => x.json()).catch(() => null);
+    setR(d?.resumen ?? d?.error ?? "No se pudo consultar.");
+    setBusy(false);
+  }
+  return r ? <span className="max-w-xs text-xs text-muted">{r}</span> : (
+    <button type="button" onClick={ver} disabled={busy} className="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:text-ink disabled:opacity-50">{busy ? "Consultando…" : "¿Por qué no pagó?"}</button>
+  );
+}
 
 function Clientes({ planes }: { planes: Plan[] }) {
   const [rows, setRows] = useState<Cliente[] | null>(null);

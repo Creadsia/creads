@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { phCapture } from "@/lib/posthog-server";
+import { after } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { workspaceRow } from "@/lib/billing";
 import { MARCA_VACIA, activarMarca, cargarMarca, guardarMarca, limpiarMarca, listarMarcas, marcaActiva, marcasPermitidas } from "@/lib/marca";
@@ -36,7 +38,10 @@ export async function PUT(req: Request) {
     const ws = s.user.workspace;
     const activa = await marcaActiva(ws);
     if (activa > (await limite(ws))) return NextResponse.json({ error: "Tu plan permite una marca. Con Agencia puedes tener hasta 3." }, { status: 403 });
+    const antes = await cargarMarca(ws, activa).catch(() => null);
     await guardarMarca(ws, limpiarMarca(b?.marca, ws), activa);
+    // the first time a kit gets a brand name: «brand_created» (once per brand slot)
+    if (!antes?.nombre?.trim() && limpiarMarca(b?.marca, ws).nombre?.trim()) after(() => phCapture(s.user.id, "brand_created", { marca: activa }, `brand_created-${ws}-${activa}`));
     return NextResponse.json(await estado(ws));
   } catch {
     return NextResponse.json({ error: "No se pudo guardar tu kit de marca. Intenta de nuevo." }, { status: 502 });

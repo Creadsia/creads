@@ -1,4 +1,6 @@
 import { strToU8, zipSync } from "fflate";
+import { phCapture } from "@/lib/posthog-server";
+import { after } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { fetchableUrl } from "@/lib/media";
 import { cargarTanda, extDe, zipName } from "@/lib/tanda";
@@ -37,6 +39,7 @@ export async function GET(req: Request) {
   }
   await Promise.all(jobs);
   if (!Object.keys(files).length) return Response.json({ error: "Esta tanda todavía no tiene imágenes listas." }, { status: 404 });
+  after(() => phCapture(s.user.id, "zip_downloaded", { tanda: t.id, archivos: Object.keys(files).length }));
   const csv = nombreCsv(t);
   files[csv] = strToU8(csvMeta(t));
   files["LEEME.txt"] = strToU8(`﻿${LEEME(csv)}\r\n`);

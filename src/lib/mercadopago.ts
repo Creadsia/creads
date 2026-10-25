@@ -136,3 +136,45 @@ export function signatureOk(req: Request, dataId: string) {
   const got = parts.v1 ?? "";
   return got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
+
+/** Plain-Spanish reasons for Mercado Pago's rejection codes (status_detail). */
+const MOTIVOS: Record<string, string> = {
+  cc_rejected_insufficient_amount: "Rechazado: la tarjeta no tenía saldo o cupo suficiente.",
+  cc_rejected_bad_filled_security_code: "Rechazado: código de seguridad mal ingresado.",
+  cc_rejected_bad_filled_date: "Rechazado: fecha de vencimiento mal ingresada.",
+  cc_rejected_bad_filled_card_number: "Rechazado: número de tarjeta mal ingresado.",
+  cc_rejected_bad_filled_other: "Rechazado: algún dato de la tarjeta mal ingresado.",
+  cc_rejected_call_for_authorize: "Rechazado: el banco pide que el cliente autorice el pago llamando.",
+  cc_rejected_card_disabled: "Rechazado: la tarjeta no está activada.",
+  cc_rejected_duplicated_payment: "Rechazado: pago duplicado.",
+  cc_rejected_high_risk: "Rechazado por Mercado Pago por prevención de fraude.",
+  cc_rejected_max_attempts: "Rechazado: demasiados intentos con la tarjeta.",
+  cc_rejected_blacklist: "Rechazado por Mercado Pago (tarjeta o cuenta bloqueada).",
+  cc_rejected_other_reason: "Rechazado por el banco, sin detalle.",
+  pending_contingency: "Pendiente: Mercado Pago lo está revisando.",
+  pending_review_manual: "Pendiente: en revisión manual de Mercado Pago.",
+  pending_waiting_payment: "Pendiente: esperando que el cliente pague (por ejemplo, efectivo).",
+};
+
+/** Why a checkout didn't turn into a payment, read from Mercado Pago (read-only). */
+export async function diagnosticoPago(o: { orderId: string; kind: "preference" | "subscription"; id: string }) {
+  const intentos: { status: string; detalle: string; motivo: string; fecha?: string; monto?: number }[] = [];
+  let suscripcion: string | null = null;
+  if (o.kind === "subscription") {
+    const pre = await getPreapproval(o.id).catch(() => null);
+    suscripcion = pre?.status ?? null;
+  }
+  const r = await mp<{ results?: { id: number; status: string; status_detail?: string; date_created?: string; transaction_amount?: number }[] }>(
+    `/v1/payments/search?external_reference=${encodeURIComponent(o.orderId)}&sort=date_created&criteria=desc&limit=20`,
+  ).catch(() => ({ results: [] }));
+  for (const p of r.results ?? []) {
+    const det = p.status_detail ?? "";
+    intentos.push({ status: p.status, detalle: det, motivo: MOTIVOS[det] ?? (p.status === "approved" ? "Aprobado." : `${p.status} (${det || "sin detalle"})`), fecha: p.date_created, monto: p.transaction_amount });
+  }
+  const resumen = intentos.length
+    ? intentos[0].motivo
+    : suscripcion === "pending" || (o.kind === "preference")
+      ? "Abandono: abrió el pago de Mercado Pago pero nunca intentó pagar (no hay ningún intento registrado)."
+      : `Suscripción en estado «${suscripcion ?? "desconocido"}», sin intentos de pago.`;
+  return { resumen, intentos, suscripcion };
+}

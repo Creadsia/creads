@@ -67,6 +67,7 @@ export async function GET(req: Request) {
     const ws = user.workspace;
     after(() => giveStarterAvatars(ws));
     await sendMeta({ name: "CompleteRegistration", eventId: `reg-${user.id}`, email: user.email }, visitor).catch(() => null);
+    await (await import("@/lib/posthog-server")).phCapture(user.id, "signup", { metodo: "google", fuente: visitor.src ?? null, campana: visitor.camp ?? null }, `signup-${user.id}`);
     await (await import("@/lib/eventos")).registrarEvento("registro", { cuenta: ws, correo: user.email, nombre: user.name ?? null, fuente: visitor.src ?? null, campana: visitor.camp ?? null, metodo: "google" });
     if (visitor.src || visitor.camp) await saveOrigin(ws, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
     await atribuirRegistro({ ws, email: user.email, cookie: refDeRequest(req) }); // affiliate link, if any (never throws)

@@ -71,7 +71,7 @@ export default function VisitBeacon() {
       const q = new URLSearchParams(window.location.search);
       const camp = (q.get("utm_campaign") || "").trim().slice(0, 80);
       if (camp) { sessionStorage.setItem("creads-camp", camp); saveSource(); }
-      const body = JSON.stringify({ path, ref: document.referrer || "", utm: q.get("utm_source") || "", fbclid: q.has("fbclid"), gclid: q.has("gclid") });
+      const body = JSON.stringify({ path, ref: document.referrer || "", utm: q.get("utm_source") || "", medium: q.get("utm_medium") || "", fbclid: q.has("fbclid"), gclid: q.has("gclid") });
       fetch("/api/visita", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true })
         .then((r) => (r.ok && r.status !== 204 ? r.json() : null))
         .then((d) => {

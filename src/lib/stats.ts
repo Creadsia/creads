@@ -18,8 +18,16 @@ export function deviceOf(ua: string): "Móvil" | "Tableta" | "Escritorio" {
 }
 
 /** Where a visit came from: the campaign tag first, then the page that sent it. */
-export function sourceOf(o: { ref?: string; utm?: string; fbclid?: boolean; gclid?: boolean; host?: string }): string {
+export function sourceOf(o: { ref?: string; utm?: string; medium?: string; fbclid?: boolean; gclid?: boolean; host?: string }): string {
   const u = (o.utm ?? "").toLowerCase().trim();
+  const m = (o.medium ?? "").toLowerCase().trim();
+  // the owner's channels (plan P0, 25 Oct 2026): tag links with utm_source=meta_ads | instagram | tiktok | youtube |
+  // comunidad | partner | outreach (paid Meta ads can also be utm_source=facebook/instagram + utm_medium=paid/cpc)
+  if (/^(meta[_-]?ads|fb[_-]?ads|facebook[_-]?ads|ig[_-]?ads|instagram[_-]?ads)$/.test(u)) return "meta_ads";
+  if (/^(facebook|fb|instagram|ig|meta)$/.test(u) && /^(paid|cpc|ppc|paid[_-]?social|ads?)$/.test(m)) return "meta_ads";
+  if (/^(comunidad|community|discord|skool|telegram|grupo)$/.test(u)) return "comunidad";
+  if (/^(partner|partners|socio|afiliado|affiliate)$/.test(u)) return "partner";
+  if (/^(outreach|prospeccion|dm|cold[_-]?email|correo[_-]?frio)$/.test(u)) return "outreach";
   const named = (s: string) =>
     /instagram|\big\b/.test(s) ? "instagram" : /facebook|\bfb\b|meta/.test(s) ? "facebook" : /google|gads|adwords/.test(s) ? "google"
       : /tiktok/.test(s) ? "tiktok" : /youtube|youtu\.be/.test(s) ? "youtube" : /whatsapp|wa\.me/.test(s) ? "whatsapp"

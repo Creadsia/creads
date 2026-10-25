@@ -7,6 +7,9 @@ import { leerEventos } from "@/lib/eventos";
 import { origins } from "@/lib/leads";
 import { libroDe, listAfiliados } from "@/lib/afiliados";
 import { type Range, type StatRow, addDays, dayCL, dayList } from "@/lib/stats";
+import { type CanalPedido, embudoPorCanal } from "@/lib/embudo-canal";
+import { usdPerCredit } from "@/lib/credits";
+import { DEFAULT_USD_PER_CREDIT } from "@/lib/credit-math";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +114,25 @@ export async function GET(req: Request) {
     const mrrUsd = pagando.reduce((a, w) => a + (PLANS.find((p) => p.id === w.plan || p.name === w.plan)?.monthly ?? 0), 0);
     const pruebasAbiertas = orders.filter((o) => o.status === "pendiente" && o.mp?.trial && !o.mp.cancelled && o.mp.trial >= today).length;
 
+    // the funnel by channel (first-click utm / affiliate ref), for the accounts created in the range
+    const [srcStats, origen, afiliados, pedidosCanal, costoCredito] = await Promise.all([
+      sbAll<StatRow>(`site_stats?day=gte.${r.from}&day=lte.${r.to}&dim=eq.src&select=day,dim,key,n`, "day.asc,dim.asc,key.asc").catch(() => [] as StatRow[]),
+      origins().catch(() => ({} as Awaited<ReturnType<typeof origins>>)),
+      listAfiliados().catch(() => []),
+      sbAll<CanalPedido>(`orders?created_at=gte.${since}&select=owner,item,status,period,created_at,closed_at,payments,visitor`, "created_at.asc,id.asc").catch(() => [] as CanalPedido[]),
+      usdPerCredit().catch(() => DEFAULT_USD_PER_CREDIT),
+    ]);
+    const referido: Record<string, string> = {};
+    for (const a of afiliados) { const l = await libroDe(a.code).catch(() => null); for (const x of l?.referidos ?? []) referido[x.ws] = a.code; }
+    const visitasPorCanal: Record<string, number> = {};
+    for (const s of srcStats) visitasPorCanal[s.key] = (visitasPorCanal[s.key] ?? 0) + s.n;
+    const cuentasRango = ws.filter((w) => inR(w.created_at)).map((w) => ({ ws: w.id, creada: w.created_at }));
+    const embudo_por_canal = embudoPorCanal({
+      visitasPorCanal, cuentas: cuentasRango, referido, pedidos: pedidosCanal,
+      origen: Object.fromEntries(Object.entries(origen).map(([k, v]) => [k, v?.src ?? null])),
+      activadas: new Set(eventos.filter((e) => e.evento === "primera_generacion").map((e) => String(e.datos?.cuenta ?? ""))),
+    });
+
     const detalle = q.get("detalle") === "1" ? await detail(r, since, ws, orders, today).catch(() => ({ error: "No se pudo leer el detalle." })) : undefined;
 
     return NextResponse.json({
@@ -121,8 +143,10 @@ export async function GET(req: Request) {
         por_plan: porPlan,
         mrr_usd_estimado: Math.round(mrrUsd * 100) / 100,
         pruebas_gratis_abiertas: pruebasAbiertas,
+        costo_por_credito: costoCredito,
+        costo_por_credito_ok: Math.abs(costoCredito - 0.0193) < 1e-9,
       },
-      total, diario, ...(detalle ? { detalle } : {}),
+      total, diario, embudo_por_canal, ...(detalle ? { detalle } : {}),
       notas: {
         tarjetas_agregadas: "Cuentas que pusieron la tarjeta y empezaron la prueba gratis de 7 días.",
         checkouts_iniciados: "Pedidos de plan o créditos creados (no incluye las pruebas gratis).",
@@ -131,6 +155,8 @@ export async function GET(req: Request) {
         bajas: "Suscripciones canceladas, desde Creads o desde Mercado Pago (desde el 25 oct 2026).",
         ingresos: "Lo cobrado por Mercado Pago, separado por moneda.",
         mrr_usd_estimado: "Suma del precio mensual en US$ de los planes vigentes.",
+        embudo_por_canal: "Por canal del primer clic (utm_source, o ref:<código> si llegó por un afiliado; «sin dato» si no aceptó cookies o no traía etiqueta): visitas, registros, primera generación, compra del Pack, Pack→plan en 7 días y renovación del mes 2, de las cuentas creadas en el rango.",
+        costo_por_credito: "Panel → Planes → «Costo real por crédito». Todos los cálculos de planes suponen 0,0193.",
       },
     }, { headers: { "cache-control": "no-store" } });
   } catch {

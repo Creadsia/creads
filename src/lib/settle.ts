@@ -1,4 +1,6 @@
 import { type Order, applyPayment, getOrder, recordIncome } from "./billing";
+import { phCapture } from "./posthog-server";
+import { findUserByEmail } from "./auth";
 import { PACKS, PLANS, PRUEBA } from "./catalog";
 import { sendMeta } from "./meta";
 import { sendEmail } from "./providers/email";
@@ -106,6 +108,12 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
     await phoneAlert({ title: renewal ? `🔁 Renovación: ${money}` : `💰 ¡Nueva venta! ${money}`, text: `${order.quote.label}${renewal ? " · se renovó" : " · cliente nuevo"}`, priority: 5 });
     if (to) await sendEmail(ownerSaleEmail(to, { label: order.quote.label, amount: pay.amount, currency: pay.currency, customer: order.email ?? "", account: order.wsName ?? "", renewal, orderId: order.id }));
   } catch (e) { console.error("owner sale email", order.id, e instanceof Error ? e.message : e); }
+  // PostHog «purchase», by the server, with the same id as Meta's Purchase so a repeated notification counts once
+  {
+    const firstPay = !(order.payments ?? []).some((p) => p !== `${source}:${pay.id}`);
+    const user = order.email ? await findUserByEmail(order.email).catch(() => null) : null;
+    await phCapture(user?.id ?? order.ws, "purchase", { item: order.item, plan: order.quote.label, valor: pay.amount, moneda: pay.currency, renovacion: !firstPay, pedido: order.id, fuente: order.visitor?.src ?? null, campana: order.visitor?.camp ?? null }, firstPay ? `buy-${order.id}` : `buy-${order.id}-${pay.id}`);
+  }
   if (order.visitor) {
     // the first payment uses «buy-<order>», the same id the browser fires on the thank-you screen (Meta counts it
     // once); renewals keep their own id per payment

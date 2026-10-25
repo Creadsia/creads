@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const path = typeof b?.path === "string" ? b.path : "/";
   if (/^\/(admin|api)(\/|$)/.test(path)) return none;
   const host = req.headers.get("host") ?? "creadsia.com";
-  const src = sourceOf({ ref: typeof b?.ref === "string" ? b.ref.slice(0, 300) : "", utm: typeof b?.utm === "string" ? b.utm.slice(0, 40) : "", fbclid: b?.fbclid === true, gclid: b?.gclid === true, host });
+  const src = sourceOf({ ref: typeof b?.ref === "string" ? b.ref.slice(0, 300) : "", utm: typeof b?.utm === "string" ? b.utm.slice(0, 40) : "", medium: typeof b?.medium === "string" ? b.medium.slice(0, 40) : "", fbclid: b?.fbclid === true, gclid: b?.gclid === true, host });
   const dec = (v: string | null) => { try { return v ? decodeURIComponent(v) : ""; } catch { return v ?? ""; } };
   const country = dec(req.headers.get("x-vercel-ip-country"));
   const region = dec(req.headers.get("x-vercel-ip-country-region"));
