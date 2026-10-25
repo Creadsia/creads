@@ -171,7 +171,7 @@ export const es: Content = {
     trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Saldo disponible al aprobarse el pago"],
   },
   nudge: {
-    bar: "Tu primera tanda de anuncios por US$9",
+    bar: "Tu primera tanda por US$9",
     barCta: "Empezar",
     strip: "Todos los modelos y estudios de esta página, desde",
     stripCta: "Ver planes",

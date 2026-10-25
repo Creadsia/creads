@@ -7,7 +7,6 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
-import Garantia from "./garantia";
 import { Money, MoneyText } from "./money";
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
@@ -169,7 +168,7 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
                 </li>
               ))}
             </ol>
-            <Cta sub="Ver tus 6 ángulos no cuesta nada.">Haz tu primera tanda por {pack}</Cta>
+            <div className="self-start"><Cta sub="Ver tus 6 ángulos no cuesta nada.">Haz tu primera tanda por {pack}</Cta></div>
           </div>
         </section>
 
@@ -257,8 +256,19 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
         <section className={gutter} aria-labelledby="garantia-title">
           <div className={`${wrap} flex flex-col gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-8`}>
             <h2 id="garantia-title" className={h2}>Tu primera tanda, garantizada</h2>
-            <p className="max-w-2xl text-muted">Calidad es lo que nos importa. Cada imagen se revisa antes de entregarla y, si un video falla, el saldo vuelve solo.</p>
-            <Garantia />
+            <p className="max-w-2xl text-muted">Calidad es lo que nos importa: cada anuncio pasa por una revisión antes de llegar a ti.</p>
+            <ul className="grid gap-3 md:grid-cols-3">
+              {[
+                ["La rehacemos o te devolvemos el pago", "Si tu primera tanda no te sirve, escríbenos a hola@creadsia.com dentro de 10 días y eliges."],
+                ["Revisión en cada imagen", "Creads revisa el texto y los detalles de cada anuncio y te avisa si algo no quedó bien."],
+                ["Si algo falla, no pagas", "Si una imagen o un video no se genera, el saldo vuelve solo a tu cuenta."],
+              ].map(([k, v]) => (
+                <li key={k} className="flex flex-col gap-1 rounded-2xl border border-good/30 bg-good/[0.06] p-4">
+                  <b className="flex items-center gap-2"><Check />{k}</b>
+                  <span className="text-sm text-muted">{v}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
