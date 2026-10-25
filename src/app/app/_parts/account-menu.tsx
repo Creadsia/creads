@@ -149,6 +149,7 @@ export default function AccountMenu({ user, up = false }: { user: ShellUser; up?
           {user.owner && <Link href="/app/equipo" role="menuitem" onClick={close} className={item}><Svg d={D.team} />Equipo</Link>}
           {user.owner && <a href="/admin" role="menuitem" className={item}><Svg d={D.chart} />Panel interno</a>}
           <Link href="/app/api" role="menuitem" onClick={close} className={item}><Svg d={D.code} />API y conector</Link>
+          <Link href="/app/afiliados" role="menuitem" onClick={close} className={item}><Svg d={D.coin} />Programa de afiliados</Link>
           <Link href="/app/ayuda" role="menuitem" onClick={close} className={item}><Svg d={D.help} />Centro de ayuda</Link>
           {WHATSAPP && <a href={whatsappLink("Hola, necesito ayuda con Creads IA")} target="_blank" rel="noopener noreferrer" role="menuitem" className={item}><Svg d={D.phone} />Ayuda por WhatsApp</a>}
           {(app.mode === "prompt" || app.mode === "ios") && (

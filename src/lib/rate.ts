@@ -24,6 +24,8 @@ const BUCKETS = {
   resetIp: [60 * 60, 20], // new-password attempts with an emailed link
   clientErr: [10 * 60, 20], // browser error reports per connection in 10 min
   visit: [10 * 60, 30], // anonymous visit counts per connection in 10 min
+  refClick: [24 * 60 * 60, 10], // affiliate link clicks counted per connection per day
+  afiliado: [60 * 60, 10], // affiliate applications and payout-detail saves per person per hour
   beat: [10 * 60, 400], // «mirando ahora» beats per connection in 10 min (one every 20 s per open tab)
   apiKeys: [60 * 60, 20], // API keys made per person per hour
   human: [24 * 60 * 60, 5], // «hablar con una persona» requests per person per day
@@ -92,6 +94,8 @@ const MSG: Record<Bucket, string> = {
   clientErr: "Demasiados reportes.",
   visit: "Demasiadas visitas.",
   beat: "Demasiadas visitas.",
+  refClick: "Demasiadas visitas.",
+  afiliado: "Demasiados intentos. Espera un rato y vuelve a probar.",
   spy: "Vas muy rápido: espera unos minutos y vuelve a buscar.",
   spyDay: "Llegaste al máximo de búsquedas de hoy. Mañana puedes seguir espiando.",
   assist: "Vas muy rápido: espera unos minutos y vuelve a preguntar. Mientras, revisa el Centro de ayuda.",

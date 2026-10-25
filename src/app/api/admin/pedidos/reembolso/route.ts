@@ -5,6 +5,7 @@ import { getOrder, recordIncome, setOrderMp } from "@/lib/billing";
 import { AlreadyDone, grant } from "@/lib/credits";
 import { cancelSubscription, getPayment, refundPayment } from "@/lib/mercadopago";
 import { orderGrant } from "@/lib/settle";
+import { reverseCommission } from "@/lib/afiliados";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     if (p.status !== "refunded") await refundPayment(payId);
     const g = orderGrant(o);
     await grant(o.ws, -g.credits, "adjust", `Reembolso · ${o.id}`, u!.email, `pay:rev:mp:${payId}`).catch((e) => { if (!(e instanceof AlreadyDone)) throw e; });
+    await reverseCommission(ref, o.ws); // the affiliate's commission on this payment, if any (never throws)
     if (o.mp?.kind === "subscription" && !o.mp.cancelled) {
       await cancelSubscription(o.mp.id).catch((e) => console.error("refund: cancel subscription", o.id, e instanceof Error ? e.message : e));
       await setOrderMp(o.id, { ...o.mp, cancelled: true });

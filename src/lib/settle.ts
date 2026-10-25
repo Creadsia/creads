@@ -7,6 +7,7 @@ import { ownerAddress } from "./errlog";
 import { phoneAlert } from "./phone-alert";
 import { beforeNewPeriod } from "./expiry";
 import { getPayment, getPreapproval, setSubscriptionAmount, subscriptionPaymentIds } from "./mercadopago";
+import { comisionPorPago } from "./afiliados";
 
 // Applies a payment confirmed by Mercado Pago (or by the owner) to its order. The money part
 // (credits, plan date, order paid) happens in one database transaction and only once per payment, so
@@ -69,6 +70,9 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   });
   await ensureRegularPrice(order);
   if (r === "already") return { ok: true, already: true };
+
+  // affiliate program: the commission of this payment, if the customer came through an affiliate (never throws)
+  await comisionPorPago({ paymentId: `${source}:${pay.id}`, ws: order.ws, amount: pay.amount, currency: pay.currency, months: g.months, orderId: order.id, label: order.quote.label });
 
   await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));
   if (order.email) {

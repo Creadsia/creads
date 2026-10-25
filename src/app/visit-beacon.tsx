@@ -52,6 +52,16 @@ export default function VisitBeacon() {
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", send); };
   }, [path]);
 
+  // a click on an affiliate's link («?ref=CODE»): counted once per tab and code (the cookie is set by the middleware)
+  useEffect(() => {
+    try {
+      const code = (new URLSearchParams(window.location.search).get("ref") || "").trim().toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9-]{2,19}$/.test(code) || sessionStorage.getItem(`creads-ref-${code}`)) return;
+      sessionStorage.setItem(`creads-ref-${code}`, "1");
+      fetch("/api/afiliados/clic", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code }), keepalive: true }).catch(() => {});
+    } catch {}
+  }, []);
+
   useEffect(() => {
     try {
       const path = window.location.pathname;

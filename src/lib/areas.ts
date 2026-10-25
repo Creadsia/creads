@@ -5,7 +5,7 @@
 export type AreaId = "direccion" | "lanzamiento" | "numeros" | "marketing" | "clientes" | "plataforma";
 export type PanelTab =
   | "oficina" | "equipo" | "lanzamiento"
-  | "estadisticas" | "suscripciones" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "modelos"
+  | "estadisticas" | "suscripciones" | "rentabilidad" | "resumen" | "movs" | "fijos" | "planes" | "afiliados" | "modelos"
   | "marketing" | "campanas"
   | "leads" | "contactar" | "clientes" | "registros"
   | "guardian" | "errores" | "calidad" | "saldos" | "estado" | "cuentas";
@@ -26,7 +26,7 @@ export const AREAS: Area[] = [
   { id: "lanzamiento", name: "Lanzamiento", what: "Todo lo que falta para abrir Creads al público, en orden.", tabs: [["lanzamiento", "Lista de lanzamiento"]], agents: [] },
   {
     id: "numeros", name: "Ventas y finanzas", what: "Cuánto vendes, cuánto cuesta y cuánto queda.",
-    tabs: [["estadisticas", "Estadísticas"], ["suscripciones", "Suscripciones y retención"], ["rentabilidad", "Rentabilidad"], ["resumen", "Proyección"], ["movs", "Movimientos"], ["fijos", "Costos fijos"], ["planes", "Planes y afiliados"], ["modelos", "Costo por modelo"]],
+    tabs: [["estadisticas", "Estadísticas"], ["suscripciones", "Suscripciones y retención"], ["rentabilidad", "Rentabilidad"], ["resumen", "Proyección"], ["movs", "Movimientos"], ["fijos", "Costos fijos"], ["planes", "Planes y afiliados"], ["afiliados", "Afiliados"], ["modelos", "Costo por modelo"]],
     agents: ["finanzas"],
   },
   { id: "marketing", name: "Marketing", what: "Anuncios, campañas pagadas en Meta y contenido orgánico.", tabs: [["campanas", "Resultados de campañas"], ["marketing", "Estudio de marketing"]], agents: ["marketing", "creativos", "trafico", "organico"] },

@@ -21,7 +21,15 @@ function Check() {
   );
 }
 
-export default function Registro({ google, tarjeta = false }: { google: boolean; /** card trial on (REGALO_CON_TARJETA) */ tarjeta?: boolean }) {
+export default function Registro({ google, tarjeta = false, refCode = "" }: { google: boolean; /** card trial on (REGALO_CON_TARJETA) */ tarjeta?: boolean; /** affiliate code from the 60-day cookie */ refCode?: string }) {
+  const [ref, setRef] = useState(refCode);
+  const [showRef, setShowRef] = useState(Boolean(refCode));
+  // straight to /registro?ref=CODE: the cookie is set on this same response, so read the code from the address
+  useEffect(() => {
+    if (refCode) return;
+    const q = (new URLSearchParams(window.location.search).get("ref") || "").trim().toUpperCase();
+    if (/^[A-Z0-9][A-Z0-9-]{2,19}$/.test(q)) { setRef(q); setShowRef(true); }
+  }, [refCode]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,7 +46,7 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
     e.preventDefault();
     setErr(null);
     setBusy(true);
-    const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, password, company }) }).catch(() => null);
+    const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, password, company, ref: ref.trim() }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (!r || !r.ok) {
       setBusy(false);
@@ -112,6 +120,14 @@ export default function Registro({ google, tarjeta = false }: { google: boolean;
             <span>Tu negocio <span className="font-normal text-muted">(opcional)</span></span>
             <input value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" className={input} />
           </label>
+          {showRef ? (
+            <label className="flex flex-col gap-1.5 text-sm font-semibold">
+              <span>Código de quien te invitó <span className="font-normal text-muted">(opcional)</span></span>
+              <input value={ref} onChange={(e) => setRef(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20))} autoComplete="off" autoCapitalize="characters" className={input} />
+            </label>
+          ) : (
+            <button type="button" onClick={() => setShowRef(true)} className="self-start text-sm font-semibold text-muted underline hover:text-ink">¿Te invitó alguien? Escribe su código</button>
+          )}
           {err && (
             <p role="alert" className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
               {err.text} {err.exists && <a href="/app" className="font-semibold underline">Entrar</a>}

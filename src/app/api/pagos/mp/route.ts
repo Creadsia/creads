@@ -8,6 +8,7 @@ import { renewalFailedEmail } from "@/lib/emails";
 import { sendEmail } from "@/lib/providers/email";
 import { listUsers } from "@/lib/auth";
 import { activarPrueba } from "@/lib/prueba";
+import { reverseCommission } from "@/lib/afiliados";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
           await grant(o.ws, -g.credits, "adjust", `Devolución en Mercado Pago · ${o.id}`, "mercadopago", `pay:rev:mp:${p.id}`).catch((e) => {
             if (!(e instanceof AlreadyDone)) throw e;
           });
+          // and the affiliate's commission on that payment is taken back (never throws)
+          await reverseCommission(`mp:${p.id}`, o.ws);
           console.warn("mercadopago: pago devuelto, créditos descontados", o.id, p.id, p.status);
         }
         return NextResponse.json({ ok: true, status: p.status });

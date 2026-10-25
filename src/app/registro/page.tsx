@@ -4,6 +4,8 @@ import { currentUser } from "@/lib/admin";
 import { googleOn } from "@/lib/google-login";
 import Registro from "./registro";
 import { tarjetaObligatoria } from "@/lib/regalo";
+import { cookies } from "next/headers";
+import { COOKIE_REF, normCode } from "@/lib/afiliados-calc";
 
 export const metadata: Metadata = {
   title: "Prueba Creads IA gratis",
@@ -16,5 +18,7 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const user = await currentUser().catch(() => null);
   if (user) redirect("/app/automatico");
-  return <Registro google={googleOn()} tarjeta={tarjetaObligatoria()} />;
+  // the affiliate whose link they came through (60-day cookie), shown pre-filled; they can change or clear it
+  const ref = normCode((await cookies()).get(COOKIE_REF)?.value);
+  return <Registro google={googleOn()} tarjeta={tarjetaObligatoria()} refCode={ref} />;
 }
