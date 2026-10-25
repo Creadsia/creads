@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { sbAll } from "@/lib/supabase";
 import { PLANS } from "@/lib/catalog";
 import { recentErrors } from "@/lib/errlog";
+import { leerEventos } from "@/lib/eventos";
+import { origins } from "@/lib/leads";
+import { libroDe, listAfiliados } from "@/lib/afiliados";
 import { type Range, type StatRow, addDays, dayCL, dayList } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
@@ -53,9 +56,10 @@ export async function GET(req: Request) {
       sbAll<{ created_at: string }>(`images?created_at=gte.${since}&select=created_at`, "created_at.asc,id.asc").catch(() => []),
       sbAll<StatRow>(`site_stats?day=gte.${r.from}&day=lte.${r.to}&dim=eq.ses&key=eq.all&select=day,dim,key,n`, "day.asc,dim.asc,key.asc").catch(() => [] as StatRow[]),
     ]);
+    const eventos = await leerEventos(r.from, r.to).catch(() => []);
     const blank = () => ({
-      visitas: 0, registros: 0, tarjetas_agregadas: 0, regalos_sin_tarjeta: 0, pruebas_canceladas: 0,
-      checkouts_iniciados: 0, pagos_aprobados: 0, ingresos: {} as Record<string, number>,
+      visitas: 0, registros: 0, activaciones: 0, tarjetas_agregadas: 0, regalos_sin_tarjeta: 0, pruebas_canceladas: 0,
+      checkouts_iniciados: 0, pagos_aprobados: 0, pagos_fallidos: 0, bajas: 0, ingresos: {} as Record<string, number>,
       creditos_usados: 0, creditos_devueltos: 0,
       videos_generados: 0, videos_fallidos: 0, imagenes_generadas: 0,
     });
@@ -63,6 +67,12 @@ export async function GET(req: Request) {
     const at = (ts: string | null) => (ts ? byDay.get(inR(ts) ?? "") : undefined);
 
     for (const s of stats) { const d = byDay.get(s.day); if (d) d.visitas += s.n; }
+    for (const e of eventos) {
+      const d = at(e.fecha); if (!d) continue;
+      if (e.evento === "primera_generacion") d.activaciones++;
+      else if (e.evento === "pago_fallido") d.pagos_fallidos++;
+      else if (e.evento === "baja") d.bajas++;
+    }
     for (const w of ws) { const d = at(w.created_at); if (d) d.registros++; }
     for (const c of credits) {
       const d = at(c.created_at); if (!d) continue;
@@ -116,6 +126,9 @@ export async function GET(req: Request) {
       notas: {
         tarjetas_agregadas: "Cuentas que pusieron la tarjeta y empezaron la prueba gratis de 7 días.",
         checkouts_iniciados: "Pedidos de plan o créditos creados (no incluye las pruebas gratis).",
+        activaciones: "Cuentas que hicieron su primera generación (desde el 25 oct 2026).",
+        pagos_fallidos: "Pagos rechazados por Mercado Pago, también renovaciones (desde el 25 oct 2026).",
+        bajas: "Suscripciones canceladas, desde Creads o desde Mercado Pago (desde el 25 oct 2026).",
         ingresos: "Lo cobrado por Mercado Pago, separado por moneda.",
         mrr_usd_estimado: "Suma del precio mensual en US$ de los planes vigentes.",
       },
@@ -129,6 +142,9 @@ interface OrderFull { id: string; owner: string; email: string; item: string; st
 
 /** Everything per account and per order, plus where generations fail. Read-only. */
 async function detail(r: Range, since: string, ws: Ws[], _orders: Order[], today: string) {
+  const [org, afis] = await Promise.all([origins().catch(() => ({} as Awaited<ReturnType<typeof origins>>)), listAfiliados().catch(() => [])]);
+  const afiDe = new Map<string, string>();
+  for (const a of afis) for (const ref of (await libroDe(a.code).catch(() => null))?.referidos ?? []) afiDe.set((ref as { ws: string }).ws, a.code);
   const [users, orders, credits, pays, clips, errores, wsNames] = await Promise.all([
     sbAll<{ email: string; name: string | null; workspace: string; role: string; last_login: string | null }>("users?select=email,name,workspace,role,last_login", "created_at.asc,id.asc"),
     sbAll<OrderFull>("orders?select=id,owner,email,item,status,quote,mp,visitor,created_at,closed_at", "created_at.asc,id.asc"),
@@ -151,7 +167,9 @@ async function detail(r: Range, since: string, ws: Ws[], _orders: Order[], today
     return {
       cuenta: w.id, nombre: name.get(w.id)?.name ?? "", correos: us.map((u) => u.email),
       registro: w.created_at, ultimo_ingreso: us.map((u) => u.last_login).filter(Boolean).sort().pop() ?? null,
-      fuente: os.find((o) => o.visitor?.src)?.visitor?.src ?? null,
+      fuente: org[w.id]?.src ?? os.find((o) => o.visitor?.src)?.visitor?.src ?? null,
+      campana: org[w.id]?.camp ?? null,
+      afiliado: afiDe.get(w.id) ?? null,
       plan: w.plan, pagado_hasta: w.paid_until, plan_vigente: Boolean(w.active && w.plan && w.paid_until && w.paid_until >= today), activa: w.active,
       descuento: name.get(w.id)?.discount ?? 0, acceso: name.get(w.id)?.access ?? "full",
       tarjeta: prueba ? (prueba.mp?.cancelled ? "prueba cancelada" : regalo ? "prueba activa o terminada" : "pidió prueba, sin tarjeta confirmada") : "no",
@@ -180,7 +198,18 @@ async function detail(r: Range, since: string, ws: Ws[], _orders: Order[], today
     modelos.set(k, m);
   }
   const r2 = (n: number) => Math.round(n * 100) / 100;
+  // credits used in the range, by the account's plan, and signups/payers by source
+  const planDe = new Map(ws.map((w) => [w.id, w.plan ?? "sin plan"]));
+  const usadoRango = await sbAll<{ owner: string; delta: number }>(`credits?kind=eq.charge&created_at=gte.${since}&select=owner,delta`, "created_at.asc,id.asc").catch(() => []);
+  const consumo: Record<string, { cuentas: number; creditos: number; promedio_por_cuenta: number }> = {};
+  const porCuenta = new Map<string, number>();
+  for (const c of usadoRango) if (planDe.has(c.owner)) porCuenta.set(c.owner, (porCuenta.get(c.owner) ?? 0) + Math.abs(Number(c.delta) || 0));
+  for (const [w, n] of porCuenta) { const k = planDe.get(w)!; const x = consumo[k] ?? { cuentas: 0, creditos: 0, promedio_por_cuenta: 0 }; x.cuentas++; x.creditos += n; consumo[k] = x; }
+  for (const x of Object.values(consumo)) x.promedio_por_cuenta = x.cuentas ? Math.round(x.creditos / x.cuentas) : 0;
+  const porFuente: Record<string, { cuentas: number; pagan: number }> = {};
+  for (const c of cuentas) { const k = c.afiliado ? `afiliado:${c.afiliado}` : c.fuente ?? "sin dato"; const x = porFuente[k] ?? { cuentas: 0, pagan: 0 }; x.cuentas++; if (c.pagos > 0) x.pagan++; porFuente[k] = x; }
   return {
+    consumo_por_plan: consumo, por_fuente: porFuente,
     cuentas, pedidos,
     modelos: [...modelos.values()].sort((a, b) => b.total - a.total).map((m) => ({
       modelo: m.modelo, tipo: m.tipo, total: m.total, fallidos: m.fallidos, tasa_falla: m.total ? r2(m.fallidos / m.total) : 0,

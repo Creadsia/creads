@@ -77,3 +77,8 @@ export default function PostHog() {
   }, [path]);
   return null;
 }
+
+/** A funnel step for PostHog (owner's plan, 25 Oct 2026). No-op until PostHog has started (consent). */
+export function capture(event: string, props: Record<string, unknown> = {}) {
+  try { if (started) posthog.capture(event, props); } catch { /* measurement never breaks the page */ }
+}

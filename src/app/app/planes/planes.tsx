@@ -6,6 +6,7 @@ import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { fmtSaldo } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
+import { capture } from "../../posthog";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
 import { Money } from "../../money";
@@ -142,6 +143,7 @@ export default function Planes() {
     setBusy(false);
     if (!r.ok) return setErr(d.error || "No se pudo crear el pedido.");
     track("InitiateCheckout", { value: d.order.total, currency: "USD", content_name: d.order.label }, eventId);
+    capture("checkout", { item, period, total: d.order.total });
     if (d.redirect) { window.location.href = d.redirect; return; } // pay on Mercado Pago's page
     setDone(d.order); setItem(null); load();
     requestAnimationFrame(() => document.getElementById("pedido-ok")?.scrollIntoView({ behavior: "smooth", block: "center" }));

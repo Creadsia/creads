@@ -9,6 +9,7 @@ import { sendEmail } from "@/lib/providers/email";
 import { listUsers } from "@/lib/auth";
 import { activarPrueba } from "@/lib/prueba";
 import { reverseCommission } from "@/lib/afiliados";
+import { registrarEvento } from "@/lib/eventos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
         }
         return NextResponse.json({ ok: true, status: p.status });
       }
+      if (p.status === "rejected" && (await once(`evento:rechazo:${p.id}`, 30 * 86400))) {
+        const o = p.external_reference ? await getOrder(p.external_reference).catch(() => null) : null;
+        await registrarEvento("pago_fallido", { cuenta: o?.ws ?? null, correo: o?.email ?? null, pedido: o?.id ?? p.external_reference ?? null, monto: p.transaction_amount, moneda: p.currency_id, motivo: (p as { status_detail?: string }).status_detail ?? null });
+      }
       if (p.status !== "approved") return NextResponse.json({ ok: true, status: p.status });
       let orderId = p.external_reference ?? "";
       const pre = typeof p.metadata?.preapproval_id === "string" ? p.metadata.preapproval_id : "";
@@ -58,6 +63,7 @@ export async function POST(req: Request) {
         if (ap.payment?.status === "rejected" && (await once(`mp:renov-rechazada:${ap.id}`, 30 * 86400))) {
           const pre = await getPreapproval(ap.preapproval_id).catch(() => null);
           const o = pre?.external_reference ? await getOrder(pre.external_reference).catch(() => null) : null;
+          await registrarEvento("pago_fallido", { cuenta: o?.ws ?? null, correo: o?.email ?? null, pedido: o?.id ?? null, renovacion: true });
           if (o?.email) {
             const name = (await listUsers(o.ws).catch(() => [])).find((u) => u.email === o.email)?.name ?? null;
             await sendEmail(renewalFailedEmail(o.email, name, { plan: o.quote?.label ?? null })).catch(() => false);
@@ -80,7 +86,10 @@ export async function POST(req: Request) {
       }
       if (pre.status === "cancelled" && pre.external_reference) {
         const o = await getOrder(pre.external_reference);
-        if (o?.mp && !o.mp.cancelled) await setOrderMp(o.id, { ...o.mp, cancelled: true });
+        if (o?.mp && !o.mp.cancelled) {
+          await setOrderMp(o.id, { ...o.mp, cancelled: true });
+          await registrarEvento("baja", { cuenta: o.ws, correo: o.email, plan: o.quote?.label ?? null, pedido: o.id, desde: "mercadopago" });
+        }
       }
       return NextResponse.json({ ok: true, status: pre.status });
     }

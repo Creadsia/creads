@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     const eventId = `reg-${user.id}`;
     const visitor = visitorFrom(req);
     await sendMeta({ name: "CompleteRegistration", eventId, email }, visitor).catch(() => null);
+    await (await import("@/lib/eventos")).registrarEvento("registro", { cuenta: newWs, correo: email, nombre: name, fuente: visitor.src ?? null, campana: visitor.camp ?? null, metodo: "correo" });
     // where this account came from (channel and ad campaign, only with cookie consent), for Clientes → Nuevas cuentas
     if (visitor.src || visitor.camp) await saveOrigin(newWs, { src: visitor.src ?? null, camp: visitor.camp ?? null }).catch(() => null);
     // affiliate program: the link they came through (cookie) or the code they typed (never throws)

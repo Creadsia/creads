@@ -24,6 +24,14 @@ export async function payFor(user: User, usd: number, note: string, svc: Service
     throw err;
   }
   later(() => lowBalanceCheck(user));
+  // activation: the account's first paid job (once)
+  if (user.workspace !== "main" && !charge.free) later(async () => {
+    const { once } = await import("./marketing");
+    if (await once(`evento:primera:${user.workspace}`, 3650 * 86400)) {
+      const { registrarEvento } = await import("./eventos");
+      await registrarEvento("primera_generacion", { cuenta: user.workspace, correo: user.email, que: note.slice(0, 80) });
+    }
+  });
   return charge;
 }
 
@@ -51,6 +59,7 @@ async function lowBalanceCheck(user: User) {
   if (!(await once(`saldo-bajo:${user.workspace}:${st.paidUntil ?? "sin-plan"}`, 40 * 86400))) return;
   const [{ lowBalanceEmail }, { sendEmail }] = await Promise.all([import("./emails"), import("./providers/email")]);
   await sendEmail(lowBalanceEmail(user.email, user.name ?? null, { seconds: secs, credits: st.balance, until: st.paidUntil ?? null }));
+  await (await import("./eventos")).registrarEvento("saldo_bajo", { cuenta: user.workspace, correo: user.email, creditos: st.balance });
 }
 
 /** The message a failed job shows: credit problems as they are, provider problems explained. */

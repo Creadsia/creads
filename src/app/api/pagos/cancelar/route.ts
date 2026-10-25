@@ -51,6 +51,7 @@ export async function POST(req: Request) {
   if (!sub?.mp) return NextResponse.json({ error: "No tienes una suscripción activa." }, { status: 404 });
   try {
     await cancelSubscription(sub.mp.id);
+    await (await import("@/lib/eventos")).registrarEvento("baja", { cuenta: sub.ws, correo: s.user.email, plan: sub.quote?.label ?? null, pedido: sub.id, motivo: typeof b?.reason === "string" ? b.reason.slice(0, 120) : null, desde: "creads" });
     await setOrderMp(sub.id, { ...sub.mp, cancelled: true });
     try {
       await updatePrivateJSON<Leave[]>("cancelaciones.json", (cur) => [...(cur ?? []), { ws: s.user.workspace, at: new Date().toISOString(), reason, detail, plan: sub.item }].slice(-500));

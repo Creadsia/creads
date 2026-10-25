@@ -8,6 +8,7 @@ import { sendMeta, visitorFrom } from "@/lib/meta";
 import { createPreference, createSubscription, getPreapproval, mpReady, oneTimeOnly } from "@/lib/mercadopago";
 import { reconcileSubscription } from "@/lib/settle";
 import { tooMany } from "@/lib/rate";
+import { registrarEvento } from "@/lib/eventos";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
     if (!q) return NextResponse.json({ error: "Plan desconocido." }, { status: 400 });
     const visitor = visitorFrom(req);
     const order = await addOrder({ ws, wsName: w.name, email: s.user.email, item: q.item, period: q.period, method, quote: q, visitor });
+    await registrarEvento("checkout", { cuenta: ws, correo: s.user.email, item: q.item, plan: q.label, total_usd: q.total, pedido: order.id, fuente: visitor.src ?? null });
     await sendMeta({ name: "InitiateCheckout", eventId: typeof b?.eventId === "string" ? b.eventId : undefined, email: s.user.email, value: q.total, content: q.label }, visitor);
 
     let redirect: string | null = null;

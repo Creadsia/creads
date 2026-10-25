@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PageHead, Spinner, btnCls, cardCls, ghostCls, inputCls, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
+import { capture } from "../../posthog";
 import { TIPO_LABEL, type Angulo, type Pieza, type Producto, type Tanda, type TipoAngulo } from "@/lib/tanda-tipos";
 import { RUBRO_INFO, type Rubro, esRubro } from "@/lib/hooks-biblioteca";
 
@@ -74,6 +75,7 @@ export default function PrimeraTanda() {
     setErr(""); setBusy("Leyendo tu página y pensando ángulos de venta…");
     try {
       const d = await post<{ producto: Producto; angulos: Angulo[] }>({ accion: "leer", ...(sinLink ? { descripcion } : { url }), idioma, ...(rubro ? { rubro } : {}) });
+      capture("tanda_angulos_propuestos", { con_link: !sinLink, idioma });
       setProducto(d.producto); setAngulos(d.angulos); setElegidos(new Set(d.angulos.map((_, i) => i))); setPaso("angulos");
     } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos leer tu producto."); }
     finally { setBusy(""); }
@@ -121,6 +123,7 @@ export default function PrimeraTanda() {
       const r = await fetch("/api/pagos", { method: "POST", headers: H, body: JSON.stringify({ item: "pack-prueba", method: "mercadopago", volver: `/app/tanda?id=${t.id}` }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo preparar el pago.");
+      capture("pack_checkout", { desde: "tanda" });
       if (d.redirect) { window.location.href = d.redirect; return; }
       setErr("El pago en línea no está activo todavía. Escríbenos a hola@creadsia.com y te activamos el pack.");
     } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo preparar el pago."); }
@@ -133,6 +136,7 @@ export default function PrimeraTanda() {
     setErr(""); setBusy("Escribiendo tus 10 anuncios…");
     try {
       const d = await post<{ tanda: Tanda }>({ accion: "crear", producto, angulos: angulos.filter((_, i) => elegidos.has(i)), idioma, n: 10 });
+      capture("tanda_creada", { angulos: elegidos.size, alcanza });
       setTanda(d.tanda); setPaso("tanda"); setBusy("");
       window.history.replaceState(null, "", `/app/tanda?id=${d.tanda.id}`);
       if (!alcanza) return comprarPack(d.tanda);
@@ -241,7 +245,7 @@ export default function PrimeraTanda() {
               {!corriendo && listos < total && (info && !covers(MODEL_USD * 2)
                 ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : "Crear por US$9 (Pack Prueba)"}</button>
                 : <button type="button" onClick={() => generar(tanda)} className={ghostCls}>Crear las que faltan</button>)}
-              <a href={`/api/tanda/zip?id=${tanda.id}`} className={`${btnCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos}>Descargar ZIP (feed 4:5 + stories 9:16)</a>
+              <a href={`/api/tanda/zip?id=${tanda.id}`} onClick={() => capture("tanda_zip", { imagenes: listos })} className={`${btnCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos}>Descargar ZIP (feed 4:5 + stories 9:16)</a>
               <a href={`/api/tanda/meta?id=${tanda.id}`} className={`${ghostCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos} title="Para importar en el Administrador de anuncios de Meta: todo parte en pausa">Descargar archivo para Meta (CSV)</a>
             </div>
           </div>

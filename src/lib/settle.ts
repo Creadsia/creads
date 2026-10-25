@@ -82,6 +82,10 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
   // affiliate program: the commission of this payment, if the customer came through an affiliate (never throws)
   await comisionPorPago({ paymentId: `${source}:${pay.id}`, ws: order.ws, amount: pay.amount, currency: pay.currency, months: g.months, orderId: order.id, label: order.quote.label });
 
+  await (await import("./eventos")).registrarEvento("pago", {
+    cuenta: order.ws, correo: order.email, item: order.item, plan: order.quote.label, monto: pay.amount, moneda: pay.currency, pedido: order.id,
+    renovacion: (order.payments ?? []).some((p) => p !== `${source}:${pay.id}`),
+  });
   await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));
   if (order.email) {
     await sendEmail(receiptEmail(order.email, { label: order.quote.label, credits: g.credits, amount: pay.amount, currency: pay.currency, orderId: order.id, paymentId: `${pay.id}` }));
