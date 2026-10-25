@@ -57,7 +57,7 @@ export default function Privacidad() {
       <p>Puedes pedir acceso, rectificación, supresión, oposición y portabilidad de tus datos, y retirar tu consentimiento a la medición publicitaria cuando quieras (borrando las cookies o escribiéndonos). Escríbenos a <b>hola@creadsia.com</b> desde el correo de tu cuenta y te respondemos en los plazos que fija la ley.</p>
 
       <h2>8. Cookies</h2>
-      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Las cookies de medición de Meta, RedTrack y PostHog están activas desde tu primera visita; puedes desactivarlas aquí mismo:</p>
+      <p>Usamos cookies necesarias para que funcione la plataforma (por ejemplo, para mantener tu sesión). Si llegas por el link de un afiliado, guardamos su código en una cookie («creads_ref») por 60 días para reconocer que nos recomendó; no contiene datos tuyos. Las cookies de medición de Meta, RedTrack y PostHog están activas desde tu primera visita; puedes desactivarlas aquí mismo:</p>
       <MedicionSwitch />
       <p>Además contamos las visitas de forma anónima y agregada (cuántas visitas hubo cada día, desde qué tipo de dispositivo, ciudad y canal), sin guardar tu IP ni nada que te identifique. Mientras la medición esté activa, una cookie propia recuerda además solo el canal por el que llegaste (por ejemplo, «instagram») durante 90 días, para saber qué canales nos traen clientes.</p>
 
