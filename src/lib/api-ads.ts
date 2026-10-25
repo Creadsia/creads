@@ -168,6 +168,8 @@ export const publicAd = (j: ApiAd) => ({
   id: j.id, estado: j.estado, paso: j.paso ?? null, titulo: j.titulo, formato: j.formato, idioma: j.idioma, modelo: j.modelo ?? null, avatar: j.avatarId ?? null,
   video_url: j.videoUrl ? (j.videoUrl.startsWith("http") ? j.videoUrl : `${SITE}${j.videoUrl}`) : null,
   error: j.error ?? null, creado: j.createdAt, actualizado: j.updatedAt,
+  // the same ad in the studio (to open it in the video editor)
+  estudio_id: j.adId ?? null,
 });
 
 /** A finished ad made outside the pipeline (the «Demo con presentador» montage): saved already «listo». */

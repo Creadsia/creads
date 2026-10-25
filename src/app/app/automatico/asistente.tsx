@@ -13,7 +13,7 @@ import { MoneyText } from "../../money";
 
 type Block = { type: string; text?: string; name?: string; content?: unknown; is_error?: boolean; id?: string; tool_use_id?: string; input?: unknown };
 type Msg = { role: "user" | "assistant"; content: string | Block[] };
-interface Ad { id: string; estado: string; paso?: string | null; video_url?: string | null; error?: string | null; told?: boolean }
+interface Ad { id: string; estado: string; paso?: string | null; video_url?: string | null; error?: string | null; told?: boolean; estudio_id?: string | null }
 
 const KEY = "creads-automatico";
 const REF = /\/api\/media\/ws\/[\w-]+\/[\w./-]+\.(?:png|jpe?g|webp|mp4|mov|webm)/gi;
@@ -192,7 +192,7 @@ export default function Asistente() {
             {a.estado === "listo" && a.video_url ? (
               <>
                 <video key={a.video_url} src={a.video_url} controls playsInline className="max-h-[70vh] w-full max-w-xs rounded-xl bg-black" />
-                <a href={dl(a.video_url)} download target="_blank" rel="noopener noreferrer" className={`${ghostCls} w-fit`}>Descargar</a>
+                <div className="flex flex-wrap gap-2"><a href={dl(a.video_url)} download target="_blank" rel="noopener noreferrer" className={`${ghostCls} w-fit`}>Descargar</a>{a.estudio_id && <a href={`/app/editor/${a.estudio_id}`} className={`${ghostCls} w-fit`}>🎬 Editar video</a>}</div>
                 <FixSubtitles id={a.id} onDone={(url) => setAds((all) => all.map((x) => (x.id === a.id ? { ...x, video_url: url } : x)))} />
                 <AfterFirstAd />
               </>

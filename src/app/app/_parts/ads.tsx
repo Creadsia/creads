@@ -109,7 +109,10 @@ export default function Ads({ mode }: { mode: "work" | "done" }) {
                     </button>
                   )}
                   {a.final_url && !story && (
-                    <button type="button" onClick={() => setSubs(a)} className="mt-1 w-fit rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">✏️ Editar o mover subtítulos</button>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {!(a.settings as { demo?: boolean } | null)?.demo && <Link href={`/app/editor/${a.id}`} className="w-fit rounded-lg bg-[image:var(--grad)] px-3 py-1.5 text-xs font-semibold text-white">🎬 Editar video</Link>}
+                      <button type="button" onClick={() => setSubs(a)} className="w-fit rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:border-ink">✏️ Subtítulos</button>
+                    </div>
                   )}
                   <div className="mt-auto flex items-center justify-between pt-2">
                     <Link href={href} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label} →</Link>
