@@ -94,6 +94,7 @@ const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = 
     group: "Imágenes",
     items: [
       { href: "/app/laboratorio", label: "Imágenes para anuncios", icon: I.image, full: true },
+      { href: "/app/video-producto", label: "Video de producto", icon: I.film, badge: "Nuevo" },
     ],
   },
 ];
