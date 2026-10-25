@@ -8,6 +8,7 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
+import Muro from "./muro";
 import { SCENES } from "./landing";
 import Casos from "./casos";
 import { Money, MoneyText } from "./money";
@@ -41,6 +42,21 @@ const DEMOS = {
   bano: { src: "/demos/bano.mp4", poster: "/demos/bano.jpg", label: "Cosmética" },
   cocina: { src: "/demos/cocina.mp4", poster: "/demos/cocina.jpg", label: "Vida sana" },
 };
+
+// Product videos made with «Video de producto» and two UGC ads, all real Creads outputs (owner, 25 Oct 2026).
+const PRODUCTO = {
+  blendgo: { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Licuadora portátil" },
+  serum: { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Sérum" },
+  cafe: { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "Café" },
+  celular: { src: "/demos/prod-celular.mp4", poster: "/demos/prod-celular.jpg", label: "Celular" },
+  zapatillas: { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "Zapatillas" },
+  perfume: { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "Perfume" },
+  ugcProteina: { src: "/demos/ugc-proteina.mp4", poster: "/demos/ugc-proteina.jpg", label: "UGC · proteína" },
+  ugcDepto: { src: "/demos/ugc-depto.mp4", poster: "/demos/ugc-depto.jpg", label: "UGC · inmobiliaria" },
+};
+/** The hero reel: product videos and UGC cut fast, to the beat. */
+const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto y UGC hechos con Creads" };
+const MURO_VIDEOS = [PRODUCTO.celular, PRODUCTO.ugcProteina, PRODUCTO.blendgo, PRODUCTO.zapatillas, PRODUCTO.ugcDepto, PRODUCTO.serum, PRODUCTO.perfume, PRODUCTO.cafe];
 
 const STEPS = [
   { title: "Cuéntale tu negocio", text: "Qué vendes, a quién y qué quieres que hagan: comprar, agendar, escribirte.", why: "Así el anuncio habla de tu oferta real, no de algo genérico." },
@@ -148,18 +164,14 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               </ul>
             </div>
 
-            <div className="hidden flex-col items-center gap-4 lg:flex">
-              <div className="flex w-full items-end justify-center">
-                <DemoPhone {...DEMOS.rubia} className="relative z-0 -mr-10 hidden w-[120px] shrink-0 -rotate-12 sm:block lg:w-[135px]" />
-                <DemoPhone {...DEMOS.dent} className="relative z-[1] -mr-5 w-[29vw] max-w-[165px] shrink-0 -rotate-6 sm:-mr-8" />
-                <DemoPhone {...DEMOS.cafe} big sound className="relative z-10 w-[40vw] max-w-[235px] shrink-0" />
-                <DemoPhone {...DEMOS.doc} className="relative z-[1] -ml-5 w-[29vw] max-w-[165px] shrink-0 rotate-6 sm:-ml-8" />
-                <DemoPhone {...DEMOS.gym} className="relative z-0 -ml-10 hidden w-[120px] shrink-0 rotate-12 sm:block lg:w-[135px]" />
-              </div>
-              <p className="rounded-full border border-line bg-surface/80 px-4 py-1.5 text-center text-sm font-semibold backdrop-blur">
-                Ninguna de estas personas existe. <span className="text-muted">Las hizo Creads.</span>
-              </p>
+            <div className="relative hidden justify-center py-4 lg:flex">
+              <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-30 blur-[110px]" />
+              <DemoPhone {...REEL} big className="relative w-72" />
             </div>
+          </div>
+          {/* the wall: product videos and UGC moving */}
+          <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] pb-12 sm:pb-16">
+            <Muro videos={MURO_VIDEOS} />
           </div>
         </section>
 
@@ -176,6 +188,31 @@ export default function Venta({ t, rate = 950, renews = true }: { t: Content; ra
               ))}
             </div>
             <Cta href={FREE} sub={CON_TARJETA ? "7 días gratis. Hoy no se cobra nada." : "Sin tarjeta. Te regalamos 200 créditos."}>Crea el tuyo gratis</Cta>
+          </div>
+        </section>
+
+        {/* Product videos: three side by side, the style under each */}
+        <section className={`stage relative overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="producto-title">
+          <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[120px]" />
+          <div className={`${wrap} relative grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]`}>
+            <div className="flex flex-col gap-4">
+              <h2 id="producto-title" className={h2}>Tu producto, en <span className="chroma">movimiento</span></h2>
+              <p className="max-w-[46ch] text-lg text-muted">Sube una foto de tu producto y elige un estilo. En minutos tienes un video de 6 segundos que parece de estudio: sin modelos, sin grabar, sin editar.</p>
+              <ul className="flex flex-wrap gap-2">
+                {["Salpicadura", "Giro 360", "Flotando", "Macro", "Unboxing", "En su lugar"].map((x) => (
+                  <li key={x} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm font-semibold">{x}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted">Tecnología, moda, belleza, comida, suplementos: sirve para cualquier producto que se venda por foto.</p>
+              <div className="self-start"><Cta href="/app/video-producto">Haz el video de tu producto</Cta></div>
+            </div>
+            <div className="grid grid-cols-3 items-center gap-3 sm:gap-5">
+              {([[PRODUCTO.zapatillas, "Salpicadura"], [PRODUCTO.celular, "Salpicadura"], [PRODUCTO.perfume, "Salpicadura"]] as const).map(([d, estilo], i) => (
+                <div key={d.src} className={i === 1 ? "-mt-10" : "mt-10"}>
+                  <DemoPhone {...d} label={`${d.label} · ${estilo}`} big={i === 1} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

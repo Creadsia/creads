@@ -254,3 +254,34 @@ html { -webkit-tap-highlight-color: transparent; }
 .p-clp { display: none; }
 html[data-cl] .p-clp { display: inline; }
 html[data-cl] .p-usd { display: none; }
+
+/* Home «muro» (owner, 25 Oct 2026: «dale movimiento»): endless rows of real outputs drifting in opposite
+   directions, paused on hover; with reduced motion they become plain scrollable rows. */
+@keyframes creads-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.marquee-track { display: flex; width: max-content; animation: creads-marquee var(--dur, 70s) linear infinite; }
+.marquee-rev .marquee-track { animation-direction: reverse; }
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; mask-image: none; }
+}
+
+/* Phones that float gently around the product reel. */
+@keyframes creads-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
+}
+.float { animation: creads-float var(--fd, 7s) ease-in-out infinite; animation-delay: var(--fdl, 0s); }
+
+/* A gradient ring that lights up on hover around an example. */
+.glow-ring { position: relative; transition: transform 0.25s ease; }
+.glow-ring::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit; padding: 2px; background: var(--grad);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
+}
+.glow-ring:hover { transform: translateY(-4px) rotate(-0.6deg); }
+.glow-ring:hover::after { opacity: 1; }
