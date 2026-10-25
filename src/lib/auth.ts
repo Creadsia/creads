@@ -277,7 +277,7 @@ export function apiKeyFromRequest(req: Request): string {
  * avatars, voices and credits. Never the account itself (team, passwords, payments, keys, admin): a
  * leaked key can't take over the account or the team.
  */
-const KEY_ROUTES = /^\/api\/(v1\/|mcp$|ads\/start$|clips\/|credits$|cuts$|data\/(ads|clips|avatars|products|scripts)(\/|$)|generate\/|media\/|montage$|review$|scenes$|voices(\/acentos)?$|models$)/;
+const KEY_ROUTES = /^\/api\/(v1\/|mcp$|ads\/start$|clips\/|credits$|cuts$|data\/(ads|clips|avatars|products|scripts)(\/|$)|generate\/|media\/|montage$|review$|scenes$|voices(\/acentos)?$|models$|video-producto$)/;
 export const keyMayUse = (req: Request) => {
   try { return KEY_ROUTES.test(new URL(req.url).pathname); } catch { return false; }
 };
