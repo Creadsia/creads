@@ -46,3 +46,33 @@ export const fmtSeconds = (s: number) => `${Math.max(0, Math.round(s)).toLocaleS
 
 /** How many 30-second ads a number of seconds is (at least 1 when there is any). */
 export const adsOf = (s: number) => (s >= 30 ? Math.floor(s / 30) : s > 0 ? 1 : 0);
+
+// ---------- balance as images or videos (owner's plan, 25 Oct 2026) ----------
+// Customers see «te quedan X imágenes o Y videos»; credits stay as internal accounting. One image = one ad of
+// a batch in its formats with the standard model (≈ US$0.16–0.19); one video = a 10 s talking-avatar video
+// (≈ US$2.25–2.40). Nano Banana Pro uses about two images.
+export const IMAGEN_CR = 10;
+export const VIDEO_CR = 125;
+
+export const unidadesDe = (credits: number) => ({
+  imagenes: Math.max(0, Math.floor(credits / IMAGEN_CR + 1e-9)),
+  videos: Math.max(0, Math.floor(credits / VIDEO_CR + 1e-9)),
+});
+
+/** «47 imágenes o 3 videos» */
+export function fmtSaldo(credits: number) {
+  const u = unidadesDe(credits);
+  const im = `${u.imagenes.toLocaleString("es-CL")} imagen${u.imagenes === 1 ? "" : "es"}`;
+  if (!u.videos) return im;
+  return `${im} o ${u.videos.toLocaleString("es-CL")} video${u.videos === 1 ? "" : "s"}`;
+}
+
+/** What one job uses, as images or videos («1 imagen», «≈ 1 video», «0,4 videos»). */
+export function fmtGasto(credits: number, kind?: "imagen" | "video") {
+  if (kind === "video" || (!kind && credits >= VIDEO_CR * 0.6)) {
+    const v = Math.round((credits / VIDEO_CR) * 10) / 10;
+    return `≈ ${v.toLocaleString("es-CL")} video${v === 1 ? "" : "s"}`;
+  }
+  const i = Math.max(1, Math.round(credits / IMAGEN_CR));
+  return `${i} imagen${i === 1 ? "" : "es"}`;
+}

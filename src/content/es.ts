@@ -516,7 +516,59 @@ export const es: Content = {
     ],
     plans: [
       {
+        id: "testea",
+        name: "Testea",
+        price: 29,
+        yearly: 27.55,
+        credits: "470",
+        imagenes: 47,
+        videos: 3,
+        for: "Para empezar a testear en serio: varias tandas al mes sin gastar de más.",
+        features: [
+          "Hasta 47 imágenes o 3 videos con avatar de 10 s al mes (o la mezcla que quieras)",
+          "Tandas desde el link de tu producto: 6 ángulos y 10 anuncios",
+          "Kit de marca: logo, colores y tono en todo",
+          "Descarga por ubicación: feed 4:5 y stories 9:16",
+          "Español e inglés",
+        ],
+      },
+      {
+        id: "escala",
+        name: "Escala",
+        featured: true,
+        price: 59,
+        yearly: 56.05,
+        credits: "950",
+        imagenes: 95,
+        videos: 7,
+        for: "Para quien invierte en Meta todas las semanas y necesita ángulos nuevos sin parar.",
+        features: [
+          "Hasta 95 imágenes o 7 videos con avatar de 10 s al mes (o la mezcla que quieras)",
+          "Todo lo de Testea",
+          "Videos UGC con avatares que hablan y tu voz clonada",
+          "Espiar anuncios de tu competencia y guiones con IA",
+          "Editor de video incluido",
+        ],
+      },
+      {
+        id: "agencia",
+        name: "Agencia",
+        price: 149,
+        yearly: 141.55,
+        credits: "2.440",
+        imagenes: 244,
+        videos: 19,
+        for: "Para agencias y media buyers que testean para varias marcas.",
+        features: [
+          "Hasta 244 imágenes o 19 videos con avatar de 10 s al mes (o la mezcla que quieras)",
+          "Todo lo de Escala",
+          "Hasta 3 marcas, cada una con su kit",
+          "Ayuda directa por WhatsApp",
+        ],
+      },
+      {
         id: "basico",
+        hidden: true, // legacy plan (until 25 Oct 2026): kept for its subscribers
         name: "Básico",
         price: 25,
         yearly: 25,
@@ -532,6 +584,7 @@ export const es: Content = {
       },
       {
         id: "starter",
+        hidden: true, // legacy plan (until 25 Oct 2026): kept for its subscribers
         name: "Emprende",
         price: 55,
         yearly: 55,
@@ -548,6 +601,7 @@ export const es: Content = {
       },
       {
         id: "plus",
+        hidden: true, // legacy plan (until 25 Oct 2026): kept for its subscribers
         name: "Negocio",
         price: 99,
         yearly: 99,

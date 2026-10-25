@@ -18,12 +18,11 @@ test("gift: throwaway inboxes don't get it", () => {
   assert.ok(!regaloEmailOk("x@yopmail.com"));
 });
 
-test("trial video: not sold any more, but an old order still settles (200 credits, no months)", () => {
-  assert.ok(!onSale(PRUEBA.id, "mensual"));
+test("Pack Prueba: US$9 once, 125 credits; an old trial-video order still settles with its 200 credits", () => {
+  assert.ok(onSale(PRUEBA.id, "mensual"));
   const q = quote(PRUEBA.id, "mensual")!;
   assert.equal(q.total, 9);
-  assert.equal(q.credits, 200);
-  assert.equal(q.label, "Video de prueba (15 s)");
-  const g = orderGrant({ item: PRUEBA.id, quote: q } as never);
-  assert.deepEqual(g, { credits: 200, months: 0, plan: null });
+  assert.equal(q.credits, 125);
+  assert.deepEqual(orderGrant({ item: PRUEBA.id, quote: q } as never), { credits: 125, months: 0, plan: null });
+  assert.deepEqual(orderGrant({ item: PRUEBA.id, quote: { ...q, credits: 200 } } as never), { credits: 200, months: 0, plan: null });
 });

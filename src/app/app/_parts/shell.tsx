@@ -9,7 +9,7 @@ import InstallBanner from "./install-banner";
 import Assistant from "./assistant";
 import FailNotices from "./fail-notices";
 import { Guides, HelpButton } from "./tour";
-import { fmtCredits } from "@/lib/credit-math";
+import { fmtSaldo } from "@/lib/credit-math";
 import { useCredits } from "./use-credits";
 import CreditsPopup from "./credits-popup";
 import TrialPopup from "./trial-popup";
@@ -211,17 +211,17 @@ function MobileTabs({ path, user, onMore, moreOpen }: { path: string; user: Shel
 /** The account's credits in the menu (the owner has no limit). */
 function CreditsBox() {
   const { info } = useCredits();
-  const low = Boolean(info && !info.unlimited && (info.balance ?? 0) < 340); // less than ≈ 30 s of video
+  const low = Boolean(info && !info.unlimited && (info.balance ?? 0) < 50); // less than ≈ 5 images
   return (
     <Link href="/app/planes" data-tour="creditos" className="block rounded-xl bg-surface-2 p-3 hover:bg-surface-2/70">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-semibold text-muted">Tus créditos</span>
-        <span className={`font-mono text-sm font-bold ${low ? "text-warn" : ""}`}>
-          {!info ? "…" : info.unlimited ? "Sin límite" : fmtCredits(info.balance ?? 0)}
+        <span className="text-xs font-semibold text-muted">Te quedan</span>
+        <span className={`text-right text-sm font-bold ${low ? "text-warn" : ""}`}>
+          {!info ? "…" : info.unlimited ? "Sin límite" : fmtSaldo(info.balance ?? 0)}
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te quedan pocos créditos." : "Sumar más créditos"}
+        {!info ? "" : info.unlimited ? "Cuenta del dueño." : info.expired ? "Tu plan venció." : info.paidUntil ? `Plan al día hasta el ${new Date(`${info.paidUntil}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "short" })}.` : low ? "Te queda poco saldo." : "Sumar saldo"}
       </p>
     </Link>
   );

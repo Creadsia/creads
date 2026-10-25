@@ -32,7 +32,8 @@ async function mp<T>(path: string, init: RequestInit = {}): Promise<T> {
 const back = (orderId: string) => `${SITE}/app/planes?pago=volver&pedido=${encodeURIComponent(orderId)}`;
 
 /** One-time payment page (Checkout Pro). Returns the link to send the customer to. */
-export async function createPreference(o: { orderId: string; title: string; clp: number; email: string }) {
+export async function createPreference(o: { orderId: string; title: string; clp: number; email: string; /** a studio page to come back to (e.g. the batch being made) */ backPath?: string }) {
+  const ret = o.backPath ? `${SITE}${o.backPath}${o.backPath.includes("?") ? "&" : "?"}pago=volver&pedido=${encodeURIComponent(o.orderId)}` : back(o.orderId);
   const r = await mp<{ id: string; init_point: string; sandbox_init_point?: string }>("/checkout/preferences", {
     method: "POST",
     headers: { "x-idempotency-key": `pref-${o.orderId}` },
@@ -41,7 +42,7 @@ export async function createPreference(o: { orderId: string; title: string; clp:
       payer: { email: o.email },
       external_reference: o.orderId,
       notification_url: `${SITE}/api/pagos/mp`,
-      back_urls: { success: back(o.orderId), pending: back(o.orderId), failure: back(o.orderId) },
+      back_urls: { success: ret, pending: ret, failure: ret },
       auto_return: "approved",
       statement_descriptor: "CREADS IA",
     }),

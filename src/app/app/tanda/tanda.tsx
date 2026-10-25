@@ -44,11 +44,19 @@ export default function PrimeraTanda() {
   const [tanda, setTanda] = useState<Tanda | null>(null);
   const [estado, setEstado] = useState<Record<string, "esperando" | "creando" | "listo" | "error">>({});
   const [anteriores, setAnteriores] = useState<Tanda[]>([]);
-  const { price } = useCredits();
+  const { price, covers, info } = useCredits();
+  const [pagando, setPagando] = useState(false);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const id = q.get("id");
+    // back from paying the Pack Prueba: confirm the payment, then the batch can be made
+    const pedido = q.get("pedido");
+    if (q.get("pago") === "volver" && pedido) {
+      fetch("/api/pagos/confirmar", { method: "POST", headers: H, body: JSON.stringify({ pedido, payment_id: q.get("payment_id") ?? q.get("collection_id") }) })
+        .then(() => refreshCredits()).catch(() => {});
+      window.history.replaceState(null, "", id ? `/app/tanda?id=${id}` : "/app/tanda");
+    }
     const u = q.get("url");
     if (u && /^https?:\/\//i.test(u)) setUrl(u.slice(0, 600));
     fetch(`/api/tanda${id ? `?id=${encodeURIComponent(id)}` : ""}`).then((r) => r.json()).then((d) => {
@@ -102,6 +110,20 @@ export default function PrimeraTanda() {
     await Promise.all([worker(), worker(), worker()]);
   }
 
+  /** No balance yet: the batch is saved first (free), then the Pack Prueba is paid and the customer comes back to it. */
+  async function comprarPack(t: Tanda) {
+    setPagando(true); setErr("");
+    try {
+      const r = await fetch("/api/pagos", { method: "POST", headers: H, body: JSON.stringify({ item: "pack-prueba", method: "mercadopago", volver: `/app/tanda?id=${t.id}` }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "No se pudo preparar el pago.");
+      if (d.redirect) { window.location.href = d.redirect; return; }
+      setErr("El pago en línea no está activo todavía. Escríbenos a hola@creadsia.com y te activamos el pack.");
+    } catch (e) { setErr(e instanceof Error ? e.message : "No se pudo preparar el pago."); }
+    setPagando(false);
+  }
+  const alcanza = covers(MODEL_USD * 20);
+
   async function crear() {
     if (!producto) return;
     setErr(""); setBusy("Escribiendo tus 10 anuncios…");
@@ -109,6 +131,7 @@ export default function PrimeraTanda() {
       const d = await post<{ tanda: Tanda }>({ accion: "crear", producto, angulos: angulos.filter((_, i) => elegidos.has(i)), idioma, n: 10 });
       setTanda(d.tanda); setPaso("tanda"); setBusy("");
       window.history.replaceState(null, "", `/app/tanda?id=${d.tanda.id}`);
+      if (!alcanza) return comprarPack(d.tanda);
       await generar(d.tanda);
     } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear la tanda."); setBusy(""); }
   }
@@ -190,10 +213,11 @@ export default function PrimeraTanda() {
             })}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={crear} disabled={!elegidos.size || Boolean(busy)} className={btnCls}>Crear mis 10 anuncios</button>
+            <button type="button" onClick={crear} disabled={!elegidos.size || Boolean(busy) || pagando} className={btnCls}>{alcanza ? "Crear mis 10 anuncios" : "Crear mis 10 anuncios por US$9"}</button>
             <button type="button" onClick={() => setPaso("link")} className={ghostCls}>Volver</button>
             {busy ? <span className="flex items-center gap-2 text-sm text-muted"><Spinner /> {busy}</span>
-              : <span className="text-xs text-muted">Usa {price(MODEL_USD * 20)} de tu saldo (10 anuncios × 2 formatos). Si una imagen falla, no se cobra.</span>}
+              : alcanza ? <span className="text-xs text-muted">Usa {price(MODEL_USD * 20, "imagen")} de tu saldo (10 anuncios en 2 formatos). Si una imagen falla, no se cobra.</span>
+              : <span className="text-xs text-muted">Pack Prueba: pago único de US$9, hasta 12 imágenes o 1 video. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>}
           </div>
         </div>
       )}
@@ -203,7 +227,9 @@ export default function PrimeraTanda() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted">{tanda.producto.nombre} · {listos} de {total} imágenes listas{corriendo ? " · creando…" : ""}</p>
             <div className="flex flex-wrap gap-2">
-              {!corriendo && listos < total && <button type="button" onClick={() => generar(tanda)} className={ghostCls}>Crear las que faltan</button>}
+              {!corriendo && listos < total && (info && !covers(MODEL_USD * 2)
+                ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : "Crear por US$9 (Pack Prueba)"}</button>
+                : <button type="button" onClick={() => generar(tanda)} className={ghostCls}>Crear las que faltan</button>)}
               <a href={`/api/tanda/zip?id=${tanda.id}`} className={`${btnCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos}>Descargar ZIP (feed 4:5 + stories 9:16)</a>
             </div>
           </div>

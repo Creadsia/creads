@@ -82,7 +82,7 @@ export interface Order {
   /** For Meta: consent and browser ids at checkout, so the purchase can be matched later. */
   visitor?: Visitor | null;
   /** Online payment with Mercado Pago. */
-  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; cancelled?: boolean; /** free trial with card: first charge on this date */ trial?: string } | null;
+  mp?: { kind: "preference" | "subscription"; id: string; clp: number; fullClp?: number; /** price of months 2..promoMonths (founder price) */ midClp?: number; /** months charged below fullClp (default 1) */ promoMonths?: number; cancelled?: boolean; /** free trial with card: first charge on this date */ trial?: string } | null;
   /** Payments already applied (a subscription adds one each month). */
   payments?: string[];
 }
@@ -153,4 +153,23 @@ export async function hasPaidBefore(ws: string) {
   } catch {
     return true;
   }
+}
+
+// ---------- precio fundador and Pack Prueba discount (owner's plan, 25 Oct 2026) ----------
+
+/** How many accounts already took the founder price (paid orders with it): the real counter on the site. */
+export async function fundadoresUsados(): Promise<number> {
+  const rows = await sbRest<{ owner: string }[]>("orders?status=eq.pagado&quote->>fundador=not.is.null&select=owner&limit=1000").catch(() => []);
+  return new Set(rows.map((r) => r.owner)).size;
+}
+
+/** The Pack Prueba paid in the last `days` days whose price hasn't been discounted from a plan yet. */
+export async function packParaDescontar(ws: string, days: number): Promise<{ order: string; usd: number } | null> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+  const packs = await sbRest<{ id: string; quote: { total?: number } }[]>(`orders?owner=eq.${encodeURIComponent(ws)}&item=eq.pack-prueba&status=eq.pagado&closed_at=gte.${since}&select=id,quote&order=closed_at.desc&limit=3`).catch(() => []);
+  for (const p of packs) {
+    const used = await sbRest<{ id: string }[]>(`orders?owner=eq.${encodeURIComponent(ws)}&status=eq.pagado&quote->>packOrder=eq.${encodeURIComponent(p.id)}&select=id&limit=1`).catch(() => [{ id: "?" }]);
+    if (!used.length && Number(p.quote?.total) > 0) return { order: p.id, usd: Number(p.quote.total) };
+  }
+  return null;
 }

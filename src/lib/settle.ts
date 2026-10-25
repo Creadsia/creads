@@ -18,7 +18,9 @@ export interface Paid { id: string; amount: number; currency: string }
 
 /** What an order gives: credits and months of plan (0 for a top-up). */
 export function orderGrant(o: Order) {
-  const pack = PACKS.find((p) => p.id === o.item) ?? (o.item === PRUEBA.id ? PRUEBA : undefined);
+  // the Pack Prueba gives what its order promised (older ones: the 15 s trial video, 200 credits)
+  if (o.item === PRUEBA.id) return { credits: Number(o.quote?.credits) > 0 ? Number(o.quote.credits) : PRUEBA.credits, months: 0, plan: null as string | null };
+  const pack = PACKS.find((p) => p.id === o.item);
   if (pack) return { credits: pack.credits, months: 0, plan: null as string | null };
   // a pack that's no longer sold: the credits stored in the order when it was placed
   if (o.item.startsWith("pack-") && Number(o.quote?.credits) > 0) return { credits: Number(o.quote.credits), months: 0, plan: null as string | null };
@@ -28,12 +30,18 @@ export function orderGrant(o: Order) {
   return { credits: plan.credits * months, months, plan: plan.name };
 }
 
-/** Keeps a monthly subscription at its regular price once the launch month is paid. */
-async function ensureRegularPrice(o: Order) {
-  if (o.mp?.kind !== "subscription" || !o.mp.fullClp || o.mp.fullClp <= o.mp.clp) return;
+/**
+ * Keeps a monthly subscription at the right price after each payment: the first month may be cheaper (Pack
+ * Prueba discount), months 2..promoMonths at the founder price (midClp), then the regular price (fullClp).
+ */
+async function ensureRegularPrice(o: Order, paidNow: number) {
+  if (o.mp?.kind !== "subscription" || !o.mp.fullClp) return;
+  const months = Math.max(1, o.mp.promoMonths ?? 1);
+  const target = paidNow < months ? (o.mp.midClp ?? o.mp.fullClp) : o.mp.fullClp;
+  if (!(target > 0)) return;
   try {
     const sub = await getPreapproval(o.mp.id);
-    if ((sub.auto_recurring?.transaction_amount ?? 0) < o.mp.fullClp && sub.status !== "cancelled") await setSubscriptionAmount(o.mp.id, o.mp.fullClp);
+    if (Math.abs((sub.auto_recurring?.transaction_amount ?? 0) - target) >= 1 && sub.status !== "cancelled") await setSubscriptionAmount(o.mp.id, target);
   } catch (e) {
     console.error("subscription price", o.id, e instanceof Error ? e.message : e);
   }
@@ -67,7 +75,7 @@ export async function settleOrder(orderId: string, pay: Paid, source: "mp" | "ma
     paymentId: `${source}:${pay.id}`, orderId: order.id, amount: pay.amount, currency: pay.currency,
     credits: g.credits, months: g.months, plan: g.plan, note: `${order.quote.label} · ${order.id}`,
   });
-  await ensureRegularPrice(order);
+  await ensureRegularPrice(order, new Set([...(order.payments ?? []), `${source}:${pay.id}`]).size);
   if (r === "already") return { ok: true, already: true };
 
   await recordIncome(order.wsName, `${order.quote.label} · ${order.id}`, pay.amount, pay.currency === "CLP" ? "CLP" : "USD").catch((e) => console.error("income", order.id, e instanceof Error ? e.message : e));

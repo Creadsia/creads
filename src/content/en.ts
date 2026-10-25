@@ -514,7 +514,59 @@ export const en = {
     ],
     plans: [
       {
+        id: "testea",
+        name: "Test",
+        price: 29,
+        yearly: 27.55,
+        credits: "470",
+        imagenes: 47,
+        videos: 3,
+        for: "To start testing seriously: several batches a month without overspending.",
+        features: [
+          "Up to 47 images or 3 talking-avatar videos of 10 s a month (or any mix)",
+          "Batches from your product link: 6 angles and 10 ads",
+          "Brand kit: logo, colours and tone everywhere",
+          "Download by placement: feed 4:5 and stories 9:16",
+          "English and Spanish",
+        ],
+      },
+      {
+        id: "escala",
+        name: "Scale",
+        featured: true,
+        price: 59,
+        yearly: 56.05,
+        credits: "950",
+        imagenes: 95,
+        videos: 7,
+        for: "For people who spend on Meta every week and need new angles all the time.",
+        features: [
+          "Up to 95 images or 7 talking-avatar videos of 10 s a month (or any mix)",
+          "Everything in Test",
+          "UGC videos with talking avatars and your cloned voice",
+          "Spy on competitors' ads and AI scripts",
+          "Video editor included",
+        ],
+      },
+      {
+        id: "agencia",
+        name: "Agency",
+        price: 149,
+        yearly: 141.55,
+        credits: "2,440",
+        imagenes: 244,
+        videos: 19,
+        for: "For agencies and media buyers testing for several brands.",
+        features: [
+          "Up to 244 images or 19 talking-avatar videos of 10 s a month (or any mix)",
+          "Everything in Scale",
+          "Up to 3 brands, each with its own kit",
+          "Direct help on WhatsApp",
+        ],
+      },
+      {
         id: "starter",
+        hidden: true, // legacy plan (until 25 Oct 2026): kept for its subscribers
         name: "Grow",
         price: 55,
         yearly: 55,
@@ -531,6 +583,7 @@ export const en = {
       },
       {
         id: "plus",
+        hidden: true, // legacy plan (until 25 Oct 2026): kept for its subscribers
         name: "Business",
         price: 99,
         yearly: 99,

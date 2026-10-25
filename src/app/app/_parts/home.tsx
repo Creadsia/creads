@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHead, SetupNotice, cardCls } from "./ui";
 import { useCredits } from "./use-credits";
-import { adsOf, fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { adsOf, fmtCredits, fmtSaldo, fmtSeconds, secondsOf } from "@/lib/credit-math";
 
 type Counts = Record<"avatars" | "products" | "scripts" | "ads" | "images", number | null>;
 interface ClipRow { id: string; kind: string | null; model: string | null; url: string | null; status: string; created_at: string; prompt?: string | null }
@@ -191,8 +191,8 @@ function Dashboard({ c, clips, working, full, balance, plan, paidUntil, unlimite
           <div className="flex h-full flex-col justify-between gap-4 rounded-[15px] bg-surface p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm text-muted">Tus créditos{plan ? ` · Plan ${plan}` : ""}</span>
-                <b className="font-display text-4xl font-bold tabular-nums">{unlimited ? "Ilimitados" : balance == null ? "—" : fmtCredits(balance)}</b>
+                <span className="text-sm text-muted">Te quedan{plan ? ` · Plan ${plan}` : ""}</span>
+                <b className="font-display text-3xl font-bold tabular-nums">{unlimited ? "Sin límite" : balance == null ? "—" : fmtSaldo(balance)}</b>
                 {until && !unlimited && <span className="text-xs text-muted">Tu plan se renueva el {until}</span>}
               </div>
               <Link href="/app/planes" className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">Recargar</Link>

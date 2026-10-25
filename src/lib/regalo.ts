@@ -36,8 +36,11 @@ export async function hasPaid(ws: string) {
 
 /** «Prueba con tarjeta» (owner, 25 Oct 2026): the gift only after the customer adds a card on Mercado Pago (a
  *  7-day trial that becomes the Básico plan unless cancelled). Off with REGALO_CON_TARJETA=0 in Vercel. */
-// On by default since 25 Oct 2026 (owner: «déjalo listo»); REGALO_CON_TARJETA=0 in Vercel turns it off.
-export const tarjetaObligatoria = () => process.env.REGALO_CON_TARJETA !== "0";
+// Replaced on 25 Oct 2026 (owner's plan) by the Pack Prueba: no free gift and no card trial for new accounts.
+// MODO_PACK=0 in Vercel brings back the previous behaviour (card trial unless REGALO_CON_TARJETA=0).
+// Trials already started keep working (their card activation still loads the gift).
+export const modoPack = () => process.env.MODO_PACK !== "0";
+export const tarjetaObligatoria = () => !modoPack() && process.env.REGALO_CON_TARJETA !== "0";
 export const PRUEBA_DIAS = 7;
 
 /** Has this workspace received its gift credits (with the card trial on, that means the card was added)? */
@@ -45,10 +48,11 @@ export async function regaloDado(ws: string) {
   return (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(ws)}&ref=eq.${encodeURIComponent(`regalo:${ws}`)}&select=id&limit=1`).catch(() => [])).length > 0;
 }
 
-export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" | "tarjeta" };
+export type RegaloResult = { ok: true } | { ok: false; why: "ya" | "tope" | "correo" | "pagado" | "tarjeta" | "pack" };
 
 /** Gives the gift once (the credit ledger's unique ref makes a second try a no-op). */
 export async function darRegalo(ws: string, email: string, o: { conTarjeta?: boolean } = {}): Promise<RegaloResult> {
+  if (modoPack() && !o.conTarjeta) return { ok: false, why: "pack" };
   if (tarjetaObligatoria() && !o.conTarjeta) return { ok: false, why: "tarjeta" };
   // with a card on file the trial is a real customer: no throwaway-inbox or monthly-cap limits
   if (!o.conTarjeta && !regaloEmailOk(email)) return { ok: false, why: "correo" };

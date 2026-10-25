@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ANNUAL, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, type Period, clpFor, quote } from "@/lib/catalog";
+import { ANNUAL, ANNUAL_PCT, FUNDADOR, type ItemId, LAUNCH_PCT, LAUNCH_PRICE, hasLaunch, type MethodId, PACKS, PLANS, PRUEBA, type Period, clpFor, quote } from "@/lib/catalog";
 import { PageHead, btnCls, cardCls, ghostCls } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
-import { fmtCredits, fmtSeconds, secondsOf } from "@/lib/credit-math";
+import { fmtSaldo } from "@/lib/credit-math";
 import { newEventId, track } from "@/lib/track";
 import Garantia from "../../garantia";
 import PayBadges from "../../pay-badges";
@@ -14,7 +14,7 @@ import { Money } from "../../money";
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
 
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
-interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string; trial?: string; clp?: number } | null }
+interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string; trial?: string; clp?: number } | null; fundador?: { quedan: number }; packDescuento?: number | null; packComprado?: boolean }
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const STATUS: Record<string, [string, string]> = {
@@ -33,8 +33,7 @@ function Check() {
 
 export default function Planes() {
   const { info } = useCredits();
-  // everything the customer reads is in seconds of video (credits stay underneath)
-  const secs = (credits: number) => secondsOf(credits, info?.rate);
+  // everything the customer reads is in images or videos (credits stay underneath)
   const hasPlan = Boolean(info?.unlimited || (info?.paidUntil && !info.expired)); // top-ups need an active plan
   const [pay, setPay] = useState<PayInfo | null>(null);
   const [tab, setTab] = useState<"planes" | "creditos">("planes");
@@ -73,6 +72,7 @@ export default function Planes() {
     if (sp.get("aviso") === "pago") setErr("Tu cuenta quedó creada, pero no pudimos abrir el pago. Elige tu plan aquí abajo e inténtalo de nuevo.");
     // arriving from the website with a plan already chosen (/app/planes?plan=plus&periodo=anual)
     const want = sp.get("plan") as ItemId | null;
+    if (want === PRUEBA.id) { setItem(PRUEBA.id); window.history.replaceState(null, "", "/app/planes"); }
     if (want && [...PLANS, ...PACKS].some((x) => x.id === want)) {
       if (PACKS.some((x) => x.id === want)) setTab("creditos");
       if (ANNUAL && sp.get("periodo") === "anual") setPeriod("anual");
@@ -120,8 +120,9 @@ export default function Planes() {
     load();
   }
 
-  const opts = { discountPct: pay?.discount ?? 0, firstPurchase: pay?.firstPurchase ?? true };
-  const q = useMemo(() => (item ? quote(item, period, opts) : null), [item, period, opts.discountPct, opts.firstPurchase]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fundadorOn = Boolean(pay?.firstPurchase && (pay?.fundador?.quedan ?? 0) > 0);
+  const opts = { discountPct: pay?.discount ?? 0, firstPurchase: pay?.firstPurchase ?? true, fundador: fundadorOn, pack: pay?.packDescuento ? { order: "", usd: pay.packDescuento } : null };
+  const q = useMemo(() => (item ? quote(item, period, opts) : null), [item, period, opts.discountPct, opts.firstPurchase, opts.fundador, pay?.packDescuento]); // eslint-disable-line react-hooks/exhaustive-deps
   const currentPlan = info?.plan ?? null;
 
   function choose(id: ItemId) {
@@ -148,7 +149,7 @@ export default function Planes() {
 
   return (
     <>
-      <PageHead title="Planes" lead="Cada plan trae créditos al mes. Ves el precio exacto antes de pagar y puedes cancelar cuando quieras." />
+      <PageHead title="Planes" lead="Un solo saldo al mes: lo gastas en imágenes o videos, como quieras. Ves el precio exacto antes de pagar y cancelas cuando quieras." />
 
       {pay?.owner && (
         <p className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm">
@@ -159,8 +160,8 @@ export default function Planes() {
       {/* where the account stands */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Tu cuenta">
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
-          <span className="text-xs font-semibold text-muted">Tus créditos</span>
-          <span className="font-mono text-2xl font-bold tabular-nums sm:text-3xl">{!info ? "…" : info.unlimited ? "∞" : fmtCredits(info.balance ?? 0)}</span>
+          <span className="text-xs font-semibold text-muted">Te quedan</span>
+          <span className="text-xl font-bold tabular-nums sm:text-2xl">{!info ? "…" : info.unlimited ? "Sin límite" : fmtSaldo(info.balance ?? 0)}</span>
         </div>
         <div className="flex flex-col gap-1 rounded-2xl border border-line bg-surface p-4">
           <span className="text-xs font-semibold text-muted">Tu plan</span>
@@ -169,7 +170,7 @@ export default function Planes() {
         </div>
         <div className="hidden flex-col gap-1 rounded-2xl border border-line bg-surface p-4 sm:flex">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
-          <span className="text-sm text-muted">Un segundo de video con avatar que habla usa unos 11 créditos. Los modelos más caros usan más (Veo 3.1: unas 4 veces más). Revisar y la Edición Pro no usan créditos. Si algo falla, vuelven solos.</span>
+          <span className="text-sm text-muted">Cada anuncio de una tanda (en 4:5 y 9:16) usa 1 imagen. Un video de 10 s con avatar que habla usa 1 video. Nano Banana Pro cuenta como 2 imágenes. Editar y revisar no usan saldo. Si algo falla, vuelve solo.</span>
         </div>
       </section>
 
@@ -205,7 +206,7 @@ export default function Planes() {
               </label>
             ))}
           </div>
-          {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Emprende</b>? Es el más económico y trae video para varios anuncios al mes.</p>}
+          {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Testea</b>? Es el más económico y trae saldo para hasta 47 imágenes o 3 videos al mes.</p>}
           {(reason === "Los resultados de la IA no me convencieron" || reason === "Problemas técnicos") && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
           {reason === "No uso suficientes créditos" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
@@ -235,9 +236,20 @@ export default function Planes() {
         </section>
       )}
 
+      {/* Pack Prueba (25 Oct 2026): the way in, once per account */}
+      {pay && !pay.owner && !pay.packComprado && !hasPlan && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Pack Prueba">
+          <div className="flex flex-col gap-1">
+            <b className="font-display text-xl font-semibold">Pack Prueba · {money(PRUEBA.usd)} pago único</b>
+            <span className="text-sm text-muted">Hasta 12 imágenes o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>
+          </div>
+          <button type="button" onClick={() => choose(PRUEBA.id)} className={`${btnCls} shrink-0`}>Haz tu primera tanda por {money(PRUEBA.usd)}</button>
+        </section>
+      )}
+
       {/* what to buy */}
       <div role="tablist" aria-label="Qué quieres comprar" className="flex gap-1 border-b border-line">
-        {([["planes", "Planes"], ["creditos", "Solo recargas"]] as const).map(([k, l]) => (
+        {([["planes", "Planes"], ["creditos", "Recargas"]] as const).map(([k, l]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} onClick={() => setTab(k)}
             className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold ${tab === k ? "border-accent-text text-ink" : "border-transparent text-muted hover:text-ink"}`}>{l}</button>
         ))}
@@ -252,11 +264,12 @@ export default function Planes() {
                   className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${period === p ? "bg-ink text-bg" : "text-muted hover:text-ink"}`}>{p === "mensual" ? "Mensual" : "Anual"}</button>
               ))}
             </div>}
-            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? "15% menos" : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
+            <span className="rounded-full bg-good/15 px-3 py-1 text-sm font-semibold text-good">{period === "anual" ? `${ANNUAL_PCT}% menos pagando el año` : pay?.firstPurchase && LAUNCH_PCT > 0 ? `Emprende −${LAUNCH_PCT}% el primer mes` : pay?.renews === false ? "Pagas mes a mes" : "Cancela cuando quieras"}</span>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.filter((p) => !p.hidden || currentPlan === p.name).map((p) => {
-              const featured = p.id === "plus";
+              const featured = p.featured;
+              const founder = fundadorOn && period === "mensual" && p.id === FUNDADOR.plan;
               const mine = currentPlan === p.name;
               const perMonth = period === "anual" ? p.yearlyPerMonth : p.monthly;
               const first = period === "mensual" && pay?.firstPurchase && hasLaunch(p.id) ? LAUNCH_PRICE : null;
@@ -264,14 +277,14 @@ export default function Planes() {
                 <article key={p.id} className={`relative flex flex-col gap-4 rounded-2xl p-5 ${featured ? "border-2 border-transparent bg-surface [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box]" : "border border-line bg-surface"} ${item === p.id ? "ring-2 ring-accent-text/60" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xl font-extrabold">{p.name}</h3>
-                    {mine ? <span className="rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Tu plan</span> : featured ? <span className="rounded-full bg-[image:var(--grad)] px-2.5 py-0.5 text-xs font-bold text-white">El más elegido</span> : null}
+                    {mine ? <span className="rounded-full bg-good/15 px-2.5 py-0.5 text-xs font-bold text-good">Tu plan</span> : featured ? <span className="rounded-full bg-[image:var(--grad)] px-2.5 py-0.5 text-xs font-bold text-white">Plan estrella</span> : null}
                   </div>
                   <p className="text-sm text-muted">{p.for}</p>
                   <div className="flex flex-col">
-                    <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(perMonth)}</b><span className="text-sm text-muted">/mes</span></span>
-                    <span className="text-xs text-muted">{period === "anual" ? <>{money(p.yearlyPerMonth * 12)} al año</> : first !== null ? <>Primer mes {money(first)}</> : "Facturado cada mes"}</span>
+                    <span className="flex items-baseline gap-1"><b className="font-display text-4xl font-semibold">{money(founder ? FUNDADOR.usd : perMonth)}</b><span className="text-sm text-muted">/mes</span>{founder && <s className="text-sm text-muted">{money(p.monthly)}</s>}</span>
+                    <span className="text-xs text-muted">{founder ? <>Precio fundador los primeros {FUNDADOR.months} meses · quedan {pay?.fundador?.quedan} de {FUNDADOR.cupos} cupos</> : period === "anual" ? <>{money(p.yearlyPerMonth * 12)} al año</> : first !== null ? <>Primer mes {money(first)}</> : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">{period === "anual" ? <><b className="font-mono">{fmtCredits(p.credits * 12)}</b> para el año</> : <><b className="font-mono">{fmtCredits(p.credits)}</b> al mes (≈ {fmtSeconds(secs(p.credits))} de video) · imágenes y voces con los mismos créditos</>}</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Hasta <b>{p.imagenes} imágenes</b> o <b>{p.videos} videos</b> con avatar de 10 s al mes, o la mezcla que quieras{period === "anual" ? " (12 meses)" : ""}.</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>
@@ -293,8 +306,8 @@ export default function Planes() {
             {PACKS.map((k) => (
               <article key={k.id} className={`flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 ${item === k.id ? "ring-2 ring-accent-text/60" : ""}`}>
                 <span className="text-xs font-semibold text-muted">{k.note}</span>
-                <b className="font-mono text-3xl">+{fmtCredits(k.credits)}</b>
-                <span className="text-sm text-muted">de video</span>
+                <b className="font-mono text-3xl">+{Math.floor(k.credits / 10)} imágenes</b>
+                <span className="text-sm text-muted">{fmtSaldo(k.credits)}</span>
                 <span className="font-display text-2xl font-semibold">{money(k.usd)}</span>
                 <button type="button" onClick={() => choose(k.id)} disabled={!hasPlan} className={`${ghostCls} mt-auto w-full py-2.5 disabled:opacity-50`}>Comprar</button>
               </article>
@@ -332,11 +345,13 @@ export default function Planes() {
               <div className="flex justify-between gap-3"><dt>{q.label}</dt><dd className="font-mono">{money(q.subtotal)}</dd></div>
               {q.launch > 0 && <div className="flex justify-between gap-3 text-good"><dt>Oferta de lanzamiento (−{LAUNCH_PCT}% primer mes)</dt><dd className="font-mono">−{money(q.launch)}</dd></div>}
               {q.discount > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu descuento ({pay?.discount}%)</dt><dd className="font-mono">−{money(q.discount)}</dd></div>}
+              {(q.fundador ?? 0) > 0 && <div className="flex justify-between gap-3 text-good"><dt>Precio fundador (primeros {FUNDADOR.months} meses)</dt><dd className="font-mono">−{money(q.fundador!)}</dd></div>}
+              {(q.pack ?? 0) > 0 && <div className="flex justify-between gap-3 text-good"><dt>Tu Pack Prueba, descontado</dt><dd className="font-mono">−{money(q.pack!)}</dd></div>}
               <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold"><dt>Total hoy</dt><dd className="font-mono">{money(q.total)}</dd></div>
               <div className="p-usd flex justify-between gap-3 text-xs text-muted"><dt>Mercado Pago cobra en pesos chilenos</dt><dd className="font-mono">{pesos(clp(q.total))}</dd></div>
             </dl>
-            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes <b className="font-mono">{fmtCredits(q.credits)}</b>{q.period === "anual" ? " (1 año)" : q.period === "mensual" ? " este mes" : ""}.</p>
-            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? <>Pago de un mes, sin renovación automática. Desde el segundo mes: {money(m)}.</> : <>Se renueva solo cada mes: {money(m)}. Cancela cuando quieras.</>}</p>; })()}
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Recibes saldo para <b>{fmtSaldo(q.period === "anual" ? q.credits / 12 : q.credits)}</b>{q.period === "anual" ? " cada mes, por 12 meses" : q.period === "mensual" ? " este mes" : ""}.</p>
+            {q.period === "mensual" && (() => { const m = PLANS.find((p) => p.id === q.item)!.monthly * (1 - (pay?.discount ?? 0) / 100); return <p className="text-xs text-muted">{pay?.renews === false ? <>Pago de un mes, sin renovación automática. Desde el segundo mes: {money(m)}.</> : (q.fundador ?? 0) > 0 ? <>Meses 2 y 3: {money(FUNDADOR.usd)}. Desde el mes 4: {money(m)}. Cancela cuando quieras.</> : <>Se renueva solo cada mes: {money(m)}. Cancela cuando quieras.</>}</p>; })()}
             <Garantia compact />
             <button type="submit" disabled={busy || Boolean(pay?.owner)} className={`${btnCls} w-full py-3 text-base`}>{busy ? "Preparando…" : pay?.online ? <>Pagar {money(q.total)} con Mercado Pago</> : <>Ir a pagar {money(q.total)}</>}</button>
             <p className="text-xs text-muted">Al pagar aceptas los <a href="/terminos" target="_blank" className="underline">Términos</a>. Los créditos quedan disponibles al instante, por eso no aplica el derecho a retracto (Ley 19.496, art. 3 bis). Aun así, si no has usado nada de esa compra y nos escribes dentro de 10 días, te devolvemos el pago.</p>

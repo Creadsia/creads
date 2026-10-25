@@ -43,6 +43,25 @@ const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolea
 
 export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false, prueba?: { dias: number; plan: string } | null): Email {
   const link = `${SITE}/app`;
+  // Pack Prueba (25 Oct 2026): no gift; the first batch is US$9
+  if (process.env.MODO_PACK !== "0" && !cargado) {
+    return {
+      to, tag: "bienvenida",
+      subject: "Bienvenido a Creads: tu primera tanda de anuncios",
+      html: layout({
+        preview: "Pega el link de tu producto y Creads propone 6 ángulos de venta.",
+        title: "Testea 70 anuncios al mes, no 3",
+        paragraphs: [
+          esc(hello(name)),
+          "Gracias por crear tu cuenta. Empieza por tu primera tanda: pega el link de tu producto, Creads lee tu página y te propone 6 ángulos de venta. Eso no tiene costo.",
+          "Cuando elijas los ángulos, creas 10 anuncios en 4:5 y 9:16 con el Pack Prueba de US$9 (hasta 12 imágenes o 1 video con avatar). Si después te suscribes dentro de 7 días, esos US$9 se descuentan de tu primer mes.",
+        ],
+        cta: { label: "Hacer mi primera tanda", href: `${link}/tanda` },
+        after: ["Si tienes cualquier duda, responde este correo: lo lee una persona."],
+      }),
+      text: plain([hello(name), "", "Pega el link de tu producto y Creads te propone 6 ángulos de venta (sin costo).", "Crea 10 anuncios con el Pack Prueba de US$9. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.", "", `Hacer mi primera tanda: ${link}/tanda`]),
+    };
+  }
   // «prueba con tarjeta»: the gift loads once the card is added on Mercado Pago (nothing charged today)
   if (prueba && !cargado) {
     return {

@@ -136,11 +136,34 @@ describe("rate limits", () => {
   });
 });
 
-test("onSale: Ultra and the annual payment can't be bought, even with an old link", async () => {
+test("onSale: only the plans of 25 Oct 2026 (monthly or yearly), the packs and the Pack Prueba", async () => {
   const { onSale } = await import("../src/lib/catalog");
   assert.equal(onSale("studio", "mensual"), false);
-  assert.equal(onSale("plus", "anual"), false);
-  assert.equal(onSale("plus", "mensual"), true);
-  assert.equal(onSale("starter", "mensual"), true);
+  assert.equal(onSale("plus", "mensual"), false);
+  assert.equal(onSale("starter", "mensual"), false);
+  assert.equal(onSale("basico", "mensual"), false);
+  assert.equal(onSale("testea", "mensual"), true);
+  assert.equal(onSale("escala", "anual"), true);
+  assert.equal(onSale("agencia", "mensual"), true);
   assert.equal(onSale("pack-500", "mensual"), true);
+  assert.equal(onSale("pack-prueba", "mensual"), true);
+});
+
+test("quote: founder price, Pack Prueba discount and yearly 5% off", async () => {
+  const { quote } = await import("../src/lib/catalog");
+  const f = quote("escala", "mensual", { firstPurchase: true, fundador: true })!;
+  assert.equal(f.total, 49);
+  assert.equal(f.fundador, 10);
+  const fp = quote("escala", "mensual", { firstPurchase: true, fundador: true, pack: { order: "CR-ABCDEF", usd: 9 } })!;
+  assert.equal(fp.total, 40);
+  assert.equal(fp.packOrder, "CR-ABCDEF");
+  // the founder price is only for Escala, monthly
+  assert.equal(quote("testea", "mensual", { fundador: true })!.total, 29);
+  assert.equal(quote("escala", "anual", { fundador: true })!.fundador, undefined);
+  const y = quote("testea", "anual")!;
+  assert.equal(y.total, 330.6); // 27.55 × 12
+  assert.equal(y.credits, 470 * 12);
+  const p = quote("pack-prueba", "mensual", { discountPct: 50 })!;
+  assert.equal(p.total, 9);
+  assert.equal(p.credits, 125);
 });
