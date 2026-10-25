@@ -2,13 +2,15 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { sbAll } from "@/lib/supabase";
 import { PLANS } from "@/lib/catalog";
+import { recentErrors } from "@/lib/errlog";
 import { type Range, type StatRow, addDays, dayCL, dayList } from "@/lib/stats";
 
 export const dynamic = "force-dynamic";
 
 // Read-only numbers for the owner's outside agents (e.g. his «CEO General» on Grok), so they quote exact
-// figures instead of guesses. Only aggregates: no emails, names or ids of customers ever leave here.
-// Access: METRICS_TOKEN (Vercel env, 24+ chars) as `Authorization: Bearer <token>` or `?token=` for agents
+// figures instead of guesses. By default only aggregates; `?detalle=1` (owner, 25 Oct 2026: «Grok es mío»)
+// adds every account with its email, every order, each model's failures and the recent platform errors.
+// Always read-only: nothing here writes. Access: METRICS_TOKEN (Vercel env, 24+ chars) as `Authorization: Bearer <token>` or `?token=` for agents
 // that can only open a URL. Days are Chile days (America/Santiago). Money as paid, per currency.
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -99,6 +101,8 @@ export async function GET(req: Request) {
     const mrrUsd = pagando.reduce((a, w) => a + (PLANS.find((p) => p.id === w.plan)?.monthly ?? 0), 0);
     const pruebasAbiertas = orders.filter((o) => o.status === "pendiente" && o.mp?.trial && !o.mp.cancelled && o.mp.trial >= today).length;
 
+    const detalle = q.get("detalle") === "1" ? await detail(r, since, ws, orders, today).catch(() => ({ error: "No se pudo leer el detalle." })) : undefined;
+
     return NextResponse.json({
       actualizado: new Date().toISOString(), zona: "America/Santiago", rango: r,
       ahora: {
@@ -108,7 +112,7 @@ export async function GET(req: Request) {
         mrr_usd_estimado: Math.round(mrrUsd * 100) / 100,
         pruebas_gratis_abiertas: pruebasAbiertas,
       },
-      total, diario,
+      total, diario, ...(detalle ? { detalle } : {}),
       notas: {
         tarjetas_agregadas: "Cuentas que pusieron la tarjeta y empezaron la prueba gratis de 7 días.",
         checkouts_iniciados: "Pedidos de plan o créditos creados (no incluye las pruebas gratis).",
@@ -119,4 +123,70 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ error: "No se pudieron leer las métricas." }, { status: 502 });
   }
+}
+
+interface OrderFull { id: string; owner: string; email: string; item: string; status: string; quote: { label?: string; total?: number } | null; mp: { kind?: string; trial?: string; cancelled?: boolean; clp?: number } | null; visitor: { src?: string } | null; created_at: string; closed_at: string | null }
+
+/** Everything per account and per order, plus where generations fail. Read-only. */
+async function detail(r: Range, since: string, ws: Ws[], _orders: Order[], today: string) {
+  const [users, orders, credits, pays, clips, errores, wsNames] = await Promise.all([
+    sbAll<{ email: string; name: string | null; workspace: string; role: string; last_login: string | null }>("users?select=email,name,workspace,role,last_login", "created_at.asc,id.asc"),
+    sbAll<OrderFull>("orders?select=id,owner,email,item,status,quote,mp,visitor,created_at,closed_at", "created_at.asc,id.asc"),
+    sbAll<{ owner: string; delta: number; kind: string; ref: string | null; note: string | null }>("credits?select=owner,delta,kind,ref,note", "created_at.asc,id.asc"),
+    sbAll<{ owner: string; amount: number; currency: string }>("payments?select=owner,amount,currency", "created_at.asc,id.asc").catch(() => []),
+    sbAll<{ owner: string; status: string; kind: string | null; model: string | null; error: string | null; usd: number | null; created_at: string }>(`clips?created_at=gte.${since}&status=neq.pending&select=owner,status,kind,model,error,usd,created_at`, "created_at.asc,id.asc"),
+    recentErrors(1).catch(() => []),
+    sbAll<{ id: string; name: string; discount: number; access: string }>("workspaces?kind=eq.client&select=id,name,discount,access", "created_at.asc,id.asc"),
+  ]);
+  const name = new Map(wsNames.map((w) => [w.id, w]));
+  const per = <T,>(rows: T[], key: (x: T) => string) => { const m = new Map<string, T[]>(); for (const x of rows) m.set(key(x), [...(m.get(key(x)) ?? []), x]); return m; };
+  const uBy = per(users, (u) => u.workspace), oBy = per(orders, (o) => o.owner), cBy = per(credits, (c) => c.owner), pBy = per(pays, (p) => p.owner), clBy = per(clips, (c) => c.owner);
+
+  const cuentas = ws.map((w) => {
+    const us = uBy.get(w.id) ?? [], os = oBy.get(w.id) ?? [], cs = cBy.get(w.id) ?? [], ps = pBy.get(w.id) ?? [], cl = clBy.get(w.id) ?? [];
+    const regalo = cs.find((c) => c.ref === `regalo:${w.id}`);
+    const prueba = os.find((o) => o.mp?.trial);
+    const pagado: Record<string, number> = {};
+    for (const p of ps) { const c = (p.currency || "USD").toUpperCase(); pagado[c] = Math.round(((pagado[c] ?? 0) + Number(p.amount || 0)) * 100) / 100; }
+    return {
+      cuenta: w.id, nombre: name.get(w.id)?.name ?? "", correos: us.map((u) => u.email),
+      registro: w.created_at, ultimo_ingreso: us.map((u) => u.last_login).filter(Boolean).sort().pop() ?? null,
+      fuente: os.find((o) => o.visitor?.src)?.visitor?.src ?? null,
+      plan: w.plan, pagado_hasta: w.paid_until, plan_vigente: Boolean(w.active && w.plan && w.paid_until && w.paid_until >= today), activa: w.active,
+      descuento: name.get(w.id)?.discount ?? 0, acceso: name.get(w.id)?.access ?? "full",
+      tarjeta: prueba ? (prueba.mp?.cancelled ? "prueba cancelada" : regalo ? "prueba activa o terminada" : "pidió prueba, sin tarjeta confirmada") : "no",
+      cobro_prueba: prueba?.mp?.trial ?? null,
+      regalo: regalo ? (/tarjeta/i.test(regalo.note ?? "") ? "con tarjeta" : "sin tarjeta") : "no",
+      saldo_creditos: cs.reduce((a, c) => a + Number(c.delta || 0), 0),
+      creditos_usados: cs.filter((c) => c.kind === "charge").reduce((a, c) => a + Math.abs(Number(c.delta) || 0), 0),
+      pagos: ps.length, total_pagado: pagado,
+      videos_en_rango: cl.length, fallidos_en_rango: cl.filter((c) => c.status === "failed").length,
+    };
+  }).sort((a, b) => b.registro.localeCompare(a.registro));
+
+  const pedidos = orders.filter((o) => { const d = dayCL(new Date(o.created_at)); return d >= r.from && d <= r.to; }).map((o) => ({
+    pedido: o.id, cuenta: o.owner, correo: o.email, que: o.quote?.label ?? o.item, estado: o.status,
+    total_usd: Number(o.quote?.total) || 0, clp: o.mp?.clp ?? null, prueba: o.mp?.trial ? { cobro: o.mp.trial, cancelada: Boolean(o.mp.cancelled) } : null,
+    fuente: o.visitor?.src ?? null, creado: o.created_at, cerrado: o.closed_at,
+  })).reverse();
+
+  const modelos = new Map<string, { modelo: string; tipo: string; total: number; fallidos: number; costo_usd: number; costo_fallidos_usd: number; errores: Map<string, number> }>();
+  for (const c of clips) {
+    const tipo = c.kind === "gen:image" ? "imagen" : c.kind?.startsWith("tool:") ? "herramienta" : "video";
+    const k = `${tipo}|${c.model ?? "?"}`;
+    const m = modelos.get(k) ?? { modelo: c.model ?? "?", tipo, total: 0, fallidos: 0, costo_usd: 0, costo_fallidos_usd: 0, errores: new Map() };
+    m.total++; m.costo_usd += Number(c.usd || 0);
+    if (c.status === "failed") { m.fallidos++; m.costo_fallidos_usd += Number(c.usd || 0); const e = (c.error ?? "sin detalle").slice(0, 120); m.errores.set(e, (m.errores.get(e) ?? 0) + 1); }
+    modelos.set(k, m);
+  }
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return {
+    cuentas, pedidos,
+    modelos: [...modelos.values()].sort((a, b) => b.total - a.total).map((m) => ({
+      modelo: m.modelo, tipo: m.tipo, total: m.total, fallidos: m.fallidos, tasa_falla: m.total ? r2(m.fallidos / m.total) : 0,
+      costo_usd: r2(m.costo_usd), costo_fallidos_usd: r2(m.costo_fallidos_usd),
+      errores_frecuentes: [...m.errores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([error, veces]) => ({ error, veces })),
+    })),
+    errores_24h: errores.slice(0, 50).map((e) => ({ cuando: e.at, area: e.area, mensaje: e.message, veces: e.n ?? 1, pagina: e.path ?? null, cuenta: e.ws ?? null })),
+  };
 }
