@@ -108,6 +108,16 @@ export default function VideoProducto() {
             <label className="flex flex-col gap-1.5 text-sm font-semibold">Qué es (opcional)
               <input value={descripcion} onChange={(e) => setDescripcion(e.target.value.slice(0, 300))} placeholder="Ej: sérum de vitamina C en frasco ámbar" className={inputCls} />
             </label>
+            <details className="rounded-lg border border-line p-3 text-sm text-muted">
+              <summary className="cursor-pointer font-semibold text-ink">Para que te quede pro</summary>
+              <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
+                <li>Usa una foto nítida del producto solo, de frente, con la etiqueta legible y fondo limpio.</li>
+                <li>Escribe en «Qué es» el producto y su material (vidrio, bolsa kraft, botella): así no lo cambia.</li>
+                <li>Titular corto, de 3 a 5 palabras, con el beneficio. Se lee mejor que una frase larga.</li>
+                <li>Bebidas y comida: Salpicadura. Café, cocina o baño: En su lugar. Frascos y cosmética: Giro 360.</li>
+                <li>Haz 2 estilos del mismo producto y testea cuál funciona mejor.</li>
+              </ul>
+            </details>
           </div>
         </div>
         {biblio && (
