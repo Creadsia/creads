@@ -36,7 +36,7 @@ const GASTO = [
 /** Before / after: the plain product photo and what Creads made from it (all real outputs). */
 const ANTES_DESPUES = [
   { foto: "/antes-despues/zap-foto.jpg", producto: "Zapatillas", imagen: "/ejemplos/stride-flash.jpg", video: { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "" } },
-  { foto: "/antes-despues/aud-foto.jpg", producto: "Audífonos", imagen: "/ejemplos/aural-ficha.jpg", video: { src: "/demos/prod-audifonos.mp4", poster: "/demos/prod-audifonos.jpg", label: "" } },
+  { foto: "/antes-despues/perfume-foto.jpg", producto: "Perfume", imagen: "/ejemplos/velour.jpg", video: { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "" } },
 ];
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
@@ -80,11 +80,16 @@ const PRODUCTO_DEMOS = [
   { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "Zapatillas" },
   { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "Perfume" },
 ];
+/** Two real UGC ads made with Creads, mixed into the wall so it isn't only products (owner, 25 Oct 2026). */
+const UGC_DEMOS = [
+  { src: "/demos/ugc-proteina.mp4", poster: "/demos/ugc-proteina.jpg", label: "UGC · proteína" },
+  { src: "/demos/ugc-depto.mp4", poster: "/demos/ugc-depto.jpg", label: "UGC · inmobiliaria" },
+];
 /** The product reel: several product videos cut fast, to the beat. */
-const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto hechos con Creads" };
+const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto y UGC hechos con Creads" };
 const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
-/** The wall under the hero: only clean product videos. */
-const MURO_VIDEOS = [PRODUCTO_DEMOS[4], PRODUCTO_DEMOS[0], PRODUCTO_DEMOS[5], PRODUCTO_DEMOS[1], PRODUCTO_DEMOS[3], PRODUCTO_DEMOS[6], PRODUCTO_DEMOS[2]];
+/** The wall under the hero: clean product videos with two UGC ads in between. */
+const MURO_VIDEOS = [PRODUCTO_DEMOS[4], UGC_DEMOS[0], PRODUCTO_DEMOS[0], PRODUCTO_DEMOS[5], UGC_DEMOS[1], PRODUCTO_DEMOS[1], PRODUCTO_DEMOS[6], PRODUCTO_DEMOS[2]];
 
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
@@ -218,7 +223,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
               <div className="self-start"><Cta href="/app/video-producto" sub="Usa el mismo saldo de tu plan.">Haz el video de tu producto</Cta></div>
             </div>
             <div className="grid grid-cols-3 items-center gap-3 sm:gap-5">
-              {([[PRODUCTO_DEMOS[4], "Salpicadura"], [PRODUCTO_DEMOS[3], "Flotando"], [PRODUCTO_DEMOS[6], "Salpicadura"]] as const).map(([d, estilo], i) => (
+              {([[PRODUCTO_DEMOS[5], "Salpicadura"], [PRODUCTO_DEMOS[4], "Salpicadura"], [PRODUCTO_DEMOS[6], "Salpicadura"]] as const).map(([d, estilo], i) => (
                 <div key={d.src} className={i === 1 ? "-mt-10" : "mt-10"}>
                   <DemoPhone {...d} label={`${d.label} · ${estilo}`} big={i === 1} />
                 </div>
