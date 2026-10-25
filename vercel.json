@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/correos",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/calidad-imagenes",
+      "schedule": "0 12 * * 1"
     }
   ]
 }
