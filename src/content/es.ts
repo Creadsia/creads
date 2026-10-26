@@ -6,7 +6,7 @@ export const es: Content = {
   meta: {
     title: "Creads IA · Hasta 400 anuncios al mes, sin diseñador",
     description:
-      "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Tu primera tanda por US$9.",
+      "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Pruébalo 7 días gratis.",
   },
   nav: {
     studios: "Estudios",
@@ -171,11 +171,11 @@ export const es: Content = {
     trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Saldo disponible al aprobarse el pago"],
   },
   nudge: {
-    bar: "Tu primera tanda por US$9",
+    bar: "Prueba Creads 7 días gratis",
     barCta: "Empezar",
     strip: "Todos los modelos y estudios de esta página, desde",
     stripCta: "Ver planes",
-    exitTitle: "Antes de irte: tu primera tanda por US$9",
+    exitTitle: "Antes de irte: prueba Creads 7 días gratis",
     exitLead: "Déjanos tu correo y te mandamos ejemplos de anuncios y cómo hacer el primero en minutos.",
     exitCta: "Enviarme ejemplos",
     exitPlans: "Hacer mi primera tanda",

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCredits } from "./use-credits";
 import { buyNow } from "./buy";
 import { MoneyText } from "../../money";
+import { SHOWN_PLANS } from "@/lib/catalog";
 
 // «Se te acabaron los créditos» (owner, 24 Oct 2026): the moment a customer runs out (or is about to), an
 // on-brand sheet offers the next step: a plan for those who never paid, a top-up or
@@ -85,17 +86,14 @@ export default function CreditsPopup() {
   const bal = Math.max(0, info.balance ?? 0);
   const paid = Boolean(info.plan || info.paidUntil);
   const opts: Opt[] = !paid
-    ? [
-        { href: "/app/planes?plan=starter", item: "starter", title: "Emprende · US$55 al mes", text: "1.500 créditos: ≈ 8 anuncios de 15 s al mes.", hot: true },
-        { href: "/app/planes?plan=basico", item: "basico", title: "Básico · US$25 al mes", text: "500 créditos: ≈ 2 anuncios de 15 s al mes." },
-        { href: "/app/planes?plan=plus", item: "plus", title: "Negocio · US$99 al mes", text: "3.000 créditos: ≈ 17 anuncios de 15 s al mes." },
-      ]
+    // the plans on sale (Básico, Emprende and Negocio were retired on 25 Oct 2026 and can't be bought)
+    ? SHOWN_PLANS.map((p) => ({ href: `/app/planes?plan=${p.id}`, item: p.id, title: `${p.name} · US$${p.monthly} al mes`, text: `${p.credits.toLocaleString("es-CL")} créditos: hasta ${p.imagenes} imágenes o ${p.videos} videos con avatar al mes.`, hot: p.featured }))
     : info.expired
       ? [{ href: "/app/planes", title: "Renovar mi plan", text: "Tus anuncios y archivos siguen aquí.", hot: true }]
       : [
           { href: "/app/planes?plan=pack-500", item: "pack-500", title: "Recargar 500 créditos · US$29", text: "Se suman al tiro a tu saldo.", hot: true },
           { href: "/app/planes?plan=pack-1000", item: "pack-1000", title: "Recargar 1.000 créditos · US$55", text: "Para seguir todo el mes." },
-          { href: "/app/planes?plan=plus", title: "Subir a Negocio · US$99", text: "3.000 créditos al mes: ≈ 17 anuncios de 15 s." },
+          { href: "/app/planes", title: "Subir de plan", text: "Más saldo cada mes: mira Escala y Agencia en Planes." },
         ];
   const title = open === "mejorar" ? "Saca todo el potencial de Creads" : open === "poco" ? "Te quedan pocos créditos" : info.expired ? "Tu plan venció" : "Se te acabaron los créditos";
   const lead = open === "mejorar" ? (paid ? "Suma créditos o sube de plan y sigue creando sin parar." : "Anuncios todos los meses, sin agencia y sin grabar. Paga con Mercado Pago y empiezas al tiro.") : open === "poco"

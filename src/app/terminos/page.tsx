@@ -1,12 +1,18 @@
 import { GARANTIA } from "@/lib/garantia-textos";
+import { PLANS } from "@/lib/catalog";
+import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS, modoPack } from "@/lib/oferta";
 import type { Metadata } from "next";
 import Legal from "../legal";
 
 export const metadata: Metadata = { title: "Términos y condiciones · Creads IA", description: "Las reglas para usar Creads IA: cuentas, créditos, pagos y uso del contenido." };
 
 export default function Terminos() {
+  // the trial plan and its price come from the catalog (never written by hand); the Pack Prueba is described as on
+  // sale only while it is the way in (MODO_PACK=1)
+  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
+  const pack = modoPack();
   return (
-    <Legal title="Términos y condiciones" updated="22 de octubre de 2026">
+    <Legal title="Términos y condiciones" updated="26 de octubre de 2026">
       <p>Estos términos regulan el uso de Creads IA («Creads»), disponible en creadsia.com. Al crear una cuenta o usar la plataforma aceptas estos términos y la <a href="/privacidad" className="underline">Política de privacidad</a>. Contacto: <b>hola@creadsia.com</b>.</p>
 
       <h2>1. El servicio</h2>
@@ -32,11 +38,13 @@ export default function Terminos() {
         <li>Los precios se muestran en dólares de EE. UU. (US$) e incluyen los impuestos que correspondan. Los pagos se procesan con Mercado Pago, que cobra el equivalente en pesos chilenos al tipo de cambio del día; antes de pagar ves el monto exacto en pesos.</li>
         <li>Los planes mensuales con renovación automática se cobran cada mes hasta que canceles. Puedes cancelar la renovación en cualquier momento desde «Planes y créditos»; tu plan sigue activo hasta la fecha pagada.</li>
         <li>Las recargas se pagan una sola vez.</li>
-        <li><b>Prueba gratis con tarjeta:</b> cuando la ofrecemos, agregas tu tarjeta en Mercado Pago, no se cobra nada ese día y recibes créditos de regalo. Al terminar los días de prueba indicados antes de agregarla, se cobra el plan Básico y se renueva cada mes hasta que canceles. Puedes cancelar antes del primer cobro en «Planes y créditos» y no se te cobra nada; los créditos de regalo siguen en tu cuenta. Una prueba por persona.</li>
+        <li id="prueba" className="scroll-mt-24"><b>Prueba gratis de {PRUEBA_DIAS} días con tarjeta:</b> {pack ? "cuando la ofrecemos, " : "para usar Creads, al crear tu cuenta "}agregas tu tarjeta en Mercado Pago (Creads nunca ve los datos de tu tarjeta). Ese día no se cobra nada y recibes {REGALO_CREDITS} créditos de regalo, una vez por cuenta. Al terminar los {PRUEBA_DIAS} días de prueba, Mercado Pago cobra el plan {plan.name} (US${plan.monthly} al mes, en pesos chilenos al tipo de cambio del día en que agregas la tarjeta, monto que ves antes de agregarla) con {plan.credits} créditos cada mes, y se renueva cada mes hasta que canceles. Puedes cancelar antes del primer cobro en «Planes y créditos», con un clic, y no se te cobra nada; los créditos de regalo siguen en tu cuenta. Te avisamos por correo el día antes del primer cobro. Una prueba por persona. Las cuentas que ya pagaron un plan o una recarga no necesitan agregar tarjeta para usar Creads.</li>
         <li><b>Derecho a retracto:</b> conforme al artículo 3 bis de la Ley 19.496, te informamos antes de pagar que en la compra de planes y recargas no aplica el derecho a retracto, porque el servicio es digital y se entrega de inmediato: los créditos quedan disponibles apenas se confirma el pago. Aun así, si no has usado ningún crédito de esa compra y nos escribes dentro de los 10 días siguientes, te devolvemos el pago.</li>
-        <li id="garantia" className="scroll-mt-24"><b>Garantía de 7 días:</b> {GARANTIA.pack} {GARANTIA.planes} El plazo se cuenta desde la fecha del pago y aplica solo al primer pago de cada cuenta; para pedirla, {GARANTIA.contacto.charAt(0).toLowerCase() + GARANTIA.contacto.slice(1)}</li>
+        <li id="garantia" className="scroll-mt-24"><b>Garantía de 7 días:</b> {pack && <>{GARANTIA.pack} </>}{GARANTIA.planes} El plazo se cuenta desde la fecha del pago y aplica solo al primer pago de cada cuenta; para pedirla, {GARANTIA.contacto.charAt(0).toLowerCase() + GARANTIA.contacto.slice(1)}</li>
         <li><b>Videos con labios desincronizados:</b> {GARANTIA.labios}</li>
-        <li><b>Pack Prueba:</b> pago único de US$9 (o su equivalente en pesos), una vez por cuenta. Si contratas un plan dentro de los 7 días siguientes, ese monto se descuenta de tu primer pago del plan.</li>
+        {pack
+          ? <li><b>Pack Prueba:</b> pago único de US$9 (o su equivalente en pesos), una vez por cuenta. {GARANTIA.pack} Si contratas un plan dentro de los 7 días siguientes, ese monto se descuenta de tu primer pago del plan.</li>
+          : <li><b>Pack Prueba (vendido desde el 25 de octubre de 2026 hasta que lo reemplazó la prueba gratis):</b> si lo compraste, mantiene sus condiciones: {GARANTIA.pack.charAt(0).toLowerCase() + GARANTIA.pack.slice(1)} Si contratas un plan dentro de los 7 días siguientes a esa compra, lo que pagaste se descuenta de tu primer pago del plan.</li>}
         <li><b>Precio fundador:</b> el plan Escala a US$49 al mes durante los primeros 3 meses para los primeros 50 clientes que lo contraten; desde el cuarto mes se cobra el precio normal. Si cancelas, el precio fundador no se recupera.</li>
         <li>Si tienes un problema con un cobro, escríbenos a hola@creadsia.com antes de reclamar en Mercado Pago, y lo resolvemos. Si un pago se devuelve o se desconoce, descontamos los créditos que ese pago entregó. Esto no limita los derechos que te da la Ley 19.496 sobre protección de los derechos de los consumidores.</li>
       </ul>

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
-import { ANNUAL_LABEL, FUNDADOR, PRUEBA } from "@/lib/catalog";
+import { ANNUAL_LABEL, FUNDADOR, PLANS, PRUEBA } from "@/lib/catalog";
+import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS } from "@/lib/oferta";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import { Money, MoneyText } from "./money";
@@ -15,14 +16,15 @@ const INCLUIDO = {
   en: ["Brand kit: logo, colours and tone", "Free sales angles and hooks", "Every image in feed 4:5, stories 9:16 and square", "ZIP sorted by placement", "Meta bulk-import file", "Hooks library by niche", "Editor that doesn't use your balance", "English and Spanish"],
 };
 
-// The plans, front and center (owner's plan, 25 Oct 2026): Pack Prueba first, then Testea, Escala (highlighted,
-// with the founder price and its real counter) and Agencia, shown as images or videos a month. Every button goes
-// straight to checkout (/empezar) with that plan already chosen.
+// The plans, front and center (owner's plan, 25 Oct 2026): the way in first (the 7-day free trial with card since
+// 26 Oct 2026; the Pack Prueba only with MODO_PACK=1), then Testea, Escala (highlighted, with the founder price and
+// its real counter) and Agencia, shown as images or videos a month. Every plan button goes straight to checkout
+// (/empezar) with that plan already chosen; the trial goes to sign-up (/registro).
 
 
 export const startHref = (plan: string, yearly = false) => `/empezar?plan=${plan}&periodo=${yearly ? "anual" : "mensual"}`;
 
-export default function Pricing({ t, lang, rate = 950, renews = true, compact = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean }) {
+export default function Pricing({ t, lang, rate = 950, renews = true, compact = false, pack = false }: { t: Content["pricing"]; lang: string; rate: number; renews?: boolean; /** sales page: no top-ups or payment questions (its own FAQ covers them) */ compact?: boolean; /** the Pack Prueba is the way in (MODO_PACK=1); else the free trial */ pack?: boolean }) {
   const es = lang === "es";
   const [yearly, setYearly] = useState(false);
   const [quedan, setQuedan] = useState<number | null>(null);
@@ -58,15 +60,16 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
         <p className="text-sm text-muted">{es ? "Un solo saldo al mes: lo gastas en imágenes o videos, como quieras." : "One balance a month: spend it on images or videos, as you like."}</p>
       </div>
 
-      {/* Pack Prueba («Tu primera tanda»): the way in */}
-      <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+      {/* the way in: the 7-day free trial with card (default), or the Pack Prueba («Tu primera tanda») with MODO_PACK=1 */}
+      {!pack && <PruebaBox es={es} money={money} />}
+      {pack && <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           <b className="font-display text-lg font-semibold">{es ? "Tu primera tanda" : "Your first batch"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
           <span className="text-sm text-muted">{es ? "12 imágenes, 4 videos de producto o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "12 images, 4 product videos or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
           <span className="text-xs text-muted">{PRUEBA.credits} {es ? "créditos" : "credits"} · {es ? "7 días de garantía" : "7-day guarantee"}</span>
         </div>
         <a href="/registro" className="shrink-0 rounded-xl bg-ink px-5 py-3 text-center font-semibold whitespace-nowrap text-bg">{es ? <>Empezar por {money(PRUEBA.usd)}</> : <>Start for {money(PRUEBA.usd)}</>}</a>
-      </div>
+      </div>}
 
       {/* plans */}
       <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-3 md:items-start">
@@ -162,7 +165,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
 
       {/* why it's safe to pay */}
       <div className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5 sm:p-6">
-        {lang === "es" && !compact && <Garantia />}
+        {lang === "es" && !compact && <Garantia pack={pack} />}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <PayBadges />
         </div>
@@ -209,6 +212,38 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
           ))}
         </div>
       </div>}
+    </div>
+  );
+}
+
+/** «7 días gratis» (owner, 26 Oct 2026): the card today with nothing charged, the gift, then the trial plan. */
+function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.ReactNode }) {
+  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
+  const filas: [string, React.ReactNode][] = es
+    ? [["Hoy, con tu tarjeta", "$0"], ["Créditos de regalo", REGALO_CREDITS], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
+    : [["Today, with your card", "$0"], ["Gift credits", REGALO_CREDITS], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
+  return (
+    <div className="grid gap-4 rounded-3xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+      <div className="flex min-w-0 flex-col gap-2">
+        <b className="font-display text-xl font-semibold">{es ? `${PRUEBA_DIAS} días gratis` : `${PRUEBA_DIAS}-day free trial`}</b>
+        <span className="text-sm text-muted">
+          {es
+            ? <>Creas tu cuenta y agregas tu tarjeta: hoy no se cobra nada. Usas tus {REGALO_CREDITS} créditos de regalo en tu primera tanda y, si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes). Si no, cancelas antes del cobro con un clic y no pagas nada.</>
+            : <>Create your account and add your card: nothing is charged today. Use your {REGALO_CREDITS} gift credits on your first batch and, if you like it, carry on with {plan.name} ({plan.credits} credits a month). If not, cancel before the first charge with one click and pay nothing.</>}
+        </span>
+        <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
+          {filas.map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3 border-t border-line pt-1.5 sm:flex-col sm:justify-start sm:gap-0.5">
+              <dt className="text-muted">{k}</dt>
+              <dd className="font-semibold">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      <div className="flex flex-col items-stretch gap-1.5 sm:items-center">
+        <a href="/registro" className="rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold whitespace-nowrap text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]">{es ? `Probar ${PRUEBA_DIAS} días gratis` : `Try ${PRUEBA_DIAS} days free`}</a>
+        <span className="text-center text-xs text-muted">{es ? "Cancelas cuando quieras" : "Cancel anytime"}</span>
+      </div>
     </div>
   );
 }

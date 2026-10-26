@@ -34,7 +34,7 @@ async function post<T>(body: unknown): Promise<T> {
   return d as T;
 }
 
-export default function PrimeraTanda() {
+export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is on sale (MODO_PACK=1); else a customer without balance chooses a plan */ pack?: boolean }) {
   const [paso, setPaso] = useState<Paso>("link");
   const [url, setUrl] = useState("");
   const [sinLink, setSinLink] = useState(false);
@@ -122,8 +122,14 @@ export default function PrimeraTanda() {
     await Promise.all([worker(), worker(), worker()]);
   }
 
-  /** No balance yet: the batch is saved first (free), then the Pack Prueba is paid and the customer comes back to it. */
+  /** No balance yet: the batch is saved first (free), then the Pack Prueba is paid and the customer comes back to it.
+   *  With the card trial (no pack on sale) the customer chooses a plan instead; the batch stays saved. */
   async function comprarPack(t: Tanda) {
+    if (!pack) {
+      capture("paywall_planes", { desde: "tanda" });
+      window.location.href = "/app/planes";
+      return;
+    }
     setPagando(true); setErr("");
     try {
       const r = await fetch("/api/pagos", { method: "POST", headers: H, body: JSON.stringify({ item: "pack-prueba", method: "mercadopago", volver: `/app/tanda?id=${t.id}`, casoFundador }) });
@@ -139,8 +145,8 @@ export default function PrimeraTanda() {
   // «paywall_view»: the angles are free; this is the moment the Pack is asked for (once per visit to this step)
   const [vioPaywall, setVioPaywall] = useState(false);
   useEffect(() => {
-    if (paso === "angulos" && info && !alcanza && !vioPaywall) { setVioPaywall(true); capture("paywall_view", { lugar: "tanda", item: "pack-prueba" }); }
-  }, [paso, info, alcanza, vioPaywall]);
+    if (paso === "angulos" && info && !alcanza && !vioPaywall) { setVioPaywall(true); capture("paywall_view", { lugar: "tanda", item: pack ? "pack-prueba" : "plan" }); }
+  }, [paso, info, alcanza, vioPaywall, pack]);
 
   async function crear() {
     if (!producto) return;
@@ -287,13 +293,14 @@ export default function PrimeraTanda() {
             })}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={crear} disabled={!elegidos.size || Boolean(busy) || pagando} className={btnCls}>{alcanza ? "Crear mis 10 anuncios" : "Crear mis 10 anuncios por US$9"}</button>
+            <button type="button" onClick={crear} disabled={!elegidos.size || Boolean(busy) || pagando} className={btnCls}>{alcanza || !pack ? "Crear mis 10 anuncios" : "Crear mis 10 anuncios por US$9"}</button>
             <button type="button" onClick={() => setPaso("link")} className={ghostCls}>Volver</button>
             {busy ? <span className="flex items-center gap-2 text-sm text-muted"><Spinner /> {busy}</span>
               : alcanza ? <span className="text-xs text-muted">Usa {price(MODEL_USD * 20, "imagen")} de tu saldo (10 anuncios en 2 formatos). Si una imagen falla, no se cobra.</span>
-              : <span className="text-xs text-muted">Pack Prueba: pago único de US$9, hasta 12 imágenes o 1 video. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>}
+              : pack ? <span className="text-xs text-muted">Pack Prueba: pago único de US$9, hasta 12 imágenes o 1 video. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>
+              : <span className="text-xs text-muted">Te falta saldo para crearlos: guardamos tu tanda y eliges un plan. Escribirla no usa saldo.</span>}
           </div>
-          {!alcanza && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
+          {!alcanza && pack && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
         </div>
       )}
 
@@ -303,13 +310,13 @@ export default function PrimeraTanda() {
             <p className="text-sm text-muted">{tanda.producto.nombre}{tanda.origen ? ` · variaciones del anuncio #${tanda.origen.n}` : ""} · {listos} de {total} imágenes listas{corriendo ? " · creando…" : ""}{busy ? ` · ${busy}` : ""}</p>
             <div className="flex flex-wrap gap-2">
               {!corriendo && listos < total && (info && !covers(MODEL_USD * 2)
-                ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : "Crear por US$9 (Pack Prueba)"}</button>
+                ? <button type="button" onClick={() => comprarPack(tanda)} disabled={pagando} className={btnCls}>{pagando ? "Abriendo pago…" : pack ? "Crear por US$9 (Pack Prueba)" : "Elegir un plan para crearlas"}</button>
                 : <button type="button" onClick={() => generar(tanda)} className={ghostCls}>Crear las que faltan</button>)}
               <a href={`/api/tanda/zip?id=${tanda.id}`} onClick={() => capture("tanda_zip", { imagenes: listos })} className={`${btnCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos}>Descargar ZIP (feed 4:5 + stories 9:16)</a>
               <a href={`/api/tanda/meta?id=${tanda.id}`} className={`${ghostCls} ${listos ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!listos} title="Para importar en el Administrador de anuncios de Meta: todo parte en pausa">Descargar archivo para Meta (CSV)</a>
             </div>
           </div>
-          {!corriendo && listos < total && info && !covers(MODEL_USD * 2) && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
+          {!corriendo && listos < total && info && !covers(MODEL_USD * 2) && pack && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {tanda.piezas.map((p) => <PiezaCard key={p.n} p={p} estado={estado} onRetry={(f) => generar(tanda, [{ n: p.n, f }])}
               onGanador={() => post<{ tanda: Tanda | null }>({ accion: "pieza", id: tanda.id, n: p.n, formato: "4:5", ganador: !p.ganador }).then((o) => o.tanda && setTanda(o.tanda)).catch(() => {})}

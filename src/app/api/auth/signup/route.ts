@@ -7,7 +7,8 @@ import { sendMeta, visitorFrom } from "@/lib/meta";
 import { saveOrigin } from "@/lib/leads";
 import { sendEmail } from "@/lib/providers/email";
 import { SITE, welcomeEmail } from "@/lib/emails";
-import { PRUEBA_DIAS, darRegalo, regaloSign, tarjetaObligatoria } from "@/lib/regalo";
+import { darRegalo, regaloSign, tarjetaObligatoria } from "@/lib/regalo";
+import { resumenPrueba } from "@/lib/prueba";
 import { allow } from "@/lib/rate";
 import { atribuirRegistro, refDeRequest } from "@/lib/afiliados";
 
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     // If it couldn't be given now, the welcome email's button tries again.
     const gift = (await allow("regaloIp", clientIp(req))) ? await darRegalo(newWs, email).catch(() => null) : null;
     const regalo = gift?.ok ? null : `${SITE}/api/regalo?u=${encodeURIComponent(user.id)}&s=${regaloSign(user.id)}`;
-    await sendEmail(welcomeEmail(email, name, regalo, Boolean(gift?.ok), tarjetaObligatoria() ? { dias: PRUEBA_DIAS, plan: "Básico" } : null)); // never fails the sign-up
+    await sendEmail(welcomeEmail(email, name, regalo, Boolean(gift?.ok), tarjetaObligatoria() ? resumenPrueba() : null)); // never fails the sign-up
     const res = NextResponse.json({ ok: true, eventId });
     res.cookies.set(SESSION_COOKIE, token, cookieOptions);
     return res;

@@ -6,6 +6,7 @@ import { cardCls, ghostCls, inputCls, uploadFile, dl } from "../_parts/ui";
 import { refreshCredits, useCredits } from "../_parts/use-credits";
 import { buyNow, openUpgrade } from "../_parts/buy";
 import { MoneyText } from "../../money";
+import { SHOWN_PLANS } from "@/lib/catalog";
 
 // «Automático»: the customer talks with the Creads assistant (Claude + the Creads tools + the RECETA). The
 // page keeps the conversation (in this browser), shows the pictures it makes, follows each ad until it's
@@ -257,15 +258,18 @@ function AfterFirstAd() {
   const [going, setGoing] = useState("");
   if (!info || info.unlimited || info.owner || (info.paidUntil && !info.expired)) return null;
   const go = async (item: string) => { setGoing(item); await buyNow(item); };
+  // the plans on sale (Testea and the highlighted Escala), never the retired Básico/Emprende
+  const top = SHOWN_PLANS.find((p) => p.featured) ?? SHOWN_PLANS[0];
+  const base = [...SHOWN_PLANS].sort((a, b) => a.monthly - b.monthly)[0];
   return (
     <div className="relative mt-1 flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-4 [background:linear-gradient(var(--color-surface),var(--color-surface))_padding-box,var(--grad)_border-box]">
       <div className="flex flex-col gap-0.5">
         <b className="font-display text-lg leading-tight">¿Te gustó? Haz uno así cada semana.</b>
-        <span className="text-sm text-muted">Con Emprende tienes ≈ 8 anuncios de 15 s al mes, sin agencia y sin grabar. Cancelas cuando quieras.</span>
+        <span className="text-sm text-muted">Con {top.name} tienes hasta {top.videos} videos con avatar o {top.imagenes} imágenes al mes, sin agencia y sin grabar. Cancelas cuando quieras.</span>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={() => go("starter")} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === "starter" ? "Abriendo el pago…" : <MoneyText text="Quiero Emprende · US$55/mes" />}</button>
-        <button type="button" onClick={() => go("basico")} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === "basico" ? "Abriendo el pago…" : <MoneyText text="Básico · US$25/mes" />}</button>
+        <button type="button" onClick={() => go(top.id)} disabled={Boolean(going)} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">{going === top.id ? "Abriendo el pago…" : <MoneyText text={`Quiero ${top.name} · US$${top.monthly}/mes`} />}</button>
+        {base.id !== top.id && <button type="button" onClick={() => go(base.id)} disabled={Boolean(going)} className="rounded-xl border border-line px-4 py-3 text-sm font-semibold disabled:opacity-60">{going === base.id ? "Abriendo el pago…" : <MoneyText text={`${base.name} · US$${base.monthly}/mes`} />}</button>}
       </div>
       <button type="button" onClick={openUpgrade} className="w-fit text-xs font-semibold text-muted underline">Ver todas las opciones</button>
     </div>

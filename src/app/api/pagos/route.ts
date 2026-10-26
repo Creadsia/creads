@@ -6,6 +6,7 @@ import { addOrder, fundadoresUsados, hasPaidBefore, ordersOf, packParaDescontar,
 import { FUNDADOR, type ItemId, METHODS, type MethodId, PLANS, PRUEBA, PRUEBA_DESCUENTO_DIAS, type Period, clpFor, onSale, quote } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
 import { cancelarPrueba, pruebaAbierta } from "@/lib/prueba";
+import { modoPack } from "@/lib/oferta";
 import { sendMeta, visitorFrom } from "@/lib/meta";
 import { createPreference, createSubscription, getPreapproval, mpReady, oneTimeOnly } from "@/lib/mercadopago";
 import { reconcileSubscription } from "@/lib/settle";
@@ -44,6 +45,8 @@ export async function GET(req: Request) {
       online: mpReady(), renews: !oneTimeOnly(), owner: false, firstPurchase: !paid, discount: Number(w.discount ?? 0), usdClp: rate,
       fundador: { quedan: paid ? 0 : Math.max(0, FUNDADOR.cupos - usados) }, packDescuento: pack?.usd ?? null,
       packComprado: mine.some((o) => o.item === PRUEBA.id && o.status === "pagado"),
+      // the Pack Prueba is on sale only while it's the way in (MODO_PACK=1); the card trial replaced it on 26 Oct 2026
+      packVenta: modoPack(),
       subscription: sub ? { id: sub.id, label: sub.quote.label } : trial && trialOn ? { id: trial.id, label: trial.quote.label, trial: trial.mp!.trial, clp: trial.mp!.clp } : null,
       orders: mine.filter((o) => o.status !== "reemplazado").slice(0, 10).map(({ id, item, period, method, quote: q, status, created }) => ({ id, item, period, method, total: q.total, label: q.label, status, created })),
     });
@@ -72,6 +75,9 @@ export async function POST(req: Request) {
     }
     // top-ups add to an active plan: on their own they couldn't be used (an ended plan blocks jobs)
     // and would expire with the period that already ended
+    if (b?.item === PRUEBA.id && !modoPack()) {
+      return NextResponse.json({ error: "El Pack Prueba ya no está a la venta. Elige un plan para seguir creando." }, { status: 400 });
+    }
     if (b?.item === PRUEBA.id && mine.some((o) => o.item === PRUEBA.id && o.status === "pagado")) {
       return NextResponse.json({ error: "El Pack Prueba se compra una sola vez. Elige un plan para seguir creando (si lo haces dentro de 7 días, se descuenta lo que pagaste)." }, { status: 400 });
     }

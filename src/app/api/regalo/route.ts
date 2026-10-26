@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getUserById } from "@/lib/auth";
 import { session } from "@/lib/access";
 import { allow, clientIp } from "@/lib/rate";
-import { darRegalo, regaloCheck, regaloSign } from "@/lib/regalo";
+import { darRegalo, regaloCheck, regaloSign, tarjetaObligatoria } from "@/lib/regalo";
+import { resumenPrueba } from "@/lib/prueba";
 import { SITE, welcomeEmail } from "@/lib/emails";
 import { sendEmail } from "@/lib/providers/email";
 
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   if (!(await allow("forgotEmail", s.user.email))) return NextResponse.json({ error: "Ya te lo mandamos hace poco. Revisa tu correo (y la carpeta de spam)." }, { status: 429 });
-  await sendEmail(welcomeEmail(s.user.email, s.user.name, `${SITE}/api/regalo?u=${encodeURIComponent(s.user.id)}&s=${regaloSign(s.user.id)}`));
+  // with the card trial on, the email explains the card step (the gift only loads with the card)
+  await sendEmail(welcomeEmail(s.user.email, s.user.name, `${SITE}/api/regalo?u=${encodeURIComponent(s.user.id)}&s=${regaloSign(s.user.id)}`, false, tarjetaObligatoria() ? resumenPrueba() : null));
   return NextResponse.json({ ok: true });
 }

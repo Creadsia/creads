@@ -4,11 +4,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import TarjetaMP from "../../tarjeta-mp";
 
-// «Tarjeta para registrarse» (owner, 25 Oct 2026: «igual que ChatGPT o Higgsfield»): a new account can't use the
-// studio until it adds its card for the free trial. Full screen, no close; only «Ver planes» (to pay a plan
-// directly) and «Salir». The terms are said plainly: nothing today, the date and amount of the first charge.
+// «Tarjeta para registrarse» (owner, 25 Oct 2026: «igual que ChatGPT o Higgsfield»; required for every new account
+// since 26 Oct 2026): an account that never paid and never got its gift can't use the studio until it adds its card
+// for the free trial (the rule: lib/oferta.ts bloqueaPorTarjeta, applied by GET /api/prueba → estado «sin-tarjeta»).
+// Covers email and Google sign-ups alike, and accounts created before that left without the card. Full screen, no
+// close; only «Prefiero elegir un plan» (to pay a plan directly) and «Salir». The terms are said plainly: nothing
+// today, the date, plan and price of the first charge (in US$, the pesos once next to the card form).
 
-interface Info { activa: boolean; dias?: number; plan?: string; clp?: number; estado?: string }
+interface Info { activa: boolean; dias?: number; regalo?: number; plan?: string; usd?: number; credits?: number; clp?: number; estado?: string }
 const enDias = (d: number) => new Date(Date.now() + d * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
 
 export default function TrialPopup() {
@@ -57,13 +60,13 @@ export default function TrialPopup() {
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(255,43,214,0.8)]" aria-hidden="true">🎁</span>
           <div className="flex flex-col gap-1.5">
             <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">Último paso: activa tu prueba gratis de {dias} días</h2>
-            <p className="text-[15px] leading-snug text-muted">Agrega tu tarjeta en Mercado Pago y entras al tiro con <b className="text-ink">200 créditos de regalo</b> para tu primer anuncio.</p>
+            <p className="text-[15px] leading-snug text-muted">Agrega tu tarjeta y entras al tiro con <b className="text-ink">{info.regalo ?? 200} créditos de regalo</b> para tus primeros anuncios. Hoy no se cobra nada.</p>
           </div>
           <ul className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-3.5 text-sm">
             <li className="flex justify-between gap-3"><span>Hoy</span><b>$0</b></li>
-            <li className="flex justify-between gap-3"><span>Créditos de regalo</span><b>200</b></li>
-            <li className="flex justify-between gap-3"><span>Desde el {enDias(dias)} · Plan {info.plan}</span><b>${info.clp?.toLocaleString("es-CL")}/mes</b></li>
-            <li className="text-muted">Cancelas cuando quieras en Planes, antes del cobro, con un clic.</li>
+            <li className="flex justify-between gap-3"><span>Créditos de regalo</span><b>{info.regalo ?? 200}</b></li>
+            <li className="flex justify-between gap-3"><span>Desde el {enDias(dias)} · Plan {info.plan}</span><b className="whitespace-nowrap">US${info.usd?.toLocaleString("es-CL")}/mes</b></li>
+            <li className="text-muted">{info.credits ? `${info.credits} créditos cada mes. ` : ""}{info.clp ? `Mercado Pago lo cobra en pesos: $${info.clp.toLocaleString("es-CL")} al mes. ` : ""}Cancelas cuando quieras en Planes, antes del cobro, con un clic.</li>
           </ul>
           <TarjetaMP monto={info.clp ?? 1} onListo={() => { window.location.href = "/app/automatico?bienvenida=1"; }} fallback={
             <button type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)] disabled:opacity-60">
