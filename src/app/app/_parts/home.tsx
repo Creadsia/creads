@@ -25,7 +25,7 @@ const CREAR = [
 /** The two ways to make a video ad, first thing on the page (owner, 26 Oct 2026: «que aparezca nuevamente el automático y manual»). */
 function DosCaminos() {
   return (
-    <section aria-label="Crea tu anuncio en video" className="grid gap-3 md:grid-cols-2">
+    <section aria-label="Crea tu anuncio en video" data-tour="primeros-pasos" className="grid gap-3 md:grid-cols-2">
       <Link href="/app/automatico" className="group relative flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] transition-transform hover:-translate-y-0.5 motion-reduce:transition-none">
         <span className="flex items-center justify-between gap-2">
           <b className="font-display text-2xl font-semibold">Automático</b>
