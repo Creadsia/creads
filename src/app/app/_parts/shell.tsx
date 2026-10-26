@@ -39,6 +39,12 @@ const I = {
   pen: "M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4",
   help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.5-11.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01",
   redo: "M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5",
+  wand: "M4 20 15 9M14 4v2M19 9h2M17.5 6.5 19 5M18 13v2M9 4v2M15 9l-2-2",
+  scissors: "M6 7a2.5 2.5 0 1 0 0-.01M6 17a2.5 2.5 0 1 0 0 .01M8 8.5 20 18M8 15.5 20 6",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4.5l3 2",
+  bulb: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z",
+  hook: "M6 4v9a6 6 0 0 0 12 0v-2M18 11l-2.5 2.5M18 11l2.5 2.5",
+  steps: "M4 6h4M4 12h8M4 18h12M18 4v6M15 7h6",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3ZM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9L18 15Z",
 };
 
@@ -51,42 +57,53 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
 }
 
 type Item = { href: string; label: string; icon: string; owner?: boolean; soon?: boolean; external?: boolean; full?: boolean; badge?: string; step?: number; optional?: boolean };
-// The menu (owner's brief, 25 Oct 2026): Inicio · Crear (Imágenes, Video de producto, Video con avatar) · Editor ·
-// Mis anuncios · Marcas · Ideas · Saldo y plan · Ayuda. Everything else lives under «Más herramientas».
+// The menu (owner's brief, 25 Oct 2026, ordered again the same night: «no sé si quedó muy ordenado el panel del
+// costado»). Groups in the order a customer works: create → their ads → their brand → ideas. Every item has its
+// own icon. Account things (balance, help) live in the «Cuenta» group at the end; the rarely used tools stay
+// folded under «Más herramientas».
 const NAV: { group?: string; hint?: string; items: Item[]; more?: boolean }[] = [
   { items: [{ href: "/app", label: "Inicio", icon: I.home }] },
   {
     group: "Crear",
     items: [
       { href: "/app/tanda", label: "Imágenes", icon: I.image },
-      { href: "/app/laboratorio", label: "Imagen a medida", icon: I.image, full: true },
+      { href: "/app/laboratorio", label: "Imagen a medida", icon: I.wand, full: true },
       { href: "/app/video-producto", label: "Video de producto", icon: I.film },
-      { href: "/app/automatico", label: "Video con avatar", icon: I.spark },
+      { href: "/app/automatico", label: "Video con avatar", icon: I.user },
     ],
   },
   {
+    group: "Tus anuncios",
     items: [
-      { href: "/app/editor", label: "Editor", icon: I.create },
       { href: "/app/biblioteca", label: "Mis anuncios", icon: I.lib },
-      { href: "/app/marca", label: "Marcas", icon: I.box },
-      { href: "/app/ideas", label: "Ideas", icon: I.pen },
-      { href: "/app/planes", label: "Saldo y plan", icon: I.card },
-      { href: "/app/ayuda", label: "Ayuda", icon: I.help },
+      { href: "/app/videos", label: "En producción", icon: I.clock },
+      { href: "/app/editor", label: "Editor", icon: I.scissors },
+    ],
+  },
+  {
+    group: "Tu marca",
+    items: [
+      { href: "/app/marca", label: "Marcas", icon: I.spark },
+      { href: "/app/productos", label: "Productos", icon: I.box },
+      { href: "/app/avatares", label: "Avatares", icon: I.team },
+      { href: "/app/voces", label: "Voces", icon: I.mic },
+    ],
+  },
+  {
+    group: "Ideas",
+    items: [
+      { href: "/app/ideas", label: "Ideas para tu marca", icon: I.bulb },
+      { href: "/app/hooks", label: "Hooks por rubro", icon: I.hook },
+      { href: "/app/guiones", label: "Guiones", icon: I.pen },
+      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, full: true },
     ],
   },
   {
     group: "Más herramientas",
     more: true,
     items: [
-      { href: "/app/videos", label: "En producción", icon: I.film },
-      { href: "/app/hooks", label: "Hooks por rubro", icon: I.lib },
-      { href: "/app/crear", label: "Video paso a paso", icon: I.create },
-      { href: "/app/guiones", label: "Guiones", icon: I.pen },
-      { href: "/app/spy", label: "Espiar anuncios", icon: I.spy, full: true },
-      { href: "/app/voces", label: "Voces", icon: I.mic },
-      { href: "/app/avatares", label: "Avatares", icon: I.user },
-      { href: "/app/productos", label: "Productos", icon: I.box },
-      { href: "/app/prompts", label: "Generador de prompts", icon: I.pen },
+      { href: "/app/crear", label: "Video paso a paso", icon: I.steps },
+      { href: "/app/prompts", label: "Generador de prompts", icon: I.create },
       { href: "/app/aprendizajes", label: "Aprendizajes", icon: I.brain, full: true, owner: true },
     ],
   },
@@ -116,11 +133,13 @@ function BackButton({ path }: { path: string }) {
 export interface ShellUser { email: string; name: string | null; role: "owner" | "admin" | "member"; owner: boolean; access: "full" | "ads" }
 
 function navFor(user: ShellUser) {
-  const account: Item[] = [{ href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
+  const account: Item[] = [{ href: "/app/planes", label: "Saldo y plan", icon: I.card }, { href: "/app/cuenta", label: "Mi cuenta", icon: I.key }];
   // giving access is the owner's alone
-  if (user.owner) account.unshift({ href: "/app/equipo", label: "Equipo", icon: I.team });
+  if (user.owner) account.push({ href: "/app/equipo", label: "Equipo", icon: I.team });
   if (user.owner) account.push({ href: "/admin", label: "Panel interno", icon: I.chart, external: true });
-  const groups = [...NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.owner || user.owner) })), { group: "Cuenta", items: account }];
+  account.push({ href: "/app/ayuda", label: "Ayuda", icon: I.help });
+  const all = NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.owner || user.owner) }));
+  const groups = [...all.filter((g) => !g.more), { group: "Cuenta", items: account }, ...all.filter((g) => g.more)];
   const visible = user.access === "full" ? groups : groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.full) })).filter((g) => g.items.length); // "Solo anuncios"
   // number the steps in the order they're shown
   return visible.map((g) => { let n = 0; return { ...g, items: g.items.map((i) => (i.step ? { ...i, step: ++n } : i)) }; });
@@ -130,8 +149,9 @@ function Nav({ path, user, onPick }: { path: string; user: ShellUser; onPick?: (
   const groups = navFor(user);
   const inMore = groups.some((g) => g.more && g.items.some((it) => path.startsWith(it.href)));
   // open unless the customer folded it (remembered on this browser)
-  const [moreOpen, setMoreOpen] = useState(true);
-  useEffect(() => { try { if (localStorage.getItem("creads-more") === "0" && !inMore) setMoreOpen(false); } catch {} }, [inMore]);
+  // folded unless the customer opened it (remembered on this browser) or is on one of its pages
+  const [moreOpen, setMoreOpen] = useState(inMore);
+  useEffect(() => { try { if (localStorage.getItem("creads-more") === "1" || inMore) setMoreOpen(true); } catch {} }, [inMore]);
   const toggleMore = () => setMoreOpen((v) => { try { localStorage.setItem("creads-more", v ? "0" : "1"); } catch {} return !v; });
   return (
     <nav aria-label="Menú de la plataforma" className="flex flex-col gap-4">
