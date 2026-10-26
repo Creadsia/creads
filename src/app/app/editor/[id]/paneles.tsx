@@ -1,8 +1,8 @@
 "use client";
 
 import { CAPTION_PRESETS, type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
-import { ANIMACIONES, FORMATOS, FUENTES, type Texto } from "@/lib/editor-tipos";
-import { ANIM_NOMBRE, Chip, type Ed, FORMATO_INFO, Icon, PRESETS, RATIO, Seccion, Slider, SubtituloLinea, Switch, Swatches, fmt, len } from "./piezas";
+import { ANIMACIONES, FORMATOS, FUENTES, type Texto, VELOCIDADES } from "@/lib/editor-tipos";
+import { ANIM_NOMBRE, Chip, type Ed, FORMATO_INFO, Icon, PRESETS, RATIO, Seccion, Segmented, Slider, SubtituloLinea, Switch, Swatches, fmt, len } from "./piezas";
 
 // The options of each tool (left panel on desktop, bottom sheet on phones). Selecting something on the
 // timeline or the preview opens its tool with that item's properties on top.
@@ -14,6 +14,7 @@ export function Panel({ ed }: { ed: Ed }) {
   if (ed.tool === "texto") return <Textos ed={ed} />;
   if (ed.tool === "subtitulos") return <Subtitulos ed={ed} />;
   if (ed.tool === "audio") return <Audio ed={ed} />;
+  if (ed.tool === "velocidad") return <Velocidad ed={ed} />;
   return <Formato ed={ed} />;
 }
 
@@ -210,7 +211,9 @@ function Subtitulos({ ed }: { ed: Ed }) {
             })}
           </div>
         </Seccion>
-        <Seccion title="Posición">
+        <Seccion title="Posición" aside={pos === "libre" ? (
+          <button type="button" onClick={() => ed.setEstiloSub({ x: undefined, y: undefined })} className="inline-flex items-center gap-1 text-[13px] font-semibold text-accent-text hover:underline"><Icon name="reset" className="h-3.5 w-3.5" />Restablecer</button>
+        ) : undefined}>
           <div className="grid grid-cols-3 gap-2" role="group" aria-label="Posición de los subtítulos">
             {(["arriba", "centro", "abajo"] as const).map((x) => (
               <Chip key={x} on={pos === x} onClick={() => ed.setEstiloSub({ position: x, x: undefined, y: undefined })}>
@@ -221,6 +224,7 @@ function Subtitulos({ ed }: { ed: Ed }) {
               </Chip>
             ))}
           </div>
+          <p className="text-[13px] text-muted">{pos === "libre" ? "Los subtítulos están en un lugar libre: los arrastraste sobre el video. Usa «Restablecer» para volver a arriba, centro o abajo." : "Arrastra los subtítulos sobre el video para ponerlos donde quieras."}</p>
           <Slider label="Tamaño" min={16} max={40} unit="" value={st.size} onChange={(v) => ed.setEstiloSub({ size: v })} />
           <span className="text-[13px] font-semibold text-ink">Palabras a la vez</span>
           <div className="grid grid-cols-4 gap-2" role="group" aria-label="Palabras a la vez">
@@ -276,6 +280,30 @@ function Audio({ ed }: { ed: Ed }) {
           <Icon name="upload" className="h-4 w-4" />{m ? "Cambiar música" : "Subir música"}
           <input type="file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/aac" className="sr-only" onChange={(e) => ed.subirMusica(e.target.files?.[0])} />
         </label>
+      </Seccion>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- speed
+
+function Velocidad({ ed }: { ed: Ed }) {
+  const v = ed.p.velocidad;
+  const salida = ed.total / (v || 1);
+  return (
+    <div className="flex flex-col gap-6">
+      <Seccion title="Velocidad del video">
+        <Segmented label="Velocidad" value={v}
+          options={VELOCIDADES.map((x) => ({ v: x, label: x === 1 ? "1x" : `${x}x` }))}
+          onChange={(x) => ed.setVelocidad(x)} />
+        <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2/50 px-3.5 py-3 text-sm">
+          <span className="flex items-center gap-2 text-muted"><Icon name="gauge" className="h-4 w-4" />Duración final</span>
+          <b className="font-mono text-ink tabular-nums">{fmt(salida)}</b>
+        </div>
+        {v !== 1 && (
+          <button type="button" onClick={() => ed.setVelocidad(1)} className={small}><Icon name="reset" className="h-4 w-4" />Volver a 1x</button>
+        )}
+        <p className="text-[13px] text-muted">Acelera todo el video, imagen y voz juntas, sin que la voz suene chillona. Los subtítulos, textos y la música se ajustan solos.</p>
       </Seccion>
     </div>
   );

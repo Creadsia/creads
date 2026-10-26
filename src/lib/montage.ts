@@ -250,10 +250,15 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
   // BorderStyle 3 = opaque box behind the text
   const [border, outl, shadow, outCol, backCol] =
     look === "caja" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor("#000000", 0x30), assColor("#000000", 0x30)]
-      : look === "etiqueta" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor(st.accent), assColor(st.accent)]
-        : look === "neon" ? [1, Math.max(3, Math.round(size / 9)), 0, assColor(st.accent), assColor(st.accent, 0x80)]
-          : look === "suave" ? [1, 0, Math.max(3, Math.round(size / 14)), assColor("#000000"), assColor("#000000", 0x60)]
-            : [1, outline, Math.max(2, Math.round(size / 24)), assColor("#000000"), assColor("#000000", 0x64)];
+      : look === "realce" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor("#000000", 0x26), assColor("#000000", 0x26)]
+        : look === "etiqueta" ? [3, Math.max(10, Math.round(size / 6)), 0, assColor(st.accent), assColor(st.accent)]
+          : look === "neon" ? [1, Math.max(3, Math.round(size / 9)), 0, assColor(st.accent), assColor(st.accent, 0x80)]
+            : look === "suave" ? [1, 0, Math.max(3, Math.round(size / 14)), assColor("#000000"), assColor("#000000", 0x60)]
+              : look === "grueso" ? [1, Math.max(6, Math.round(size / 6)), Math.max(1, Math.round(size / 40)), assColor("#000000"), assColor("#000000", 0x55)]
+                : look === "sombra" ? [1, 0, Math.max(5, Math.round(size / 7)), assColor("#000000"), assColor("#000000")]
+                  : look === "borde" ? [1, Math.max(4, Math.round(size / 10)), Math.max(1, Math.round(size / 28)), assColor(st.accent), assColor("#000000", 0x55)]
+                    : look === "limpio" ? [1, Math.max(1, Math.round(size / 26)), Math.max(1, Math.round(size / 30)), assColor("#000000"), assColor("#000000", 0x40)]
+                      : [1, outline, Math.max(2, Math.round(size / 24)), assColor("#000000"), assColor("#000000", 0x64)];
   const align = st.position === "arriba" ? 8 : st.position === "centro" ? 5 : 2;
   const mv = marginPx(st.position, H, vertical);
   // where every line sits: dragged anywhere (x, y in %), or the quick «arriba / centro / abajo»
@@ -290,7 +295,7 @@ export function captions(words0: Word[], W: number, H: number, aspect: string, s
     const toks = c.map((x) => x.w);
     toks[toks.length - 1] = toks[toks.length - 1].replace(/,$/, "");
     const disp = toks.map((t) => clean(shapeWord(t, st))).map((t) => (font.capsOnly && st.case !== "lower" ? t.toLocaleUpperCase("es") : t));
-    if (look === "resaltar" || look === "salto") {
+    if (look === "resaltar" || look === "salto" || look === "realce") {
       const big = look === "salto" ? "\\fscx118\\fscy118" : "", back = look === "salto" ? "\\fscx100\\fscy100" : "";
       c.forEach((w, j) => {
         const s0 = j === 0 ? a : w.s;
@@ -335,8 +340,10 @@ export interface BuildClip {
 /** How long a clip lasts in the final ad. */
 export const segLen = (c: BuildClip) => (c.voice ? c.voice.b - c.voice.a : c.b - c.a);
 
-/** Joins the trimmed clips and burns the captions in one encode. Returns the mp4 bytes. */
-export async function build(dir: string, clips: BuildClip[], aspect: string, assText: string | null) {
+/** Joins the trimmed clips and burns the captions in one encode. Returns the mp4 bytes.
+ *  `velocidad` (0.5–2) speeds the whole cut up: the picture via setpts and the sound via atempo together, so
+ *  the voice keeps its lipsync and its pitch. Captions must already be timed on the sped-up timeline. */
+export async function build(dir: string, clips: BuildClip[], aspect: string, assText: string | null, velocidad = 1) {
   const [W, H] = frameSize(aspect);
   const args: string[] = ["-y", "-v", "error"];
   const VF = `fps=30,scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1`;
@@ -359,13 +366,22 @@ export async function build(dir: string, clips: BuildClip[], aspect: string, ass
     parts.push(`[${ai}:a]aresample=44100,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a${i}]`);
   });
   parts.push(`${clips.map((_, i) => `[v${i}][a${i}]`).join("")}concat=n=${clips.length}:v=1:a=1[vc][ac]`);
+  // speed: setpts on the picture and atempo on the sound, applied before captions are burned in
+  let vlab = "[vc]", alab = "[ac]";
+  if (velocidad !== 1) {
+    parts.push(`[vc]setpts=PTS/${velocidad}[vspd]`);
+    parts.push(`[ac]atempo=${velocidad}[aspd]`);
+    vlab = "[vspd]"; alab = "[aspd]";
+  }
+  let vout = vlab;
   if (assText) {
     await writeFile(path.join(dir, "caps.ass"), assText);
     const esc = (p: string) => p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
-    parts.push(`[vc]ass=filename='${esc(path.join(dir, "caps.ass"))}':fontsdir='${esc(FONTS)}'[vo]`);
+    parts.push(`${vlab}ass=filename='${esc(path.join(dir, "caps.ass"))}':fontsdir='${esc(FONTS)}'[vo]`);
+    vout = "[vo]";
   }
   const out = path.join(dir, "final.mp4");
-  args.push("-filter_complex", parts.join(";"), "-map", assText ? "[vo]" : "[vc]", "-map", "[ac]",
+  args.push("-filter_complex", parts.join(";"), "-map", vout, "-map", alab,
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out);
   await ff(args, 280_000);
   return readFile(out);

@@ -7,8 +7,10 @@ import { ff } from "./montage";
 // again (no AI models): the browser previews it and the montage engine renders it once on export.
 
 import type { Formato, Fuente, Proyecto, Texto } from "./editor-tipos";
-import { ANIMACIONES, FORMATOS, FUENTES } from "./editor-tipos";
+import { ANIMACIONES, FORMATOS, FUENTES, clampVelocidad } from "./editor-tipos";
 export * from "./editor-tipos";
+// The pure timing-scaling helpers (clampVelocidad, escalar, escalarPalabras, escalarTextos) live in
+// editor-tipos.ts so the browser can use them too, and are re-exported here for the export route and the tests.
 
 const num = (v: unknown, lo: number, hi: number, d: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 const hex = (v: unknown, d: string) => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v.toUpperCase() : d);
@@ -35,6 +37,7 @@ export function limpiarProyecto(v: unknown, clips: Set<string>): Proyecto {
     musica: m && typeof m.url === "string" ? { url: m.url, nombre: String(m.nombre ?? "Música").slice(0, 80), vol: num(m.vol, 0, 100, 25) } : null,
     vozVol: num(o.vozVol, 0, 150, 100),
     formato: (FORMATOS as readonly string[]).includes(String(o.formato)) ? (o.formato as Formato) : "9:16",
+    velocidad: clampVelocidad(o.velocidad),
   };
 }
 

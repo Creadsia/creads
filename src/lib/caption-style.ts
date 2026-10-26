@@ -1,7 +1,8 @@
 // Subtitle options for the final ad. Shared by the editor (browser) and the montage (server), so the
 // preview and the rendered video follow the same rules.
 
-export type Look = "clasico" | "resaltar" | "caja" | "palabra" | "suave" | "pop" | "subir" | "karaoke" | "salto" | "neon" | "etiqueta";
+export type Look = "clasico" | "resaltar" | "caja" | "palabra" | "suave" | "pop" | "subir" | "karaoke" | "salto" | "neon" | "etiqueta"
+  | "grueso" | "sombra" | "borde" | "limpio" | "realce";
 export type Case = "normal" | "upper" | "lower";
 export type Position = "arriba" | "centro" | "abajo";
 
@@ -17,6 +18,11 @@ export const LOOKS: { id: Look; name: string; hint: string; animated?: boolean }
   { id: "subir", name: "Sube y aparece", hint: "Cada frase sube suave desde abajo", animated: true },
   { id: "neon", name: "Neón", hint: "Letras con brillo de color", animated: false },
   { id: "etiqueta", name: "Etiqueta de color", hint: "Texto sobre una caja del color que elijas", animated: false },
+  { id: "grueso", name: "Contorno TikTok", hint: "Borde negro bien grueso, estilo TikTok", animated: false },
+  { id: "sombra", name: "Sombra dura", hint: "Sin borde, con una sombra marcada abajo", animated: false },
+  { id: "borde", name: "Borde de color", hint: "El borde toma el color que elijas", animated: false },
+  { id: "limpio", name: "Minimal", hint: "Fino y limpio, sin recargar", animated: false },
+  { id: "realce", name: "Realce noticia", hint: "Caja oscura y la palabra que se dice en color", animated: true },
 ];
 
 /** `width`: average letter width as a share of the font size (to know how many words fit on a line). */
@@ -70,7 +76,7 @@ export interface CaptionStyle {
 }
 
 /** Looks whose second colour matters (the highlighted word, the karaoke fill, the glow, the box). */
-export const USES_ACCENT: Look[] = ["resaltar", "salto", "karaoke", "neon", "etiqueta"];
+export const USES_ACCENT: Look[] = ["resaltar", "salto", "karaoke", "neon", "etiqueta", "borde", "realce"];
 
 export const DEFAULT_STYLE: CaptionStyle = {
   look: "resaltar", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100",
@@ -160,4 +166,9 @@ export const CAPTION_PRESETS: { id: string; name: string; hint: string; style: P
   { id: "etiqueta", name: "Etiqueta", hint: "Texto sobre una caja de color", style: { look: "etiqueta", font: "inter", size: 24, color: "#FFFFFF", accent: "#FF3B3B", case: "normal", words: 3, position: "abajo", punct: false } },
   { id: "pop", name: "Pop color", hint: "Rebota al entrar, amarillo", style: { look: "pop", font: "poppins", size: 28, color: "#FFE100", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
   { id: "noticia", name: "Noticia", hint: "Caja oscura, letra condensada", style: { look: "caja", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 4, position: "abajo", punct: false } },
+  { id: "tiktok", name: "Contorno TikTok", hint: "Borde negro grueso, se lee sobre todo", style: { look: "grueso", font: "montserrat", size: 28, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "sombra", name: "Sombra dura", hint: "Limpio con una sombra marcada", style: { look: "sombra", font: "poppins", size: 26, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "borde", name: "Borde de color", hint: "El borde en el color de tu marca", style: { look: "borde", font: "archivo", size: 28, color: "#FFFFFF", accent: "#8A5CFF", case: "upper", words: 2, position: "abajo", punct: false } },
+  { id: "minimal", name: "Minimal", hint: "Fino y elegante, poco invasivo", style: { look: "limpio", font: "inter", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 4, position: "abajo", punct: true } },
+  { id: "realce", name: "Realce noticia", hint: "Caja oscura y la palabra en amarillo", style: { look: "realce", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 4, position: "abajo", punct: false } },
 ];
