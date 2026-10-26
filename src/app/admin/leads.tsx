@@ -10,7 +10,7 @@ import { Fragment } from "react";
 
 interface Cuenta {
   id: string; empresa: string; email: string; nombre: string | null; creada: string; ultimaVez: string | null;
-  etapa: string; etapaTexto: string; compro: string[]; pagosAbiertos: number; pagado: boolean; generaciones: number; anunciosListos: number;
+  etapa: string; etapaTexto: string; dinero?: string; pagoConDinero?: boolean; conTarjeta?: boolean; compro: string[]; pagosAbiertos: number; pagado: boolean; generaciones: number; anunciosListos: number;
   avatares: number; imagenes: number; anuncios: number; origen: string | null; campana: string | null; prueba: boolean;
 }
 interface Data { dias: number; cuentas: Cuenta[]; resumen: Record<string, number>; etapas: Record<string, string> }
@@ -123,7 +123,7 @@ export default function Leads() {
                       <tr className={`border-t border-line align-top ${c.prueba ? "opacity-50" : ""}`}>
                         <td className="py-2.5 pr-3"><b>{c.nombre || c.empresa}</b>{c.prueba && <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">prueba</span>}<div className="text-xs text-muted" data-private>{c.email}</div></td>
                         <td className="pr-3 text-xs">{new Date(c.creada).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div className="text-muted">{hace(c.creada)}</div></td>
-                        <td className="pr-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${TONE[c.etapa] ?? ""}`}>{c.etapaTexto}</span>{c.compro.length > 0 && <div className="mt-1 text-xs text-muted">{c.compro.join(", ")}</div>}</td>
+                        <td className="pr-3"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${TONE[c.etapa] ?? ""}`}>{c.etapaTexto}</span>{c.dinero ? <div className={`mt-1 text-xs font-semibold ${c.pagoConDinero ? "text-good" : c.conTarjeta ? "text-accent-text" : "text-muted"}`}>{c.dinero}</div> : c.compro.length > 0 && <div className="mt-1 text-xs text-muted">{c.compro.join(", ")}</div>}</td>
                         <td className="pr-3 text-xs tabular-nums">
                           {c.anunciosListos} anuncios listos · {c.generaciones} generaciones<br />{c.imagenes} imágenes · {c.avatares} avatares propios{c.pagosAbiertos > 0 && !c.pagado ? <><br /><span className="text-warn">abrió el pago {c.pagosAbiertos} {c.pagosAbiertos === 1 ? "vez" : "veces"}</span></> : null}
                         </td>

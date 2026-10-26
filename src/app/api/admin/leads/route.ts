@@ -22,13 +22,15 @@ export async function GET(req: Request) {
     const inList = `in.(${ws.map((w) => `"${w.id}"`).join(",")})`;
     const [users, orders, ads, avatars, images, charges, orig] = await Promise.all([
       sbAll<{ workspace: string; email: string; name: string | null; last_login: string | null; created_at: string }>(`users?workspace=${inList}&select=workspace,email,name,last_login,created_at`, "created_at.asc,email.asc"),
-      sbAll<{ owner: string; status: string; item: string; created_at: string; quote: { label?: string } | null }>(`orders?owner=${inList}&select=owner,status,item,created_at,quote`, "created_at.asc,id.asc"),
+      sbAll<{ owner: string; status: string; item: string; created_at: string; quote: { label?: string } | null; mp: { trial?: string; cancelled?: boolean } | null }>(`orders?owner=${inList}&select=owner,status,item,created_at,quote,mp`, "created_at.asc,id.asc"),
       sbAll<{ owner: string; status: string; final_url: string | null; created_at: string }>(`ads?owner=${inList}&select=owner,status,final_url,created_at`, "created_at.asc,id.asc").catch(() => []),
       sbAll<{ owner: string; notes: string | null; created_at: string }>(`avatars?owner=${inList}&select=owner,notes,created_at`, "created_at.asc,id.asc").catch(() => []),
       sbAll<{ owner: string; created_at: string }>(`images?owner=${inList}&select=owner,created_at`, "created_at.asc,id.asc").catch(() => []),
       sbAll<{ owner: string; created_at: string }>(`credits?owner=${inList}&kind=eq.charge&select=owner,created_at`, "created_at.asc,id.asc").catch(() => []),
       origins(),
     ]);
+    // gift credits: «tarjeta agregada» (card trial) or «correo confirmado» (the old free ad)
+    const regalos = await sbAll<{ owner: string; note: string | null }>(`credits?owner=${inList}&ref=like.regalo:*&select=owner,note`, "created_at.asc,id.asc").catch(() => []);
     const by = <T extends { owner: string }>(rows: T[], id: string) => rows.filter((r) => r.owner === id);
     const latest = (...dates: (string | null | undefined)[]) => dates.filter(Boolean).sort().pop() ?? null;
     const cuentas = ws.map((w) => {
@@ -37,10 +39,19 @@ export async function GET(req: Request) {
       const paid = o.filter((x) => x.status === "pagado");
       const info = { pagosAbiertos: o.filter((x) => x.status !== "reemplazado").length, pagado: paid.length > 0, generaciones: ch.length, anunciosListos: a.filter((x) => x.status === "done" || x.final_url).length };
       const etapa: Etapa = etapaOf(info);
+      // money and card, in plain words (owner, 26 Oct 2026: «¿pusieron su tarjeta? ¿cómo puedo saber eso?»)
+      const trial = o.find((x) => x.mp?.trial);
+      const reg = regalos.find((r) => r.owner === w.id);
+      const tarjeta = !trial ? null
+        : trial.mp?.cancelled ? `Puso tarjeta y canceló la prueba`
+        : reg && /tarjeta/i.test(reg.note ?? "") ? `Puso tarjeta: se le cobra el ${trial.mp!.trial} si no cancela`
+        : "Abrió la página de la tarjeta y no la puso";
+      const dinero = paid.length ? `Pagó: ${paid.map((x) => x.quote?.label ?? x.item).join(", ")}`
+        : tarjeta ?? (reg ? "No pagó ni puso tarjeta: usó el anuncio de regalo" : info.pagosAbiertos ? "No pagó ni puso tarjeta: abrió el pago y lo dejó" : "No pagó ni puso tarjeta");
       return {
         id: w.id, empresa: w.name, email: u?.email ?? "", nombre: u?.name ?? null, creada: w.created_at,
         ultimaVez: latest(u?.last_login, ...o.map((x) => x.created_at), ...a.map((x) => x.created_at), ...av.map((x) => x.created_at), ...im.map((x) => x.created_at), ...ch.map((x) => x.created_at)),
-        etapa, etapaTexto: ETAPAS[etapa],
+        etapa, etapaTexto: ETAPAS[etapa], dinero, pagoConDinero: paid.length > 0, conTarjeta: Boolean(tarjeta && /^Puso tarjeta:/.test(tarjeta)),
         compro: paid.map((x) => x.quote?.label ?? x.item),
         ...info, avatares: av.length, imagenes: im.length, anuncios: a.length,
         origen: orig[w.id]?.src ?? null, campana: orig[w.id]?.camp ?? null, prueba: desde.pruebas.includes(w.id),
