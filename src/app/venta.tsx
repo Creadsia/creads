@@ -112,8 +112,7 @@ const COMPARA = [
 /** The two questions about trying it: the 7-day free trial with card (default since 26 Oct 2026) or the Pack Prueba. */
 const FAQ_ENTRADA = {
   prueba: [
-    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis. Creas tu cuenta, agregas tu tarjeta (hoy no se cobra nada) y recibes ${REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, a los ${PRUEBA_DIAS} días sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes. Si no, cancelas antes en «Planes» con un clic y no pagas nada.`],
-    ["¿Necesito tarjeta para crear la cuenta?", `Sí. La agregas al crear tu cuenta (con tu correo o con Google), en la ventana segura de Mercado Pago: Creads nunca ve tu tarjeta. Hoy no se cobra nada. Tienes ${PRUEBA_DIAS} días gratis y, si cancelas antes con un clic en «Planes», no pagas nada. Si no cancelas, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia.`],
+    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis con ${REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia. Si no, cancelas en «Planes» con un clic.`],
   ],
   pack: [
     ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tu primera tanda: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],

@@ -7,7 +7,7 @@ export const GARANTIA_USO_MAX = 0.2;
 
 export const GARANTIA = {
   /** The 7-day free trial with card (since 26 Oct 2026): nothing is charged if cancelled before the first charge. */
-  prueba: `Prueba gratis de ${GARANTIA_DIAS} días: hoy no se cobra nada y, si cancelas antes del primer cobro, no pagas nada.`,
+  prueba: `Prueba gratis de ${GARANTIA_DIAS} días: si no te sirve, cancelas con un clic y no pagas nada.`,
   /** The Pack Prueba (only while it's on sale, MODO_PACK=1). */
   pack: `Garantía de tu primera tanda: si no te sirve para publicar, escríbenos dentro de ${GARANTIA_DIAS} días y te devolvemos tu pago.`,
   planes: `${GARANTIA_DIAS} días de garantía: si los anuncios no te sirven, te devolvemos el 100% de tu primer pago, aunque hayas usado hasta el ${Math.round(GARANTIA_USO_MAX * 100)}% de tu saldo.`,

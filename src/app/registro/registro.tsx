@@ -84,7 +84,7 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-x-12 lg:gap-y-6 lg:py-14">
         <section className="flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
           <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{tarjeta ? `Prueba Creads ${prueba.dias} días gratis` : "Crea tu cuenta y haz tu primera tanda"}</h1>
-          <p className="text-lg text-muted">{tarjeta ? `Crea tu cuenta, agrega tu tarjeta (hoy no se cobra nada) y haz tus primeros anuncios con ${prueba.regalo} créditos de regalo.` : "Pega el link de tu producto y Creads te propone 6 ángulos de venta. Después creas 10 anuncios para testear en Meta."}</p>
+          <p className="text-lg text-muted">{tarjeta ? `Crea tu cuenta y haz tus primeros anuncios con ${prueba.regalo} créditos de regalo.` : "Pega el link de tu producto y Creads te propone 6 ángulos de venta. Después creas 10 anuncios para testear en Meta."}</p>
         </section>
 
         {paso === "tarjeta" ? (
@@ -139,18 +139,17 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
               {err.text} {err.exists && <a href="/app" className="font-semibold underline">Entrar</a>}
             </p>
           )}
-          {tarjeta && <Resumen prueba={prueba} clp={monto} />}
           <button type="submit" disabled={busy} className="rounded-xl bg-ink px-4 py-3.5 text-base font-semibold text-bg disabled:opacity-50">
-            {busy ? (tarjeta ? "Abriendo el pago seguro…" : "Creando tu cuenta…") : tarjeta ? "Continuar · agregar tarjeta (hoy $0)" : "Crear mi cuenta"}
+            {busy ? (tarjeta ? "Abriendo el pago seguro…" : "Creando tu cuenta…") : tarjeta ? "Empezar mi prueba gratis" : "Crear mi cuenta"}
           </button>
-          <p className="text-xs text-muted">{tarjeta ? "En el siguiente paso agregas tu tarjeta (Mercado Pago): hoy no se cobra nada. También si entras con Google." : "Crear la cuenta no pide tarjeta."} Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
+          <p className="text-xs text-muted">{tarjeta ? "" : "Crear la cuenta no pide tarjeta. "}Al crear tu cuenta aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Privacidad</a>.</p>
         </form>
         )}
           <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
             {tarjeta ? (
               <>
-                <li className="flex gap-2"><Check /><span><b>{prueba.regalo} créditos de regalo</b>: alcanzan para tu primera tanda de anuncios o un video corto, listos para publicar. Se cargan al agregar tu tarjeta (hoy no se cobra nada).</span></li>
-                <li className="flex gap-2"><Check /><span><MoneyText text={`Si te gusta, a los ${prueba.dias} días sigues con el plan ${prueba.plan} (US$${prueba.usd} al mes, ${prueba.credits} créditos cada mes). Si no, cancelas antes con un clic y no pagas nada.`} /></span></li>
+                <li className="flex gap-2"><Check /><span><b>{prueba.regalo} créditos de regalo</b>: alcanzan para tu primera tanda de anuncios o un video corto, listos para publicar.</span></li>
+                <li className="flex gap-2"><Check /><span><MoneyText text={`Si te gusta, a los ${prueba.dias} días sigues con el plan ${prueba.plan} (US$${prueba.usd} al mes, ${prueba.credits} créditos cada mes). Si no, cancelas con un clic.`} /></span></li>
                 <li className="flex gap-2"><Check /><span><b>6 ángulos de venta para tu producto</b> y 10 anuncios en 4:5 y 9:16, con tu marca, listos para Meta.</span></li>
               </>
             ) : (

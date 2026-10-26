@@ -10,7 +10,7 @@ import { COOKIE_REF, normCode } from "@/lib/afiliados-calc";
 
 export const metadata: Metadata = {
   title: "Prueba Creads IA 7 días gratis",
-  description: "Crea tu cuenta, agrega tu tarjeta (hoy no se cobra nada) y recibe 200 créditos de regalo para tus primeros anuncios. Cancelas cuando quieras.",
+  description: "Prueba Creads 7 días gratis con 200 créditos de regalo para tus primeros anuncios. Cancelas cuando quieras.",
   alternates: { canonical: "/registro" },
 };
 export const dynamic = "force-dynamic";

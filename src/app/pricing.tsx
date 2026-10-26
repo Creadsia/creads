@@ -220,16 +220,16 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
 function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.ReactNode }) {
   const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
   const filas: [string, React.ReactNode][] = es
-    ? [["Hoy, con tu tarjeta", "$0"], ["Créditos de regalo", REGALO_CREDITS], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
-    : [["Today, with your card", "$0"], ["Gift credits", REGALO_CREDITS], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
+    ? [[`${PRUEBA_DIAS} días`, "Gratis"], ["Créditos de regalo", REGALO_CREDITS], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
+    : [[`${PRUEBA_DIAS} days`, "Free"], ["Gift credits", REGALO_CREDITS], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
   return (
     <div className="grid gap-4 rounded-3xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
       <div className="flex min-w-0 flex-col gap-2">
         <b className="font-display text-xl font-semibold">{es ? `${PRUEBA_DIAS} días gratis` : `${PRUEBA_DIAS}-day free trial`}</b>
         <span className="text-sm text-muted">
           {es
-            ? <>Creas tu cuenta y agregas tu tarjeta: hoy no se cobra nada. Usas tus {REGALO_CREDITS} créditos de regalo en tu primera tanda y, si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes). Si no, cancelas antes del cobro con un clic y no pagas nada.</>
-            : <>Create your account and add your card: nothing is charged today. Use your {REGALO_CREDITS} gift credits on your first batch and, if you like it, carry on with {plan.name} ({plan.credits} credits a month). If not, cancel before the first charge with one click and pay nothing.</>}
+            ? <>Prueba Creads {PRUEBA_DIAS} días con {REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes); si no, cancelas con un clic.</>
+            : <>Try Creads for {PRUEBA_DIAS} days with {REGALO_CREDITS} gift credits for your first batch. If you like it, carry on with {plan.name} ({plan.credits} credits a month); if not, cancel with one click.</>}
         </span>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
           {filas.map(([k, v]) => (
