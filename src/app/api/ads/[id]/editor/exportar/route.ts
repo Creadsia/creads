@@ -5,7 +5,7 @@ import { tooMany } from "@/lib/rate";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { type BuildClip, build, captions, download, frameSize, probe, segLen, workdir } from "@/lib/montage";
 import { normalizeStyle } from "@/lib/caption-style";
-import { limpiarProyecto, pasadaAudio, pasadaTextos, textosAss } from "@/lib/editor";
+import { escalar, escalarPalabras, escalarTextos, limpiarProyecto, pasadaAudio, pasadaTextos, textosAss } from "@/lib/editor";
 import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
 import { hasPaid } from "@/lib/regalo";
@@ -67,22 +67,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       offset += segLen(seg);
     });
     const [W, H] = frameSize(p.formato);
+    // the sped-up output timeline: the picture runs setpts=PTS/velocidad, so every text, subtitle and the music
+    // is placed at its scaled time (source second / velocidad) and the reported length shrinks the same way.
+    const vel = p.velocidad;
+    const salida = escalar(offset, vel); // final duration after speed-up
     const style = normalizeStyle(st.editorCaptions ?? st.captions ?? undefined); // the editor's own pick wins
-    const cap = p.subtitulos && timeline.length ? captions(timeline, W, H, p.formato, style, offset, []) : null;
-    let bytes: Uint8Array | Buffer = await build(dir, parts, p.formato, cap?.ass ?? null);
+    const cap = p.subtitulos && timeline.length ? captions(escalarPalabras(timeline, vel), W, H, p.formato, style, salida, []) : null;
+    let bytes: Uint8Array | Buffer = await build(dir, parts, p.formato, cap?.ass ?? null, vel);
     const marca = ws !== "main" && !(await hasPaid(ws).catch(() => false));
-    const textos = marca ? [...p.textos, { id: "sello", texto: "Hecho con Creads IA", desde: 0, hasta: offset + 1, x: 30, y: 7, tam: 4.5, color: "#FFFFFF", fondo: "#8A5CFF", fuente: "Montserrat ExtraBold" as const, animacion: "ninguna" as const }] : p.textos;
+    const textosBase = escalarTextos(p.textos, vel);
+    const textos = marca ? [...textosBase, { id: "sello", texto: "Hecho con Creads IA", desde: 0, hasta: salida + 1, x: 30, y: 7, tam: 4.5, color: "#FFFFFF", fondo: "#8A5CFF", fuente: "Montserrat ExtraBold" as const, animacion: "ninguna" as const }] : textosBase;
     if (textos.length) bytes = await pasadaTextos(dir, bytes, textosAss(textos, W, H));
     if (p.musica || p.vozVol !== 100) {
       const music = p.musica ? path.join(dir, "musica.audio") : null;
       if (music && p.musica) await download(await fetchableUrl(p.musica.url, ws), music);
-      bytes = await pasadaAudio(dir, bytes, music, p.vozVol, p.musica?.vol ?? 0, offset);
+      bytes = await pasadaAudio(dir, bytes, music, p.vozVol, p.musica?.vol ?? 0, salida);
     }
 
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${id}-ed-${Date.now()}.mp4`);
     const versiones = [...(st.versiones ?? []), ...(ad.final_url ? [ad.final_url] : [])].slice(-10);
-    await s.db.update("ads", id, { final_url: url, status: "done", settings: { ...st, editor: p, versiones, duration: Math.round(offset * 10) / 10 } });
-    return NextResponse.json({ url, segundos: Math.round(offset * 10) / 10 });
+    await s.db.update("ads", id, { final_url: url, status: "done", settings: { ...st, editor: p, versiones, duration: Math.round(salida * 10) / 10 } });
+    return NextResponse.json({ url, segundos: Math.round(salida * 10) / 10 });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo exportar el video.") }, { status: 502 });
   }

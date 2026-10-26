@@ -51,6 +51,22 @@ test("new looks: karaoke fill, highlighted word that grows, entrances, glow and 
   assert.match(run("etiqueta"), /Style: Cap,[^\n]*,3,\d+,0,/);
 });
 
+test("new looks: thick outline, hard shadow, colour border, minimal, news highlight", () => {
+  const ws = [{ w: "Hola", s: 0, e: 0.4 }, { w: "mundo", s: 0.45, e: 0.9 }];
+  const run = (look: string, extra = {}) => captions(ws, 1080, 1920, "9:16", { ...DEFAULT_STYLE, look, ...extra } as never).ass;
+  // each new look is accepted by normalizeStyle (not dropped to the default)
+  for (const look of ["grueso", "sombra", "borde", "limpio", "realce"]) assert.equal(normalizeStyle({ look }).look, look);
+  // contorno grueso: a much thicker outline than the classic look
+  assert.match(run("grueso"), /Style: Cap,[^\n]*,1,\d+,\d+/);
+  // borde de color: the outline colour is the accent (yellow &H0000E1FF), not black
+  assert.match(run("borde", { accent: "#FFE100" }), /Style: Cap,[^\n]*,&H0000E1FF,/);
+  // sombra dura: a box-less look with a real shadow (shadow value > 0, outline 0)
+  assert.match(run("sombra"), /Style: Cap,[^\n]*,1,0,[1-9]/);
+  // realce noticia: an opaque box (BorderStyle 3) and the spoken word recoloured to the accent
+  assert.match(run("realce", { accent: "#FFE100" }), /,3,\d+,0,/);
+  assert.match(run("realce", { accent: "#FFE100" }), /\\c&H00E1FF&\}Hola/);
+});
+
 test("subtitles can sit anywhere: x and y in % win over arriba / centro / abajo", async () => {
   const { captions } = await import("../src/lib/montage");
   const { DEFAULT_STYLE, normalizeStyle } = await import("../src/lib/caption-style");

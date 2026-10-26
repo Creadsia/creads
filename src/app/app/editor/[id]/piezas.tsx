@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Corte, Formato, Proyecto, Texto } from "@/lib/editor-tipos";
 import { type CaptionStyle, fontOf, fontPx, marginPx, shapeWord } from "@/lib/caption-style";
 import type { Word } from "@/lib/textmatch";
@@ -11,16 +11,18 @@ import type { Word } from "@/lib/textmatch";
 export interface Clip { id: string; idx: number; texto: string; url: string; palabras: Word[] }
 export interface Datos { titulo: string; aspecto: string; final: string | null; cortes: Clip[]; proyecto: Proyecto | null; musica: string | null; subtitulosEstilo?: unknown }
 export type Sel = { tipo: "corte" | "texto"; i: number } | null;
-export type Tool = "cortes" | "texto" | "subtitulos" | "audio" | "formato";
+export type Tool = "cortes" | "texto" | "subtitulos" | "audio" | "formato" | "velocidad";
 export interface Strip { step: number; frames: string[]; ar: number }
 export interface Frase { s: number; e: number; words: Word[] }
 
-export const TOOLS: { id: Tool; label: string; icon: string }[] = [
-  { id: "cortes", label: "Cortes", icon: "film" },
-  { id: "texto", label: "Texto", icon: "text" },
-  { id: "subtitulos", label: "Subtítulos", icon: "cc" },
-  { id: "audio", label: "Audio", icon: "music" },
-  { id: "formato", label: "Formato", icon: "crop" },
+/** `desc`: one short line shown under the panel title and as the rail tooltip, so each tool reads at a glance. */
+export const TOOLS: { id: Tool; label: string; icon: string; desc: string }[] = [
+  { id: "cortes", label: "Cortes", icon: "film", desc: "Recorta, ordena y arma los clips de tu video." },
+  { id: "texto", label: "Texto", icon: "text", desc: "Pon títulos, ofertas y llamados sobre el video." },
+  { id: "subtitulos", label: "Subtítulos", icon: "cc", desc: "Estilo, color y posición de los subtítulos." },
+  { id: "audio", label: "Audio", icon: "music", desc: "Volumen de la voz y música de fondo." },
+  { id: "velocidad", label: "Velocidad", icon: "gauge", desc: "Acelera todo el video sin perder el sonido." },
+  { id: "formato", label: "Formato", icon: "crop", desc: "Tamaño para Reels, Feed o cuadrado." },
 ];
 
 /** Everything the panels and the timeline need from the editor. */
@@ -42,6 +44,7 @@ export interface Ed {
   nuevoTexto: (preset: Partial<Texto>) => void; agregarCorte: (clipId: string) => void;
   musicaUrl: string | null; subirMusica: (f: File | undefined) => void; musicaOn: (on: boolean) => void;
   ultimaMusica: Proyecto["musica"]; setMusicaVol: (v: number) => void;
+  setVelocidad: (v: number) => void;
 }
 
 export const len = (c: Corte) => Math.max(0.3, c.b - c.a);
@@ -92,6 +95,8 @@ const PATHS: Record<string, string> = {
   eyeoff: "M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2",
   keys: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
   fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  gauge: "M4 18a8 8 0 1 1 16 0M12 14l4-3.5M9 18h6",
+  reset: "M4 10a8 8 0 1 1 1 6M4 10V5m0 5h5",
 };
 
 export function Icon({ name, className = "h-[18px] w-[18px]", fill = false }: { name: string; className?: string; fill?: boolean }) {
@@ -170,6 +175,23 @@ export function Chip({ on, onClick, children, label, style }: { on: boolean; onC
   );
 }
 
+/** A clean segmented control: one row of pills, the active one lifted with the brand gradient. */
+export function Segmented<T extends string | number>({ value, options, onChange, label }: { value: T; options: { v: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex gap-1 rounded-xl border border-line bg-surface-2/60 p-1">
+      {options.map((o) => {
+        const on = o.v === value;
+        return (
+          <button key={String(o.v)} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.v)}
+            className={`min-h-9 flex-1 rounded-lg px-2 text-[13px] font-semibold transition-colors ${on ? "bg-[image:var(--grad)] text-white shadow-[0_4px_14px_-6px_rgba(255,43,214,.9)]" : "text-muted hover:text-ink"}`}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Swatches({ value, onChange, label, none }: { value: string | null; onChange: (c: string | null) => void; label: string; none?: boolean }) {
   return (
     <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
@@ -201,27 +223,40 @@ export function subtituloCss(st: CaptionStyle, formato: Formato, fw: number, fh:
     : st.position === "arriba" ? { left: "50%", top: marginPx("arriba", H, vertical) * (fh / H), transform: "translateX(-50%)" }
     : { left: "50%", bottom: marginPx("abajo", H, vertical) * (fh / H), transform: "translateX(-50%)" };
   const stroke = Math.max(1, size * 0.07);
-  const outline = `0 ${stroke}px 0 #000, 0 -${stroke}px 0 #000, ${stroke}px 0 0 #000, -${stroke}px 0 0 #000, 0 ${stroke * 1.5}px ${stroke * 3}px rgba(0,0,0,.5)`;
+  // a solid outline of `s` px in colour `c` (eight offsets), the same border the ASS export draws
+  const ring = (s: number, c: string) => `${s}px 0 0 ${c},-${s}px 0 0 ${c},0 ${s}px 0 ${c},0 -${s}px 0 ${c},${s}px ${s}px 0 ${c},-${s}px -${s}px 0 ${c},${s}px -${s}px 0 ${c},-${s}px ${s}px 0 ${c}`;
+  const outline = `${ring(stroke, "#000")},0 ${stroke * 1.5}px ${stroke * 3}px rgba(0,0,0,.5)`;
   const look = st.look;
   const word: CSSProperties = {
     color: st.color,
-    textShadow: look === "suave" ? `0 ${size * 0.06}px ${size * 0.25}px rgba(0,0,0,.85)` : look === "neon" ? `0 0 ${size * 0.25}px ${st.accent}, 0 0 ${size * 0.5}px ${st.accent}` : look === "caja" || look === "etiqueta" ? "none" : outline,
+    textShadow:
+      look === "suave" ? `0 ${size * 0.06}px ${size * 0.25}px rgba(0,0,0,.85)`
+        : look === "neon" ? `0 0 ${size * 0.25}px ${st.accent}, 0 0 ${size * 0.5}px ${st.accent}`
+          : look === "caja" || look === "etiqueta" || look === "realce" ? "none"
+            : look === "grueso" ? `${ring(size * 0.1, "#000")},0 ${size * 0.05}px ${size * 0.18}px rgba(0,0,0,.45)`
+              : look === "sombra" ? `${size * 0.045}px ${size * 0.06}px 0 rgba(0,0,0,.95)`
+                : look === "borde" ? `${ring(size * 0.07, st.accent)},0 ${size * 0.04}px ${size * 0.12}px rgba(0,0,0,.6)`
+                  : look === "limpio" ? `${ring(Math.max(1, size * 0.03), "#000")},0 ${size * 0.03}px ${size * 0.12}px rgba(0,0,0,.4)`
+                    : outline,
   };
   const box: CSSProperties = {
     ...pos, position: "absolute", width: "86%", textAlign: "center", fontFamily: `"${fontOf(st.font).ass}", var(--font-display), sans-serif`,
     fontSize: size, lineHeight: 1.15, pointerEvents: "none",
   };
-  const accent: CSSProperties = ["resaltar", "salto", "karaoke", "palabra"].includes(look) ? { color: st.accent } : {};
+  const accent: CSSProperties = ["resaltar", "salto", "karaoke", "palabra", "realce"].includes(look) ? { color: st.accent } : {};
   return { box, word, accent };
 }
 
-/** One subtitle phrase, drawn as the export will (look, colours, the spoken word highlighted). */
-export function SubtituloLinea({ st, words, now, formato, fw, fh }: { st: CaptionStyle; words: Word[]; now: number; formato: Formato; fw: number; fh: number }) {
+/** One subtitle phrase, drawn as the export will (look, colours, the spoken word highlighted). On the preview it
+ *  can be made draggable (sets style.x/y) with a visible selection box. */
+export function SubtituloLinea({ st, words, now, formato, fw, fh, selected, onPointerDown }: { st: CaptionStyle; words: Word[]; now: number; formato: Formato; fw: number; fh: number; selected?: boolean; onPointerDown?: (e: ReactPointerEvent) => void }) {
   const { box, word, accent } = subtituloCss(st, formato, fw, fh);
-  const boxed = st.look === "caja" || st.look === "etiqueta";
+  const boxed = st.look === "caja" || st.look === "etiqueta" || st.look === "realce";
+  const bg = st.look === "etiqueta" ? st.accent : "rgba(0,0,0,.72)";
+  const interactive = Boolean(onPointerDown);
   return (
-    <span style={box} aria-hidden="true">
-      <span style={boxed ? { background: st.look === "caja" ? "rgba(0,0,0,.72)" : st.accent, padding: "0.08em 0.3em", borderRadius: "0.18em", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" } : undefined}>
+    <span style={{ ...box, ...(interactive ? { pointerEvents: "auto", cursor: "move", outline: selected ? `1.5px solid ${SELECT}` : undefined, outlineOffset: 6, borderRadius: 4 } : null) }} aria-hidden="true" onPointerDown={onPointerDown}>
+      <span style={boxed ? { background: bg, padding: "0.08em 0.3em", borderRadius: "0.18em", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" } : undefined}>
         {words.map((w, i) => {
           const on = now >= w.s && now < w.e + 0.05;
           return <span key={i} style={{ ...word, ...(on ? accent : {}) }}>{shapeWord(w.w, st)}{i < words.length - 1 ? " " : ""}</span>;

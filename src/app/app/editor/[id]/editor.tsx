@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { dl, uploadFile, Working } from "../../_parts/ui";
-import { FORMATOS, type Corte, type Proyecto, type Texto } from "@/lib/editor-tipos";
+import { FORMATOS, clampVelocidad, type Corte, type Proyecto, type Texto } from "@/lib/editor-tipos";
 import { type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
 import type { Word } from "@/lib/textmatch";
 import { type Clip, type Datos, type Ed, type Frase, Icon, IconBtn, RATIO, SELECT, type Sel, type Strip, SubtituloLinea, TOOLS, type Tool, ToolBtn, fmt, len } from "./piezas";
@@ -79,6 +79,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   const [durs, setDurs] = useState<Record<string, number>>({});
   const [strips, setStrips] = useState<Record<string, Strip | "x">>({});
   const [sel, setSel] = useState<Sel>(null);
+  const [subSel, setSubSel] = useState(false); // the subtitle block is selected on the preview (for free dragging)
   const [tool, setTool] = useState<Tool>("cortes");
   const [sheet, setSheet] = useState(false);
   const [wide, setWide] = useState(false);
@@ -109,7 +110,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       setD(x); setTitulo(x.titulo);
       setEstiloSubRaw(normalizeStyle(x.subtitulosEstilo ?? undefined));
       setMusicaUrl(x.musica);
-      setP(x.proyecto ?? { cortes: x.cortes.map((c: Clip) => ({ clipId: c.id, a: 0, b: 600 })), textos: [], subtitulos: true, musica: null, vozVol: 100, formato: (FORMATOS as readonly string[]).includes(x.aspecto) ? (x.aspecto as Proyecto["formato"]) : "9:16" });
+      setP(x.proyecto ?? { cortes: x.cortes.map((c: Clip) => ({ clipId: c.id, a: 0, b: 600 })), textos: [], subtitulos: true, musica: null, vozVol: 100, formato: (FORMATOS as readonly string[]).includes(x.aspecto) ? (x.aspecto as Proyecto["formato"]) : "9:16", velocidad: 1 });
     };
     if (inicial) { abrir(inicial); return; }
     fetch(`/api/ads/${id}/editor`).then(async (r) => {
@@ -237,7 +238,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
     const v = video.current; if (!v || !p || !d || !p.cortes[i]) return;
     cur.current = i;
     const c = p.cortes[i], src = clipOf(c.clipId)?.url ?? "";
-    const go = () => { v.currentTime = c.a + at; v.volume = Math.min(1, p.vozVol / 100); if (play) v.play().catch(() => setPlaying(false)); };
+    const go = () => { v.currentTime = c.a + at; v.volume = Math.min(1, p.vozVol / 100); v.playbackRate = p.velocidad; if (play) v.play().catch(() => setPlaying(false)); };
     if (v.src !== new URL(src, location.href).href) { v.src = src; v.onloadeddata = () => { v.onloadeddata = null; go(); }; v.load(); } else go();
   }, [p, d, clipOf]);
   const buscar = useCallback((tt: number, play = playing) => {
@@ -263,10 +264,13 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   function playPause() {
     const v = video.current; if (!v) return;
     if (playing) { pausar(); return; }
+    v.playbackRate = p?.velocidad ?? 1;
     if (t >= total - 0.05) buscar(0, true); else v.play().catch(() => null);
-    if (audio.current && p?.musica) { audio.current.volume = (p.musica.vol ?? 25) / 100; audio.current.play().catch(() => null); }
+    if (audio.current && p?.musica) { audio.current.volume = (p.musica.vol ?? 25) / 100; audio.current.playbackRate = p.velocidad; audio.current.play().catch(() => null); }
     setPlaying(true);
   }
+  // keep the preview speed in step with the chosen velocidad, even while paused
+  useEffect(() => { const v = video.current, a = audio.current, r = p?.velocidad ?? 1; if (v) v.playbackRate = r; if (a) a.playbackRate = r; }, [p?.velocidad]);
 
   // ---------------------------------------------------------------- actions
   function borrar() {
@@ -364,6 +368,23 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
     if (!on) { audio.current?.pause(); cambiar((x) => ({ ...x, musica: null })); }
   }
   const setMusicaVol = (vol: number) => { if (audio.current) audio.current.volume = vol / 100; cambiar((x) => ({ ...x, musica: x.musica ? { ...x.musica, vol } : null }), "musica-vol"); };
+  const setVelocidad = (v: number) => cambiar((x) => ({ ...x, velocidad: clampVelocidad(v) }), "velocidad");
+  // drag the subtitle block anywhere on the preview (sets the caption style's x/y in %, like a text layer)
+  function arrastrarSub(e: React.PointerEvent) {
+    const r = frame.current?.getBoundingClientRect(); if (!r) return;
+    e.preventDefault(); e.stopPropagation();
+    setSubSel(true); setSel(null); setTool("subtitulos");
+    const free = estiloSub.y !== undefined ? { x: estiloSub.x ?? 50, y: estiloSub.y } : null;
+    const x0 = e.clientX, y0 = e.clientY;
+    const cl = (v: number, lo: number, hi: number) => Math.round(Math.min(hi, Math.max(lo, v)));
+    const move = (ev: PointerEvent) => {
+      const x = free ? cl(free.x + ((ev.clientX - x0) / r.width) * 100, 8, 92) : cl(((ev.clientX - r.left) / r.width) * 100, 8, 92);
+      const y = free ? cl(free.y + ((ev.clientY - y0) / r.height) * 100, 6, 94) : cl(((ev.clientY - r.top) / r.height) * 100, 6, 94);
+      setEstiloSub({ x, y });
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
   async function exportar() {
     if (!p) return;
     pausar();
@@ -388,7 +409,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       else if (mod && e.key.toLowerCase() === "b") { e.preventDefault(); dividir(); }
       else if (mod && e.key.toLowerCase() === "d") { e.preventDefault(); duplicar(); }
       else if ((e.key === "Delete" || e.key === "Backspace") && sel) { e.preventDefault(); borrar(); }
-      else if (e.key === "Escape") { setSel(null); setSheet(false); setAtajos(false); }
+      else if (e.key === "Escape") { setSel(null); setSubSel(false); setSheet(false); setAtajos(false); }
       else if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); if (playing) pausar(); buscar(t + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 1 : 0.1), false); }
       else if (e.key === "Home") { e.preventDefault(); buscar(0, false); }
       else if (e.key === "End") { e.preventDefault(); buscar(total, false); }
@@ -403,7 +424,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   const ed: Ed = {
     d, p, t, total, starts, durs, playing, sel, setSel, tool, abrir, setTool, cambiar, gesto, setCorte, setTexto, buscar, pausar, setT, clipOf, strips,
-    frases, estiloSub, setEstiloSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol,
+    frases, estiloSub, setEstiloSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
   };
   const r = RATIO[p.formato];
   const padC = wide ? 40 : 16;
@@ -412,6 +433,8 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   const hayDeshacer = hist.current.past.length > 0, hayRehacer = hist.current.future.length > 0;
   const toolInfo = TOOLS.find((x) => x.id === tool)!;
   const guardadoTxt = guardado === "guardando" ? "Guardando…" : guardado === "ok" ? "Guardado" : guardado === "error" ? "Sin guardar" : "";
+  // the clock shows the final (sped-up) time, so what you read matches what you export
+  const salida = (s: number) => s / (p.velocidad || 1);
 
   const exportBtn = (
     <button type="button" onClick={exportar} disabled={exp.busy}
@@ -461,7 +484,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
             {TOOLS.map((x) => {
               const on = tool === x.id;
               return (
-                <button key={x.id} type="button" onClick={() => setTool(x.id)} aria-pressed={on}
+                <button key={x.id} type="button" onClick={() => setTool(x.id)} aria-pressed={on} title={x.desc}
                   className={`flex w-[64px] flex-col items-center gap-1 rounded-xl py-2.5 text-[11px] font-semibold transition-colors ${on ? "bg-surface-2 text-ink" : "text-muted hover:bg-surface-2/60 hover:text-ink"}`}>
                   <span className={`grid h-8 w-8 place-items-center rounded-lg ${on ? "bg-[image:var(--grad)] text-white" : ""}`}><Icon name={x.icon} className="h-[18px] w-[18px]" /></span>
                   {x.label}
@@ -472,8 +495,11 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
         )}
         {wide && (
           <aside aria-label={toolInfo.label} className="flex w-[336px] shrink-0 flex-col border-r border-line bg-surface">
-            <h2 className="flex h-12 shrink-0 items-center px-5 font-display text-[15px] font-semibold">{toolInfo.label}</h2>
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+            <div className="shrink-0 border-b border-line/70 px-5 pt-3.5 pb-3">
+              <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold"><span className="grid h-6 w-6 place-items-center rounded-md bg-surface-2 text-muted"><Icon name={toolInfo.icon} className="h-4 w-4" /></span>{toolInfo.label}</h2>
+              <p className="mt-1.5 text-[13px] leading-snug text-muted">{toolInfo.desc}</p>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-6">
               <Panel ed={ed} />
             </div>
           </aside>
@@ -481,9 +507,9 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
         <div ref={canvas} className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#14151b,#050608_70%)]">
           <div ref={frame} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-black shadow-[0_20px_60px_-20px_rgba(0,0,0,.9)] ring-1 ring-white/10" style={{ width: fw, height: fh }}
-            onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === video.current) { if (sel?.tipo === "texto") setSel(null); else playPause(); } }}>
+            onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === video.current) { if (sel?.tipo === "texto") setSel(null); else if (subSel) setSubSel(false); else playPause(); } }}>
             <video ref={video} playsInline onTimeUpdate={onTime} className="absolute inset-0 h-full w-full object-cover" />
-            {p.subtitulos && frase && fw > 0 && <SubtituloLinea st={estiloSub} words={frase.words} now={t} formato={p.formato} fw={fw} fh={fh} />}
+            {p.subtitulos && frase && fw > 0 && <SubtituloLinea st={estiloSub} words={frase.words} now={t} formato={p.formato} fw={fw} fh={fh} selected={subSel} onPointerDown={arrastrarSub} />}
             {p.textos.map((tx, i) => {
               const vis = t >= tx.desde && t < tx.hasta;
               const on = sel?.tipo === "texto" && sel.i === i;
@@ -521,7 +547,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
               <Icon name={playing ? "pause" : "play"} className="h-5 w-5" />
             </button>
             <IconBtn icon="end" label="Ir al final" onClick={() => buscar(total, false)} />
-            <span className="ml-2 font-mono text-[13px] text-muted tabular-nums"><span className="text-ink">{fmt(t)}</span> / {fmt(total)}</span>
+            <span className="ml-2 font-mono text-[13px] text-muted tabular-nums"><span className="text-ink">{fmt(salida(t))}</span> / {fmt(salida(total))}{p.velocidad !== 1 && <span className="ml-1 text-accent-text">· {p.velocidad}x</span>}</span>
           </div>
           <div className="relative flex flex-1 items-center justify-end gap-1">
             <button type="button" onClick={() => setAtajos((v) => !v)} aria-expanded={atajos} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-ink"><Icon name="keys" className="h-4 w-4" />Atajos</button>
@@ -541,7 +567,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
         </div>
       ) : (
         <div className="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-t border-line bg-surface px-2">
-          <span className="pl-1 font-mono text-[13px] text-muted tabular-nums"><span className="text-ink">{fmt(t)}</span> / {fmt(total)}</span>
+          <span className="pl-1 font-mono text-[13px] text-muted tabular-nums"><span className="text-ink">{fmt(salida(t))}</span> / {fmt(salida(total))}{p.velocidad !== 1 && <span className="ml-1 text-accent-text">· {p.velocidad}x</span>}</span>
           <button type="button" onClick={playPause} aria-label={playing ? "Pausar" : "Reproducir"} className="grid h-11 w-11 place-items-center rounded-full text-ink active:scale-95">
             <Icon name={playing ? "pause" : "play"} className="h-7 w-7" />
           </button>
@@ -555,9 +581,12 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       {/* ------------------------------------------------ timeline, or (phone) the tool's sheet */}
       {!wide && sheet ? (
         <section aria-label={toolInfo.label} className="ed-sheet flex max-h-[52svh] min-h-[46svh] shrink-0 flex-col rounded-t-2xl border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]">
-          <div className="flex h-12 shrink-0 items-center justify-between pr-2 pl-4">
-            <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold"><Icon name={toolInfo.icon} className="h-4 w-4" />{toolInfo.label}</h2>
-            <button type="button" onClick={() => setSheet(false)} className="inline-flex h-11 items-center gap-1 rounded-lg px-3 text-sm font-semibold text-ink"><Icon name="check" className="h-4 w-4" />Listo</button>
+          <div className="flex min-h-12 shrink-0 items-center justify-between gap-2 pr-2 pl-4 pt-1">
+            <div className="flex min-w-0 flex-col py-1">
+              <h2 className="flex items-center gap-2 font-display text-[15px] font-semibold"><Icon name={toolInfo.icon} className="h-4 w-4" />{toolInfo.label}</h2>
+              <p className="truncate text-[12px] text-muted">{toolInfo.desc}</p>
+            </div>
+            <button type="button" onClick={() => setSheet(false)} className="inline-flex h-11 shrink-0 items-center gap-1 rounded-lg px-3 text-sm font-semibold text-ink"><Icon name="check" className="h-4 w-4" />Listo</button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5"><Panel ed={ed} /></div>
         </section>
@@ -583,10 +612,10 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
                   ))}
                 </div>
               ) : (
-                <div className="grid h-16 grid-cols-5">
+                <div className="grid h-16 grid-cols-6">
                   {TOOLS.map((x) => (
-                    <button key={x.id} type="button" onClick={() => abrir(x.id)} className="flex flex-col items-center justify-center gap-1 text-[12px] font-semibold text-muted active:text-ink">
-                      <Icon name={x.icon} className="h-5 w-5 text-ink" />{x.label}
+                    <button key={x.id} type="button" onClick={() => abrir(x.id)} title={x.desc} className="flex min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[11px] font-semibold text-muted active:text-ink">
+                      <Icon name={x.icon} className="h-5 w-5 text-ink" /><span className="max-w-full truncate">{x.label}</span>
                     </button>
                   ))}
                 </div>
