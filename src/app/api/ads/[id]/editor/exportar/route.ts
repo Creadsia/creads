@@ -18,7 +18,7 @@ export const maxDuration = 300;
 // plan, 25 Oct 2026); accounts that never paid (no Pack Prueba, no plan) export with the «Creads IA» mark. The previous video is kept in the ad's
 // versions; the new one becomes the ad's finished video.
 
-type Settings = Record<string, unknown> & { review?: { clipId: string; url?: string; words: Word[] }[]; captions?: unknown; versiones?: string[] };
+type Settings = Record<string, unknown> & { review?: { clipId: string; url?: string; words: Word[] }[]; captions?: unknown; editorCaptions?: unknown; versiones?: string[] };
 interface ClipRow { id: string; idx: number; url: string | null; status: string; text: string | null }
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -67,7 +67,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       offset += segLen(seg);
     });
     const [W, H] = frameSize(p.formato);
-    const style = normalizeStyle(st.captions ?? undefined);
+    const style = normalizeStyle(st.editorCaptions ?? st.captions ?? undefined); // the editor's own pick wins
     const cap = p.subtitulos && timeline.length ? captions(timeline, W, H, p.formato, style, offset, []) : null;
     let bytes: Uint8Array | Buffer = await build(dir, parts, p.formato, cap?.ass ?? null);
     const marca = ws !== "main" && !(await hasPaid(ws).catch(() => false));
