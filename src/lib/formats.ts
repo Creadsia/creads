@@ -1,7 +1,7 @@
 // Video formats, ported from the prototype (legacy/creads-artifact.html → FORMATS, fmtSplitRules).
 // UI copy is Spanish; the rules sent to Claude stay as written in the prototype.
 
-export type FormatId = "ugc" | "faceless" | "antes" | "entrevista" | "podcast" | "noticiero" | "ronda" | "comentario";
+export type FormatId = "ugc" | "faceless" | "antes" | "entrevista" | "podcast" | "noticiero" | "ronda" | "comentario" | "comercial";
 
 export interface Format {
   id: FormatId;
@@ -56,6 +56,10 @@ export const FORMATS: Format[] = [
     desc: "Aparece la cajita con la pregunta de un usuario y el avatar responde.",
     when: "Responde la duda número 1 de tu público.",
     how: ["Escribes la pregunta y quién la hizo", "La primera frase responde nombrando a esa persona", "La cajita aparece arriba los primeros segundos"] },
+  { id: "comercial", en: "commercial-style video of a presenter filmed by a camera operator", icon: "🎥", name: "Te graban (estilo comercial)", tag: "Con avatar", av: "req", avLabel: "¿Quién habla?",
+    desc: "Otra persona graba a tu avatar mientras habla a cámara: varios ángulos y movimiento, como un comercial.",
+    when: "Para marcas que quieren verse más producidas sin perder lo cercano. Las manos quedan libres para mostrar el producto.",
+    how: ["Tu avatar dice el guion exacto mirando a la cámara", "Cada corte cambia de ángulo: plano medio, cerca, caminando", "Se arma con subtítulos y edición pro"] },
 ];
 
 export const formatById = (id: string) => FORMATS.find((f) => f.id === id) ?? FORMATS[0];
@@ -126,5 +130,5 @@ Responde SOLO JSON: {"titulo":"nombre corto en español","cortes":[{"tipo":"Hook
  * The formats Creads sells (owner and Benjamín, 21 Oct 2026: back to simple, UGC ads and images). The others
  * stay in the code, hidden, so they can come back without rebuilding them.
  */
-export const SOLD_FORMATS: FormatId[] = ["ugc", "comentario"];
+export const SOLD_FORMATS: FormatId[] = ["ugc", "comentario", "comercial"];
 export const SHOWN_FORMATS = FORMATS.filter((f) => SOLD_FORMATS.includes(f.id));

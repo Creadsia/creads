@@ -223,6 +223,15 @@ test("video prompts: every clip with a person carries the two-arms body rule", (
   assert.ok(firstFramePrompt(ctx(), c, {}).includes(BODY_RULE));
 });
 
+test("comercial format: filmed by a camera operator, never a selfie, with the body rule", () => {
+  const c = { texto: "Corro todos los días." } as Parameters<typeof scenePrompt>[1];
+  const p = scenePrompt(ctx({ format: "comercial" }), c, {}, 0);
+  assert.match(p, /IT IS NOT A SELFIE/);
+  assert.doesNotMatch(p, /UGC selfie video/);
+  assert.ok(p.includes(BODY_RULE));
+  assert.match(firstFramePrompt(ctx({ format: "comercial" }), c, {}), /camera operator/);
+});
+
 test("review prompt: the product photo is the last image; consecutive cuts are compared", () => {
   const p = lookPrompt({ formatName: "UGC selfie", format: "ugc", twoPeople: false, narr: false, texts: ["a", "b", "c"], hasProduct: true });
   assert.match(p, /imagen 4\) NO es un corte/);

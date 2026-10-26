@@ -45,6 +45,11 @@ export interface SceneContext {
 }
 
 export const FORMAT_LOCK: Partial<Record<FormatId, string>> = {
+  comercial: `FORMAT LOCK — COMMERCIAL-STYLE VIDEO FILMED BY A CAMERA OPERATOR. IT IS NOT A SELFIE.
+- A SEPARATE camera operator films the presenter from about 1 to 3 meters away (third-person shot, handheld gimbal or shoulder camera). The camera operator is never seen.
+- The presenter NEVER holds a phone, NEVER films himself or herself, NEVER stretches an arm toward the camera. Both hands are free: natural gestures, or holding the product when the words talk about it.
+- The presenter talks straight into the lens, like a confident real person in a modern brand commercial.
+- Same person, same clothes, same location and light in every clip.`,
   ronda: `FORMAT LOCK — HANDHELD PHONE ROLL-CALL VIDEO (real people answering a question).
 - Filmed vertically on a phone by a person who walks around the place asking people questions. The person filming is NEVER seen; only their voice is heard (off-camera).
 - The on-camera person talks to the person filming, standing slightly off-axis to the lens, like a casual real moment. They NEVER film themselves (they may hold up their own phone only to SHOW it).
@@ -76,6 +81,7 @@ export const FORMAT_LOCK: Partial<Record<FormatId, string>> = {
 };
 
 const FORMAT_REMIND: Partial<Record<FormatId, string>> = {
+  comercial: "REMINDER: filmed by a camera operator, the presenter talks into the lens with both hands free; NOT a selfie, no phone in hand.",
   ronda: "REMINDER: handheld phone footage by an unseen person asking questions; the on-camera person answers them casually; same place and lighting as the other clips; not a selfie.",
   noticiero: "REMINDER: third-person field report filmed by a camera operator; the reporter holds a handheld microphone in EVERY frame; NOT a selfie, no phone in hand.",
   entrevista: "REMINDER: third-person street interview filmed by a camera operator; the reporter's handheld microphone is visible in EVERY clip; NOT a selfie, no phone in hand.",
@@ -85,6 +91,7 @@ const FORMAT_REMIND: Partial<Record<FormatId, string>> = {
 };
 
 const FMT_DIR: Partial<Record<FormatId, string>> = {
+  comercial: `This is a COMMERCIAL-STYLE ad: one presenter talks straight to a camera held by an unseen camera operator, with the energy and polish of a modern brand commercial but still real people and real places (not a glossy studio). Make it DYNAMIC: every cut a DIFFERENT angle and shot size from the previous one, rotating between: medium shot from the waist up · tight close-up for the key line · slow walk-and-talk with the camera moving backwards in front of the presenter · a low angle · a three-quarter side angle with the presenter turning to the lens · a slow push-in or orbit. Add smooth camera movement in most cuts (gimbal glide, push-in, tracking). Natural light with depth (soft background blur). The presenter keeps looking into the lens while talking; small, natural body movement only. When the words talk about the product, the presenter shows it with one hand, clearly visible.`,
   ronda: `This is a ROLL-CALL video: someone walks around one place with a phone and asks different people a quick question (the asker is OFF-CAMERA, only heard). Each cut has ONE different on-camera person (see ON-CAMERA PERSON in each cut) with whatever makes them part of that place (their car, their truck, their tools…). Keep the SAME place, time of day and lighting in every cut. Handheld phone framing, medium or medium close-up, the person turned a little toward the asker, natural background activity. Vary each person's pose and spot inside the place.`,
   faceless: `This is a FACELESS video: a voiceover narrates the script (it is added later). On screen there is NO presenter talking to the camera and NO lip-sync. For EACH cut, design ONE realistic shot that shows exactly what the voiceover is saying at that moment (e.g. a close-up of a stair-step crack in a brick foundation; a contractor measuring a wall; a worried homeowner reading a quote at the kitchen table seen from the side, not talking; a hand holding a phone checking a website with the screen not readable; a family relaxed in their repaired home). Vary shot types across cuts (macro close-up, slow push-in, handheld walk-through, over-the-shoulder, wide establishing). It must feel like real phone or documentary footage, not a stock commercial. People may appear but never speak to the camera.`,
   antes: `This is a BEFORE / AFTER video with a voiceover (added later); nobody talks to the camera. The first cuts show the problem in its worst believable state (dated bathroom, cracked foundation, water damage), the middle cuts show the work being done (crew, tools, progress), and the final cuts show the finished result in the SAME space and, when possible, the same angle, so the transformation is obvious. One clear shot per cut, synced to what the voiceover says at that moment.`,
@@ -168,7 +175,7 @@ export function directorPrompt(ctx: SceneContext, cuts: CutIn[]): string {
     : ctx.lang === "es" ? "The video is in neutral Latin American Spanish and happens in an ordinary Latin American city: no country-specific flags, signs or landmarks." : "";
 
   if (ctx.format !== "ugc" && ctx.format !== "comentario") {
-    return `You are directing a realistic lead-gen video ad made with AI in the format "${f.en}". It must look real and believable, not like a polished commercial.
+    return `You are directing a realistic video ad made with AI in the format "${f.en}". ${ctx.format === "comercial" ? "It must look like a real modern brand commercial with a real person: dynamic camera work, believable, never a fake-looking AI presenter." : "It must look real and believable, not like a polished commercial."}
 ${FORMAT_LOCK[ctx.format] ?? ""}
 EVERY cut you direct must obey the FORMAT LOCK above, and the "framing" and "action" of EVERY cut must explicitly describe it (who holds the camera, the microphone or studio setup, what is visible) — never only in the first cut. ${ctx.format === "ronda" ? "Never describe a selfie or an on-camera person filming themselves (an on-camera person may hold up a phone to SHOW it, with the screen not readable). Keep the SAME place, time of day and lighting in every cut, and repeat the exact ON-CAMERA PERSON description given for that cut." : "Never describe a selfie, a phone in hand or someone filming themselves."}
 ${cast(ctx, personOnly(avatar))}
@@ -260,6 +267,23 @@ Realism: real phone footage, real textures, ordinary-looking people, no beauty f
 No subtitles, no captions, no on-screen text, no readable numbers or plates, no logos or brand badges in focus, no watermark. Any phone screen shown is not readable.
 Reminder: the dialogue is ONLY: ${ls.map((l) => `${l.speaker === "voice" ? "VOICE" : "PERSON"}: "${l.text}"`).join(" ")}
 ${FORMAT_REMIND.ronda}`;
+  } else if (ctx.format === "comercial") {
+    const who = ref ? `${ref} — ${desc}` : desc;
+    p = `${FORMAT_LOCK.comercial}
+
+SPOKEN LINE (the ONLY words in this video, said exactly as written by the presenter, every word, in this order, nothing added, nothing removed, no greeting, no extra ending): "${c.texto}"
+
+${orient} commercial-style video, filmed by a camera operator.${ctx.aspect === "1:1" ? " Keep the presenter centered for a square frame." : ""} The presenter is ${who}.
+Setting: ${d.setting || ctx.place || "a real place that fits the product, natural light"}.
+Shot: ${d.framing || "medium shot from the waist up, the presenter looking into the lens"}.
+Camera movement: ${d.movement || "smooth gimbal movement, a slow push-in"}.
+American English, natural confident voice.
+Delivery: ${d.emotion || "confident, warm, energetic"}.
+What happens, synced to the words: ${d.action || "the presenter talks to the lens with natural hand gestures"}.${d.style ? `\nProducer's direction for this clip: ${d.style}` : ""}
+Look: real person and real place, natural light with soft background blur, real skin texture, no beauty filter, crisp modern commercial look but believable. Same person, same clothes, same voice as the other clips.
+No music. No subtitles, no captions, no on-screen text, no logos, no watermark.
+Reminder: the presenter says ONLY: "${c.texto}"
+${FORMAT_REMIND.comercial}`;
   } else if (ctx.format === "entrevista" || ctx.format === "podcast" || ctx.format === "noticiero") {
     const spk = c.speaker || (ctx.format === "noticiero" ? "reporter" : "");
     const isAv = ["homeowner", "guest"].includes(spk) || ctx.format === "noticiero";
