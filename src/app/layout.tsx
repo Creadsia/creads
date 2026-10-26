@@ -12,7 +12,7 @@ import VisitBeacon from "./visit-beacon";
 
 export const metadata: Metadata = {
   title: "Creads IA · Anuncios en video que venden, sin grabar a nadie",
-  description: "Anuncios UGC en video e imágenes para tu negocio, hechos con IA: guion, persona, voz con acento latino, edición y revisión. Planes desde US$25 al mes.",
+  description: "Anuncios UGC en video e imágenes para tu negocio, hechos con IA: guion, persona, voz con acento latino, edición y revisión. Planes desde US$29 al mes.",
   metadataBase: new URL("https://www.creadsia.com"),
   openGraph: { siteName: "Creads", type: "website" },
   // installable app: home-screen icon and full screen on iPhone

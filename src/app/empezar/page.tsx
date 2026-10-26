@@ -10,7 +10,7 @@ import { googleOn } from "@/lib/google-login";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
-  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Desde US$25 al mes.",
+  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Desde US$29 al mes.",
   robots: { index: false, follow: true },
 };
 export const dynamic = "force-dynamic";

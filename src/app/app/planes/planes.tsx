@@ -17,7 +17,7 @@ import CasoFundadorCheck from "../_parts/caso-fundador";
 // Online payment isn't connected yet: the order is saved and Creadsia finishes it with the customer.
 
 interface OrderRow { id: string; label: string; total: number; status: string; created: string }
-interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string; trial?: string; clp?: number } | null; fundador?: { quedan: number }; packDescuento?: number | null; packComprado?: boolean }
+interface PayInfo { online: boolean; renews?: boolean; owner: boolean; firstPurchase: boolean; discount: number; usdClp: number; orders: OrderRow[]; subscription: { id: string; label: string; trial?: string; clp?: number } | null; fundador?: { quedan: number }; packDescuento?: number | null; packComprado?: boolean; /** the Pack Prueba is on sale (MODO_PACK=1) */ packVenta?: boolean }
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 const STATUS: Record<string, [string, string]> = {
@@ -124,6 +124,8 @@ export default function Planes() {
     load();
   }
 
+  // a link to the Pack Prueba while it isn't on sale (card trial on): nothing to check out
+  useEffect(() => { if (pay && !pay.packVenta && item === PRUEBA.id) setItem(null); }, [pay, item]);
   const fundadorOn = Boolean(pay?.firstPurchase && (pay?.fundador?.quedan ?? 0) > 0);
   const opts = { discountPct: pay?.discount ?? 0, firstPurchase: pay?.firstPurchase ?? true, fundador: fundadorOn, pack: pay?.packDescuento ? { order: "", usd: pay.packDescuento } : null };
   const q = useMemo(() => (item ? quote(item, period, opts) : null), [item, period, opts.discountPct, opts.firstPurchase, opts.fundador, pay?.packDescuento]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -241,8 +243,8 @@ export default function Planes() {
         </section>
       )}
 
-      {/* Pack Prueba (25 Oct 2026): the way in, once per account */}
-      {pay && !pay.owner && !pay.packComprado && !hasPlan && (
+      {/* Pack Prueba (25 Oct 2026): the way in, once per account, only while it's on sale (MODO_PACK=1) */}
+      {pay && pay.packVenta && !pay.owner && !pay.packComprado && !hasPlan && (
         <section className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between" aria-label="Pack Prueba">
           <div className="flex flex-col gap-1">
             <b className="font-display text-xl font-semibold">Pack Prueba · {money(PRUEBA.usd)} pago único</b>

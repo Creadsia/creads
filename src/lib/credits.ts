@@ -4,6 +4,7 @@ import type { User } from "./auth";
 import { DEFAULT_USD_PER_CREDIT, SECOND_USD, creditsFor, fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
 import type { Finanzas } from "./finance";
 import { SbError, readPrivateJSON, sbRest, sbRpc } from "./supabase";
+import { modoPack } from "./oferta";
 
 // Customers pay with credits. Every paid job is charged before it starts (so a customer can never
 // spend more than they have) and refunded automatically if it fails. Creadsia's own workspace
@@ -93,7 +94,8 @@ export async function needsCredits(user: User): Promise<string | null> {
   } catch {
     return "No pudimos revisar tus créditos. Intenta de nuevo en un momento.";
   }
-  return "Para usar esto necesitas saldo. Parte con el Pack Prueba de US$9 o elige un plan en «Planes».";
+  // the Pack Prueba only while it's the way in (MODO_PACK=1); with the card trial, new accounts get their gift with the card
+  return modoPack() ? "Para usar esto necesitas saldo. Parte con el Pack Prueba de US$9 o elige un plan en «Planes»." : "Para usar esto necesitas saldo. Elige un plan en «Planes» y sigues al tiro.";
 }
 
 /**

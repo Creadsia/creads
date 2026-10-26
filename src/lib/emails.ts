@@ -1,5 +1,6 @@
 import type { Email } from "./providers/email";
 import { fmtCredits, fmtSeconds, secondsOf } from "./credit-math";
+import { modoPack } from "./oferta";
 
 // The emails Creads sends, in Chilean Spanish. Plain table layout so they look right in Gmail,
 // Outlook and phones; every email also has a plain-text version.
@@ -41,10 +42,10 @@ const unhtml = (t: string) => t.replace(/<br>/g, "\n").replace(/<[^>]+>/g, "").r
 
 const plain = (lines: (string | false | undefined)[]) => [...lines.filter(Boolean), "", "Creads IA · creadsia.com · hola@creadsia.com"].join("\n");
 
-export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false, prueba?: { dias: number; plan: string } | null): Email {
+export function welcomeEmail(to: string, name: string | null, regalo?: string | null, cargado = false, prueba?: { dias: number; plan: string; usd?: number; credits?: number; regalo?: number } | null): Email {
   const link = `${SITE}/app`;
-  // Pack Prueba (25 Oct 2026): no gift; the first batch is US$9
-  if (process.env.MODO_PACK !== "0" && !cargado) {
+  // Pack Prueba (25 Oct 2026, back only with MODO_PACK=1): no gift; the first batch is US$9
+  if (modoPack() && !cargado) {
     return {
       to, tag: "bienvenida",
       subject: "Bienvenido a Creads: tu primera tanda de anuncios",
@@ -62,23 +63,26 @@ export function welcomeEmail(to: string, name: string | null, regalo?: string | 
       text: plain([hello(name), "", "Pega el link de tu producto y Creads te propone 6 ángulos de venta (sin costo).", "Crea 10 anuncios con el Pack Prueba de US$9. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.", "", `Hacer mi primera tanda: ${link}/tanda`]),
     };
   }
-  // «prueba con tarjeta»: the gift loads once the card is added on Mercado Pago (nothing charged today)
+  // «prueba con tarjeta» (required at sign-up since 26 Oct 2026): the gift loads once the card is added (nothing
+  // charged today); the plan, price and credits come from the trial plan (lib/prueba.ts resumenPrueba)
   if (prueba && !cargado) {
+    const gift = prueba.regalo ?? 200;
+    const precio = prueba.usd ? ` (US$${prueba.usd.toLocaleString("es-CL")} al mes${prueba.credits ? `, ${prueba.credits.toLocaleString("es-CL")} créditos cada mes` : ""})` : "";
     return {
       to, tag: "bienvenida",
-      subject: `Activa tu prueba gratis de ${prueba.dias} días en Creads IA`,
+      subject: `Último paso: activa tu prueba gratis de ${prueba.dias} días en Creads IA`,
       html: layout({
-        preview: "Agrega tu tarjeta (hoy no se cobra nada) y recibe 200 créditos para tu primer anuncio.",
-        title: "Tu primer anuncio va por nuestra cuenta",
+        preview: `Agrega tu tarjeta (hoy no se cobra nada) y recibe ${gift} créditos de regalo.`,
+        title: "Te falta un paso: agregar tu tarjeta",
         paragraphs: [
           esc(hello(name)),
-          `Gracias por crear tu cuenta en Creads IA. Para recibir tus <b>200 créditos de regalo</b> activa tu prueba gratis de ${prueba.dias} días: agregas tu tarjeta en Mercado Pago y hoy no se cobra nada.`,
-          `Si te gusta, al terminar la prueba se cobra el plan ${esc(prueba.plan)} cada mes. Si no, lo cancelas antes en «Planes» con un clic y no pagas nada.`,
+          `Gracias por crear tu cuenta en Creads IA. Para entrar al estudio y recibir tus <b>${gift} créditos de regalo</b>, agrega tu tarjeta en la ventana segura de Mercado Pago. <b>Hoy no se cobra nada</b>: tienes ${prueba.dias} días gratis.`,
+          `Si te gusta, al terminar la prueba sigues con el plan ${esc(prueba.plan)}${esc(precio)}. Si no, lo cancelas antes en «Planes» con un clic y no pagas nada.`,
         ],
-        cta: { label: "Activar mi prueba gratis", href: `${link}/automatico` },
-        after: ["Mientras tanto ya puedes espiar anuncios de tu competencia y crear guiones gratis. Si tienes cualquier duda, responde este correo."],
+        cta: { label: "Agregar mi tarjeta y empezar", href: `${link}/automatico` },
+        after: ["Creads nunca ve tu tarjeta: la guarda Mercado Pago. Si tienes cualquier duda, responde este correo."],
       }),
-      text: plain([hello(name), "", `Activa tu prueba gratis de ${prueba.dias} días (hoy no se cobra nada) y recibe 200 créditos para tu primer anuncio.`, "", `Activar: ${link}/automatico`]),
+      text: plain([hello(name), "", `Agrega tu tarjeta (hoy no se cobra nada) y recibe ${gift} créditos de regalo: tienes ${prueba.dias} días gratis.`, `Si no cancelas antes, sigues con el plan ${prueba.plan}${precio}.`, "", `Agregar tarjeta: ${link}/automatico`]),
     };
   }
   // the gift is already in the account: straight to Automático
@@ -417,7 +421,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Tu primer video va de regalo (confirma tu correo con el botón del mensaje de bienvenida); después, los planes parten en US$25 al mes.";
+  const plan = o.hasPlan ? "" : " Tienes 7 días gratis con 200 créditos de regalo al agregar tu tarjeta; después, los planes parten en US$29 al mes.";
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",
@@ -566,25 +570,27 @@ export function adReadyEmail(to: string, name: string | null, o: { titulo?: stri
 }
 
 /** The day before the free trial's first charge: plain, so nobody is surprised (fewer disputes). */
-export function trialEndingEmail(to: string, name: string | null, o: { fecha: string; plan: string; clp: number; ads: number }): Email {
+export function trialEndingEmail(to: string, name: string | null, o: { fecha: string; plan: string; usd: number; clp: number; credits: number; ads: number }): Email {
   const planes = `${SITE}/app/planes`;
-  const monto = `$${Math.round(o.clp).toLocaleString("es-CL")}`;
+  // the price in dollars like the site; the pesos are what Mercado Pago really charges the card
+  const monto = `US$${o.usd.toLocaleString("es-CL")} al mes`;
+  const pesos = o.clp > 0 ? ` (Mercado Pago cobra $${Math.round(o.clp).toLocaleString("es-CL")} en pesos chilenos)` : "";
   return {
     to, tag: "prueba-termina",
     subject: `Mañana termina tu prueba gratis de Creads IA`,
     html: layout({
-      preview: `El ${o.fecha} se cobra el plan ${o.plan} (${monto} al mes). Si no quieres seguir, cancélalo hoy.`,
+      preview: `El ${o.fecha} se cobra el plan ${o.plan} (${monto}). Si no quieres seguir, cancélalo hoy.`,
       title: "Mañana termina tu prueba gratis",
       paragraphs: [
         esc(hello(name)),
-        o.ads > 0 ? "Ya probaste Creads con tus créditos de regalo. ¡Bien!" : "Todavía no haces tu primer anuncio: aún estás a tiempo, te toma unos 5 minutos en Automático.",
-        `El <b>${esc(o.fecha)}</b> Mercado Pago cobra el plan <b>${esc(o.plan)}: ${monto} al mes</b>, con 500 créditos nuevos cada mes. No tienes que hacer nada para seguir.`,
+        o.ads > 0 ? "Ya probaste Creads con tus créditos de regalo. ¡Bien!" : "Todavía no haces tu primer anuncio: aún estás a tiempo, te toma unos 5 minutos.",
+        `El <b>${esc(o.fecha)}</b> Mercado Pago cobra el plan <b>${esc(o.plan)}: ${monto}</b>${pesos}, con ${o.credits.toLocaleString("es-CL")} créditos nuevos cada mes. No tienes que hacer nada para seguir.`,
         "Si prefieres no seguir, cancela hoy en «Planes» con un clic y no se te cobra nada.",
       ],
       cta: { label: "Ver mi prueba y mi plan", href: planes },
       after: ["¿Dudas? Responde este correo y te ayudamos."],
     }),
-    text: plain([hello(name), "", `Mañana (${o.fecha}) se cobra el plan ${o.plan}: ${monto} al mes. Para no seguir, cancela hoy en Planes: ${planes}`]),
+    text: plain([hello(name), "", `Mañana (${o.fecha}) se cobra el plan ${o.plan}: ${monto}${pesos}. Para no seguir, cancela hoy en Planes: ${planes}`]),
   };
 }
 

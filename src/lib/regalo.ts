@@ -1,12 +1,14 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { AlreadyDone, grant } from "./credits";
 import { readPrivateJSON, sbRest, writePrivateJSON } from "./supabase";
+import { REGALO_CREDITS, modoPack, tarjetaObligatoria } from "./oferta";
+export { REGALO_CREDITS, PRUEBA_DIAS, PRUEBA_PLAN, bloqueaPorTarjeta, modoPack, tarjetaObligatoria } from "./oferta";
 
 // «Tu primer anuncio de regalo» (owner, 23 Oct 2026, launch audit): a new account confirms its email and gets
 // enough credits for one short ad (~12 s), once per account, with a
 // monthly ceiling for everyone together so the gift can never run up the bill. Cost: US$2.5 to 3.9 per gift.
 
-export const REGALO_CREDITS = 200; // two cuts of up to 8 s (the first gift, 150, ran out after one cut)
+// REGALO_CREDITS: two cuts of up to 8 s (the first gift, 150, ran out after one cut); lives in ./oferta
 /** Gifts per calendar month for everyone (owner can change it with REGALO_TOPE in Vercel). */
 export const regaloTope = () => Math.max(0, Math.min(1000, Number(process.env.REGALO_TOPE ?? 50) || 0));
 
@@ -34,14 +36,10 @@ export async function hasPaid(ws: string) {
   return Boolean(rows?.length);
 }
 
-/** «Prueba con tarjeta» (owner, 25 Oct 2026): the gift only after the customer adds a card on Mercado Pago (a
- *  7-day trial that becomes the Básico plan unless cancelled). Off with REGALO_CON_TARJETA=0 in Vercel. */
-// Replaced on 25 Oct 2026 (owner's plan) by the Pack Prueba: no free gift and no card trial for new accounts.
-// MODO_PACK=0 in Vercel brings back the previous behaviour (card trial unless REGALO_CON_TARJETA=0).
-// Trials already started keep working (their card activation still loads the gift).
-export const modoPack = () => process.env.MODO_PACK !== "0";
-export const tarjetaObligatoria = () => !modoPack() && process.env.REGALO_CON_TARJETA !== "0";
-export const PRUEBA_DIAS = 7;
+/** «Prueba con tarjeta»: the gift only after the customer adds a card on Mercado Pago (a 7-day trial that becomes
+ *  the Testea plan unless cancelled). On by default since 26 Oct 2026; the switches are in ./oferta (MODO_PACK=1
+ *  brings back the Pack Prueba, REGALO_CON_TARJETA=0 turns the card trial off). Trials already started keep
+ *  working either way (their card activation still loads the gift). */
 
 /** Has this workspace received its gift credits (with the card trial on, that means the card was added)? */
 export async function regaloDado(ws: string) {

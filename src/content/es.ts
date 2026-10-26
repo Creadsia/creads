@@ -6,7 +6,7 @@ export const es: Content = {
   meta: {
     title: "Creads IA · Hasta 400 anuncios al mes, sin diseñador",
     description:
-      "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Tu primera tanda por US$9.",
+      "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Pruébalo 7 días gratis.",
   },
   nav: {
     studios: "Estudios",
@@ -19,10 +19,10 @@ export const es: Content = {
     switchLabel: "View in English",
   },
   bar: {
-    text: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes · Cancelas cuando quieras",
+    text: "7 días gratis · Testea US$29 · Escala US$49 · Agencia US$149 al mes · Cancelas cuando quieras",
     cta: "Ver planes",
     items: [
-      { tag: "NUEVO", text: "Plan Básico: 500 créditos al mes por US$25" },
+      { tag: "NUEVO", text: "Prueba Creads 7 días gratis: 200 créditos de regalo" },
       { tag: "NUEVO", text: "Automático: cuéntale tu negocio a Creads y te entrega el anuncio listo" },
       { tag: "NUEVO", text: "Demo con presentador: varios UGC de tu producto en un solo video" },
       { tag: "NUEVO", text: "Crea tus anuncios desde Claude o ChatGPT con el conector de Creads" },
@@ -157,7 +157,7 @@ export const es: Content = {
     ["100%", "de los cortes revisados antes de armar"],
   ],
   hero: {
-    promo: "Básico US$25 · Emprende US$55 · Negocio US$99 al mes",
+    promo: "7 días gratis · Testea US$29 · Escala US$49 · Agencia US$149 al mes",
     title: "Tu anuncio con IA. Listo para lanzar.",
     lead: "Espía los anuncios que llevan semanas activos en tu rubro. Creads escribe el guion, crea hasta 8 escenas con Veo, Kling o Seedance, les pone voz y subtítulos, y revisa cada una. En unos 15 minutos tienes tu video editado, en el formato que necesites.",
     who: ["Afiliados", "Media buyers", "Agencias", "Marcas y e-commerce"],
@@ -171,11 +171,11 @@ export const es: Content = {
     trust: ["Pagas con Mercado Pago", "Cancelas cuando quieras", "Saldo disponible al aprobarse el pago"],
   },
   nudge: {
-    bar: "Tu primera tanda por US$9",
+    bar: "Prueba Creads 7 días gratis",
     barCta: "Empezar",
     strip: "Todos los modelos y estudios de esta página, desde",
     stripCta: "Ver planes",
-    exitTitle: "Antes de irte: tu primera tanda por US$9",
+    exitTitle: "Antes de irte: prueba Creads 7 días gratis",
     exitLead: "Déjanos tu correo y te mandamos ejemplos de anuncios y cómo hacer el primero en minutos.",
     exitCta: "Enviarme ejemplos",
     exitPlans: "Hacer mi primera tanda",
@@ -445,9 +445,9 @@ export const es: Content = {
   },
   pricing: {
     title: "Elige tu plan y empieza a crear hoy",
-    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Desde US$25 al mes y cancelas cuando quieras.",
+    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Prueba 7 días gratis, después desde US$29 al mes y cancelas cuando quieras.",
     offerTag: "Prueba gratis",
-    offer: "Tu primer anuncio de regalo · planes desde US$25 al mes",
+    offer: "7 días gratis con 200 créditos de regalo · planes desde US$29 al mes",
     offerNote: "Se aplica sola al pagar. No necesitas código.",
     monthly: "Mensual",
     yearly: "Anual",

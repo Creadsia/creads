@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Content } from "@/content/en";
 import { FUNDADOR, PRUEBA, SHOWN_PLANS, usd } from "@/lib/catalog";
+import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS } from "@/lib/oferta";
 import { Logo } from "./brand";
 import Pricing from "./pricing";
 import ThemeToggle from "./theme-toggle";
@@ -50,9 +51,11 @@ const gutter = "px-[max(16px,env(safe-area-inset-left,0px))]";
 const wrap = "mx-auto w-full max-w-6xl";
 const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3rem]";
 
-/** Sign-up, then the first batch (paid with the Pack Prueba). */
+/** Sign-up (with the card for the 7-day free trial; or the Pack Prueba with MODO_PACK=1), then the first batch. */
 const START = "/registro";
 const cheapest = [...SHOWN_PLANS].sort((a, b) => a.monthly - b.monthly)[0];
+/** The plan the free trial becomes (Testea): its real price, never written by hand. */
+const planPrueba = SHOWN_PLANS.find((p) => p.id === PRUEBA_PLAN) ?? cheapest;
 
 /** The founder's photo, when it's in /public (owner, 25 Oct 2026). */
 const FOTO_FUNDADOR = existsSync(path.join(process.cwd(), "public", "fundador.jpg"));
@@ -106,13 +109,23 @@ const COMPARA = [
   ["Variaciones", "Cada una es otro pedido", "Otra grabación", "Se cotizan aparte", "Una por una", "10 nuevas del ganador en un clic"],
 ] as const;
 
-const FAQ = [
-  ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tu primera tanda: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],
-  ["¿Necesito tarjeta para crear la cuenta?", "No. La cuenta se crea con tu correo o con Google. Solo pagas cuando compras el Pack Prueba o un plan, en la ventana segura de Mercado Pago."],
+/** The two questions about trying it: the 7-day free trial with card (default since 26 Oct 2026) or the Pack Prueba. */
+const FAQ_ENTRADA = {
+  prueba: [
+    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis. Creas tu cuenta, agregas tu tarjeta (hoy no se cobra nada) y recibes ${REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, a los ${PRUEBA_DIAS} días sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes. Si no, cancelas antes en «Planes» con un clic y no pagas nada.`],
+    ["¿Necesito tarjeta para crear la cuenta?", `Sí. La agregas al crear tu cuenta (con tu correo o con Google), en la ventana segura de Mercado Pago: Creads nunca ve tu tarjeta. Hoy no se cobra nada. Tienes ${PRUEBA_DIAS} días gratis y, si cancelas antes con un clic en «Planes», no pagas nada. Si no cancelas, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia.`],
+  ],
+  pack: [
+    ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tu primera tanda: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],
+    ["¿Necesito tarjeta para crear la cuenta?", "No. La cuenta se crea con tu correo o con Google. Solo pagas cuando compras el Pack Prueba o un plan, en la ventana segura de Mercado Pago."],
+  ],
+} as const;
+
+const FAQ_RESTO = [
   ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 95 imágenes, 31 videos de producto o 7 videos con avatar de 10 s, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
   ["¿Para qué tipo de negocio sirve?", "Para quien ya invierte en anuncios de Meta y necesita testear ángulos nuevos todo el tiempo: tiendas online, afiliados y media buyers, infoproductos. También para pymes que quieren anuncios propios sin agencia."],
   ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges en cada tanda. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
-  ["¿Qué pasa si mi primera tanda no me sirve?", "Tienes 7 días de garantía: escríbenos a hola@creadsia.com y te devolvemos tu pago. Los detalles están en «7 días de garantía», más arriba."],
+  ["¿Qué pasa si mis anuncios no me sirven?", "Tienes 7 días de garantía en tu primer pago: escríbenos a hola@creadsia.com y te devolvemos tu pago. Los detalles están en «7 días de garantía», más arriba."],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
   ["¿Puedo cancelar?", "Sí, cuando quieras, desde tu cuenta y con un clic. Sin permanencia: sigues usando tu plan hasta la fecha que pagaste."],
 ] as const;
@@ -130,11 +143,14 @@ function Cta({ children, href = START, sub }: { children: React.ReactNode; href?
   );
 }
 
-export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DATOS }: { t: Content; rate?: number; renews?: boolean; confianza?: Confianza }) {
-  const pack = <Money usd={PRUEBA.usd} rate={rate} />;
+export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DATOS, pack = false }: { t: Content; rate?: number; renews?: boolean; confianza?: Confianza; /** the Pack Prueba is the way in (MODO_PACK=1); else the 7-day free trial with card */ pack?: boolean }) {
+  const precioPack = <Money usd={PRUEBA.usd} rate={rate} />;
+  // the main button: «Prueba 7 días gratis» (card trial) or «Haz tu primera tanda por US$9» (Pack Prueba)
+  const empezar = pack ? <>Haz tu primera tanda por {precioPack}</> : <>Prueba {PRUEBA_DIAS} días gratis</>;
+  const FAQ = [...FAQ_ENTRADA[pack ? "pack" : "prueba"], ...FAQ_RESTO];
   return (
     <div className="overflow-x-clip pb-20 lg:pb-0">
-      <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} />
+      <FunnelNudges t={t.nudge} lang={t.lang} rate={rate} pack={pack} />
       <WhatsAppButton />
 
       <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-line/60 bg-bg/85 backdrop-blur">
@@ -178,7 +194,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 Imágenes, videos de producto, UGC y avatares que hablan, con tu marca y listos para subir a Meta.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta sub="Pago único, sin suscripción. Se descuenta si te suscribes en 7 días.">Haz tu primera tanda por {pack}</Cta>
+                <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_CREDITS} créditos de regalo · cancelas con un clic`}>{empezar}</Cta>
                 <a href="#como" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo funciona</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
@@ -223,7 +239,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 </li>
               ))}
             </ol>
-            <div className="self-start"><Cta sub="Ver tus 6 ángulos no cuesta nada.">Haz tu primera tanda por {pack}</Cta></div>
+            <div className="self-start"><Cta sub={pack ? "Ver tus 6 ángulos no cuesta nada." : `Tu primera tanda sale de tus ${REGALO_CREDITS} créditos de regalo.`}>{empezar}</Cta></div>
           </div>
         </section>
 
@@ -372,7 +388,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
               <h2 id="pricing-title" className={h2}>Un saldo, lo gastas como quieras</h2>
               <p className="text-muted">Imágenes o videos, tú decides cada mes. Sin permanencia. Escala a <Money usd={FUNDADOR.usd} rate={rate} /> los primeros {FUNDADOR.months} meses para los primeros {FUNDADOR.cupos} clientes.</p>
             </div>
-            <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact />
+            <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact pack={pack} />
             <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:p-6">
               <h3 className="font-bold">Así se gasta tu saldo</h3>
               <dl className="divide-y divide-line text-sm">
@@ -396,7 +412,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               {[
                 ["En tu plan", GARANTIA.planes],
-                ["En tu primera tanda", GARANTIA.pack],
+                pack ? ["En tu primera tanda", GARANTIA.pack] : ["En tu prueba gratis", GARANTIA.prueba],
                 ["Labios que no calzan", GARANTIA.labios],
                 ["Revisión en cada pieza", "Creads revisa el texto y los detalles de cada anuncio antes de entregártelo. Si algo no se genera, el saldo vuelve solo a tu cuenta."],
               ].map(([k, v]) => (
@@ -466,7 +482,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <div className="relative flex min-w-0 flex-col items-start gap-4">
               <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próxima tanda puede estar corriendo hoy.</h2>
               <p className="text-muted">Pega el link de tu producto, elige tus ángulos y descarga 10 anuncios listos para Meta.</p>
-              <Cta>Haz tu primera tanda por {pack}</Cta>
+              <Cta sub={pack ? undefined : "Hoy no pagas nada. Cancelas cuando quieras."}>{empezar}</Cta>
               <InsigniasPago compact />
               <SoporteLinea />
             </div>

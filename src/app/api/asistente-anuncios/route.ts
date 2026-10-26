@@ -12,7 +12,9 @@ import { isOwner } from "@/lib/auth";
 import { fetchRetry } from "@/lib/providers/retry";
 import { SHOWN_PLANS, clpFor } from "@/lib/catalog";
 import { usdClpRate } from "@/lib/usd-clp";
-import { PRUEBA_DIAS, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
+import { PRUEBA_DIAS, bloqueaPorTarjeta, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
+import { planPrueba } from "@/lib/prueba";
+import { unlimited as sinLimite } from "@/lib/credits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -97,8 +99,8 @@ export async function POST(req: Request) {
   // card trial: a new account with no credits gets its gift by adding a card (the card box is above the chat)
   // card trial: the conversation is free (questions, angles, the two scripts); the card is asked for at the
   // moment the customer has seen their scripts and wants the video (owner, 25 Oct 2026)
-  const sinTarjeta = tarjetaObligatoria() && ws !== "main" && !(await hasPaid(ws).catch(() => true)) && !(await regaloDado(ws));
-  if (sinTarjeta) system.push({ type: "text", text: `PRUEBA CON TARJETA (este cliente aún no la activa, tiene 0 créditos): conversa y trabaja gratis como siempre (preguntas, ángulo, los dos guiones), pero NO llames herramientas que gastan créditos (crear anuncio, imagen, avatar, demo) ni creads_saldo. Cuando ya le mostraste sus guiones (o pide el video), dile en una o dos frases que para hacer su video con sus 200 créditos de regalo active su prueba gratis de ${PRUEBA_DIAS} días: agrega su tarjeta en Mercado Pago, hoy no se cobra nada, y si no cancela antes, al terminar se cobra el plan Básico cada mes. Termina ESE mensaje con la marca exacta [[TARJETA]] (abre la ventana para agregarla). Nunca pidas datos de tarjeta en el chat. Cuando vuelva con la prueba activa, sigue donde quedaron con el guion que eligió.` });
+  const sinTarjeta = tarjetaObligatoria() && !sinLimite(ws) && bloqueaPorTarjeta({ trialOn: true, unlimited: sinLimite(ws), paid: await hasPaid(ws).catch(() => true), giftGiven: await regaloDado(ws) });
+  if (sinTarjeta) system.push({ type: "text", text: `PRUEBA CON TARJETA (este cliente aún no la activa, tiene 0 créditos): conversa y trabaja gratis como siempre (preguntas, ángulo, los dos guiones), pero NO llames herramientas que gastan créditos (crear anuncio, imagen, avatar, demo) ni creads_saldo. Cuando ya le mostraste sus guiones (o pide el video), dile en una o dos frases que para hacer su video con sus 200 créditos de regalo active su prueba gratis de ${PRUEBA_DIAS} días: agrega su tarjeta en Mercado Pago, hoy no se cobra nada, y si no cancela antes, al terminar se cobra el plan ${planPrueba().name} (US$${planPrueba().usd} al mes). Termina ESE mensaje con la marca exacta [[TARJETA]] (abre la ventana para agregarla). Nunca pidas datos de tarjeta en el chat. Cuando vuelva con la prueba activa, sigue donde quedaron con el guion que eligió.` });
   // prices in the customer's money (owner, 24 Oct 2026): pesos in Chile, US$ elsewhere
   if (await inChile(req)) {
     const rate = await usdClpRate().catch(() => 950);

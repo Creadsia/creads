@@ -1,4 +1,5 @@
 import { GARANTIA } from "./garantia-textos";
+import { modoPack } from "./oferta";
 // The help center: short answers to what customers ask most, each with a link to where it's done.
 // The same articles feed the in-app assistant (src/app/api/asistente), so a fix here fixes both.
 // Safe for the browser. Keep answers short, in tú, and true to how the product works today.
@@ -66,7 +67,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Básico US$25 al mes (500 créditos), Emprende US$55 al mes (1.500 créditos) y Negocio US$99 al mes (3.000 créditos). Todo se paga con esos créditos: videos, imágenes y voces. Un segundo de video con persona IA usa unos 11 créditos. Sin permanencia: cancelas cuando quieras.",
+    a: "Testea US$29 al mes (470 créditos), Escala US$59 al mes (950 créditos; US$49 los primeros 3 meses para los primeros 50 clientes) y Agencia US$149 al mes (4.000 créditos). Partes con 7 días gratis y 200 créditos de regalo. Todo se paga con esos créditos: videos, imágenes y voces. Un segundo de video con persona IA usa unos 11 créditos. Sin permanencia: cancelas cuando quieras.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },
@@ -101,7 +102,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "devolucion", cat: "creditos",
     q: "¿Me pueden devolver el pago?",
-    a: `Sí. ${GARANTIA.pack} ${GARANTIA.planes} ${GARANTIA.labios} Para otras compras (recargas o meses siguientes), si no has usado nada de esa compra y nos escribes dentro de 10 días, también te devolvemos el pago.`,
+    a: `Sí. ${modoPack() ? GARANTIA.pack : GARANTIA.prueba} ${GARANTIA.planes} ${GARANTIA.labios} Para otras compras (recargas o meses siguientes), si no has usado nada de esa compra y nos escribes dentro de 10 días, también te devolvemos el pago.`,
     link: { label: "Ver términos", href: "/terminos" },
     tags: "reembolso devolucion plata dinero retracto",
   },

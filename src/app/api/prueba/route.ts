@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { tooMany } from "@/lib/rate";
 import { getOrder } from "@/lib/billing";
-import { PLANS, clpFor } from "@/lib/catalog";
+import { clpFor } from "@/lib/catalog";
+import { unlimited } from "@/lib/credits";
 import { mpReady } from "@/lib/mercadopago";
 import { visitorFrom } from "@/lib/meta";
-import { PRUEBA_DIAS, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
-import { PRUEBA_PLAN, activarPrueba, empezarPrueba, empezarPruebaConTarjeta, pruebaAbierta, tuvoPrueba } from "@/lib/prueba";
+import { bloqueaPorTarjeta, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
+import { activarPrueba, empezarPrueba, empezarPruebaConTarjeta, pruebaAbierta, resumenPrueba, tuvoPrueba } from "@/lib/prueba";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +18,18 @@ export async function GET(req: Request) {
   const s = await session(req);
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   const on = tarjetaObligatoria() && mpReady();
-  if (!on || s.user.workspace === "main") return NextResponse.json({ activa: false });
   const ws = s.user.workspace;
-  const [paid, abierta, tuvo, dado, rate] = await Promise.all([hasPaid(ws), pruebaAbierta(ws), tuvoPrueba(ws), regaloDado(ws), usdClpRate().catch(() => 950)]);
-  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
+  if (!on || unlimited(ws)) return NextResponse.json({ activa: false });
+  const [paid, abierta, tuvo, dadoAntes, rate] = await Promise.all([hasPaid(ws), pruebaAbierta(ws), tuvoPrueba(ws), regaloDado(ws), usdClpRate().catch(() => 950)]);
+  let dado = dadoAntes;
+  // a card already accepted whose gift didn't load yet (webhook late, page closed on the way back): load it now
+  if (!paid && !dado && abierta) dado = (await activarPrueba(abierta).catch(() => null)) === "ok" && (await regaloDado(ws));
+  const r = resumenPrueba();
+  // the lock rule (lib/oferta.ts bloqueaPorTarjeta): never paid and never got the gift = add the card first
+  const bloqueo = bloqueaPorTarjeta({ trialOn: on, unlimited: unlimited(ws), paid, giftGiven: dado });
   return NextResponse.json({
-    activa: true, dias: PRUEBA_DIAS, plan: plan.name, clp: clpFor(plan.monthly, rate), usd: plan.monthly,
-    // the gift only loads with the card: no gift = no card yet (accounts from before the card trial keep their gift)
-    estado: paid ? "pagado" : !dado ? "sin-tarjeta" : abierta ? "en-prueba" : tuvo ? "usada" : "regalo-previo", cobro: abierta?.mp?.trial ?? null,
+    activa: true, ...r, clp: clpFor(r.usd, rate),
+    estado: paid ? "pagado" : bloqueo ? "sin-tarjeta" : abierta ? "en-prueba" : tuvo ? "usada" : "regalo-previo", cobro: abierta?.mp?.trial ?? null,
   });
 }
 
@@ -35,7 +40,7 @@ export async function POST(req: Request) {
   if (limited) return limited;
   if (!tarjetaObligatoria() || !mpReady()) return NextResponse.json({ error: "La prueba con tarjeta no está activa." }, { status: 400 });
   const ws = s.user.workspace;
-  if (ws === "main") return NextResponse.json({ error: "Esta es la vista de cliente." }, { status: 400 });
+  if (unlimited(ws)) return NextResponse.json({ error: "Esta es la vista de cliente." }, { status: 400 });
   const b = await req.json().catch(() => null);
   try {
     if (typeof b?.pedido === "string") {

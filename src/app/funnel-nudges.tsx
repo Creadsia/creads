@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HAS_OFFER, LAUNCH_PRICE, PLANS, PRUEBA, usd } from "@/lib/catalog";
+import { PRUEBA_DIAS } from "@/lib/oferta";
 import { newEventId, track } from "@/lib/track";
 import type { Content } from "@/content/en";
 import { startHref } from "./pricing";
@@ -18,7 +19,7 @@ const seenRecently = () => {
 };
 const markSeen = () => { try { localStorage.setItem(SEEN, String(Date.now())); } catch { /* private mode */ } };
 
-export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Content["nudge"]; lang: string; rate?: number; /** card trial on: no «sin tarjeta» */ tarjeta?: boolean }) {
+export default function FunnelNudges({ t, lang, rate, pack = false }: { t: Content["nudge"]; lang: string; rate?: number; /** the Pack Prueba is the way in (MODO_PACK=1); else the 7-day card trial (default since 26 Oct 2026) */ pack?: boolean }) {
   const es = lang === "es";
   const plus = PLANS.find((p) => p.id === "starter")!; // the plan with the launch offer
   const first = LAUNCH_PRICE;
@@ -99,8 +100,8 @@ export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Co
       <div aria-hidden={!bar} className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))] backdrop-blur transition-transform duration-300 lg:hidden ${bar ? "translate-y-0" : "translate-y-full"}`}>
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
-            <b className="block truncate"><MoneyText text={t.bar} rate={rate} /></b>
-            <span className="text-muted">{es ? <>{tarjeta ? "7 días gratis" : "Pack Prueba US$9"} · planes desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
+            <b className="block truncate"><MoneyText text={es && pack ? "Tu primera tanda por US$9" : t.bar} rate={rate} /></b>
+            <span className="text-muted">{es ? <>{pack ? "Pack Prueba US$9" : "Hoy no pagas nada"} · planes desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
           </span>
           <a href={es ? "/registro" : startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
         </div>
@@ -112,8 +113,8 @@ export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Co
         <div className="relative flex flex-col gap-4 overflow-hidden p-6 sm:p-7">
           <span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full opacity-40 blur-[70px]" style={{ background: "var(--grad)" }} />
           <button type="button" onClick={() => setOpen(false)} aria-label={t.exitClose} className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2 hover:text-ink">×</button>
-          <span className="chroma relative font-display text-5xl leading-none font-semibold" aria-hidden="true">US${PRUEBA.usd}</span>
-          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={t.exitTitle} rate={rate} /></h2>
+          <span className="chroma relative font-display text-5xl leading-none font-semibold" aria-hidden="true">{es && !pack ? `${PRUEBA_DIAS} días` : `US$${PRUEBA.usd}`}</span>
+          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={es && pack ? "Antes de irte: tu primera tanda por US$9" : t.exitTitle} rate={rate} /></h2>
           <p className="relative text-muted"><MoneyText text={t.exitLead} rate={rate} /></p>
           {state === "done" ? (
             <p role="status" className="relative rounded-xl bg-good/15 px-4 py-3 font-semibold text-good">{t.exitDone}</p>
@@ -126,7 +127,7 @@ export default function FunnelNudges({ t, lang, rate, tarjeta = false }: { t: Co
             </form>
           )}
           {state === "error" && <p role="alert" className="relative text-sm text-bad">{es ? "No se pudo guardar. Intenta de nuevo." : "Couldn't save. Try again."}</p>}
-          <a href={es ? "/registro" : "#pricing"} onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{es && tarjeta ? "Probar 7 días gratis" : t.exitPlans}</a>
+          <a href={es ? "/registro" : "#pricing"} onClick={() => setOpen(false)} className="relative rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold text-white">{es && !pack ? `Probar ${PRUEBA_DIAS} días gratis` : t.exitPlans}</a>
           <button type="button" onClick={() => setOpen(false)} className="relative text-sm text-muted underline">{t.exitClose}</button>
         </div>
       </dialog>

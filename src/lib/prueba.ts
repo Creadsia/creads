@@ -1,7 +1,7 @@
 import { type Order, addOrder, cancelOrder, ordersOf, setOrderMp, workspaceRow } from "./billing";
 import { PLANS, clpFor, quote } from "./catalog";
 import { cancelSubscription, createSubscription, createSubscriptionWithCard, getPreapproval, SITE } from "./mercadopago";
-import { PRUEBA_DIAS, darRegalo, hasPaid } from "./regalo";
+import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS, darRegalo, hasPaid } from "./regalo";
 import { sendMeta, type Visitor } from "./meta";
 import { phoneAlert } from "./phone-alert";
 import { sbRest } from "./supabase";
@@ -11,13 +11,27 @@ import { once } from "./marketing";
 import { getOrder } from "./billing";
 import { usdClpRate } from "./usd-clp";
 
-// «Prueba gratis con tarjeta» (owner, 25 Oct 2026): at sign-up the customer adds a card on Mercado Pago's own
-// page. Nothing is charged today; the gift credits load as soon as the card is accepted; after PRUEBA_DIAS days
-// Mercado Pago charges the Básico plan every month unless the customer cancels first (Planes → cancelar, or
-// Mercado Pago). It is an ordinary monthly subscription whose first charge has a later start date, so the
-// first charge and the renewals settle through the same webhook as any plan.
+// «Prueba gratis con tarjeta» (owner, 25 Oct 2026; required at sign-up since 26 Oct 2026): the customer adds a
+// card (inside Creads with Mercado Pago's secure fields, or on Mercado Pago's page). Nothing is charged today; the
+// gift credits load as soon as the card is accepted; after PRUEBA_DIAS days Mercado Pago charges the PRUEBA_PLAN
+// plan (Testea since 26 Oct 2026; trials started before keep the Básico they were sold) every month unless the
+// customer cancels first (Planes → cancelar, or Mercado Pago). It is an ordinary monthly subscription whose first
+// charge has a later start date, so the first charge and the renewals settle through the same webhook as any plan
+// (settle.ts: the order's quote carries Testea's monthlyCredits).
 
-export const PRUEBA_PLAN = "basico" as const;
+export { PRUEBA_PLAN };
+
+/** The plan the trial becomes, with what the customer is told: name, US$ a month, credits a month. */
+export function planPrueba() {
+  const p = PLANS.find((x) => x.id === PRUEBA_PLAN)!;
+  return { id: p.id, name: p.name, usd: p.monthly, credits: p.credits };
+}
+
+/** What the trial says everywhere (sign-up summary, lock, welcome email): days, gift, plan, price. */
+export function resumenPrueba() {
+  const p = planPrueba();
+  return { dias: PRUEBA_DIAS, regalo: REGALO_CREDITS, plan: p.name, usd: p.usd, credits: p.credits };
+}
 
 /** The trial order of this workspace that can still charge (not cancelled, not yet paid). */
 export async function pruebaAbierta(ws: string): Promise<Order | null> {
@@ -102,8 +116,10 @@ export async function avisarFinPrueba(): Promise<number> {
     if (!(await once(`prueba-fin:${o.id}`, 30 * 86400))) continue;
     const ads = (await sbRest<{ id: number }[]>(`credits?owner=eq.${encodeURIComponent(o.ws)}&kind=eq.charge&select=id&limit=50`).catch(() => [])).length;
     const fecha = new Date(`${o.mp.trial}T12:00:00`).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
-    const plan = PLANS.find((p) => p.id === o.item)?.name ?? "Básico";
-    if (await sendEmail(trialEndingEmail(o.email, null, { fecha, plan, clp: o.mp.clp, ads }))) n++;
+    // the plan this trial was sold with (older trials: Básico), with its own price and monthly credits
+    const plan = PLANS.find((p) => p.id === o.item) ?? PLANS.find((p) => p.id === PRUEBA_PLAN)!;
+    const credits = Number(o.quote?.monthlyCredits) > 0 ? Number(o.quote.monthlyCredits) : plan.credits;
+    if (await sendEmail(trialEndingEmail(o.email, null, { fecha, plan: plan.name, usd: plan.monthly, clp: o.mp.clp, credits, ads }))) n++;
   }
   return n;
 }

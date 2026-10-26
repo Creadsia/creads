@@ -9,7 +9,7 @@ import { MoneyText } from "../../money";
 const MSG: Record<string, { tone: "good" | "warn"; text: string }> = {
   ok: { tone: "good", text: "¡Listo! Te cargamos créditos para tu primer anuncio de regalo (unos 12 segundos). Cuéntale a Creads aquí abajo qué vendes y te lo hace." },
   ya: { tone: "warn", text: "Tu anuncio de regalo ya estaba cargado en tu cuenta." },
-  tope: { tone: "warn", text: "Este mes ya se entregaron todos los anuncios de regalo. Elige un plan desde US$25 al mes y empiezas al tiro." },
+  tope: { tone: "warn", text: "Este mes ya se entregaron todos los anuncios de regalo. Elige un plan desde US$29 al mes y empiezas al tiro." },
   correo: { tone: "warn", text: "Los correos temporales no reciben el regalo. Crea tu cuenta con tu correo de siempre." },
   tarjeta: { tone: "warn", text: "Para recibir tus créditos de regalo, activa tu prueba gratis agregando tu tarjeta aquí abajo." },
   pagado: { tone: "good", text: "Tu cuenta ya tiene créditos de un plan: úsalos aquí abajo." },

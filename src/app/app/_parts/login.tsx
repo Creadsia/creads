@@ -150,7 +150,7 @@ export default function Login({ mode: initial, google = false }: { mode: "login"
       )}
       {mode === "login" && (
         <a href="/empezar" className="flex w-full max-w-sm items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-5 py-4 text-sm hover:border-accent-text">
-          <span><b className="block">¿Todavía no tienes cuenta?</b><span className="text-muted"><MoneyText text="Planes desde US$25 al mes." /></span></span>
+          <span><b className="block">¿Todavía no tienes cuenta?</b><span className="text-muted"><MoneyText text="Planes desde US$29 al mes." /></span></span>
           <span className="shrink-0 rounded-lg bg-[image:var(--grad)] px-3 py-2 font-semibold text-white">Crear cuenta</span>
         </a>
       )}
