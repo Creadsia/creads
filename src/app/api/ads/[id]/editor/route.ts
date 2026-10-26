@@ -3,13 +3,16 @@ import { session, SESSION_ENDED } from "@/lib/access";
 import { fetchableUrl } from "@/lib/media";
 import { limpiarProyecto, type Proyecto } from "@/lib/editor";
 import type { Word } from "@/lib/textmatch";
+import { normalizeStyle } from "@/lib/caption-style";
 
 export const dynamic = "force-dynamic";
 
 // «Editor de video»: GET → the ad's clips (links to play them), the words said in each (for subtitles in the
-// preview) and the saved project; PUT {proyecto} → saves the project (autosave from the editor).
+// preview) and the saved project; PUT {proyecto, subtitulosEstilo?} → saves the project (autosave from the
+// editor). The subtitle style picked in the editor is kept apart (`editorCaptions`): it only changes the edited
+// export, never the original ad or its «Subtítulos» screen.
 
-type Settings = { editor?: unknown; review?: { clipId: string; url?: string; words: Word[] }[]; captions?: unknown; demo?: boolean; story?: unknown };
+type Settings = { editor?: unknown; editorCaptions?: unknown; review?: { clipId: string; url?: string; words: Word[] }[]; captions?: unknown; demo?: boolean; story?: unknown };
 interface ClipRow { id: string; idx: number; url: string | null; status: string; text: string | null }
 
 async function load(req: Request, id: string) {
@@ -34,7 +37,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   })));
   const proyecto: Proyecto | null = st.editor ? limpiarProyecto(st.editor, new Set(clips.map((c) => c.id))) : null;
   const musica = proyecto?.musica?.url ? await fetchableUrl(proyecto.musica.url, s.user.workspace, 4 * 3600).catch(() => null) : null;
-  return NextResponse.json({ titulo: ad.title ?? "Sin título", aspecto: ad.aspect ?? "9:16", final: ad.final_url, subtitulosEstilo: st.captions ?? null, cortes, proyecto, musica });
+  return NextResponse.json({ titulo: ad.title ?? "Sin título", aspecto: ad.aspect ?? "9:16", final: ad.final_url, subtitulosEstilo: st.editorCaptions ?? st.captions ?? null, cortes, proyecto, musica });
 }
 
 export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -43,6 +46,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ id: string }> }
   const { s, ad, clips } = r;
   const b = await req.json().catch(() => null);
   const proyecto = limpiarProyecto(b?.proyecto, new Set(clips.map((c) => c.id)));
-  await s.db.update("ads", ad.id, { settings: { ...(ad.settings ?? {}), editor: proyecto } });
+  const estilo = b?.subtitulosEstilo && typeof b.subtitulosEstilo === "object" ? normalizeStyle(b.subtitulosEstilo) : undefined;
+  await s.db.update("ads", ad.id, { settings: { ...(ad.settings ?? {}), editor: proyecto, ...(estilo ? { editorCaptions: estilo } : {}) } });
   return NextResponse.json({ ok: true });
 }
