@@ -9,7 +9,7 @@ import { readOrder, publicAd, type ApiAd } from "../src/lib/api-ads";
 import { readLang, sttLang, spokenEs } from "../src/lib/ad-lang";
 import { PERSON_REF, PRODUCT_EXACT, PRODUCT_GENERIC, adFramePrompt, autoPersona, personaWanted, scriptGender, usesPersona, withPersonRef, withoutPersonRef } from "../src/lib/ad-continuity";
 import { cutsPrompt } from "../src/lib/cuts-prompt";
-import { type SceneContext, directorPrompt, firstFramePrompt, scenePrompt } from "../src/lib/director";
+import { BODY_RULE, type SceneContext, directorPrompt, firstFramePrompt, scenePrompt } from "../src/lib/director";
 import { type LookTarget, applyLook, lookPrompt } from "../src/lib/review-look";
 import { defaultAccent, seededPick, usEnglish } from "../src/lib/voices";
 import { framePrompts, runStep, type AdJob, type Studio } from "../src/lib/ad-runner";
@@ -198,6 +198,29 @@ test("review: clothes or person changing between scenes is severe only when clea
   applyLook(o, [{ corte: 1, tipo: "otro", problema: "mano deforme", grave: true }, { corte: 9, problema: "no existe", grave: true }], { hasProduct: false, format: "ugc" });
   assert.equal(o[0].severe, true);
   assert.equal(o[0].redraw, undefined);
+});
+
+test("review: an extra arm or a deformed body is severe and redrawn (owner, 25 Oct 2026: Kling's double arm)", () => {
+  const t = targets(3);
+  applyLook(t, [
+    { corte: 2, tipo: "cuerpo", problema: "tiene un tercer brazo", grave: false, claro: true },
+    { corte: 3, tipo: "cuerpo", problema: "mano algo borrosa", grave: false, claro: false },
+  ], { hasProduct: false, format: "ugc" });
+  assert.equal(t[1].severe, true);
+  assert.equal(t[1].redraw, true);
+  assert.match(t[1].issues[0], /cuerpo raro/);
+  assert.equal(t[2].severe, false, "a blur only gets noted");
+  assert.equal(t[2].issues.length, 1);
+  const p = lookPrompt({ formatName: "UGC selfie", format: "ugc", twoPeople: false, narr: false, texts: ["a"], hasProduct: false });
+  assert.match(p, /brazo o una mano de más/);
+  assert.doesNotMatch(lookPrompt({ formatName: "Voz en off", format: "x", twoPeople: false, narr: true, texts: ["a"], hasProduct: false }), /CUERPO/);
+});
+
+test("video prompts: every clip with a person carries the two-arms body rule", () => {
+  assert.match(BODY_RULE, /TWO arms and TWO hands/);
+  const c = { texto: "Hola, les cuento algo." } as Parameters<typeof scenePrompt>[1];
+  assert.ok(scenePrompt(ctx(), c, {}, 0).includes(BODY_RULE));
+  assert.ok(firstFramePrompt(ctx(), c, {}).includes(BODY_RULE));
 });
 
 test("review prompt: the product photo is the last image; consecutive cuts are compared", () => {

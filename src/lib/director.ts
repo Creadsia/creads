@@ -327,6 +327,7 @@ Reminder: the person says ONLY: "${c.texto}"`;
   } else {
     extra.push(PRODUCT_GENERIC); // no photo: never a real brand's product (owner's test: a famous brand's shoe)
   }
+  if (!f.narr) extra.push(BODY_RULE);
   if (ctx.rules?.length) extra.push(`LESSONS FROM PAST VIDEOS (avoid these mistakes):\n- ${ctx.rules.slice(0, 10).join("\n- ")}`);
   if (extra.length) {
     const i = p.search(/\n(Reminder:|REMINDER:)/);
@@ -341,6 +342,12 @@ Reminder: the person says ONLY: "${c.texto}"`;
   }
   return p;
 }
+
+/**
+ * Body realism (owner, 25 Oct 2026: Kling had the best lips and voice but showed a second arm and odd body
+ * movements). Goes into every clip with a person on camera and into the first frame.
+ */
+export const BODY_RULE = "BODY: exactly ONE head, TWO arms and TWO hands per person, natural human anatomy, five fingers on each hand. In a selfie one arm holds the phone (mostly out of frame) and only the other hand gestures; never a third arm or hand, never a hand coming from nowhere. Frame from the chest up so the body stays simple. Calm, small, natural gestures and gentle head movement; no sudden jumps, twists or fast body movement, no limbs bending the wrong way, nothing melting or morphing.";
 
 /** A still first frame for models that animate an image (Kling, Seedance): same scene, no motion. */
 export function firstFramePrompt(ctx: SceneContext, c: CutIn, d: Direction): string {
@@ -358,6 +365,6 @@ Shot: ${d.framing || "handheld, chest-up"}.
 Moment: the instant before they start talking: ${d.action ? d.action.replace(/On "[^"]*"/g, "").slice(0, 300) : "a natural relaxed expression, mouth closed"}.
 ${FORMAT_LOCK[ctx.format] ? FORMAT_LOCK[ctx.format]!.split("\n").slice(0, 3).join(" ") : "Selfie framing: the phone is the camera, held at arm's length."}
 ${ctx.product ? `The product is visible in the scene${ctx.product.hasPhoto ? `: ${PRODUCT_EXACT}` : ""}: ${ctx.product.description || ctx.product.name}.` : PRODUCT_GENERIC}
-${placeHint(ctx.lang)}
+${f.narr ? "" : `${BODY_RULE}\n`}${placeHint(ctx.lang)}
 Natural light, real skin texture, no beauty filter, no text, no captions, ${ctx.product?.hasPhoto ? "no logos other than the product's own label," : "no logos,"} no watermark.`;
 }
