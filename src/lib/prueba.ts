@@ -92,7 +92,8 @@ export async function empezarPruebaConTarjeta(u: { ws: string; email: string }, 
   const sub = await createSubscriptionWithCard({ orderId: order.id, title: `Creads IA · Plan ${plan.name} (prueba gratis ${PRUEBA_DIAS} días)`, clp, email: u.email, cardToken, startDate: start.toISOString() });
   await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp, ...(midClp ? { midClp, promoMonths } : {}), trial: start.toISOString().slice(0, 10) });
   const o = await getOrder(order.id);
-  return o ? activarPrueba(o) : "pendiente";
+  // the order id travels back so the browser can fire the StartTrial pixel with the same event_id (trial-<id>)
+  return { estado: o ? await activarPrueba(o) : ("pendiente" as const), order: order.id };
 }
 
 /** The card was accepted (subscription authorized): load the gift, once. Safe to call many times. */
@@ -105,7 +106,9 @@ export async function activarPrueba(o: Order): Promise<"ok" | "pendiente" | "can
   const r = await darRegalo(o.ws, o.email, { conTarjeta: true });
   if (r.ok) {
     await phoneAlert({ title: "🃏 Prueba con tarjeta", text: `${o.email} agregó su tarjeta (cobro el ${o.mp.trial})`, priority: 3 }).catch(() => null);
-    if (o.visitor) await sendMeta({ name: "StartTrial", eventId: `trial-${o.id}`, email: o.email, value: 0, currency: "CLP", content: o.quote.label }, o.visitor).catch(() => null);
+    // StartTrial fires only here (card approved, trial started), never at opening the payment. Same event_id
+    // as the browser pixel so Meta counts it once. value 0 + predicted_ltv = the chosen plan's monthly price.
+    if (o.visitor) await sendMeta({ name: "StartTrial", eventId: `trial-${o.id}`, email: o.email, value: 0, currency: "USD", predictedLtv: planPrueba(o.item).usd, content: o.quote.label }, o.visitor).catch(() => null);
   }
   return r.ok || r.why === "ya" ? "ok" : "no";
 }

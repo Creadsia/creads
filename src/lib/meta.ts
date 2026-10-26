@@ -38,8 +38,12 @@ export interface MetaEvent {
   name: "Lead" | "CompleteRegistration" | "InitiateCheckout" | "Purchase" | "Subscribe" | "StartTrial";
   eventId?: string;
   email?: string;
+  /** customer phone in E.164 if we ever have it (hashed before sending; we don't collect it at sign-up today) */
+  phone?: string;
   value?: number;
   currency?: string;
+  /** Meta predicted_ltv: what this trial is worth if it converts (the chosen plan's monthly price, in `currency`) */
+  predictedLtv?: number;
   content?: string;
   source?: "website" | "system_generated";
 }
@@ -64,6 +68,7 @@ export async function sendMeta(ev: MetaEvent, v: Visitor) {
       ...(v.url ? { event_source_url: v.url } : {}),
       user_data: {
         ...(ev.email ? { em: [sha(ev.email)] } : {}),
+        ...(ev.phone ? { ph: [sha(ev.phone.replace(/[^\d]/g, ""))] } : {}),
         ...(v.ip ? { client_ip_address: v.ip } : {}),
         ...(v.ua ? { client_user_agent: v.ua } : {}),
         ...(v.fbp ? { fbp: v.fbp } : {}),
@@ -71,6 +76,7 @@ export async function sendMeta(ev: MetaEvent, v: Visitor) {
       },
       custom_data: {
         ...(ev.value !== undefined ? { value: +ev.value.toFixed(2), currency: ev.currency ?? "USD" } : {}),
+        ...(ev.predictedLtv !== undefined ? { predicted_ltv: +ev.predictedLtv.toFixed(2), currency: ev.currency ?? "USD" } : {}),
         ...(ev.content ? { content_name: ev.content } : {}),
       },
     }],

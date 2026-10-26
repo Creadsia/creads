@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { startTrial } from "@/lib/track";
 
 // The card form inside Creads (owner, 25 Oct 2026: «que no salga de la plataforma»): Mercado Pago's own secure
 // card fields (Card Payment Brick). The card goes from the customer straight to Mercado Pago, which gives back a
@@ -54,7 +55,7 @@ export default function TarjetaMP({ monto, onListo, fallback }: { monto: number;
             setErr("");
             const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card_token: data.token }) }).catch(() => null);
             const d = r ? await r.json().catch(() => ({})) : {};
-            if (r?.ok && d.estado === "ok") { done.current(); return; }
+            if (r?.ok && d.estado === "ok") { startTrial(d.order, d.usd); done.current(); return; }
             setErr(d.error || "No se pudo activar. Revisa los datos de tu tarjeta e intenta de nuevo.");
             throw new Error("rechazada"); // lets the customer correct the card in the same form
           },

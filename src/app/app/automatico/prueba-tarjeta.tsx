@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { refreshCredits } from "../_parts/use-credits";
+import { startTrial } from "@/lib/track";
 
 /** The plan chosen at /empezar travels as ?plan= (Google sign-up lands here with it). */
 const planQs = () => { try { const p = new URLSearchParams(window.location.search).get("plan"); return p && /^[a-z]+$/.test(p) ? `?plan=${p}` : ""; } catch { return ""; } };
@@ -39,7 +40,7 @@ export default function PruebaTarjeta() {
             // the card can take a few seconds to show as accepted
             if (d.estado === "pendiente" && n < 5) return void setTimeout(() => check(n + 1), 3000);
             setVuelta(d.estado ?? "no"); refreshCredits(); load();
-            if (d.estado === "ok") window.dispatchEvent(new Event("creads:prueba-ok"));
+            if (d.estado === "ok") { startTrial(d.order ?? pedido, d.usd); window.dispatchEvent(new Event("creads:prueba-ok")); }
           })
           .catch(() => setVuelta("pendiente"));
       check(0);

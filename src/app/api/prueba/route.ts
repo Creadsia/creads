@@ -8,7 +8,7 @@ import { unlimited } from "@/lib/credits";
 import { mpReady } from "@/lib/mercadopago";
 import { visitorFrom } from "@/lib/meta";
 import { bloqueaPorTarjeta, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
-import { activarPrueba, empezarPrueba, empezarPruebaConTarjeta, planDePrueba, pruebaAbierta, resumenPrueba, tuvoPrueba } from "@/lib/prueba";
+import { activarPrueba, empezarPrueba, empezarPruebaConTarjeta, planDePrueba, planPrueba, pruebaAbierta, resumenPrueba, tuvoPrueba } from "@/lib/prueba";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,8 @@ export async function POST(req: Request) {
     if (typeof b?.pedido === "string") {
       const o = await getOrder(b.pedido).catch(() => null);
       if (!o || o.ws !== ws) return NextResponse.json({ error: "No encontré tu prueba." }, { status: 404 });
-      return NextResponse.json({ estado: await activarPrueba(o) });
+      // order + plan price travel back so the browser fires StartTrial with the same event_id and predicted_ltv
+      return NextResponse.json({ estado: await activarPrueba(o), order: o.id, usd: planPrueba(o.item).usd });
     }
     if (await hasPaid(ws)) return NextResponse.json({ error: "Tu cuenta ya tiene un plan." }, { status: 409 });
     const abierta = await pruebaAbierta(ws);
@@ -59,12 +60,12 @@ export async function POST(req: Request) {
     // the card typed inside Creads (Mercado Pago's secure fields): authorized here, no leaving the page
     if (typeof b?.card_token === "string" && /^[\w-]{16,64}$/.test(b.card_token)) {
       if (abierta) await import("@/lib/prueba").then((m) => m.cancelarPrueba(abierta)).catch(() => null);
-      const estado = await empezarPruebaConTarjeta({ ws, email: s.user.email }, b.card_token, visitorFrom(req), opciones).catch((e) => {
+      const r = await empezarPruebaConTarjeta({ ws, email: s.user.email }, b.card_token, visitorFrom(req), opciones).catch((e) => {
         console.error("prueba tarjeta", e instanceof Error ? e.message : e);
-        return "error" as const;
+        return { estado: "error" as const, order: "" };
       });
-      if (estado === "ok") return NextResponse.json({ estado });
-      return NextResponse.json({ error: estado === "error" ? "Mercado Pago no aceptó esa tarjeta. Revisa los datos o prueba con otra." : "Mercado Pago está revisando tu tarjeta: espera unos segundos y recarga." }, { status: estado === "error" ? 402 : 202 });
+      if (r.estado === "ok") return NextResponse.json({ estado: "ok", order: r.order, usd: planPrueba(plan).usd });
+      return NextResponse.json({ error: r.estado === "error" ? "Mercado Pago no aceptó esa tarjeta. Revisa los datos o prueba con otra." : "Mercado Pago está revisando tu tarjeta: espera unos segundos y recarga." }, { status: r.estado === "error" ? 402 : 202 });
     }
     const r = await empezarPrueba({ ws, email: s.user.email }, visitorFrom(req), opciones);
     return NextResponse.json({ redirect: r.url });

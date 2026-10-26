@@ -12,6 +12,17 @@ export const hasConsent = () => {
 
 export const newEventId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `ev-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
+/**
+ * StartTrial, once per page load, with the SAME event_id the server uses for CAPI (`trial-<order>`), so Meta
+ * de-dupes the pixel and the Conversions API copy. value 0, currency USD, predicted_ltv = the chosen plan's price.
+ */
+let trialSent = false;
+export function startTrial(order?: string, usd?: number) {
+  if (trialSent || !order) return;
+  trialSent = true;
+  track("StartTrial", { value: 0, currency: "USD", ...(usd ? { predicted_ltv: usd } : {}) }, `trial-${order}`);
+}
+
 /** Fires a standard Meta event in the browser (no-op without consent or pixel). Returns its id. */
 export function track(name: string, data: Record<string, unknown> = {}, eventId = newEventId()) {
   try {
