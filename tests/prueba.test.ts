@@ -82,3 +82,12 @@ test("emails: the trial says Testea, its price in dollars and its credits", asyn
   assert.ok(e.html.includes("US$29 al mes") && e.html.includes("470 créditos") && e.html.includes("$27.990"));
   assert.ok(!e.html.includes("500 créditos"));
 });
+
+test("trial on the plan chosen at /empezar: only plans on sale, Testea otherwise", async () => {
+  const { planDePrueba, resumenPrueba } = await import("../src/lib/prueba");
+  assert.equal(planDePrueba("escala"), "escala");
+  assert.equal(planDePrueba("agencia"), "agencia");
+  assert.equal(planDePrueba("basico"), "testea");
+  assert.equal(planDePrueba(undefined), "testea");
+  assert.equal(resumenPrueba("escala").plan, "Escala");
+});

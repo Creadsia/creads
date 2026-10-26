@@ -4,6 +4,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import TarjetaMP from "../../tarjeta-mp";
 
+/** The plan chosen at /empezar travels as ?plan= (Google sign-up lands here with it). */
+const planQs = () => { try { const p = new URLSearchParams(window.location.search).get("plan"); return p && /^[a-z]+$/.test(p) ? `?plan=${p}` : ""; } catch { return ""; } };
+
 // «Tarjeta para registrarse» (owner, 25 Oct 2026: «igual que ChatGPT o Higgsfield»; required for every new account
 // since 26 Oct 2026): an account that never paid and never got its gift can't use the studio until it adds its card
 // for the free trial (the rule: lib/oferta.ts bloqueaPorTarjeta, applied by GET /api/prueba → estado «sin-tarjeta»).
@@ -24,7 +27,7 @@ export default function TrialPopup() {
     let alive = true;
     const vuelta = new URLSearchParams(window.location.search).get("prueba");
     // back from Mercado Pago: the card can take a few seconds to show as accepted
-    const load = (n: number) => fetch("/api/prueba").then((r) => r.json()).then((d: Info) => {
+    const load = (n: number) => fetch(`/api/prueba${planQs()}`).then((r) => r.json()).then((d: Info) => {
       if (!alive) return;
       if (vuelta && d?.estado === "sin-tarjeta" && n < 8) return void setTimeout(() => load(n + 1), 3000);
       setInfo(d);
@@ -37,7 +40,7 @@ export default function TrialPopup() {
 
   async function agregar() {
     setBusy(true); setErr("");
-    const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => null);
+    const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan: planQs().slice(6) || undefined }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (d.redirect) return void (window.location.href = d.redirect);
     setBusy(false);

@@ -7,10 +7,13 @@ import Checkout from "./checkout";
 import WhatsAppButton from "../whatsapp";
 import { oneTimeOnly } from "@/lib/mercadopago";
 import { googleOn } from "@/lib/google-login";
+import { mpReady } from "@/lib/mercadopago";
+import { tarjetaObligatoria } from "@/lib/regalo";
+import { PRUEBA_DIAS, REGALO_CREDITS } from "@/lib/oferta";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
-  description: "Elige tu plan, crea tu cuenta y paga con Mercado Pago. Desde US$29 al mes.",
+  description: "Elige tu plan y pruébalo 7 días gratis. Después, desde US$29 al mes. Cancelas cuando quieras.",
   robots: { index: false, follow: true },
 };
 export const dynamic = "force-dynamic";
@@ -29,7 +32,7 @@ export default async function Empezar({ searchParams }: { searchParams: Promise<
   const rate = await usdClpRate().catch(() => 950);
   return (
     <div lang="es">
-      <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} google={googleOn()} />
+      <Checkout item={item} period={period} rate={rate} renews={!oneTimeOnly()} google={googleOn()} prueba={tarjetaObligatoria() && mpReady() && !oneTimeOnly() ? { dias: PRUEBA_DIAS, regalo: REGALO_CREDITS } : null} />
       <WhatsAppButton text="Hola, tengo una pregunta antes de comprar Creads IA" />
     </div>
   );

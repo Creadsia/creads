@@ -27,10 +27,14 @@ function Check({ className = "text-good" }: { className?: string }) {
   );
 }
 
-export default function Checkout({ item: first, period: firstPeriod, rate, renews = true, google = false }: { item: ItemId; period: Period; rate: number; renews?: boolean; google?: boolean }) {
+export default function Checkout({ item: first, period: firstPeriod, rate, renews = true, google = false, prueba = null }: { item: ItemId; period: Period; rate: number; renews?: boolean; google?: boolean; /** the free trial with card (owner, 26 Oct 2026): monthly plans start with it */ prueba?: { dias: number; regalo: number } | null }) {
   const [item, setItem] = useState<ItemId>(first);
   const [period, setPeriod] = useState<Period>(firstPeriod);
   const isPack = item.startsWith("pack-");
+  // «7 días gratis»: a monthly subscription whose first charge comes after the trial (the card is added on Mercado Pago)
+  const trial = Boolean(prueba) && period === "mensual" && !isPack;
+  const dias = prueba?.dias ?? 7;
+  const fechaCobro = new Date(Date.now() + dias * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
   // the founder price (Escala, first 3 months) while places are left: the server applies the same rule
   const [fundador, setFundador] = useState(false);
   useEffect(() => { fetch("/api/fundador").then((r) => r.json()).then((d) => setFundador(typeof d?.quedan === "number" && d.quedan > 0)).catch(() => {}); }, []);
@@ -54,7 +58,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
     track("AddToCart", { content_name: q.label, value: q.total, currency: "USD" }); // one per visit, whichever button brought them
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loginHref = `/app/planes?plan=${item}&periodo=${period}`;
+  const loginHref = trial ? `/app/automatico?plan=${item}` : `/app/planes?plan=${item}&periodo=${period}`;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +73,14 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
     }
     if (d.eventId) track("CompleteRegistration", { content_name: q.label }, d.eventId);
     setBusy("pago");
+    if (trial) {
+      // the trial: Mercado Pago's page to add the card (nothing charged today); the studio asks again if this fails
+      const t = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan: item }) }).catch(() => null);
+      const td = t ? await t.json().catch(() => ({})) : {};
+      await new Promise((r) => setTimeout(r, 400));
+      window.location.href = t?.ok && td.redirect ? td.redirect : `/app/automatico?plan=${item}`;
+      return;
+    }
     const eventId = newEventId();
     const p = await fetch("/api/pagos", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item, period, method: "mercadopago", eventId }) }).catch(() => null);
     const pd = p ? await p.json().catch(() => ({})) : {};
@@ -97,7 +109,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_minmax(0,440px)] lg:gap-10 lg:py-10">
         {/* progress: a real sequence */}
         <ol className="flex items-center gap-2 text-sm lg:col-span-2" aria-label="Pasos">
-          {["Elige tu plan", "Crea tu cuenta", "Paga con Mercado Pago"].map((s, i) => (
+          {["Elige tu plan", "Crea tu cuenta", trial ? `Activa tus ${dias} días gratis` : "Paga con Mercado Pago"].map((s, i) => (
             <li key={s} className="flex items-center gap-2">
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "bg-good text-black" : i === 1 ? "bg-ink text-bg" : "border border-line text-muted"}`}>{i === 0 ? "✓" : i + 1}</span>
               <span className={i === 1 ? "font-semibold" : "text-muted"}>{s}</span>
@@ -146,7 +158,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
                   <span className="flex shrink-0 flex-col items-end">
                     {xq.launch > 0 && <s className="text-xs text-muted">{usd(xq.subtotal)}</s>}
                     <b className="font-display text-lg font-semibold">{usd(xq.total)}</b>
-                    <span className="text-[13px] text-muted">{xq.period === "anual" ? "por 12 meses" : xq.period === "mensual" ? "primer mes" : "una vez"}</span>
+                    <span className="text-[13px] text-muted">{xq.period === "anual" ? "por 12 meses" : xq.period === "mensual" ? (trial ? `al mes, tras ${dias} días gratis` : "primer mes") : "una vez"}</span>
                   </span>
                 </button>
               );
@@ -166,7 +178,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
           <dl className="grid gap-3 sm:grid-cols-3">
             {[
-              ["Saldo al aprobarse el pago", "Apenas Mercado Pago aprueba, tu saldo se carga solo."],
+              trial ? [`${prueba?.regalo ?? 200} créditos para probar`, `Se cargan apenas activas tu prueba. Úsalos en tus primeros anuncios.`] : ["Saldo al aprobarse el pago", "Apenas Mercado Pago aprueba, tu saldo se carga solo."],
               ["Cancelas con un clic", "Desde tu cuenta, sin llamar ni escribir a nadie."],
               ["Pago protegido", "Pagas en Mercado Pago. Creads nunca ve tu tarjeta."],
             ].map(([t, d]) => (
@@ -180,7 +192,9 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
           <details className="rounded-2xl border border-line p-4 text-sm">
             <summary className="cursor-pointer font-semibold">¿Cómo funciona el cobro?</summary>
             <div className="mt-3 flex flex-col gap-2 text-muted">
-              {renews ? (
+              {trial ? (
+                <p>Es una suscripción mensual con {dias} días gratis. Al crear tu cuenta pones tu tarjeta en Mercado Pago, pero hoy no se cobra nada: recibes {prueba?.regalo ?? 200} créditos para probar. Si no cancelas antes del {fechaCobro}, se cobra {plan ? usd(q.total) : "el plan"} ese día y luego cada mes. Cancelas con un clic desde «Planes».</p>
+              ) : renews ? (
                 <p>Los planes son una suscripción mensual de Mercado Pago: pagas {plan ? usd(plan.monthly) : "el precio del plan"} cada mes. Puedes cancelar la renovación cuando quieras desde «Planes».</p>
               ) : (
                 <p>Por ahora el plan mensual se paga mes a mes, sin cobro automático: pagas {plan ? usd(quote(item, "mensual", { firstPurchase: true })!.total) : "el precio con descuento"} por el primer mes y, si quieres seguir, renuevas desde «Planes» ({plan ? usd(plan.monthly) : "precio normal"}/mes).</p>
@@ -197,6 +211,16 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             {/* order summary, always visible next to the button */}
             <div className="flex flex-col gap-1 rounded-2xl bg-surface-2 p-4">
               <span className="flex items-center justify-between gap-2 text-sm text-muted">{q.label}<a href="#tu-plan" className="font-semibold text-accent-text underline lg:hidden">Cambiar</a></span>
+              {trial ? (
+                <>
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <b className="font-display text-3xl font-semibold">{dias} días gratis</b>
+                  </span>
+                  <span className="text-sm">Suscripción mensual. Hoy <b>$0</b> y {prueba?.regalo ?? 200} créditos para probar.</span>
+                  <span className="text-xs text-muted">Desde el {fechaCobro}: {usd(q.total)}/mes{q.fundador ? <> los primeros meses, luego {usd(plan?.monthly ?? 0)}/mes</> : null}. Cancelas antes con un clic y no pagas nada.</span>
+                  <OnlyUSD><span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} al mes (Mercado Pago, al cambio del día).</span></OnlyUSD>
+                </>
+              ) : (<>
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <b className="font-display text-3xl font-semibold">{usd(q.total)}</b>
                 {q.launch > 0 && <s className="text-muted">{usd(q.subtotal)}</s>}
@@ -208,11 +232,12 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </span>
               <OnlyUSD><span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} (Mercado Pago, al cambio del día).
               </span></OnlyUSD>
+              </>)}
             </div>
 
             <div className="flex flex-col gap-1">
               <h2 id="cuenta" className="font-display text-xl font-semibold">Crea tu cuenta</h2>
-              <p className="text-sm text-muted">Toma 30 segundos. Después pagas y entras directo al estudio.</p>
+              <p className="text-sm text-muted">{trial ? `Toma 30 segundos. Después activas tus ${dias} días gratis poniendo tu tarjeta en Mercado Pago (hoy no se cobra nada).` : "Toma 30 segundos. Después pagas y entras directo al estudio."}</p>
             </div>
             {google && (
               <>
@@ -252,7 +277,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
             <Garantia compact que="plan" />
             <button type="submit" disabled={Boolean(busy)}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
-              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : <>Crear cuenta y pagar {usd(q.total)}</>}
+              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : trial ? <>Crear cuenta y empezar {dias} días gratis</> : <>Crear cuenta y pagar {usd(q.total)}</>}
             </button>
             <p className="text-center text-xs font-semibold text-good">{GARANTIA.boton}</p>
             <p className="text-center text-xs text-muted">

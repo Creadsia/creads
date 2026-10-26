@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { refreshCredits } from "../_parts/use-credits";
 
+/** The plan chosen at /empezar travels as ?plan= (Google sign-up lands here with it). */
+const planQs = () => { try { const p = new URLSearchParams(window.location.search).get("plan"); return p && /^[a-z]+$/.test(p) ? `?plan=${p}` : ""; } catch { return ""; } };
+
 // «Prueba gratis con tarjeta» (owner, 25 Oct 2026; required at sign-up since 26 Oct 2026). Above Automático while
 // the card trial is on: the way back from Mercado Pago and the trial's status. Nothing is charged today; the date,
 // plan and price of the first charge are said plainly before and after, with how to cancel.
@@ -19,7 +22,7 @@ export default function PruebaTarjeta() {
   const [err, setErr] = useState("");
 
   async function load() {
-    const d = await fetch("/api/prueba").then((r) => r.json()).catch(() => null);
+    const d = await fetch(`/api/prueba${planQs()}`).then((r) => r.json()).catch(() => null);
     setInfo(d);
   }
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function PruebaTarjeta() {
 
   async function agregar() {
     setBusy(true); setErr("");
-    const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => null);
+    const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan: planQs().slice(6) || undefined }) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     if (d.redirect) return void (window.location.href = d.redirect);
     setBusy(false);

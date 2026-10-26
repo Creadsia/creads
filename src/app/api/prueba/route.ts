@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { tooMany } from "@/lib/rate";
-import { getOrder } from "@/lib/billing";
+import { fundadoresUsados, getOrder } from "@/lib/billing";
+import { FUNDADOR } from "@/lib/catalog";
 import { clpFor } from "@/lib/catalog";
 import { unlimited } from "@/lib/credits";
 import { mpReady } from "@/lib/mercadopago";
 import { visitorFrom } from "@/lib/meta";
 import { bloqueaPorTarjeta, hasPaid, regaloDado, tarjetaObligatoria } from "@/lib/regalo";
-import { activarPrueba, empezarPrueba, empezarPruebaConTarjeta, pruebaAbierta, resumenPrueba, tuvoPrueba } from "@/lib/prueba";
+import { activarPrueba, empezarPrueba, empezarPruebaConTarjeta, planDePrueba, pruebaAbierta, resumenPrueba, tuvoPrueba } from "@/lib/prueba";
 import { usdClpRate } from "@/lib/usd-clp";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
   let dado = dadoAntes;
   // a card already accepted whose gift didn't load yet (webhook late, page closed on the way back): load it now
   if (!paid && !dado && abierta) dado = (await activarPrueba(abierta).catch(() => null)) === "ok" && (await regaloDado(ws));
-  const r = resumenPrueba();
+  const r = resumenPrueba(new URL(req.url).searchParams.get("plan") ?? undefined);
   // the lock rule (lib/oferta.ts bloqueaPorTarjeta): never paid and never got the gift = add the card first
   const bloqueo = bloqueaPorTarjeta({ trialOn: on, unlimited: unlimited(ws), paid, giftGiven: dado });
   return NextResponse.json({
@@ -42,6 +43,9 @@ export async function POST(req: Request) {
   const ws = s.user.workspace;
   if (unlimited(ws)) return NextResponse.json({ error: "Esta es la vista de cliente." }, { status: 400 });
   const b = await req.json().catch(() => null);
+  // the plan chosen at /empezar (Testea by default); the founder price while places are left, as /api/pagos
+  const plan = planDePrueba(typeof b?.plan === "string" ? b.plan : undefined);
+  const opciones = { plan, fundador: plan === FUNDADOR.plan && (await fundadoresUsados().catch(() => FUNDADOR.cupos)) < FUNDADOR.cupos };
   try {
     if (typeof b?.pedido === "string") {
       const o = await getOrder(b.pedido).catch(() => null);
@@ -55,14 +59,14 @@ export async function POST(req: Request) {
     // the card typed inside Creads (Mercado Pago's secure fields): authorized here, no leaving the page
     if (typeof b?.card_token === "string" && /^[\w-]{16,64}$/.test(b.card_token)) {
       if (abierta) await import("@/lib/prueba").then((m) => m.cancelarPrueba(abierta)).catch(() => null);
-      const estado = await empezarPruebaConTarjeta({ ws, email: s.user.email }, b.card_token, visitorFrom(req)).catch((e) => {
+      const estado = await empezarPruebaConTarjeta({ ws, email: s.user.email }, b.card_token, visitorFrom(req), opciones).catch((e) => {
         console.error("prueba tarjeta", e instanceof Error ? e.message : e);
         return "error" as const;
       });
       if (estado === "ok") return NextResponse.json({ estado });
       return NextResponse.json({ error: estado === "error" ? "Mercado Pago no aceptó esa tarjeta. Revisa los datos o prueba con otra." : "Mercado Pago está revisando tu tarjeta: espera unos segundos y recarga." }, { status: estado === "error" ? 402 : 202 });
     }
-    const r = await empezarPrueba({ ws, email: s.user.email }, visitorFrom(req));
+    const r = await empezarPrueba({ ws, email: s.user.email }, visitorFrom(req), opciones);
     return NextResponse.json({ redirect: r.url });
   } catch (err) {
     console.error("prueba", err instanceof Error ? err.message : err);

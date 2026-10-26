@@ -1,5 +1,5 @@
 import { type Order, addOrder, cancelOrder, ordersOf, setOrderMp, workspaceRow } from "./billing";
-import { PLANS, clpFor, quote } from "./catalog";
+import { FUNDADOR, type ItemId, PLANS, clpFor, quote } from "./catalog";
 import { cancelSubscription, createSubscription, createSubscriptionWithCard, getPreapproval, SITE } from "./mercadopago";
 import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS, darRegalo, hasPaid } from "./regalo";
 import { sendMeta, type Visitor } from "./meta";
@@ -22,14 +22,14 @@ import { usdClpRate } from "./usd-clp";
 export { PRUEBA_PLAN };
 
 /** The plan the trial becomes, with what the customer is told: name, US$ a month, credits a month. */
-export function planPrueba() {
-  const p = PLANS.find((x) => x.id === PRUEBA_PLAN)!;
+export function planPrueba(id?: string) {
+  const p = PLANS.find((x) => x.id === planDePrueba(id))!;
   return { id: p.id, name: p.name, usd: p.monthly, credits: p.credits };
 }
 
 /** What the trial says everywhere (sign-up summary, lock, welcome email): days, gift, plan, price. */
-export function resumenPrueba() {
-  const p = planPrueba();
+export function resumenPrueba(plan?: string) {
+  const p = planPrueba(plan);
   return { dias: PRUEBA_DIAS, regalo: REGALO_CREDITS, plan: p.name, usd: p.usd, credits: p.credits };
 }
 
@@ -48,34 +48,49 @@ export function fechaCobro(days = PRUEBA_DIAS) {
   return d;
 }
 
+/** Plans a trial can turn into (owner, 26 Oct 2026: «7 días gratis» on any plan chosen at /empezar). */
+export const PLANES_PRUEBA = ["testea", "escala", "agencia"] as const;
+export type OpcionesPrueba = { plan?: string; fundador?: boolean };
+export const planDePrueba = (id?: string): ItemId => ((PLANES_PRUEBA as readonly string[]).includes(id ?? "") ? id : PRUEBA_PLAN) as ItemId;
+
+/**
+ * What a trial of this plan charges once it ends: the quote (credits, label), the first charge in CLP and, for the
+ * founder price (Escala at US$49 the first months), the price after the promo months (settle.ts steps it up).
+ */
+function cobroPrueba(o: OpcionesPrueba, rate: number) {
+  const id = planDePrueba(o.plan);
+  const fundador = Boolean(o.fundador) && id === FUNDADOR.plan;
+  const q = quote(id, "mensual", { firstPurchase: false, fundador })!;
+  const plan = PLANS.find((p) => p.id === id)!;
+  const clp = clpFor(q.total, rate);
+  const fullClp = clpFor(plan.monthly, rate);
+  return { q, plan, clp, fullClp, ...(fundador ? { midClp: clp, promoMonths: FUNDADOR.months } : {}) };
+}
+
 /** Creates the trial subscription and returns Mercado Pago's page to add the card. */
-export async function empezarPrueba(u: { ws: string; email: string }, visitor?: Visitor) {
+export async function empezarPrueba(u: { ws: string; email: string }, visitor?: Visitor, opciones: OpcionesPrueba = {}) {
   const w = await workspaceRow(u.ws);
   const rate = await usdClpRate().catch(() => 950);
-  const q = quote(PRUEBA_PLAN, "mensual", { firstPurchase: false })!;
+  const { q, plan, clp, fullClp, midClp, promoMonths } = cobroPrueba(opciones, rate);
   const order = await addOrder({ ws: u.ws, wsName: w.name, email: u.email, item: q.item, period: q.period, method: "mercadopago", quote: q, visitor });
-  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
-  const clp = clpFor(plan.monthly, rate);
   const start = fechaCobro();
   const sub = await createSubscription({
     orderId: order.id, title: `Creads IA · Plan ${plan.name} (prueba gratis ${PRUEBA_DIAS} días)`, firstClp: clp, email: u.email,
     startDate: start.toISOString(), backUrl: `${SITE}/app/automatico?prueba=${encodeURIComponent(order.id)}`,
   });
-  await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp: clp, trial: start.toISOString().slice(0, 10) });
+  await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp, ...(midClp ? { midClp, promoMonths } : {}), trial: start.toISOString().slice(0, 10) });
   return { url: sub.url, order: order.id, clp, cobro: start.toISOString().slice(0, 10) };
 }
 
 /** The trial with the card typed inside Creads: authorized at once, the gift loads right away. */
-export async function empezarPruebaConTarjeta(u: { ws: string; email: string }, cardToken: string, visitor?: Visitor) {
+export async function empezarPruebaConTarjeta(u: { ws: string; email: string }, cardToken: string, visitor?: Visitor, opciones: OpcionesPrueba = {}) {
   const w = await workspaceRow(u.ws);
   const rate = await usdClpRate().catch(() => 950);
-  const q = quote(PRUEBA_PLAN, "mensual", { firstPurchase: false })!;
+  const { q, plan, clp, fullClp, midClp, promoMonths } = cobroPrueba(opciones, rate);
   const order = await addOrder({ ws: u.ws, wsName: w.name, email: u.email, item: q.item, period: q.period, method: "mercadopago", quote: q, visitor });
-  const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
-  const clp = clpFor(plan.monthly, rate);
   const start = fechaCobro();
   const sub = await createSubscriptionWithCard({ orderId: order.id, title: `Creads IA · Plan ${plan.name} (prueba gratis ${PRUEBA_DIAS} días)`, clp, email: u.email, cardToken, startDate: start.toISOString() });
-  await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp: clp, trial: start.toISOString().slice(0, 10) });
+  await setOrderMp(order.id, { kind: "subscription", id: sub.id, clp, fullClp, ...(midClp ? { midClp, promoMonths } : {}), trial: start.toISOString().slice(0, 10) });
   const o = await getOrder(order.id);
   return o ? activarPrueba(o) : "pendiente";
 }
