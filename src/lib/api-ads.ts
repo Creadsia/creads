@@ -81,6 +81,8 @@ export function readOrder(b: Record<string, unknown>): Order | string {
     if (!p) return `Modelo no disponible. Usa uno de: ${videoProviders.filter(usable).map((x) => x.id).join(", ")}.`;
     modelo = p.id;
   }
+  // «Te graban» looked most natural with Kling 3.0 (owner, 25 Oct 2026): it's the default for that format
+  if (!modelo && formato === "comercial" && videoProviders.some((x) => x.id === "kling-3.0" && x.configured())) modelo = "kling-3.0";
   const tituloPropio = typeof b.titulo === "string" && Boolean(b.titulo.trim());
   const titulo = (tituloPropio ? String(b.titulo).trim() : guion.split(/[.!?\n]/)[0]).slice(0, 80);
   let avatarId: string | undefined;
