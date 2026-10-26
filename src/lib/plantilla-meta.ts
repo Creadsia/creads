@@ -54,7 +54,7 @@ export const LEEME_PLANTILLA = [
   "Meta cambia sus columnas de vez en cuando: si te marca un error, descarga su plantilla oficial",
   "(Exportar e importar → Descargar plantilla) y copia ahí tus filas.",
   "",
-  "En Creads, cada «Primera tanda» trae este archivo ya lleno con tus imágenes. Hecho con Creads IA · creadsia.com",
+  "En Creads, cada grupo de anuncios que creas desde tu producto trae este archivo ya lleno con tus imágenes. Hecho con Creads IA · creadsia.com",
 ].join("\r\n");
 
 export const csvPlantilla = () => csvMeta(TANDA_EJEMPLO, { pais: "CL" });

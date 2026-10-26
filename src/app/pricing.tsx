@@ -64,7 +64,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
       {!pack && <PruebaBox es={es} money={money} />}
       {pack && <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
-          <b className="font-display text-lg font-semibold">{es ? "Tu primera tanda" : "Your first batch"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
+          <b className="font-display text-lg font-semibold">{es ? "Tus primeros 10 anuncios" : "Your first batch"} · {money(PRUEBA.usd)} {es ? "pago único" : "one-time"}</b>
           <span className="text-sm text-muted">{es ? "12 imágenes, 4 videos de producto o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes." : "12 images, 4 product videos or 1 avatar video. Subscribe within 7 days and it comes off your first month."}</span>
           <span className="text-xs text-muted">{PRUEBA.credits} {es ? "créditos" : "credits"} · {es ? "7 días de garantía" : "7-day guarantee"}</span>
         </div>
@@ -228,7 +228,7 @@ function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.Rea
         <b className="font-display text-xl font-semibold">{es ? `${PRUEBA_DIAS} días gratis` : `${PRUEBA_DIAS}-day free trial`}</b>
         <span className="text-sm text-muted">
           {es
-            ? <>Prueba Creads {PRUEBA_DIAS} días con {REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes); si no, cancelas con un clic.</>
+            ? <>Prueba Creads {PRUEBA_DIAS} días con {REGALO_CREDITS} créditos de regalo para tus primeros anuncios. Si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes); si no, cancelas con un clic.</>
             : <>Try Creads for {PRUEBA_DIAS} days with {REGALO_CREDITS} gift credits for your first batch. If you like it, carry on with {plan.name} ({plan.credits} credits a month); if not, cancel with one click.</>}
         </span>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">

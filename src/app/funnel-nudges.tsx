@@ -100,7 +100,7 @@ export default function FunnelNudges({ t, lang, rate, pack = false }: { t: Conte
       <div aria-hidden={!bar} className={`fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 px-4 pt-2.5 pb-[max(10px,env(safe-area-inset-bottom))] backdrop-blur transition-transform duration-300 lg:hidden ${bar ? "translate-y-0" : "translate-y-full"}`}>
         <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
           <span className="min-w-0 text-sm leading-tight">
-            <b className="block truncate"><MoneyText text={es && pack ? "Tu primera tanda por US$9" : t.bar} rate={rate} /></b>
+            <b className="block truncate"><MoneyText text={es && pack ? "Tus primeros 10 anuncios por US$9" : t.bar} rate={rate} /></b>
             <span className="text-muted">{es ? <>{pack ? "Pack Prueba US$9" : "Hoy no pagas nada"} · planes desde <Money usd={first} rate={rate} /> al mes</> : <>{HAS_OFFER && <s>{`US$${plus.monthly}`}</s>} {price}{HAS_OFFER ? "" : " a month"}</>}</span>
           </span>
           <a href={es ? "/registro" : startHref("basico")} tabIndex={bar ? 0 : -1} className="shrink-0 rounded-xl bg-[image:var(--grad)] px-5 py-3 text-sm font-bold text-white">{t.barCta}</a>
@@ -114,7 +114,7 @@ export default function FunnelNudges({ t, lang, rate, pack = false }: { t: Conte
           <span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full opacity-40 blur-[70px]" style={{ background: "var(--grad)" }} />
           <button type="button" onClick={() => setOpen(false)} aria-label={t.exitClose} className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted hover:bg-surface-2 hover:text-ink">×</button>
           <span className="chroma relative font-display text-5xl leading-none font-semibold" aria-hidden="true">{es && !pack ? `${PRUEBA_DIAS} días` : `US$${PRUEBA.usd}`}</span>
-          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={es && pack ? "Antes de irte: tu primera tanda por US$9" : t.exitTitle} rate={rate} /></h2>
+          <h2 id="exit-title" className="relative pr-8 text-2xl font-extrabold leading-tight"><MoneyText text={es && pack ? "Antes de irte: tus primeros 10 anuncios por US$9" : t.exitTitle} rate={rate} /></h2>
           <p className="relative text-muted"><MoneyText text={t.exitLead} rate={rate} /></p>
           {state === "done" ? (
             <p role="status" className="relative rounded-xl bg-good/15 px-4 py-3 font-semibold text-good">{t.exitDone}</p>

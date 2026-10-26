@@ -84,7 +84,7 @@ export const nombreCsv = (t: Tanda) => `creads-meta-${t.createdAt.slice(0, 10)}.
 
 /** LEEME.txt that goes inside the ZIP. */
 export const LEEME = (csv: string) => [
-  "Cómo subir esta tanda a Meta (Facebook e Instagram)",
+  "Cómo subir estos anuncios a Meta (Facebook e Instagram)",
   "",
   "1) Sube las imágenes de las carpetas feed-4x5 y stories-reels-9x16 a la biblioteca de contenido de tu cuenta publicitaria",
   "   (Administrador de anuncios → Biblioteca de contenido / Imágenes). No les cambies el nombre.",

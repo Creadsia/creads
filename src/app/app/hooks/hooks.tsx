@@ -60,7 +60,7 @@ export default function HooksBiblioteca() {
           <section key={t} className={cardCls}>
             <header className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-base font-bold">{TIPO_LABEL[t]}</h2>
-              <Link href={`/app/tanda?rubro=${rubro}`} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink">Usar en mi tanda</Link>
+              <Link href={`/app/tanda?rubro=${rubro}`} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink">Usar en mis anuncios</Link>
             </header>
             <ul className="flex flex-col gap-2">
               {HOOKS[rubro][t].map((h) => {

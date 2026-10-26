@@ -158,7 +158,7 @@ export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is 
       window.history.replaceState(null, "", `/app/tanda?id=${d.tanda.id}`);
       if (!alcanza) return comprarPack(d.tanda);
       await generar(d.tanda);
-    } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear la tanda."); setBusy(""); }
+    } catch (e) { setErr(e instanceof Error ? e.message : "No pudimos crear tus anuncios."); setBusy(""); }
   }
 
   /** «Haz 10 variaciones de este»: a new batch around a winner (writing them is free; the images use balance). */
@@ -209,7 +209,7 @@ export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is 
 
   return (
     <>
-      <PageHead title="Tu primera tanda" lead="Pega el link de tu producto. Creads lee tu página, te propone 6 ángulos de venta y crea 10 anuncios listos para Meta: cada uno en 4:5 para el feed y 9:16 para stories y reels." />
+      <PageHead title="Anuncios desde tu producto" lead="Pega el link de tu producto. Creads lee tu página, te propone 6 ángulos de venta y crea 10 anuncios listos para Meta: cada uno en 4:5 para el feed y 9:16 para stories y reels." />
 
       <ol className="flex flex-wrap gap-2 text-xs font-semibold" aria-label="Pasos">
         {(["link", "angulos", "tanda"] as const).map((p, i) => (
@@ -221,7 +221,7 @@ export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is 
 
       {idea && paso !== "tanda" && (
         <p className="flex flex-wrap items-center gap-2 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-sm">
-          Formato elegido: <b>{idea.tipo}</b>. Tu tanda lo va a usar en la mayoría de los anuncios.
+          Formato elegido: <b>{idea.tipo}</b>. Lo vamos a usar en la mayoría de tus anuncios.
           <button type="button" onClick={() => setIdea(null)} className="text-xs text-muted underline">Quitar</button>
         </p>
       )}
@@ -298,7 +298,7 @@ export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is 
             {busy ? <span className="flex items-center gap-2 text-sm text-muted"><Spinner /> {busy}</span>
               : alcanza ? <span className="text-xs text-muted">Usa {price(MODEL_USD * 20, "imagen")} de tu saldo (10 anuncios en 2 formatos). Si una imagen falla, no se cobra.</span>
               : pack ? <span className="text-xs text-muted">Pack Prueba: pago único de US$9, hasta 12 imágenes o 1 video. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>
-              : <span className="text-xs text-muted">Te falta saldo para crearlos: guardamos tu tanda y eliges un plan. Escribirla no usa saldo.</span>}
+              : <span className="text-xs text-muted">Te falta saldo para crearlos: guardamos tus anuncios y eliges un plan. Escribirlos no usa saldo.</span>}
           </div>
           {!alcanza && pack && <CasoFundadorCheck checked={casoFundador} onChange={setCasoFundador} className="max-w-xl" />}
         </div>
@@ -323,13 +323,13 @@ export default function PrimeraTanda({ pack = false }: { /** the Pack Prueba is 
               onVariar={() => variar(tanda, p.n)} busy={Boolean(busy)} onVideo={() => video(tanda, p.n)} />)}
           </div>
           <p className="text-xs text-muted">Siguiente paso: sube la carpeta feed-4x5 a los anuncios de feed y stories-reels-9x16 a los de stories y reels. Testea todos con el mismo presupuesto y quédate con los 2 o 3 que mejor venden. ¿Quieres ahorrarte armar los anuncios uno por uno? Sube las imágenes a la biblioteca de tu cuenta publicitaria e importa el archivo para Meta (Exportar e importar → Importar anuncios en bloque): se crean en pausa, con el mismo nombre de cada imagen. El ZIP trae un LEEME con los pasos.</p>
-          <button type="button" onClick={() => { setTanda(null); setPaso("link"); window.history.replaceState(null, "", "/app/tanda"); }} className={`${ghostCls} self-start`}>Hacer otra tanda</button>
+          <button type="button" onClick={() => { setTanda(null); setPaso("link"); window.history.replaceState(null, "", "/app/tanda"); }} className={`${ghostCls} self-start`}>Crear más anuncios</button>
         </div>
       )}
 
       {paso === "link" && anteriores.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-muted">Tus tandas</h2>
+          <h2 className="text-sm font-semibold text-muted">Tus anuncios de imagen</h2>
           <ul className="flex flex-col divide-y divide-line rounded-2xl border border-line">
             {anteriores.map((t) => (
               <li key={t.id}>

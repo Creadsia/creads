@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   if (!s) return Response.json({ error: SESSION_ENDED }, { status: 401 });
   const ws = s.user.workspace;
   const t = await cargarTanda(ws, new URL(req.url).searchParams.get("id") ?? "");
-  if (!t) return Response.json({ error: "No encontramos esa tanda." }, { status: 404 });
+  if (!t) return Response.json({ error: "No encontramos esos anuncios." }, { status: 404 });
   const files: Record<string, Uint8Array> = {};
   const jobs: Promise<void>[] = [];
   for (const p of t.piezas) for (const [f, ref] of [["4x5", p.f45], ["9x16", p.f916]] as const) {
@@ -38,12 +38,12 @@ export async function GET(req: Request) {
     })());
   }
   await Promise.all(jobs);
-  if (!Object.keys(files).length) return Response.json({ error: "Esta tanda todavía no tiene imágenes listas." }, { status: 404 });
+  if (!Object.keys(files).length) return Response.json({ error: "Tus anuncios todavía no tienen imágenes listas." }, { status: 404 });
   after(() => phCapture(s.user.id, "zip_downloaded", { tanda: t.id, archivos: Object.keys(files).length }));
   const csv = nombreCsv(t);
   files[csv] = strToU8(csvMeta(t));
   files["LEEME.txt"] = strToU8(`﻿${LEEME(csv)}\r\n`);
   const zip = zipSync(files, { level: 0 }); // images are already compressed
-  const name = `creads-tanda-${t.createdAt.slice(0, 10)}.zip`;
+  const name = `creads-anuncios-${t.createdAt.slice(0, 10)}.zip`;
   return new Response(zip as unknown as BodyInit, { headers: { "content-type": "application/zip", "content-disposition": `attachment; filename="${name}"`, "cache-control": "no-store" } });
 }

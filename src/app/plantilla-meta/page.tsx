@@ -73,7 +73,7 @@ export default function Page() {
         <div className={`${wrap} flex flex-col items-start gap-4 rounded-3xl border border-line bg-surface p-6 sm:p-8`}>
           <h2 className={h2}>¿Y si la planilla viene llena?</h2>
           <p className="max-w-2xl text-muted">
-            En Creads pegas el link de tu producto, eliges los ángulos y te armamos una tanda de anuncios en imagen (4:5 y 9:16) con este mismo archivo ya lleno, listo para importar.
+            En Creads pegas el link de tu producto, eliges los ángulos y te armamos tus anuncios en imagen (4:5 y 9:16) con este mismo archivo ya lleno, listo para importar.
           </p>
           <div className="flex flex-wrap gap-3">
             <a href="/registro" className="rounded-xl bg-ink px-6 py-3 font-semibold text-bg">Crear mi cuenta</a>

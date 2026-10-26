@@ -48,19 +48,19 @@ export function welcomeEmail(to: string, name: string | null, regalo?: string | 
   if (modoPack() && !cargado) {
     return {
       to, tag: "bienvenida",
-      subject: "Bienvenido a Creads: tu primera tanda de anuncios",
+      subject: "Bienvenido a Creads: tus primeros anuncios",
       html: layout({
         preview: "Pega el link de tu producto y Creads propone 6 ángulos de venta.",
         title: "Testea 70 anuncios al mes, no 3",
         paragraphs: [
           esc(hello(name)),
-          "Gracias por crear tu cuenta. Empieza por tu primera tanda: pega el link de tu producto, Creads lee tu página y te propone 6 ángulos de venta. Eso no tiene costo.",
+          "Gracias por crear tu cuenta. Empieza por tus primeros anuncios: pega el link de tu producto, Creads lee tu página y te propone 6 ángulos de venta. Eso no tiene costo.",
           "Cuando elijas los ángulos, creas 10 anuncios en 4:5 y 9:16 con el Pack Prueba de US$9 (hasta 12 imágenes o 1 video con avatar). Si después te suscribes dentro de 7 días, esos US$9 se descuentan de tu primer mes.",
         ],
-        cta: { label: "Hacer mi primera tanda", href: `${link}/tanda` },
+        cta: { label: "Crear mis primeros anuncios", href: `${link}/tanda` },
         after: ["Si tienes cualquier duda, responde este correo: lo lee una persona."],
       }),
-      text: plain([hello(name), "", "Pega el link de tu producto y Creads te propone 6 ángulos de venta (sin costo).", "Crea 10 anuncios con el Pack Prueba de US$9. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.", "", `Hacer mi primera tanda: ${link}/tanda`]),
+      text: plain([hello(name), "", "Pega el link de tu producto y Creads te propone 6 ángulos de venta (sin costo).", "Crea 10 anuncios con el Pack Prueba de US$9. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.", "", `Crear mis primeros anuncios: ${link}/tanda`]),
     };
   }
   // «prueba con tarjeta» (required at sign-up since 26 Oct 2026): the gift loads once the card is added (nothing
@@ -600,25 +600,25 @@ export type Embudo = "sin-generar-1h" | "sin-generar-24h" | "sin-pagar-1" | "sin
 
 const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; body: string[]; cta: { label: string; path: string } }> = {
   "sin-generar-1h": {
-    subject: "Tu primera tanda está a un link de distancia",
+    subject: "Tus primeros anuncios están a un link de distancia",
     preview: "Pega el link de tu producto y Creads hace el resto.",
     title: "Pega el link de tu producto",
     body: [
       "Ya tienes tu cuenta. Lo más rápido para ver de qué es capaz Creads: pega el link de tu producto o tu tienda.",
       "Creads lee tu página, te propone 6 ángulos de venta (dolor, deseo, mecanismo, prueba social, creencia y oferta) y crea 10 anuncios en 4:5 y 9:16, listos para subir a Meta.",
     ],
-    cta: { label: "Crear mi primera tanda", path: "/app/tanda" },
+    cta: { label: "Crear mis primeros anuncios", path: "/app/tanda" },
   },
   "sin-generar-24h": {
-    subject: "¿Te ayudo con tu primera tanda?",
+    subject: "¿Te ayudo con tus primeros anuncios?",
     preview: "Si no tienes página, basta con describir tu producto en dos frases.",
-    title: "Tu primera tanda en 3 minutos",
+    title: "Tus primeros anuncios en 3 minutos",
     body: [
-      "Vimos que todavía no creas tu primera tanda de anuncios.",
+      "Vimos que todavía no creas tus primeros anuncios.",
       "Si no tienes página web, no importa: describe tu producto en dos frases (qué es, a quién se lo vendes y su precio) y Creads propone los ángulos por ti.",
       "Si algo no te quedó claro, responde este correo y te ayudamos.",
     ],
-    cta: { label: "Hacer mi tanda ahora", path: "/app/tanda" },
+    cta: { label: "Crear mis anuncios ahora", path: "/app/tanda" },
   },
   "sin-pagar-1": {
     subject: "Tus anuncios ya están listos para testear",
@@ -626,7 +626,7 @@ const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; 
     title: "Siguiente paso: testea",
     body: [
       "Ya creaste tus primeros anuncios. Ahora súbelos a Meta con el mismo presupuesto cada uno y deja que los números elijan al ganador.",
-      "El anuncio que vende se quema en días. Gana el que testea más rápido: con un plan puedes crear tandas nuevas cada semana.",
+      "El anuncio que vende se quema en días. Gana el que testea más rápido: con un plan puedes crear anuncios nuevos cada semana.",
     ],
     cta: { label: "Ver planes", path: "/app/planes" },
   },
@@ -667,20 +667,20 @@ const EMBUDO: Record<Embudo, { subject: string; preview: string; title: string; 
     title: "Tu plan ya está activo",
     body: [
       "Gracias por confiar en Creads. Tu saldo ya está cargado y lo puedes gastar en imágenes o videos, como quieras.",
-      "Tres consejos para empezar: carga tu kit de marca (logo, colores y producto) una sola vez; haz una tanda por semana; y cuando un anuncio funcione, pide variaciones de ese.",
+      "Tres consejos para empezar: carga tu kit de marca (logo, colores y producto) una sola vez; crea anuncios nuevos cada semana; y cuando un anuncio funcione, pide variaciones de ese.",
     ],
     cta: { label: "Ir a mi estudio", path: "/app" },
   },
   // block F (25 Oct 2026). {x} are filled per customer by embudoEmail's `vars`
   "tanda-lista": {
-    subject: "Tu tanda está lista",
+    subject: "Tus anuncios están listos",
     preview: "Tus anuncios ya están listos para descargar y subir a Meta.",
-    title: "Tu tanda está lista",
+    title: "Tus anuncios están listos",
     body: [
       "Tus {n} anuncios de {producto} ya están listos, cada uno en 4:5 para el feed y en 9:16 para stories y reels.",
       "Descarga el ZIP y súbelos a Meta con el mismo presupuesto cada uno: en pocos días los números te dicen cuál vende más. Cuando tengas un ganador, pide variaciones de ese.",
     ],
-    cta: { label: "Ver mi tanda", path: "/app/tanda?id={id}" },
+    cta: { label: "Ver mis anuncios", path: "/app/tanda?id={id}" },
   },
   "pack-dia-5": {
     subject: "Tu descuento de {monto} vence el {fecha}",

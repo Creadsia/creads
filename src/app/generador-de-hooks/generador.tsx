@@ -127,7 +127,7 @@ export default function Generador() {
               Para crear las imágenes o videos con estos hooks, <span className="bg-[image:var(--grad)] bg-clip-text text-transparent">crea tu cuenta</span>
             </h2>
             <p className="max-w-2xl text-muted">
-              En Creads pegas el mismo link, eliges los ángulos y te armamos una tanda de anuncios en imagen para feed (4:5) y stories (9:16), o videos con la voz y el estilo que elijas.
+              En Creads pegas el mismo link, eliges los ángulos y te armamos tus anuncios en imagen para feed (4:5) y stories (9:16), o videos con la voz y el estilo que elijas.
             </p>
             <a href="/registro" onClick={() => evento("tool_hooks_signup_click", { idioma: res.idioma })} className="rounded-xl bg-ink px-6 py-3 font-semibold text-bg">
               Crear mi cuenta

@@ -51,7 +51,7 @@ export default function KitMarca() {
       const r = await fetch("/api/marca", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ marca: m }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo guardar.");
-      tomar(d); setMsg("Guardado. Tus próximas tandas usan este kit.");
+      tomar(d); setMsg("Guardado. Tus próximos anuncios usan este kit.");
     } catch (err) { setMsg(err instanceof Error ? err.message : "No se pudo guardar."); } finally { setBusy(""); }
   }
 
@@ -137,7 +137,7 @@ export default function KitMarca() {
 
         <div className="flex flex-wrap items-center gap-3">
           <button type="submit" disabled={Boolean(busy)} className={btnCls}>{busy === "Guardando…" ? "Guardando…" : "Guardar kit"}</button>
-          <Link href="/app/tanda" className={ghostCls}>Crear una tanda</Link>
+          <Link href="/app/tanda" className={ghostCls}>Crear anuncios</Link>
           {(busy || msg) && <span className="text-sm text-muted" role="status">{busy || msg}</span>}
         </div>
       </form>
