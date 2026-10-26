@@ -17,7 +17,7 @@ import Garantia from "../garantia";
 
 const pesos = (n: number) => `$${n.toLocaleString("es-CL")}`;
 // shown in seconds of video (talking avatar); credits stay underneath
-const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
+const input = "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[16px] text-ink outline-none transition-colors focus:border-accent-text";
 
 function Check({ className = "text-good" }: { className?: string }) {
   return (
@@ -106,9 +106,9 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1.05fr_minmax(0,440px)] lg:gap-10 lg:py-10">
+      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[1.05fr_minmax(0,440px)] lg:grid-rows-[auto_1fr] lg:gap-x-10 lg:gap-y-6 lg:py-4">
         {/* progress: a real sequence */}
-        <ol className="flex items-center gap-2 text-sm lg:col-span-2" aria-label="Pasos">
+        <ol className="hidden flex-wrap items-center gap-2 text-sm sm:flex lg:col-start-1 lg:row-start-1" aria-label="Pasos">
           {["Elige tu plan", "Crea tu cuenta", trial ? `Activa tus ${dias} días gratis` : "Paga con Mercado Pago"].map((s, i) => (
             <li key={s} className="flex items-center gap-2">
               <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? "bg-good text-black" : i === 1 ? "bg-ink text-bg" : "border border-line text-muted"}`}>{i === 0 ? "✓" : i + 1}</span>
@@ -119,7 +119,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
         </ol>
 
         {/* LEFT: the plan and what it gets you */}
-        <section className="order-2 flex min-w-0 flex-col gap-5 lg:order-1" aria-labelledby="tu-plan">
+        <section className="order-2 flex min-w-0 flex-col gap-5 lg:order-1 lg:col-start-1 lg:row-start-2" aria-labelledby="tu-plan">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h1 id="tu-plan" className="font-display text-2xl font-semibold sm:text-3xl">{isPack ? "Tu recarga" : "Tu plan"}</h1>
           </div>
@@ -206,19 +206,18 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
         </section>
 
         {/* RIGHT: the account form, sticky next to the plan */}
-        <section className="order-1 lg:order-2" aria-labelledby="cuenta">
-          <form onSubmit={submit} className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5 shadow-[0_40px_120px_-50px_rgba(138,92,255,0.55)] sm:p-6 lg:sticky lg:top-6">
+        <section className="order-1 lg:order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1" aria-labelledby="cuenta">
+          <form onSubmit={submit} className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-4 shadow-[0_40px_120px_-50px_rgba(138,92,255,0.55)] sm:p-5 lg:sticky lg:top-4">
             {/* order summary, always visible next to the button */}
-            <div className="flex flex-col gap-1 rounded-2xl bg-surface-2 p-4">
+            <div className="flex flex-col gap-1 rounded-2xl bg-surface-2 px-4 py-3">
               <span className="flex items-center justify-between gap-2 text-sm text-muted">{q.label}<a href="#tu-plan" className="font-semibold text-accent-text underline lg:hidden">Cambiar</a></span>
               {trial ? (
                 <>
                   <span className="flex flex-wrap items-baseline gap-x-2">
-                    <b className="font-display text-3xl font-semibold">{dias} días gratis</b>
+                    <b className="font-display text-2xl font-semibold">{dias} días gratis</b>
+                    <span className="text-sm">Hoy <b>$0</b> · {prueba?.regalo ?? 200} créditos para probar</span>
                   </span>
-                  <span className="text-sm">Suscripción mensual. Hoy <b>$0</b> y {prueba?.regalo ?? 200} créditos para probar.</span>
-                  <span className="text-xs text-muted">Desde el {fechaCobro}: {usd(q.total)}/mes{q.fundador ? <> los primeros meses, luego {usd(plan?.monthly ?? 0)}/mes</> : null}. Cancelas antes con un clic y no pagas nada.</span>
-                  <OnlyUSD><span className="text-xs text-muted">Se cobra en pesos chilenos: {pesos(totalClp)} al mes (Mercado Pago, al cambio del día).</span></OnlyUSD>
+                  <span className="text-xs text-muted">Suscripción mensual: activas tu prueba con tu tarjeta en Mercado Pago. Desde el {fechaCobro}: {usd(q.total)}/mes{q.fundador ? <> los primeros meses, luego {usd(plan?.monthly ?? 0)}/mes</> : null}<OnlyUSD> ({pesos(totalClp)})</OnlyUSD>. Cancelas antes con un clic y no pagas nada.</span>
                 </>
               ) : (<>
               <span className="flex flex-wrap items-baseline gap-x-2">
@@ -235,9 +234,9 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </>)}
             </div>
 
-            <div className="flex flex-col gap-1">
-              <h2 id="cuenta" className="font-display text-xl font-semibold">Crea tu cuenta</h2>
-              <p className="text-sm text-muted">{trial ? `Toma 30 segundos. Después activas tus ${dias} días gratis poniendo tu tarjeta en Mercado Pago (hoy no se cobra nada).` : "Toma 30 segundos. Después pagas y entras directo al estudio."}</p>
+            <div className="flex flex-col gap-0.5">
+              <h2 id="cuenta" className="font-display text-lg font-semibold">Crea tu cuenta</h2>
+              <p className={trial ? "hidden" : "text-sm text-muted"}>{trial ? `Después activas tus ${dias} días gratis con tu tarjeta en Mercado Pago (hoy no se cobra nada).` : "Toma 30 segundos. Después pagas y entras directo al estudio."}</p>
             </div>
             {google && (
               <>
@@ -246,27 +245,32 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
               </>
             )}
 
-            <label className="flex flex-col gap-1.5 text-sm font-semibold">
+            <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1 text-sm font-semibold">
               Tu nombre
               <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} autoComplete="name" className={input} aria-invalid={Boolean(fieldErr("name"))} />
             </label>
-            <label className="flex flex-col gap-1.5 text-sm font-semibold">
-              Correo
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" className={input} aria-invalid={Boolean(fieldErr("email"))} />
-              <span className="text-xs font-normal text-muted">{renews ? "Ahí te llega el recibo. Para la renovación mensual, Mercado Pago te pide entrar con este mismo correo: si tu Mercado Pago usa otro, escribe ese." : "Ahí te llega el recibo."}</span>
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm font-semibold">
-              Clave
-              <span className="relative">
-                <input type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} autoComplete="new-password" className={`${input} pr-20`} aria-invalid={Boolean(fieldErr("password"))} />
-                <button type="button" onClick={() => setShow(!show)} className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted hover:text-ink">{show ? "Ocultar" : "Mostrar"}</button>
-              </span>
-              <span className={`text-xs font-normal ${password && password.length < 10 ? "text-warn" : "text-muted"}`}>Mínimo 10 caracteres.</span>
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm font-semibold">
-              <span>Empresa o marca <span className="font-normal text-muted">(opcional)</span></span>
+            <label className="flex flex-col gap-1 text-sm font-semibold">
+              <span>Marca <span className="font-normal text-muted">(opcional)</span></span>
               <input value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="organization" className={input} />
             </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm font-semibold">
+              Correo
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" className={input} aria-invalid={Boolean(fieldErr("email"))} />
+              <span className="hidden text-xs font-normal text-muted sm:inline">{renews ? "Usa el mismo correo de tu Mercado Pago." : "Ahí te llega el recibo."}</span>
+            </label>
+            <label className="flex flex-col gap-1 text-sm font-semibold">
+              Clave
+              <span className="relative">
+                <input type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} autoComplete="new-password" placeholder="Mínimo 10" className={`${input} pr-20`} aria-invalid={Boolean(fieldErr("password"))} />
+                <button type="button" onClick={() => setShow(!show)} className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted hover:text-ink">{show ? "Ocultar" : "Mostrar"}</button>
+              </span>
+              {password && password.length < 10 && <span className="text-xs font-normal text-warn">Mínimo 10 caracteres.</span>}
+            </label>
+            </div>
+
 
             {err && (
               <p role="alert" className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 text-sm">
@@ -276,8 +280,8 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
             <Garantia compact que="plan" />
             <button type="submit" disabled={Boolean(busy)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-4 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
-              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : trial ? <>Crear cuenta y empezar {dias} días gratis</> : <>Crear cuenta y pagar {usd(q.total)}</>}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-3.5 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
+              {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : trial ? <><span className="sm:hidden">Empezar {dias} días gratis</span><span className="hidden sm:inline">Crear cuenta y empezar {dias} días gratis</span></> : <>Crear cuenta y pagar {usd(q.total)}</>}
             </button>
             <p className="text-center text-xs font-semibold text-good">{GARANTIA.boton}</p>
             <p className="text-center text-xs text-muted">
