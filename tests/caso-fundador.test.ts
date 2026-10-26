@@ -40,7 +40,7 @@ test("caso fundador: the testimonial is asked only to ticked cases, days 14 to 2
 test("caso fundador: status transitions (pedido → recibido → aprobado → publicado ⇄ aprobado)", () => {
   const base: Caso = { ...inscribir(undefined, who), estado: "pedido" };
   assert.equal(transicion(base, "aprobar"), null, "nothing received yet");
-  const rec = recibirTestimonio(base, { nombre: "Ana", rubro: "Cosmética", texto: "Vendí más con la tanda de anuncios.", permiso: true }, new Date("2026-11-10T10:00:00Z"));
+  const rec = recibirTestimonio(base, { nombre: "Ana", rubro: "Cosmética", texto: "Vendí más con mis anuncios.", permiso: true }, new Date("2026-11-10T10:00:00Z"));
   assert.equal(rec.estado, "recibido");
   assert.deepEqual(rec.testimonio!.permiso, { fecha: "2026-11-10T10:00:00.000Z", texto: PERMISO_TEXTO });
   assert.equal(transicion(rec, "publicar"), null, "approve first");

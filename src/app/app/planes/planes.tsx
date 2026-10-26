@@ -177,7 +177,7 @@ export default function Planes() {
         </div>
         <div className="hidden flex-col gap-1 rounded-2xl border border-line bg-surface p-4 sm:flex">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
-          <span className="text-sm text-muted">Cada anuncio de una tanda (en 4:5 y 9:16) usa 1 imagen. Un video de 10 s con avatar que habla usa 1 video. Nano Banana Pro cuenta como 2 imágenes. Editar y revisar no usan saldo. Si algo falla, vuelve solo.</span>
+          <span className="text-sm text-muted">Cada anuncio de imagen (en 4:5 y 9:16) usa 1 imagen. Un video de 10 s con avatar que habla usa 1 video. Nano Banana Pro cuenta como 2 imágenes. Editar y revisar no usan saldo. Si algo falla, vuelve solo.</span>
         </div>
       </section>
 
@@ -250,7 +250,7 @@ export default function Planes() {
             <b className="font-display text-xl font-semibold">Pack Prueba · {money(PRUEBA.usd)} pago único</b>
             <span className="text-sm text-muted">Hasta 12 imágenes o 1 video con avatar. Si te suscribes dentro de 7 días, se descuenta de tu primer mes.</span>
           </div>
-          <button type="button" onClick={() => choose(PRUEBA.id)} className={`${btnCls} shrink-0`}>Haz tu primera tanda por {money(PRUEBA.usd)}</button>
+          <button type="button" onClick={() => choose(PRUEBA.id)} className={`${btnCls} shrink-0`}>Haz tus primeros 10 anuncios por {money(PRUEBA.usd)}</button>
         </section>
       )}
 

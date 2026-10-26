@@ -57,7 +57,7 @@ export default function CasosAdmin() {
         {err && <p role="alert" className="text-sm text-bad">{err}</p>}
       </section>
 
-      {!casos.length ? <section className={card}><p className="text-sm text-muted">Todavía nadie marcó la casilla. Aparece en el pago del Pack Prueba (Primera tanda y Planes).</p></section> : casos.map((c) => {
+      {!casos.length ? <section className={card}><p className="text-sm text-muted">Todavía nadie marcó la casilla. Aparece en el pago del Pack Prueba (Anuncios desde tu producto y Planes).</p></section> : casos.map((c) => {
         const t = c.testimonio;
         const b = beneficio[c.userId] ?? c.beneficio ?? "";
         return (

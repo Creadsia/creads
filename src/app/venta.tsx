@@ -97,7 +97,7 @@ const MURO_VIDEOS = [PRODUCTO_DEMOS[4], UGC_DEMOS[0], PRODUCTO_DEMOS[0], PRODUCT
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
   { title: "Elige tus ángulos de venta", text: "Te propone 6: dolor, deseo, mecanismo, prueba social, creencia y oferta. Marcas los que quieres testear." },
-  { title: "Descarga tu tanda", text: "10 anuncios en 4:5 para el feed y 9:16 para stories y reels, con tu marca, en un ZIP ordenado y con el archivo para importarlos en Meta." },
+  { title: "Descarga tus anuncios", text: "10 anuncios en 4:5 para el feed y 9:16 para stories y reels, con tu marca, en un ZIP ordenado y con el archivo para importarlos en Meta." },
 ] as const;
 
 /** Creads vs. the other ways to get 10 ads (qualitative, no third-party figures). */
@@ -112,10 +112,10 @@ const COMPARA = [
 /** The two questions about trying it: the 7-day free trial with card (default since 26 Oct 2026) or the Pack Prueba. */
 const FAQ_ENTRADA = {
   prueba: [
-    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis con ${REGALO_CREDITS} créditos de regalo para tu primera tanda. Si te gusta, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia. Si no, cancelas en «Planes» con un clic.`],
+    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis con ${REGALO_CREDITS} créditos de regalo para tus primeros anuncios. Si te gusta, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia. Si no, cancelas en «Planes» con un clic.`],
   ],
   pack: [
-    ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tu primera tanda: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],
+    ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tus primeros anuncios: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],
     ["¿Necesito tarjeta para crear la cuenta?", "No. La cuenta se crea con tu correo o con Google. Solo pagas cuando compras el Pack Prueba o un plan, en la ventana segura de Mercado Pago."],
   ],
 } as const;
@@ -123,7 +123,7 @@ const FAQ_ENTRADA = {
 const FAQ_RESTO = [
   ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 95 imágenes, 31 videos de producto o 7 videos con avatar de 10 s, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
   ["¿Para qué tipo de negocio sirve?", "Para quien ya invierte en anuncios de Meta y necesita testear ángulos nuevos todo el tiempo: tiendas online, afiliados y media buyers, infoproductos. También para pymes que quieren anuncios propios sin agencia."],
-  ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges en cada tanda. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
+  ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges cada vez. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
   ["¿Qué pasa si mis anuncios no me sirven?", "Tienes 7 días de garantía en tu primer pago: escríbenos a hola@creadsia.com y te devolvemos tu pago. Los detalles están en «7 días de garantía», más arriba."],
   ["¿Cómo pago?", "Con tarjeta de crédito, débito o saldo de Mercado Pago. Creads nunca ve tu tarjeta y el comprobante te llega al correo."],
   ["¿Puedo cancelar?", "Sí, cuando quieras, desde tu cuenta y con un clic. Sin permanencia: sigues usando tu plan hasta la fecha que pagaste."],
@@ -145,7 +145,7 @@ function Cta({ children, href = START, sub }: { children: React.ReactNode; href?
 export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DATOS, pack = false }: { t: Content; rate?: number; renews?: boolean; confianza?: Confianza; /** the Pack Prueba is the way in (MODO_PACK=1); else the 7-day free trial with card */ pack?: boolean }) {
   const precioPack = <Money usd={PRUEBA.usd} rate={rate} />;
   // the main button: «Prueba 7 días gratis» (card trial) or «Haz tu primera tanda por US$9» (Pack Prueba)
-  const empezar = pack ? <>Haz tu primera tanda por {precioPack}</> : <>Prueba {PRUEBA_DIAS} días gratis</>;
+  const empezar = pack ? <>Haz tus primeros 10 anuncios por {precioPack}</> : <>Prueba {PRUEBA_DIAS} días gratis</>;
   const FAQ = [...FAQ_ENTRADA[pack ? "pack" : "prueba"], ...FAQ_RESTO];
   return (
     <div className="overflow-x-clip pb-20 lg:pb-0">
@@ -238,7 +238,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 </li>
               ))}
             </ol>
-            <div className="self-start"><Cta sub={pack ? "Ver tus 6 ángulos no cuesta nada." : `Tu primera tanda sale de tus ${REGALO_CREDITS} créditos de regalo.`}>{empezar}</Cta></div>
+            <div className="self-start"><Cta sub={pack ? "Ver tus 6 ángulos no cuesta nada." : `Tus primeros anuncios salen de tus ${REGALO_CREDITS} créditos de regalo.`}>{empezar}</Cta></div>
           </div>
         </section>
 
@@ -411,7 +411,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               {[
                 ["En tu plan", GARANTIA.planes],
-                pack ? ["En tu primera tanda", GARANTIA.pack] : ["En tu prueba gratis", GARANTIA.prueba],
+                pack ? ["En tus primeros anuncios", GARANTIA.pack] : ["En tu prueba gratis", GARANTIA.prueba],
                 ["Labios que no calzan", GARANTIA.labios],
                 ["Revisión en cada pieza", "Creads revisa el texto y los detalles de cada anuncio antes de entregártelo. Si algo no se genera, el saldo vuelve solo a tu cuenta."],
               ].map(([k, v]) => (
@@ -479,7 +479,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
           <div className={`${wrap} relative grid items-center gap-8 overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-10 sm:px-10 md:grid-cols-[1.3fr_0.7fr]`}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-20 blur-[90px]" style={{ background: "var(--grad)" }} />
             <div className="relative flex min-w-0 flex-col items-start gap-4">
-              <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tu próxima tanda puede estar corriendo hoy.</h2>
+              <h2 className="font-display text-[1.8rem] leading-tight font-semibold sm:text-4xl">Tus próximos anuncios pueden estar corriendo hoy.</h2>
               <p className="text-muted">Pega el link de tu producto, elige tus ángulos y descarga 10 anuncios listos para Meta.</p>
               <Cta sub={pack ? undefined : "Hoy no pagas nada. Cancelas cuando quieras."}>{empezar}</Cta>
               <InsigniasPago compact />

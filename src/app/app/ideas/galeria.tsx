@@ -32,7 +32,7 @@ export default function Galeria() {
 
   return (
     <>
-      <PageHead title="Galería de ideas" lead="Anuncios reales hechos con Creads, en formatos que se repiten entre los que más escalan. Elige uno y haz una tanda así para tu producto." />
+      <PageHead title="Galería de ideas" lead="Anuncios reales hechos con Creads, en formatos que se repiten entre los que más escalan. Elige uno y haz tus anuncios así para tu producto." />
       <div className="flex flex-col gap-2">
         <div className="scroll-row flex gap-2 overflow-x-auto pb-1" role="radiogroup" aria-label="Rubro">
           {([{ id: "todos", label: "Todos" }, ...RUBROS] as const).map((r) => <button key={r.id} type="button" role="radio" aria-checked={rubro === r.id} onClick={() => setRubro(r.id)} className={chip(rubro === r.id)}>{r.label}</button>)}

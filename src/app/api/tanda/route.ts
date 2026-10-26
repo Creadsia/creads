@@ -52,7 +52,7 @@ export async function GET(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   if (id) {
     const t = await cargarTanda(s.user.workspace, id);
-    return t ? NextResponse.json({ tanda: t }) : NextResponse.json({ error: "No encontramos esa tanda." }, { status: 404 });
+    return t ? NextResponse.json({ tanda: t }) : NextResponse.json({ error: "No encontramos esos anuncios." }, { status: 404 });
   }
   return NextResponse.json({ tandas: await listarTandas(s.user.workspace) });
 }
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     if (b?.accion === "pieza") {
       const n = Number(b.n), formato = b.formato === "9:16" ? "9:16" : "4:5";
       const t = await cargarTanda(ws, String(b.id));
-      if (!t || !t.piezas.some((p) => p.n === n)) return NextResponse.json({ error: "No encontramos esa tanda." }, { status: 404 });
+      if (!t || !t.piezas.some((p) => p.n === n)) return NextResponse.json({ error: "No encontramos esos anuncios." }, { status: 404 });
       const patch: Partial<Pieza> = {};
       if (b.url !== undefined) {
         if (!ownsMedia(b.url, ws)) return NextResponse.json({ error: "Imagen inválida." }, { status: 400 });
@@ -165,7 +165,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: "Acción desconocida." }, { status: 400 });
   } catch (e) {
-    const msg = e instanceof Error && /link|página|dirección|archivo|redirige/.test(e.message) ? e.message : "No pudimos preparar tu tanda. Intenta de nuevo en un momento.";
+    const msg = e instanceof Error && /link|página|dirección|archivo|redirige/.test(e.message) ? e.message : "No pudimos preparar tus anuncios. Intenta de nuevo en un momento.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }

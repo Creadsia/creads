@@ -83,7 +83,7 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
 
       <main className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-x-12 lg:gap-y-6 lg:py-14">
         <section className="flex min-w-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
-          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{tarjeta ? `Prueba Creads ${prueba.dias} días gratis` : "Crea tu cuenta y haz tu primera tanda"}</h1>
+          <h1 className="font-display text-3xl font-semibold leading-tight sm:text-4xl">{tarjeta ? `Prueba Creads ${prueba.dias} días gratis` : "Crea tu cuenta y haz tus primeros anuncios"}</h1>
           <p className="text-lg text-muted">{tarjeta ? `Crea tu cuenta y haz tus primeros anuncios con ${prueba.regalo} créditos de regalo.` : "Pega el link de tu producto y Creads te propone 6 ángulos de venta. Después creas 10 anuncios para testear en Meta."}</p>
         </section>
 
@@ -148,15 +148,15 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
           <ul className="flex min-w-0 flex-col gap-3 text-[15px] lg:col-start-1 lg:row-start-2">
             {tarjeta ? (
               <>
-                <li className="flex gap-2"><Check /><span><b>{prueba.regalo} créditos de regalo</b>: alcanzan para tu primera tanda de anuncios o un video corto, listos para publicar.</span></li>
+                <li className="flex gap-2"><Check /><span><b>{prueba.regalo} créditos de regalo</b>: alcanzan para tus primeros anuncios o un video corto, listos para publicar.</span></li>
                 <li className="flex gap-2"><Check /><span><MoneyText text={`Si te gusta, a los ${prueba.dias} días sigues con el plan ${prueba.plan} (US$${prueba.usd} al mes, ${prueba.credits} créditos cada mes). Si no, cancelas con un clic.`} /></span></li>
                 <li className="flex gap-2"><Check /><span><b>6 ángulos de venta para tu producto</b> y 10 anuncios en 4:5 y 9:16, con tu marca, listos para Meta.</span></li>
               </>
             ) : (
               <>
                 <li className="flex gap-2"><Check /><span><b>6 ángulos de venta para tu producto</b>, sin costo: dolor, deseo, mecanismo, prueba social, creencia y oferta.</span></li>
-                <li className="flex gap-2"><Check /><span><MoneyText text="Tu primera tanda de 10 anuncios por US$9 (Pack Prueba, pago único): en 4:5 y 9:16, con tu marca, listos para Meta." /></span></li>
-                <li className="flex gap-2"><Check /><span><b>Garantía:</b> si tu primera tanda no te sirve, la rehacemos o te devolvemos el pago.</span></li>
+                <li className="flex gap-2"><Check /><span><MoneyText text="Tus primeros 10 anuncios por US$9 (Pack Prueba, pago único): en 4:5 y 9:16, con tu marca, listos para Meta." /></span></li>
+                <li className="flex gap-2"><Check /><span><b>Garantía:</b> si tus primeros anuncios no te sirven, los rehacemos o te devolvemos el pago.</span></li>
                 <li className="flex gap-2"><Check /><span><MoneyText text="Si te suscribes dentro de 7 días, los US$9 se descuentan de tu primer mes. Planes desde US$29 al mes, sin permanencia." /></span></li>
               </>
             )}
