@@ -548,6 +548,29 @@ export function regaloReminderEmail(to: string, name: string | null, unsub: stri
   };
 }
 
+/** «Tuvimos un error técnico con el pago, ya está solucionado» (owner, 27 Oct 2026): to people who opened the
+ *  card page in the days the gateway was broken and couldn't finish. Invites them to try again. */
+export function pagoArregladoEmail(to: string, name: string | null, unsub: string): Email {
+  const link = `${SITE}/app/automatico`;
+  return {
+    to, tag: "pago-arreglado", unsub,
+    subject: "Ya puedes activar tu prueba gratis en Creads IA",
+    html: layout({
+      preview: "Tuvimos un problema con el pago y ya está solucionado. Vuelve a intentarlo, toma un minuto.",
+      title: "Ya quedó solucionado",
+      paragraphs: [
+        esc(hello(name)),
+        "Intentaste activar tu prueba gratis de 7 días y tuvimos un problema técnico con el pago que no te dejó terminar. <b>Ya está solucionado.</b>",
+        "Vuelve a entrar y agrega tu tarjeta: toma un minuto, hoy no se cobra nada y entras con <b>200 créditos de regalo</b> para tus primeros anuncios.",
+      ],
+      cta: { label: "Activar mi prueba gratis", href: link },
+      after: ["Perdona la molestia. Si tienes cualquier duda, responde este correo: lo lee una persona.", unsub],
+      unsub,
+    }),
+    text: plain([hello(name), "", "Intentaste activar tu prueba gratis y tuvimos un problema técnico con el pago. Ya está solucionado.", "Vuelve a activar tu prueba de 7 días (hoy no se cobra nada, con 200 créditos de regalo):", link, "", "Perdona la molestia.", "", `No recibir más estos correos: ${unsub}`]),
+  };
+}
+
 /** The customer's ad finished while they were away (owner, 25 Oct 2026: «que salga todo perfecto»). */
 export function adReadyEmail(to: string, name: string | null, o: { titulo?: string | null }): Email {
   const link = `${SITE}/app/automatico`;
