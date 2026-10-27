@@ -11,7 +11,10 @@ import { startTrial } from "@/lib/track";
 declare global {
   interface Window { MercadoPago?: new (key: string, o: { locale: string }) => { bricks: () => { create: (kind: string, id: string, settings: unknown) => Promise<{ unmount: () => void }> } } }
 }
-export const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? "";
+// Mercado Pago's PUBLIC key is meant to live in the browser (it only tokenises the card client-side; it can't
+// charge or read the account — that needs the secret Access Token). Env var wins; this fallback is the owner's
+// own production public key so the in-page card form loads even if NEXT_PUBLIC_MP_PUBLIC_KEY isn't set in Vercel.
+export const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || "APP_USR-35577bf1-02b1-4654-a97e-0ef01429495f";
 
 let sdk: Promise<void> | null = null;
 function loadSdk() {
