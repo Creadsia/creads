@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import TarjetaMP from "../../tarjeta-mp";
+import PayBadges from "../../pay-badges";
 
 /** The plan chosen at /empezar travels as ?plan= (Google sign-up lands here with it). */
 const planQs = () => { try { const p = new URLSearchParams(window.location.search).get("plan"); return p && /^[a-z]+$/.test(p) ? `?plan=${p}` : ""; } catch { return ""; } };
@@ -77,7 +78,8 @@ export default function TrialPopup() {
             </button>
           } />
           {err && <p className="text-sm text-bad" role="alert">{err}</p>}
-          <p className="text-center text-xs text-muted">Pagas seguro con Mercado Pago: Creads nunca ve tu tarjeta.</p>
+          <div className="flex justify-center"><PayBadges compact garantias metodos={["mercadopago"]} /></div>
+          <p className="text-center text-xs text-muted">Pago procesado por Mercado Pago: Creads nunca ve tu tarjeta.</p>
           <div className="flex justify-center gap-4 pb-1 text-sm font-semibold text-muted">
             <a href="/app/planes" className="hover:text-ink">Prefiero elegir un plan</a>
             <button type="button" onClick={salir} className="hover:text-ink">Salir</button>
