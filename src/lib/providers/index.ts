@@ -3,6 +3,7 @@ import { claude } from "./claude";
 import { elevenlabs } from "./elevenlabs";
 import { direct } from "./byteplus";
 import { falImageProviders, falVideoProviders } from "./fal";
+import { heygenAvatarIV } from "./heygen";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 import { openaiImageProviders } from "./openai-image";
 
@@ -16,6 +17,7 @@ export const videoProviders: VideoProvider[] = [
   veoFast,
   veoStd,
   ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
+  heygenAvatarIV, // «avatar que habla» vía HeyGen (A/B test; sólo cuando se pide modelo heygen-avatar-iv)
 ];
 
 export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders, ...openaiImageProviders];
