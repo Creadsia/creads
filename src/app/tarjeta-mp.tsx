@@ -56,10 +56,15 @@ export default function TarjetaMP({ monto, onListo, fallback }: { monto: number;
           onError: (e: unknown) => { console.error("mp brick", e); },
           onSubmit: async (data: { token?: string }) => {
             setErr("");
-            const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card_token: data.token }) }).catch(() => null);
+            // never let the form hang (owner, 27 Oct 2026: «se queda pegado la segunda vez»): abort after 30 s so
+            // the Mercado Pago spinner always stops and the customer can try again instead of staying frozen.
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 30_000);
+            const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card_token: data.token }), signal: ctrl.signal }).catch(() => null);
+            clearTimeout(t);
             const d = r ? await r.json().catch(() => ({})) : {};
             if (r?.ok && d.estado === "ok") { startTrial(d.order, d.usd); done.current(); return; }
-            setErr(d.error || "No se pudo activar. Revisa los datos de tu tarjeta e intenta de nuevo.");
+            setErr(r ? (d.error || "No se pudo activar. Revisa los datos de tu tarjeta e intenta de nuevo.") : "Se demoró más de lo normal. Intenta de nuevo.");
             throw new Error("rechazada"); // lets the customer correct the card in the same form
           },
         },
