@@ -57,6 +57,9 @@ export const heygenAvatarIV: VideoProvider = {
     const audio = req.refs?.find((r) => r.role === "audio")?.url;
     if (!face) throw new Error("HeyGen Avatar IV necesita la foto del avatar.");
     if (!audio) throw new Error("HeyGen Avatar IV necesita la voz grabada.");
+    // Preflight: is the key itself valid? (tells a bad/absent key apart from an endpoint problem.)
+    const me = await fetchRetry(`${API}/v3/users/me`, { headers: auth() }, { maxWaitMs: 10_000 });
+    if (me.status === 401 || me.status === 403) throw new Error(`HeyGen (llave): la API rechazó la llave (${me.status}). Genera una API key nueva en HeyGen (con el saldo ya cargado) y pégala de nuevo en HEYGEN_API_KEY en Vercel.`);
     const imageKey = await uploadFace(face);
     const res = await fetchRetry(`${API}/v2/video/av4/generate`, {
       method: "POST",
