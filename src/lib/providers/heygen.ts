@@ -14,7 +14,7 @@ const API = "https://api.heygen.com";
 const UPLOAD = "https://upload.heygen.com";
 
 function key() {
-  const k = process.env.HEYGEN_API_KEY;
+  const k = process.env.HEYGEN_API_KEY?.trim(); // a stray space/newline pasted in Vercel makes every call 401
   if (!k) throw new Error("Falta HEYGEN_API_KEY en Vercel.");
   return k;
 }
