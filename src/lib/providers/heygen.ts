@@ -46,6 +46,33 @@ async function uploadAsset(url: string, kind: "foto" | "audio"): Promise<{ asset
   return { assetId: String(assetId), url: assetUrl ? String(assetUrl) : `https://files.heygen.ai/asset/${assetId}` };
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Registers an uploaded photo as a HeyGen avatar «look» and waits until it is ready; returns the look id.
+ *  A talking video needs a processed look, not the raw image asset. (Costs ~US$1.32 per look at HeyGen.) */
+async function makeLook(assetId: string): Promise<string> {
+  const res = await fetchRetry(`${API}/v3/avatars`, {
+    method: "POST",
+    headers: { ...auth(), "content-type": "application/json" },
+    body: JSON.stringify({ type: "photo", name: `Creads ${Date.now()}`, file: { type: "asset_id", asset_id: assetId } }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(plainError("registrar el avatar", body?.error?.message || body?.message || `código ${res.status}`));
+  const lookId = body?.data?.avatar_item?.id ?? body?.data?.look_id ?? body?.data?.id;
+  if (!lookId) throw new Error("HeyGen no devolvió el avatar registrado (look_id).");
+  // wait until the look finishes processing (usually a few seconds; cap ~50 s, then let the pipeline retry)
+  const until = Date.now() + 50_000;
+  for (;;) {
+    const st = await fetchRetry(`${API}/v3/avatars/looks/${encodeURIComponent(String(lookId))}`, { headers: auth() }, { maxWaitMs: 10_000 });
+    const sb = await st.json().catch(() => null);
+    const status = String(sb?.data?.status ?? sb?.data?.avatar_item?.status ?? "");
+    if (status === "completed" || status === "ready" || status === "active") return String(lookId);
+    if (status === "failed") throw new Error(plainError("registrar el avatar", "el procesamiento de la foto falló"));
+    if (Date.now() > until) throw new Error("HeyGen está demorando en procesar la foto del avatar. Reintenta.");
+    await sleep(3000);
+  }
+}
+
 // 9:16 vertical by default; HeyGen takes exact pixel dimensions.
 const DIM: Record<AspectRatio, { width: number; height: number }> = {
   "9:16": { width: 720, height: 1280 },
@@ -73,12 +100,13 @@ export const heygenAvatarIV: VideoProvider = {
     const me = await fetchRetry(`${API}/v3/users/me`, { headers: auth() }, { maxWaitMs: 10_000 });
     if (me.status === 401 || me.status === 403) throw new Error(plainError("llave", `código ${me.status}`));
     const [photo, voice] = await Promise.all([uploadAsset(face, "foto"), uploadAsset(audio, "audio")]);
+    const lookId = await makeLook(photo.assetId); // the raw photo must be registered as an avatar «look» first
     const res = await fetchRetry(`${API}/v2/video/generate`, {
       method: "POST",
       headers: { ...auth(), "content-type": "application/json" },
       body: JSON.stringify({
         video_inputs: [{
-          character: { type: "talking_photo", talking_photo_id: photo.assetId },
+          character: { type: "talking_photo", talking_photo_id: lookId },
           voice: { type: "audio", audio_url: voice.url }, // our recorded voice (ElevenLabs), not HeyGen TTS
         }],
         dimension: DIM[req.aspect] ?? DIM["9:16"],
