@@ -18,7 +18,6 @@ interface Ad { id: string; estado: string; paso?: string | null; video_url?: str
 
 const KEY = "creads-automatico";
 const REF = /\/api\/media\/ws\/[\w-]+\/[\w./-]+\.(?:png|jpe?g|webp|mp4|mov|webm)/gi;
-const START = "Hola, quiero hacer un anuncio.";
 const TOOL_LABEL: Record<string, string> = {
   creads_crear_imagen: "Creando la foto de la persona",
   creads_crear_avatar: "Guardando a la persona",
@@ -174,10 +173,22 @@ export default function Asistente() {
               <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-full bg-[image:var(--grad)] text-sm text-white">✦</span>
               Creads · Automático
             </span>
-            <h2 className="font-display text-xl leading-tight font-semibold sm:text-2xl">Cuéntame de tu negocio y yo hago el anuncio.</h2>
-            <p className="max-w-[56ch] text-[15px] leading-snug text-muted sm:text-base">Te pregunto lo justo, te propongo el guion, creo a la persona, hago el video, lo reviso y te lo entrego listo. Tú solo apruebas.</p>
+            <h2 className="font-display text-xl leading-tight font-semibold sm:text-2xl">¿Qué quieres crear hoy?</h2>
+            <p className="max-w-[56ch] text-[15px] leading-snug text-muted sm:text-base">Elige una opción y yo te voy preguntando todo lo demás. Tú solo respondes.</p>
+            <div className="grid w-full grid-cols-2 gap-2 sm:max-w-md">
+              <button type="button" onClick={() => send("Quiero hacer una imagen para promocionar mi negocio.")} className="flex flex-col items-start gap-1 rounded-2xl border-2 border-transparent p-4 text-left [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box]">
+                <span className="text-2xl" aria-hidden="true">📸</span>
+                <b className="text-[15px]">Una imagen</b>
+                <span className="text-xs text-muted">Un aviso para el feed o la historia.</span>
+              </button>
+              <button type="button" onClick={() => send("Quiero hacer un video para promocionar mi negocio.")} className="flex flex-col items-start gap-1 rounded-2xl border-2 border-transparent p-4 text-left [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box]">
+                <span className="text-2xl" aria-hidden="true">🎬</span>
+                <b className="text-[15px]">Un video</b>
+                <span className="text-xs text-muted">Un anuncio con una persona hablando.</span>
+              </button>
+            </div>
             <div data-tour="auto-ideas" className="scroll-row -mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0">
-              {[START, "Quiero un anuncio con mi propia cara", "Tengo una clínica y quiero que agenden horas", "Vendo productos y quiero más ventas"].map((x) => (
+              {["Tengo una clínica y quiero que agenden horas", "Vendo productos y quiero más ventas", "Quiero un anuncio con mi propia cara"].map((x) => (
                 <button key={x} type="button" onClick={() => send(x)} className="shrink-0 rounded-full border border-line px-3.5 py-2 text-sm hover:border-accent-text">{x}</button>
               ))}
             </div>
