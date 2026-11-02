@@ -97,6 +97,17 @@ function listOf(data: Obj): unknown[] {
 
 export interface SpySearch { query: string; country?: string; cursor?: string; video?: boolean }
 
+/** One ad in full, from the single-ad endpoint. Search results leave the video file URL empty, so
+ * this is the only place the real video_hd_url/video_sd_url comes back (and a cleaner image). */
+export async function adDetail(id: string): Promise<SpyAd | null> {
+  const clean = String(id).replace(/\D/g, "").slice(0, 30);
+  if (!clean) return null;
+  const data = await call("/ad", { id: clean });
+  return readAd(data);
+}
+
+const ENRICH_MAX = 12; // how many video ads per page we fetch in full (cached 24 h in the route, so paid once)
+
 /** Active ads matching a keyword in one country (or everywhere). */
 export async function searchAds(s: SpySearch): Promise<{ ads: SpyAd[]; cursor: string | null }> {
   const data = await call("/search/ads", {
@@ -108,6 +119,21 @@ export async function searchAds(s: SpySearch): Promise<{ ads: SpyAd[]; cursor: s
   });
   const seen = new Set<string>();
   const ads = listOf(data).map((x) => readAd(x)).filter((a): a is SpyAd => Boolean(a) && !seen.has(a!.id) && Boolean(seen.add(a!.id)));
+
+  // The search endpoint returns video ads without the playable file URL (only a preview image, if any),
+  // so those show as "text only" and can't be transcribed. Fetch the full ad to fill in the real video.
+  const need = ads.filter((a) => !a.video && (s.video || Boolean(a.poster))).slice(0, ENRICH_MAX);
+  if (need.length) {
+    const details = await Promise.all(need.map((a) => adDetail(a.id).catch(() => null)));
+    const more = new Map(details.filter((d): d is SpyAd => Boolean(d)).map((d) => [d.id, d]));
+    for (const a of ads) {
+      const d = more.get(a.id);
+      if (!d) continue;
+      a.video = a.video ?? d.video;
+      a.poster = a.poster ?? d.poster;
+      a.image = a.image ?? d.image;
+    }
+  }
   return { ads, cursor: str(data.cursor, o(data.paging).cursor) };
 }
 
