@@ -32,10 +32,10 @@ function AdCard({ ad, onScript, busy, first }: { ad: SpyAd; onScript: (ad: SpyAd
     <article data-tour={first ? "spy-card" : undefined} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="relative aspect-[4/5] bg-black">
         {ad.video ? (
-          <video src={ad.video} poster={ad.poster ?? undefined} controls playsInline preload="none" className="h-full w-full object-contain" />
-        ) : ad.image ? (
+          <video src={ad.video} poster={ad.poster ?? undefined} controls playsInline preload="metadata" className="h-full w-full object-contain" />
+        ) : ad.image || ad.poster ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={ad.image} alt={`Anuncio de ${ad.page}`} loading="lazy" className="h-full w-full object-contain" />
+          <img src={(ad.image || ad.poster) as string} alt={`Anuncio de ${ad.page}`} loading="lazy" className="h-full w-full object-contain" />
         ) : (
           <p className="grid h-full place-items-center p-4 text-center text-sm text-white/70">Anuncio solo de texto</p>
         )}
