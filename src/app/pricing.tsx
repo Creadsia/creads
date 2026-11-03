@@ -110,24 +110,17 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                       : yearly ? <>{money((p as typeof p & { yearlyTotal?: number }).yearlyTotal ?? p.yearly * 12)} {es ? "al año" : "a year"}</> : t.billedMonthly} · {t.cancel}
                   </p>
                 </div>
-                {/* the headline is a result, not credits (owner's plan): «31 videos de producto al mes» */}
+                {/* the headline is the credits (owner, 2 Nov 2026): «400 créditos al mes», not a number of ads */}
                 <div className={`flex flex-col gap-1.5 rounded-2xl border p-4 ${featured ? "border-accent/40 bg-accent/[0.07]" : "border-line bg-surface-2"}`}>
-                  <b className="font-display text-[1.35rem] leading-tight font-semibold">
-                    {plan.destaca === "imagenes"
-                      ? (es ? <>{plan.imagenes} imágenes al mes</> : <>{plan.imagenes} images a month</>)
-                      : (es ? <>{plan.productos} videos de producto al mes</> : <>{plan.productos} product videos a month</>)}
+                  <b className="font-display text-[1.6rem] leading-none font-semibold tabular-nums">
+                    {p.credits} <span className="text-[1rem] font-semibold text-muted">{es ? "créditos al mes" : "credits a month"}</span>
                   </b>
-                  <span className="text-sm text-muted">
-                    {plan.destaca === "imagenes"
-                      ? (es ? <>o {plan.productos} videos de producto, o {plan.videos} videos con avatar, o la mezcla que quieras</> : <>or {plan.productos} product videos, or {plan.videos} avatar videos, or any mix</>)
-                      : (es ? <>o {plan.imagenes} imágenes, o {plan.videos} videos con avatar, o la mezcla que quieras</> : <>or {plan.imagenes} images, or {plan.videos} avatar videos, or any mix</>)}
-                  </span>
-                  <span className="flex items-center gap-1.5 text-xs text-muted">
-                    {p.credits} {es ? "créditos al mes" : "credits a month"}
-                    <details className="relative">
-                      <summary className="-m-3.5 grid h-11 w-11 cursor-pointer list-none place-items-center" aria-label={es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}><span className="grid h-5 w-5 place-items-center rounded-full border border-line text-[13px] font-bold">?</span></summary>
-                      <span className="absolute bottom-6 left-1/2 z-20 w-60 -translate-x-1/2 rounded-lg border border-line bg-surface p-3 text-xs text-ink shadow-xl">
-                        <b>{es ? "¿Qué cuenta como anuncio?" : "What counts as an ad?"}</b> {es ? "Cada imagen sale en 3 formatos listos para subir. «Hasta 400 anuncios» corresponde al plan Agencia." : "Every image comes in 3 formats ready to upload. «Up to 400 ads» is the Agency plan."}
+                  <span className="flex items-start gap-1.5 text-sm text-muted">
+                    {es ? <>Para {plan.imagenes} imágenes, {plan.productos} videos de producto o {plan.videos} videos con avatar — la mezcla que quieras.</> : <>For {plan.imagenes} images, {plan.productos} product videos or {plan.videos} avatar videos — any mix.</>}
+                    <details className="relative shrink-0">
+                      <summary className="-m-3.5 grid h-11 w-11 cursor-pointer list-none place-items-center" aria-label={es ? "¿Cómo se gastan los créditos?" : "How do credits work?"}><span className="grid h-5 w-5 place-items-center rounded-full border border-line text-[13px] font-bold">?</span></summary>
+                      <span className="absolute bottom-6 right-0 z-20 w-60 rounded-lg border border-line bg-surface p-3 text-xs text-ink shadow-xl">
+                        <b>{es ? "¿Cómo se gastan?" : "How do credits work?"}</b> {es ? "Un solo saldo que repartes como quieras: 10 créditos una imagen, 30 un video de producto, 120 un video con avatar. Si algo falla, el saldo vuelve." : "One balance you split however you like: 10 credits an image, 30 a product video, 120 an avatar video. If something fails, the balance comes back."}
                       </span>
                     </details>
                   </span>

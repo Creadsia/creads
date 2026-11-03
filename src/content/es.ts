@@ -40,7 +40,7 @@ export const es: Content = {
     { label: "Video", href: "/ia/video", badge: "", ex: "video" },
             { label: "Recrear video", href: "/ia/recrear", badge: "NUEVO", ex: "recrear" },
             { label: "API y MCP", href: "/#conectar", badge: "NUEVO" },
-    { label: "Precios", href: "/#pricing", badge: "US$55" },
+    { label: "Precios", href: "/#pricing", badge: "US$29" },
   ],
   menuEx: {
     see: "Ver ejemplos",
@@ -196,7 +196,7 @@ export const es: Content = {
     format: "9:16",
     language: "Español",
     create: "Crear",
-    sent: "Elige tu plan abajo y créalo hoy. Emprende cuesta US$55 al mes.",
+    sent: "Elige tu plan abajo y créalo hoy. Pruebas 7 días gratis y sigues desde US$29 al mes.",
   },
   wall: {
     title: "Ejemplos",
@@ -478,13 +478,14 @@ export const es: Content = {
     compare: {
       title: "Compara los planes",
       lead: "Los tres hacen anuncios terminados con voz, subtítulos y revisión de calidad. Todo se paga con tus créditos: videos, imágenes y voces. Cambias de plan cuando quieras.",
-      cols: ["", "Básico", "Emprende", "Negocio"],
+      cols: ["", "Testea", "Escala", "Agencia"],
       groups: [
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Créditos al mes", "500", "1.500", "3.000"],
-            ["Video con persona IA (aprox.)", "43 s", "131 s", "263 s"],
+            ["Créditos al mes", "400", "950", "4.000"],
+            ["Imágenes de anuncio (aprox.)", "40", "95", "400"],
+            ["Videos con avatar de 10 s (aprox.)", "3", "7", "32"],
             ["Imágenes para anuncios (con tus créditos)", "yes", "yes", "yes"],
             ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes", "yes"],
@@ -521,9 +522,9 @@ export const es: Content = {
         price: 29,
         yearly: 24,
         yearlyTotal: 290,
-        credits: "470",
-        imagenes: 47,
-        productos: 15,
+        credits: "400",
+        imagenes: 40,
+        productos: 13,
         videos: 3,
         destaca: "productos",
         for: "Para empezar a testear en serio: varios grupos de anuncios al mes sin gastar de más.",
@@ -692,8 +693,8 @@ export const es: Content = {
   },
   start: {
     title: "Empieza a crear con Creads",
-    lead: "Crea tu cuenta en un minuto. Emprende cuesta US$55 al mes. Tu primer anuncio puede estar listo hoy.",
-    cta: "Empezar con Emprende",
+    lead: "Crea tu cuenta en un minuto. Pruebas 7 días gratis y después sigues desde US$29 al mes. Tu primer anuncio puede estar listo hoy.",
+    cta: "Empezar gratis",
     see: "Comparar planes",
     formTitle: "Tu correo y a qué te dedicas",
   },

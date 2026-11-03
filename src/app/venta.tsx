@@ -183,7 +183,28 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
       <main className="flex flex-col gap-16 pb-16 sm:gap-24">
         {/* 1 · Hero: the promise, the button and the demo */}
         <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
-          <div className={`${wrap} relative grid items-center gap-10 py-10 sm:py-14 lg:grid-cols-[1.05fr_0.95fr]`}>
+          {/* Mobile hero: video-first so the phone converts at the max (owner, 2 Nov 2026 — «el celular que
+              convierta al máximo»). A clean looping reel of UGC + product ads (muted, tap to hear), one selling
+              headline, a killer CTA and the 7-day free trial up front. Desktop keeps the two-column layout below. */}
+          <div className={`${wrap} relative flex flex-col items-center gap-4 pt-7 pb-2 lg:hidden`}>
+            <div aria-hidden="true" className="pointer-events-none absolute -top-10 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[90px]" />
+            <p className="relative w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-[13px] text-muted backdrop-blur">El anuncio que vende se quema en días. Gana el que testea más rápido.</p>
+            <h1 className="relative text-center font-display text-[2.15rem] leading-[1.04] font-semibold">
+              Anuncios que venden,<span className="chroma mt-1 block">sin grabar ni diseñar.</span>
+            </h1>
+            <p className="relative max-w-[34ch] text-center text-[15px] text-muted">
+              Pega el link de tu producto y baja 10 anuncios con tu marca, listos para Meta y TikTok, en minutos.
+            </p>
+            {HAY_REEL && <DemoPhone {...REEL} big sound className="relative w-[min(70vw,250px)]" />}
+            <div className="relative flex w-full flex-col items-center gap-2 pt-1">
+              <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_CREDITS} créditos de regalo · cancelas con un clic`}>{empezar}</Cta>
+              {!pack && <span className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-[13px] font-semibold text-accent-text">⚡ {PRUEBA_DIAS} días gratis · sin compromiso</span>}
+            </div>
+            <ul className="relative flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
+              {["Listos en minutos", "Con tu logo y tu marca", "4:5, 9:16 y cuadrado"].map((x) => <li key={x} className="flex items-center gap-1"><Check />{x}</li>)}
+            </ul>
+          </div>
+          <div className={`${wrap} relative hidden items-center gap-10 py-10 sm:py-14 lg:grid lg:grid-cols-[1.05fr_0.95fr]`}>
             <div className="flex min-w-0 flex-col gap-5">
               <p className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">El anuncio que vende se quema en días. Gana el que testea más rápido.</p>
               <h1 className="font-display text-[2.5rem] leading-[1.02] font-semibold sm:text-[3.8rem]">
