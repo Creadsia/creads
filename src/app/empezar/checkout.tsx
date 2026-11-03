@@ -52,6 +52,9 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState<"" | "cuenta" | "pago">("");
   const [err, setErr] = useState<{ text: string; field?: string; exists?: boolean } | null>(null);
+  // once the account is created we don't create it again on a retry: a second attempt only re-opens the
+  // trial/payment, so a failed trial can be retried from this same page (owner's reviewer, 3 Nov 2026).
+  const [cuentaLista, setCuentaLista] = useState(false);
 
   useEffect(() => {
     track("ViewContent", { content_name: "Checkout", value: q.total, currency: "USD" });
@@ -63,22 +66,29 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    setBusy("cuenta");
-    const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, password, company }) }).catch(() => null);
-    const d = r ? await r.json().catch(() => ({})) : {};
-    if (!r || !r.ok) {
-      setBusy("");
-      setErr({ text: d.error || "No se pudo crear tu cuenta. Revisa tu conexión e intenta de nuevo.", field: d.field, exists: d.exists });
-      return;
+    if (!cuentaLista) {
+      setBusy("cuenta");
+      const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, email, password, company }) }).catch(() => null);
+      const d = r ? await r.json().catch(() => ({})) : {};
+      if (!r || !r.ok) {
+        setBusy("");
+        setErr({ text: d.error || "No se pudo crear tu cuenta. Revisa tu conexión e intenta de nuevo.", field: d.field, exists: d.exists });
+        return;
+      }
+      if (d.eventId) track("CompleteRegistration", { content_name: q.label }, d.eventId);
+      setCuentaLista(true);
     }
-    if (d.eventId) track("CompleteRegistration", { content_name: q.label }, d.eventId);
     setBusy("pago");
     if (trial) {
-      // the trial: Mercado Pago's page to add the card (nothing charged today); the studio asks again if this fails
+      // the trial: Mercado Pago's page to add the card (nothing charged today).
       const t = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ plan: item }) }).catch(() => null);
       const td = t ? await t.json().catch(() => ({})) : {};
       await new Promise((r) => setTimeout(r, 400));
-      window.location.href = t?.ok && td.redirect ? td.redirect : `/app/automatico?plan=${item}`;
+      if (t?.ok && td.redirect) { window.location.href = td.redirect; return; } // Mercado Pago's page to add the card
+      // The account exists but the trial couldn't open. Show it clearly and let them retry from here —
+      // never send them to the studio, where they'd meet the card lock with no explanation.
+      setBusy("");
+      setErr({ text: td.error || "Creamos tu cuenta, pero no pudimos abrir tu prueba de 7 días en Mercado Pago. No se te ha cobrado nada: vuelve a tocar el botón para reintentar." });
       return;
     }
     const eventId = newEventId();
