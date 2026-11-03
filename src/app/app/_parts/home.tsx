@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PageHead, SetupNotice, cardCls } from "./ui";
+import { PageHead, SetupNotice } from "./ui";
 import { useCredits } from "./use-credits";
 
 // Inicio (owner's brief, 25 Oct 2026 — «interfaz interna ordenada»): what the balance still makes, in pieces;
@@ -52,6 +52,60 @@ function DosCaminos() {
   );
 }
 
+/** Phones (owner, 2 Nov 2026): the simplest, most didactic screen — anyone understands how to make one.
+ * Only «Automático»; the computer keeps the full studio. */
+function MobileHome({ done }: { done: ClipRow[] }) {
+  const pasos: [string, string, string][] = [
+    ["1", "Me cuentas qué vendes", "Respondes un par de preguntas simples."],
+    ["2", "Yo lo creo y lo reviso", "Escribo, lo armo y reviso que quede bien."],
+    ["3", "Lo descargas y lo publicas", "Listo para subir a Instagram o TikTok."],
+  ];
+  return (
+    <div className="flex flex-col gap-5 md:hidden">
+      <div className="flex flex-col gap-2 pt-1">
+        <h1 className="font-display text-2xl leading-tight font-extrabold">Hagamos tu anuncio 👋</h1>
+        <p className="text-[15px] leading-snug text-muted">Yo te voy preguntando todo y lo creo por ti. Puedes hacer una <b className="text-ink">imagen</b> o un <b className="text-ink">video</b>.</p>
+      </div>
+
+      <ol className="flex flex-col gap-2">
+        {pasos.map(([n, t, d]) => (
+          <li key={n} className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-3.5">
+            <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[image:var(--grad)] text-sm font-bold text-white">{n}</span>
+            <span className="flex flex-col"><b className="text-[15px]">{t}</b><span className="text-sm text-muted">{d}</span></span>
+          </li>
+        ))}
+      </ol>
+
+      <Link href="/app/automatico" className="w-full rounded-2xl bg-[image:var(--grad)] px-4 py-4 text-center text-base font-semibold text-white">Empezar mi anuncio</Link>
+
+      <p className="rounded-2xl border border-line bg-surface p-3.5 text-sm text-muted">💻 ¿Quieres más opciones —elegir la voz, usar varias escenas, editar el video? Abre Creads en tu <b className="text-ink">computador</b>.</p>
+
+      {done.length > 0 && (
+        <section aria-labelledby="recientes-m" className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="recientes-m" className="font-display text-base font-bold">Tus últimos anuncios</h2>
+            <Link href="/app/biblioteca" className="text-sm font-semibold text-accent-text">Ver todos</Link>
+          </div>
+          <ul className="grid grid-cols-3 gap-2">
+            {done.slice(0, 3).map((x) => (
+              <li key={x.id}>
+                <a href={x.url!} target="_blank" rel="noopener" className="relative block aspect-[9/16] overflow-hidden rounded-xl border border-line bg-surface-2">
+                  {isVideo(x.url)
+                    ? <video src={`${x.url}#t=0.5`} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />
+                    : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={x.url!} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
 export default function Home({ full = true }: { full?: boolean }) {
   const [ads, setAds] = useState<AdRow[] | null>(null);
   const [clips, setClips] = useState<ClipRow[] | null>(null);
@@ -85,6 +139,9 @@ export default function Home({ full = true }: { full?: boolean }) {
 
   return (
     <>
+      <MobileHome done={done} />
+      {/* Computador: el estudio completo (en el celular se muestra MobileHome) */}
+      <div className="hidden flex-col gap-4 md:flex lg:gap-6">
       <PageHead title={firstTime ? "Bienvenido a Creads" : "Inicio"} lead={firstTime ? "Elige cómo quieres hacer tu primer anuncio: conversando con Creads o paso a paso." : "Crea, revisa lo que está en producción y descarga lo terminado."} />
       {missing && <SetupNotice />}
 
@@ -172,6 +229,7 @@ export default function Home({ full = true }: { full?: boolean }) {
           </ul>
         </section>
       )}
+      </div>
     </>
   );
 }

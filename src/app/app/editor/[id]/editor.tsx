@@ -6,7 +6,7 @@ import { dl, uploadFile, Working } from "../../_parts/ui";
 import { FORMATOS, clampVelocidad, type Corte, type Proyecto, type Texto } from "@/lib/editor-tipos";
 import { type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
 import type { Word } from "@/lib/textmatch";
-import { type Clip, type Datos, type Ed, type Frase, Icon, IconBtn, RATIO, SELECT, type Sel, type Strip, SubtituloLinea, TOOLS, type Tool, ToolBtn, fmt, len } from "./piezas";
+import { type Clip, type Datos, type Ed, type Frase, Icon, IconBtn, RATIO, SELECT, type Sel, type Strip, type SubWord, SubtituloLinea, TOOLS, type Tool, ToolBtn, fmt, len } from "./piezas";
 import { Panel } from "./paneles";
 import Timeline from "./timeline";
 
@@ -110,7 +110,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       setD(x); setTitulo(x.titulo);
       setEstiloSubRaw(normalizeStyle(x.subtitulosEstilo ?? undefined));
       setMusicaUrl(x.musica);
-      setP(x.proyecto ?? { cortes: x.cortes.map((c: Clip) => ({ clipId: c.id, a: 0, b: 600 })), textos: [], subtitulos: true, musica: null, vozVol: 100, formato: (FORMATOS as readonly string[]).includes(x.aspecto) ? (x.aspecto as Proyecto["formato"]) : "9:16", velocidad: 1 });
+      setP(x.proyecto ?? { cortes: x.cortes.map((c: Clip) => ({ clipId: c.id, a: 0, b: 600 })), textos: [], subtitulos: true, subCorr: {}, musica: null, vozVol: 100, formato: (FORMATOS as readonly string[]).includes(x.aspecto) ? (x.aspecto as Proyecto["formato"]) : "9:16", velocidad: 1 });
     };
     if (inicial) { abrir(inicial); return; }
     fetch(`/api/ads/${id}/editor`).then(async (r) => {
@@ -220,9 +220,14 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   // the subtitle words on the edited timeline (preview), grouped in phrases like the export
   const palabras = useMemo(() => {
-    if (!p || !d) return [] as Word[];
-    const out: Word[] = [];
-    p.cortes.forEach((c, i) => { for (const w of clipOf(c.clipId)?.palabras ?? []) if (w.s >= c.a - 0.05 && w.e <= c.b + 0.3) out.push({ w: w.w, s: Math.max(0, w.s - c.a) + starts[i], e: Math.max(0, Math.min(w.e, c.b) - c.a) + starts[i] }); });
+    if (!p || !d) return [] as SubWord[];
+    const out: SubWord[] = [];
+    p.cortes.forEach((c, i) => (clipOf(c.clipId)?.palabras ?? []).forEach((w, j) => {
+      if (!(w.s >= c.a - 0.05 && w.e <= c.b + 0.3)) return;
+      const k = `${c.clipId}:${j}`;
+      const text = p.subCorr?.[k] ?? w.w;
+      out.push({ w: text, s: Math.max(0, w.s - c.a) + starts[i], e: Math.max(0, Math.min(w.e, c.b) - c.a) + starts[i], k, orig: w.w });
+    }));
     return out;
   }, [p, d, starts, clipOf]);
   const frases = useMemo(() => {
@@ -311,6 +316,13 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   }
   const setCorte = (i: number, patch: Partial<Corte>) => cambiar((x) => ({ ...x, cortes: x.cortes.map((c, k) => (k === i ? { ...c, ...patch } : c)) }), `corte:${i}:${Object.keys(patch).join()}`);
   const setTexto = (i: number, patch: Partial<Texto>) => cambiar((x) => ({ ...x, textos: x.textos.map((tx, k) => (k === i ? { ...tx, ...patch } : tx)) }), `texto:${i}:${Object.keys(patch).join()}`);
+  // spelling fix on one subtitle word: store «clipId:index → new word»; typing the original back (or clearing) removes the fix
+  const corregirSub = (k: string, texto: string, orig: string) => cambiar((x) => {
+    const next = { ...(x.subCorr ?? {}) };
+    const clean = texto.replace(/[{}\\\n\r]/g, "").slice(0, 60).trim();
+    if (clean === orig || clean === "") delete next[k]; else next[k] = clean; // empty or same as original = no fix
+    return { ...x, subCorr: next };
+  }, `sub:${k}`);
   function nuevoTexto(preset: Partial<Texto>) {
     if (!p) return;
     if (p.textos.length >= 20) { setAviso("Puedes tener hasta 20 textos."); return; }
@@ -424,7 +436,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   const ed: Ed = {
     d, p, t, total, starts, durs, playing, sel, setSel, tool, abrir, setTool, cambiar, gesto, setCorte, setTexto, buscar, pausar, setT, clipOf, strips,
-    frases, estiloSub, setEstiloSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
+    frases, estiloSub, setEstiloSub, corregirSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
   };
   const r = RATIO[p.formato];
   const padC = wide ? 40 : 16;

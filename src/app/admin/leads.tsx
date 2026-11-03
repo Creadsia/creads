@@ -56,6 +56,33 @@ function RecordarRegalo({ onDone }: { onDone: () => void }) {
   );
 }
 
+function AvisoPago({ onDone }: { onDone: () => void }) {
+  const [n, setN] = useState<number | null>(null);
+  const [lista, setLista] = useState<string[]>([]);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = () => fetch("/api/admin/aviso-pago").then((r) => r.json()).then((d) => { setN(d.cuantos ?? 0); setLista(d.correos ?? []); }).catch(() => setN(null));
+  useEffect(() => { load(); }, []);
+  async function send() {
+    setBusy(true); setMsg("");
+    const r = await fetch("/api/admin/aviso-pago", { method: "POST" }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(false);
+    setMsg(r?.ok ? `Listo: ${d.enviados} ${d.enviados === 1 ? "correo enviado" : "correos enviados"}.` : d.error || "No se pudo enviar.");
+    load(); onDone();
+  }
+  if (!n && !msg) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/40 bg-warn/[0.08] p-3 text-sm">
+      <span>
+        {n ? <><b>{n} {n === 1 ? "persona abrió el pago" : "personas abrieron el pago"} y no {n === 1 ? "pudo" : "pudieron"} terminar.</b> <span className="text-muted" title={lista.join(", ")}>Les llega «Ya está solucionado, vuelve a intentar tu prueba gratis» (una sola vez).</span></> : null}
+        {msg && <b className="block text-good">{msg}</b>}
+      </span>
+      {n ? <button type="button" onClick={send} disabled={busy} className="rounded-lg bg-ink px-3 py-2 font-semibold text-bg disabled:opacity-50">{busy ? "Enviando…" : `Enviarles el correo (${n})`}</button> : null}
+    </div>
+  );
+}
+
 export default function Leads() {
   const [dias, setDias] = useState(7);
   const [d, setD] = useState<Data | null>(null);
@@ -93,6 +120,7 @@ export default function Leads() {
       </div>
       <DesdeCero onChange={load} />
       <RecordarRegalo onDone={load} />
+      <AvisoPago onDone={load} />
       {err && <p className="text-sm text-bad">{err}</p>}
       {!d && !err && <p className="text-sm text-muted">Cargando…</p>}
       {d && (

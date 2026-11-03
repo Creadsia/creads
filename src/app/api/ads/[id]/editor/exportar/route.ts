@@ -63,7 +63,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       const row = byId.get(c.clipId)!;
       const words = st.review?.find((r) => r.clipId === row.id && r.url === row.url)?.words ?? [];
       const seg = parts[i];
-      for (const w of words) if (w.s >= seg.a - 0.05 && w.e <= seg.b + 0.3) timeline.push({ w: w.w, s: Math.max(0, w.s - seg.a) + offset, e: Math.max(0, Math.min(w.e, seg.b) - seg.a) + offset });
+      // apply the editor's subtitle spelling fixes (same «clipId:index» key the editor shows and stores)
+      words.forEach((w, j) => {
+        if (!(w.s >= seg.a - 0.05 && w.e <= seg.b + 0.3)) return;
+        const text = p.subCorr?.[`${row.id}:${j}`] ?? w.w;
+        if (!text) return;
+        timeline.push({ w: text, s: Math.max(0, w.s - seg.a) + offset, e: Math.max(0, Math.min(w.e, seg.b) - seg.a) + offset });
+      });
       offset += segLen(seg);
     });
     const [W, H] = frameSize(p.formato);

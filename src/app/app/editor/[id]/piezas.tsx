@@ -13,7 +13,10 @@ export interface Datos { titulo: string; aspecto: string; final: string | null; 
 export type Sel = { tipo: "corte" | "texto"; i: number } | null;
 export type Tool = "cortes" | "texto" | "subtitulos" | "audio" | "formato" | "velocidad";
 export interface Strip { step: number; frames: string[]; ar: number }
-export interface Frase { s: number; e: number; words: Word[] }
+/** A subtitle word on the edited timeline. `k` = «clipId:index» identifies it for spelling fixes; `orig` is
+ *  the word as transcribed (so a fix that types the original back just clears the fix). */
+export type SubWord = Word & { k?: string; orig?: string };
+export interface Frase { s: number; e: number; words: SubWord[] }
 
 /** `desc`: one short line shown under the panel title and as the rail tooltip, so each tool reads at a glance. */
 export const TOOLS: { id: Tool; label: string; icon: string; desc: string }[] = [
@@ -39,6 +42,9 @@ export interface Ed {
   buscar: (t: number, play?: boolean) => void; pausar: () => void; setT: (t: number) => void;
   clipOf: (id: string) => Clip | undefined; strips: Record<string, Strip | "x">;
   frases: Frase[]; estiloSub: CaptionStyle; setEstiloSub: (patch: Partial<CaptionStyle>) => void;
+  /** fixes a subtitle word's spelling. `k` = the word's «clipId:index»; `texto` the new word; `orig` the
+   *  transcribed word (passing the original back, or empty, clears the fix). */
+  corregirSub: (k: string, texto: string, orig: string) => void;
   dividir: () => void; duplicar: () => void; borrar: () => void; mover: (i: number, dir: -1 | 1) => void;
   moverA: (from: number, to: number) => void;
   nuevoTexto: (preset: Partial<Texto>) => void; agregarCorte: (clipId: string) => void;

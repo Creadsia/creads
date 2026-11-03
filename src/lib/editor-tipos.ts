@@ -16,6 +16,10 @@ export interface Texto {
 export interface Proyecto {
   cortes: Corte[]; textos: Texto[];
   subtitulos: boolean;
+  /** Subtitle word fixes (spelling), edited right in the editor. Key «clipId:wordIndex» → the corrected word
+   *  (its index within that clip's transcript, so it follows the clip when cuts are reordered or trimmed, and
+   *  the preview and the export agree). An empty value means «hide this word». */
+  subCorr?: Record<string, string>;
   musica: { url: string; nombre: string; vol: number } | null;
   vozVol: number;                // 0–150 %
   formato: Formato;

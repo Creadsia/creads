@@ -32,8 +32,15 @@ export function limpiarProyecto(v: unknown, clips: Set<string>): Proyecto {
     };
   }).filter((t) => t.texto.trim());
   const m = o.musica as Record<string, unknown> | null | undefined;
+  // subtitle word fixes: keep only «clipId:index» keys for clips still in the ad, short plain-text values
+  const sc = o.subCorr && typeof o.subCorr === "object" ? (o.subCorr as Record<string, unknown>) : {};
+  const subCorr: Record<string, string> = {};
+  for (const k of Object.keys(sc).slice(0, 400)) {
+    const mt = /^([^:]+):(\d{1,4})$/.exec(k);
+    if (mt && clips.has(mt[1]) && typeof sc[k] === "string") subCorr[k] = String(sc[k]).replace(/[{}\\\n\r]/g, "").slice(0, 60);
+  }
   return {
-    cortes, textos, subtitulos: o.subtitulos !== false,
+    cortes, textos, subtitulos: o.subtitulos !== false, subCorr,
     musica: m && typeof m.url === "string" ? { url: m.url, nombre: String(m.nombre ?? "Música").slice(0, 80), vol: num(m.vol, 0, 100, 25) } : null,
     vozVol: num(o.vozVol, 0, 150, 100),
     formato: (FORMATOS as readonly string[]).includes(String(o.formato)) ? (o.formato as Formato) : "9:16",

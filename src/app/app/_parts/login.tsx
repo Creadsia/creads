@@ -6,9 +6,10 @@ import ThemeToggle from "../../theme-toggle";
 import GoogleButton from "../../google-button";
 import { MoneyText } from "../../money";
 
-const input = "rounded-lg border border-line bg-surface-2 px-3 py-2 font-normal text-ink";
+const input = "rounded-xl border border-line bg-surface-2 px-3.5 py-3 font-normal text-ink";
 
 // Sign-in page. On the very first visit (no accounts yet) it creates the owner's account instead.
+// Look (2 Nov 2026): clean dark onboarding, phone-first (hero + pitch + Google/correo), like the reference apps.
 export default function Login({ mode: initial, google = false }: { mode: "login" | "setup" | "missing"; google?: boolean }) {
   const [mode, setMode] = useState<"login" | "setup" | "missing" | "recover" | "forgot">(initial);
   const [sent, setSent] = useState(false);
@@ -64,96 +65,114 @@ export default function Login({ mode: initial, google = false }: { mode: "login"
     setBusy(false);
   }
 
+  const heading = mode === "setup" ? "Crea tu cuenta de dueño" : mode === "recover" ? "Nueva clave del dueño" : mode === "forgot" ? "¿Olvidaste tu clave?" : null;
+  const desc = mode === "setup"
+    ? "Es la primera vez que se abre la plataforma. Esta cuenta tendrá acceso a todo y podrá invitar a otras personas."
+    : mode === "recover"
+      ? (rescue ? "Elige tu clave nueva para entrar. Este enlace sirve una sola vez." : "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador.")
+      : mode === "forgot"
+        ? (sent ? "Si hay una cuenta con ese correo, te llegará un enlace para elegir una clave nueva. Revisa también la carpeta de spam. El enlace vence en 1 hora." : "Escribe el correo de tu cuenta y te enviamos un enlace para elegir una clave nueva.")
+        : "";
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 py-10">
-      <div className="flex w-full max-w-sm items-center justify-between">
-        <Logo size={28} href="/" />
-        <ThemeToggle lang="es" />
-      </div>
-      {mode === "missing" ? (
-        <div className="flex w-full max-w-sm flex-col gap-2 rounded-2xl border border-warn/50 bg-warn/10 p-6 text-sm">
-          <h1 className="font-display text-xl font-extrabold">Falta un paso</h1>
-          <p className="text-muted">Hay que crear las tablas de cuentas en Supabase (SQL Editor → pegar el bloque «Accounts» de schema.sql → Run). Después recarga esta página.</p>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-line bg-surface p-6">
-          <div className="flex flex-col gap-1">
-            <h1 className="font-display text-2xl font-extrabold">{mode === "setup" ? "Crea tu cuenta de dueño" : mode === "recover" ? "Nueva clave del dueño" : mode === "forgot" ? "¿Olvidaste tu clave?" : "Entrar a Creads"}</h1>
-            <p className="text-sm text-muted">
-              {mode === "setup"
-                ? "Es la primera vez que se abre la plataforma. Esta cuenta tendrá acceso a todo y podrá invitar a otras personas."
-                : mode === "recover"
-                  ? rescue ? "Elige tu clave nueva para entrar. Este enlace sirve una sola vez." : "Para cambiar la clave de la cuenta del dueño, demuestra que tienes acceso a Vercel con la clave de administrador."
-                  : mode === "forgot"
-                    ? sent ? "Si hay una cuenta con ese correo, te llegará un enlace para elegir una clave nueva. Revisa también la carpeta de spam. El enlace vence en 1 hora." : "Escribe el correo de tu cuenta y te enviamos un enlace para elegir una clave nueva."
-                    : "Entra con tu correo y tu clave."}
-            </p>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 py-10">
+      {/* ambient brand glow */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[340px] bg-[radial-gradient(62%_60%_at_50%_-8%,rgba(138,92,255,0.28),transparent_70%)]" />
+      <div className="absolute right-4 top-[max(12px,env(safe-area-inset-top))] z-10"><ThemeToggle lang="es" /></div>
+
+      <div className="relative z-[1] flex w-full max-w-sm flex-col gap-6">
+        {mode === "login" && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <Logo size={38} href="/" />
+            <h1 className="font-display text-[1.7rem] leading-tight font-extrabold tracking-tight">Anuncios en video que <span className="bg-[image:var(--grad)] bg-clip-text text-transparent">venden</span>, sin grabar.</h1>
+            <p className="text-[15px] text-muted">Hechos solos, en minutos — desde tu celular.</p>
           </div>
-          {mode === "login" && google && (
-            <>
-              <GoogleButton next="/app" />
-              <div className="flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
-            </>
-          )}
-          {mode === "setup" && (
-            <label htmlFor="name" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-              Tu nombre
-              <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
-            </label>
-          )}
-          {mode !== "recover" && !(mode === "forgot" && sent) && (
-            <label htmlFor="email" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-              Correo
-              <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={input} />
-            </label>
-          )}
-          {mode !== "forgot" && <label htmlFor="password" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-            {mode === "recover" ? "Clave nueva" : "Clave"}
-            <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} className={input} />
-            {mode !== "login" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
-          </label>}
-          {mode === "login" && need2fa && (
-            <label htmlFor="otp" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-              Código de verificación
-              <input id="otp" inputMode="numeric" pattern="[0-9 ]*" maxLength={7} required autoFocus value={otp} onChange={(e) => setOtp(e.target.value)} autoComplete="one-time-code"
-                placeholder="123 456" className={`${input} font-mono text-lg tracking-[0.3em]`} />
-              <span className="text-xs font-normal">Los 6 números que muestra tu app (Google Authenticator, Authy…).</span>
-            </label>
-          )}
-          {(mode === "setup" || mode === "recover") && (
-            <>
-              <label htmlFor="password2" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-                Repite la clave
-                <input id="password2" type="password" required value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" className={input} />
+        )}
+
+        {mode === "missing" ? (
+          <div className="flex w-full flex-col gap-2 rounded-2xl border border-warn/50 bg-warn/10 p-6 text-sm">
+            <h1 className="font-display text-xl font-extrabold">Falta un paso</h1>
+            <p className="text-muted">Hay que crear las tablas de cuentas en Supabase (SQL Editor → pegar el bloque «Accounts» de schema.sql → Run). Después recarga esta página.</p>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="flex w-full flex-col gap-4 rounded-2xl border border-line bg-surface p-6 shadow-lg">
+            {heading ? (
+              <div className="flex flex-col gap-1">
+                <h1 className="font-display text-2xl font-extrabold">{heading}</h1>
+                {desc && <p className="text-sm text-muted">{desc}</p>}
+              </div>
+            ) : (
+              <p className="text-sm font-semibold text-muted">Entra con tu correo o con Google.</p>
+            )}
+            {mode === "login" && google && (
+              <>
+                <GoogleButton next="/app" />
+                <div className="flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />o con tu correo<span className="h-px flex-1 bg-line" /></div>
+              </>
+            )}
+            {mode === "setup" && (
+              <label htmlFor="name" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+                Tu nombre
+                <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
               </label>
-              {!rescue && (
-              <label htmlFor="code" className="flex flex-col gap-1 text-sm font-semibold text-muted">
-                Clave de administrador de Vercel
-                <input id="code" type="password" required value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" className={input} />
-                <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production). Si perdiste el teléfono, esto también apaga la verificación en dos pasos."}</span>
+            )}
+            {mode !== "recover" && !(mode === "forgot" && sent) && (
+              <label htmlFor="email" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+                Correo
+                <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className={input} />
               </label>
-              )}
-            </>
-          )}
-          {!(mode === "forgot" && sent) && <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2.5 font-semibold text-accent-ink disabled:opacity-50">
-            {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : mode === "forgot" ? "Enviarme el enlace" : "Entrar"}
-          </button>}
-          {error && <p role="alert" className="text-sm text-bad">{error}</p>}
-          {mode === "login" && (
-            <p className="text-xs text-muted">
-              <button type="button" onClick={() => { setMode("forgot"); setSent(false); setError(""); }} className="font-semibold text-accent-text underline">¿Olvidaste tu clave?</button>
-              {ownerLink && <>{" · "}<button type="button" onClick={() => { setMode("recover"); setError(""); }} className="underline">Soy el dueño</button></>}
-            </p>
-          )}
-          {(mode === "recover" || mode === "forgot") && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
-        </form>
-      )}
-      {mode === "login" && (
-        <a href="/empezar" className="flex w-full max-w-sm items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-5 py-4 text-sm hover:border-accent-text">
-          <span><b className="block">¿Todavía no tienes cuenta?</b><span className="text-muted"><MoneyText text="Planes desde US$29 al mes." /></span></span>
-          <span className="shrink-0 rounded-lg bg-[image:var(--grad)] px-3 py-2 font-semibold text-white">Crear cuenta</span>
-        </a>
-      )}
+            )}
+            {mode !== "forgot" && <label htmlFor="password" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+              {mode === "recover" ? "Clave nueva" : "Clave"}
+              <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} className={input} />
+              {mode !== "login" && <span className="text-xs font-normal">Mínimo 10 caracteres.</span>}
+            </label>}
+            {mode === "login" && need2fa && (
+              <label htmlFor="otp" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+                Código de verificación
+                <input id="otp" inputMode="numeric" pattern="[0-9 ]*" maxLength={7} required autoFocus value={otp} onChange={(e) => setOtp(e.target.value)} autoComplete="one-time-code"
+                  placeholder="123 456" className={`${input} font-mono text-lg tracking-[0.3em]`} />
+                <span className="text-xs font-normal">Los 6 números que muestra tu app (Google Authenticator, Authy…).</span>
+              </label>
+            )}
+            {(mode === "setup" || mode === "recover") && (
+              <>
+                <label htmlFor="password2" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+                  Repite la clave
+                  <input id="password2" type="password" required value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" className={input} />
+                </label>
+                {!rescue && (
+                <label htmlFor="code" className="flex flex-col gap-1 text-sm font-semibold text-muted">
+                  Clave de administrador de Vercel
+                  <input id="code" type="password" required value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" className={input} />
+                  <span className="text-xs font-normal">{mode === "setup" ? "La que guardaste como ADMIN_ACCESS_CODE. Se pide solo esta vez, para que nadie más pueda crear la cuenta del dueño." : "La de ADMIN_ACCESS_CODE en Vercel (Production). Si perdiste el teléfono, esto también apaga la verificación en dos pasos."}</span>
+                </label>
+                )}
+              </>
+            )}
+            {!(mode === "forgot" && sent) && <button type="submit" disabled={busy} className="rounded-xl bg-[image:var(--grad)] px-4 py-3 font-semibold text-white disabled:opacity-50">
+              {busy ? "Un momento…" : mode === "setup" ? "Crear mi cuenta" : mode === "recover" ? "Guardar clave nueva y entrar" : mode === "forgot" ? "Enviarme el enlace" : "Continuar con mi correo"}
+            </button>}
+            {error && <p role="alert" className="text-sm text-bad">{error}</p>}
+            {mode === "login" && (
+              <p className="text-xs text-muted">
+                <button type="button" onClick={() => { setMode("forgot"); setSent(false); setError(""); }} className="font-semibold text-accent-text underline">¿Olvidaste tu clave?</button>
+                {ownerLink && <>{" · "}<button type="button" onClick={() => { setMode("recover"); setError(""); }} className="underline">Soy el dueño</button></>}
+              </p>
+            )}
+            {(mode === "recover" || mode === "forgot") && <button type="button" onClick={() => { setMode("login"); setError(""); }} className="text-xs text-muted underline">Volver a entrar con mi clave</button>}
+          </form>
+        )}
+
+        {mode === "login" && (
+          <a href="/empezar" className="flex w-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-5 py-4 text-sm hover:border-accent-text">
+            <span><b className="block">¿Todavía no tienes cuenta?</b><span className="text-muted"><MoneyText text="Planes desde US$29 al mes." /></span></span>
+            <span className="shrink-0 rounded-lg bg-[image:var(--grad)] px-3 py-2 font-semibold text-white">Crear cuenta</span>
+          </a>
+        )}
+
+        <p className="px-2 text-center text-[11px] leading-relaxed text-muted">Al continuar aceptas los <a href="/terminos" className="underline">Términos</a> y la <a href="/privacidad" className="underline">Política de privacidad</a>.</p>
+      </div>
     </main>
   );
 }

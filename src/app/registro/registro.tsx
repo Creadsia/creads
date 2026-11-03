@@ -6,6 +6,7 @@ import { Logo } from "../brand";
 import ThemeToggle from "../theme-toggle";
 import GoogleButton from "../google-button";
 import TarjetaMP, { PUBLIC_KEY } from "../tarjeta-mp";
+import PayBadges from "../pay-badges";
 import { MoneyText } from "../money";
 
 // The sign-up form: name, email, password (or Google). With the card trial on (default since 26 Oct 2026) it is a
@@ -93,7 +94,8 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
             <h2 id="paso-tarjeta" className="font-display text-xl font-semibold">Agrega tu tarjeta para empezar gratis</h2>
             <Resumen prueba={prueba} clp={monto} />
             <TarjetaMP monto={monto || 1} onListo={() => { window.location.href = next; }} fallback={<a href={next} className="rounded-xl bg-ink px-4 py-3.5 text-center text-base font-semibold text-bg">Continuar</a>} />
-            <p className="text-xs text-muted">Tus datos van directo a Mercado Pago: Creads nunca ve tu tarjeta. Hoy no se cobra nada.</p>
+            <div className="flex justify-center"><PayBadges compact garantias metodos={["mercadopago"]} /></div>
+            <p className="text-xs text-muted">Pago procesado por Mercado Pago: Creads nunca ve tu tarjeta. Hoy no se cobra nada.</p>
           </section>
         ) : (
         <form onSubmit={submit} className="flex flex-col gap-4 self-start rounded-2xl lg:col-start-2 lg:row-span-2 lg:row-start-1 border border-line bg-surface p-5 sm:p-6" aria-labelledby="crear-cuenta">

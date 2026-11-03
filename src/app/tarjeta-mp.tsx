@@ -11,7 +11,10 @@ import { startTrial } from "@/lib/track";
 declare global {
   interface Window { MercadoPago?: new (key: string, o: { locale: string }) => { bricks: () => { create: (kind: string, id: string, settings: unknown) => Promise<{ unmount: () => void }> } } }
 }
-export const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? "";
+// Mercado Pago's PUBLIC key is meant to live in the browser (it only tokenises the card client-side; it can't
+// charge or read the account — that needs the secret Access Token). Env var wins; this fallback is the owner's
+// own production public key so the in-page card form loads even if NEXT_PUBLIC_MP_PUBLIC_KEY isn't set in Vercel.
+export const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY || "APP_USR-35577bf1-02b1-4654-a97e-0ef01429495f";
 
 let sdk: Promise<void> | null = null;
 function loadSdk() {
@@ -53,10 +56,15 @@ export default function TarjetaMP({ monto, onListo, fallback }: { monto: number;
           onError: (e: unknown) => { console.error("mp brick", e); },
           onSubmit: async (data: { token?: string }) => {
             setErr("");
-            const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card_token: data.token }) }).catch(() => null);
+            // never let the form hang (owner, 27 Oct 2026: «se queda pegado la segunda vez»): abort after 30 s so
+            // the Mercado Pago spinner always stops and the customer can try again instead of staying frozen.
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 30_000);
+            const r = await fetch("/api/prueba", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ card_token: data.token }), signal: ctrl.signal }).catch(() => null);
+            clearTimeout(t);
             const d = r ? await r.json().catch(() => ({})) : {};
             if (r?.ok && d.estado === "ok") { startTrial(d.order, d.usd); done.current(); return; }
-            setErr(d.error || "No se pudo activar. Revisa los datos de tu tarjeta e intenta de nuevo.");
+            setErr(r ? (d.error || "No se pudo activar. Revisa los datos de tu tarjeta e intenta de nuevo.") : "Se demoró más de lo normal. Intenta de nuevo.");
             throw new Error("rechazada"); // lets the customer correct the card in the same form
           },
         },

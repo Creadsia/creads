@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { CAPTION_PRESETS, type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
 import { ANIMACIONES, FORMATOS, FUENTES, type Texto, VELOCIDADES } from "@/lib/editor-tipos";
 import { ANIM_NOMBRE, Chip, type Ed, FORMATO_INFO, Icon, PRESETS, RATIO, Seccion, Segmented, Slider, SubtituloLinea, Switch, Swatches, fmt, len } from "./piezas";
@@ -8,6 +9,28 @@ import { ANIM_NOMBRE, Chip, type Ed, FORMATO_INFO, Icon, PRESETS, RATIO, Seccion
 // timeline or the preview opens its tool with that item's properties on top.
 
 const small = "inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface-2/60 px-3 text-[13px] font-semibold text-muted hover:text-ink disabled:pointer-events-none disabled:opacity-35 lg:min-h-9";
+
+/** One subtitle word in «Lo que se dice»: tap it to fix its spelling. Fixed words are highlighted. */
+function PalabraEditable({ w, orig, fixed, onSave, onFocus }: { w: string; orig: string; fixed: boolean; onSave: (txt: string) => void; onFocus: () => void }) {
+  const [edit, setEdit] = useState(false);
+  const [val, setVal] = useState(w);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (!edit) setVal(w); }, [w, edit]);
+  useEffect(() => { if (edit) { ref.current?.focus(); ref.current?.select(); } }, [edit]);
+  const commit = () => { setEdit(false); if (val !== w) onSave(val); };
+  if (edit) return (
+    <input ref={ref} value={val} onChange={(e) => setVal(e.target.value)} onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } else if (e.key === "Escape") { setVal(w); setEdit(false); } }}
+      maxLength={60} aria-label={`Corregir «${orig}»`} enterKeyHint="done"
+      className="min-w-[2ch] max-w-full rounded-md border border-[var(--sel)] bg-surface px-1.5 py-0.5 text-sm font-semibold text-ink outline-none" style={{ width: `${Math.max(2, val.length + 1)}ch` }} />
+  );
+  return (
+    <button type="button" onClick={() => { onFocus(); setEdit(true); }} title={fixed ? `Corregido (original: «${orig}»). Tocar para editar.` : "Tocar para corregir"}
+      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-sm transition-colors ${fixed ? "bg-[var(--sel)]/15 font-semibold text-ink ring-1 ring-[var(--sel)]/40" : "font-medium text-muted hover:bg-surface-2 hover:text-ink"}`}>
+      {w || "—"}{fixed && <Icon name="pen" className="h-3 w-3 opacity-60" />}
+    </button>
+  );
+}
 
 export function Panel({ ed }: { ed: Ed }) {
   if (ed.tool === "cortes") return <Cortes ed={ed} />;
@@ -235,20 +258,22 @@ function Subtitulos({ ed }: { ed: Ed }) {
       </div>
       {ed.frases.length > 0 ? (
         <Seccion title="Lo que se dice">
-          <ul className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             {ed.frases.map((f, k) => {
               const on = ed.t >= f.s && ed.t < f.e + 0.15;
               return (
-                <li key={k}>
-                  <button type="button" onClick={() => ed.buscar(f.s + 0.01, false)} className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm lg:min-h-0 ${on ? "bg-[var(--sel)]/10 text-ink" : "text-muted hover:bg-surface-2 hover:text-ink"}`}>
-                    <span className="w-12 shrink-0 font-mono text-[13px] tabular-nums">{fmt(f.s)}</span>
-                    <span>{f.words.map((w) => w.w).join(" ")}</span>
-                  </button>
-                </li>
+                <div key={k} className={`flex min-h-11 w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${on ? "bg-[var(--sel)]/10" : "hover:bg-surface-2"}`}>
+                  <button type="button" onClick={() => ed.buscar(f.s + 0.01, false)} aria-label={`Ir a ${fmt(f.s)}`} className="mt-1.5 w-12 shrink-0 font-mono text-[13px] text-muted tabular-nums hover:text-ink">{fmt(f.s)}</button>
+                  <span className="flex flex-1 flex-wrap items-center gap-x-1 gap-y-1">
+                    {f.words.map((w, wi) => (
+                      <PalabraEditable key={w.k ?? wi} w={w.w} orig={w.orig ?? w.w} fixed={Boolean(w.k && ed.p.subCorr?.[w.k])} onSave={(txt) => w.k && ed.corregirSub(w.k, txt, w.orig ?? w.w)} onFocus={() => ed.buscar(f.s + 0.01, false)} />
+                    ))}
+                  </span>
+                </div>
               );
             })}
-          </ul>
-          <p className="text-[13px] text-muted">Para corregir una palabra, usa «Subtítulos» en Mis anuncios.</p>
+          </div>
+          <p className="text-[13px] text-muted">Toca cualquier palabra para corregir su ortografía. El cambio se ve al tiro y queda en el video que exportas. (Déjala vacía para volver a la original.)</p>
         </Seccion>
       ) : <p className="text-[13px] text-muted">Este anuncio no tiene palabras para mostrar como subtítulos.</p>}
     </div>
