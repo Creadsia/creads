@@ -483,9 +483,9 @@ export const es: Content = {
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Créditos al mes", "400", "950", "4.000"],
-            ["Imágenes de anuncio (aprox.)", "40", "95", "400"],
-            ["Videos con avatar de 10 s (aprox.)", "3", "7", "32"],
+            ["Créditos al mes", "400", "1.000", "4.000"],
+            ["Imágenes de anuncio (aprox.)", "40", "100", "400"],
+            ["Videos con avatar de 10 s (aprox.)", "3", "8", "32"],
             ["Imágenes para anuncios (con tus créditos)", "yes", "yes", "yes"],
             ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes", "yes"],
@@ -542,10 +542,10 @@ export const es: Content = {
         price: 59,
         yearly: 49,
         yearlyTotal: 590,
-        credits: "950",
-        imagenes: 95,
-        productos: 31,
-        videos: 7,
+        credits: "1.000",
+        imagenes: 100,
+        productos: 33,
+        videos: 8,
         destaca: "productos",
         for: "Para quien invierte en Meta todas las semanas y necesita ángulos nuevos sin parar.",
         features: [

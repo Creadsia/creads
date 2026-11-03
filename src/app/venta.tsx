@@ -121,7 +121,7 @@ const FAQ_ENTRADA = {
 } as const;
 
 const FAQ_RESTO = [
-  ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 95 imágenes, 31 videos de producto o 7 videos con avatar de 10 s, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
+  ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 100 imágenes, 33 videos de producto o 8 videos con avatar de 10 s, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
   ["¿Para qué tipo de negocio sirve?", "Para quien ya invierte en anuncios de Meta y necesita testear ángulos nuevos todo el tiempo: tiendas online, afiliados y media buyers, infoproductos. También para pymes que quieren anuncios propios sin agencia."],
   ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges cada vez. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
   ["¿Qué pasa si mis anuncios no me sirven?", "Tienes 7 días de garantía en tu primer pago: escríbenos a hola@creadsia.com y te devolvemos tu pago. Los detalles están en «7 días de garantía», más arriba."],
