@@ -10,6 +10,7 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
+import { HeroReelRow } from "./hero-reel";
 import { Money, MoneyText } from "./money";
 import Ejemplos from "./ejemplos";
 import { GARANTIA } from "@/lib/garantia-textos";
@@ -188,20 +189,15 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
               headline, a killer CTA and the 7-day free trial up front. Desktop keeps the two-column layout below. */}
           <div className={`${wrap} relative flex flex-col items-center gap-3 pt-3 pb-2 lg:hidden`}>
             <div aria-hidden="true" className="pointer-events-none absolute -top-10 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[90px]" />
-            {/* Collage de videos pequeños en movimiento, alrededor del titular (owner, 3 Nov 2026:
-                «varios videos chiquititos en movimiento alrededor de Anuncios que venden»). UGC + productos. */}
-            <div className="relative grid w-full grid-cols-3 gap-2">
-              {[UGC_DEMOS[0], PRODUCTO_DEMOS[0], DEMOS.doc].map((v, i) => (
-                <div key={v.src} className={i === 1 ? "mt-5" : ""}><DemoPhone {...v} label="" className="w-full" /></div>
-              ))}
+            {/* Dos filas limpias de videos en movimiento (estilo HeyGen), alrededor del titular. UGC + productos. */}
+            <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] w-screen max-w-none">
+              <HeroReelRow clips={[UGC_DEMOS[0], PRODUCTO_DEMOS[0], DEMOS.doc, PRODUCTO_DEMOS[1], DEMOS.rubia]} dur="56s" />
             </div>
             <h1 className="relative text-center font-display text-[1.8rem] leading-[1.05] font-semibold">
               Anuncios que venden,<span className="chroma block">sin grabar ni diseñar.</span>
             </h1>
-            <div className="relative grid w-full grid-cols-3 gap-2">
-              {[PRODUCTO_DEMOS[6], UGC_DEMOS[1], PRODUCTO_DEMOS[5]].map((v, i) => (
-                <div key={v.src} className={i === 1 ? "-mt-4" : ""}><DemoPhone {...v} label="" className="w-full" /></div>
-              ))}
+            <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] w-screen max-w-none">
+              <HeroReelRow clips={[PRODUCTO_DEMOS[6], UGC_DEMOS[1], PRODUCTO_DEMOS[5], DEMOS.bano, PRODUCTO_DEMOS[2]]} rev dur="50s" />
             </div>
             <div className="relative flex w-full flex-col items-center gap-2 pt-1">
               <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_CREDITS} créditos de regalo · cancelas con un clic`}>{empezar}</Cta>
