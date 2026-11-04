@@ -17,6 +17,7 @@ import Equipo from "@/app/app/equipo/equipo";
 import Guardian from "./guardian";
 import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
+import ResumenGeneral from "./resumen-general";
 import AfiliadosAdmin from "./afiliados";
 import CasosAdmin from "./casos";
 import PortadaAdmin from "./portada";
@@ -200,7 +201,7 @@ export default function AdminPanel() {
 
       {/* tabs that load their own data render the same way before and after the money data arrives
           (so they don't mount twice) */}
-      {tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <div className="flex flex-col gap-4"><DesdeCero /><RetencionResumen /><AvisosCelular /><Estadisticas cfg={data?.config} /></div> : tab === "suscripciones" ? <Retencion /> : tab === "leads" ? <Leads /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "campanas" ? <Campanas /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "afiliados" ? <AfiliadosAdmin /> : tab === "casos" ? <CasosAdmin /> : tab === "portada" ? <PortadaAdmin /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
+      {tab === "tablero" ? <ResumenGeneral /> : tab === "lanzamiento" ? <Lanzamiento /> : tab === "estadisticas" ? <div className="flex flex-col gap-4"><DesdeCero /><RetencionResumen /><AvisosCelular /><Estadisticas cfg={data?.config} /></div> : tab === "suscripciones" ? <Retencion /> : tab === "leads" ? <Leads /> : tab === "oficina" ? <Oficina /> : tab === "equipo" ? <Equipo /> : tab === "guardian" ? <Guardian /> : tab === "marketing" ? <Marketing /> : tab === "campanas" ? <Campanas /> : tab === "rentabilidad" ? <Rentabilidad /> : tab === "afiliados" ? <AfiliadosAdmin /> : tab === "casos" ? <CasosAdmin /> : tab === "portada" ? <PortadaAdmin /> : tab === "errores" ? <Errores /> : tab === "calidad" ? <Calidad /> : tab === "contactar" ? <Contactar /> : tab === "saldos" ? <Saldos /> : tab === "registros" ? <Registros /> : tab === "estado" ? <Estado /> : !data ? (
         tab === "clientes" ? <Clientes planes={DEFAULT_FINANZAS.config.planes} /> : <div className={card}><p className="text-muted">{status}</p></div>
       ) : (
         <>
