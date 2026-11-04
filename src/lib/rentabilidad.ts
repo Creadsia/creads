@@ -125,7 +125,10 @@ export function realCostPerCredit(charges: ChargeRow[]) {
   }
   // free redos and failed jobs the provider still billed are on top: count them against what was charged
   const extra = charges.filter((c) => c.kind === "charge" && (c.delta === 0 || refunded.has(c.id))).reduce((a, c) => a + num(c.usd), 0);
-  return credits >= 500 ? { usd: r4((usd + extra) / credits), credits, base: r4(usd / credits) } : null;
+  // Needs real volume before the per-credit cost is trustworthy: with only a few hundred credits, a couple of
+  // failed jobs that the provider still billed (e.g. a bad run of Kling) distort it wildly. Until then the report
+  // falls back to the Panel's assumed cost, so margins reflect steady state instead of a startup artifact.
+  return credits >= 5000 ? { usd: r4((usd + extra) / credits), credits, base: r4(usd / credits) } : null;
 }
 
 export interface PlanRow { plan: string; caso: string; precio: number; costoIA: number; iva: number; comision: number; queda: number; margen: number }
