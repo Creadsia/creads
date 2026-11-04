@@ -38,7 +38,7 @@ CUERPO (tipo "cuerpo"): cuenta los brazos, las manos y las cabezas de cada perso
 LO QUE DICE CADA CORTE:
 ${c.texts.map((t, i) => `CORTE ${i + 1}: "${t}"`).join("\n")}
 ${sameness}${people}${body}${product}
-OTROS (tipo "otro"): busca SOLO errores OBVIOS que un espectador notaría: texto, logos o números legibles en pantalla; algo que contradice lo que dice el corte; formato equivocado (por ejemplo una selfie cuando debería ser con camarógrafo).
+OTROS (tipo "otro"): busca SOLO errores OBVIOS que un espectador notaría: texto, logos o números legibles en pantalla; algo que contradice lo que dice el corte; formato equivocado (por ejemplo una selfie cuando debería ser con camarógrafo). ${c.narr ? "" : "También: un objeto en las manos que no corresponde (un vaso, taza, lata, botella, bebida, café o celular) cuando la persona solo está hablando y no está mostrando un producto; y una pantalla, monitor, notebook o TV de fondo que muestra gráficos, números o texto que CAMBIAN entre cortes (debería estar apagada o mostrar siempre lo mismo). Marca el corte donde aparece."}
 "grave": true solo si vale la pena rehacer el corte.
 Responde SOLO JSON: {"cortes":[{"corte":número,"tipo":"persona|cuerpo|producto|otro","problema":"en español, corto","grave":true,"claro":true}]} (lista vacía si no hay errores).`;
 }

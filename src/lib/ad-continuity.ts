@@ -96,7 +96,12 @@ export function adFramePrompt(dir: { setting?: string; framing?: string } | unde
     ? ` The product is clearly visible, held by the person or right next to them: ${PRODUCT_EXACT}. ${o.personRef ? TWO_REFS : ONE_REF}`
     : ` ${PRODUCT_GENERIC}`;
   const hint = placeHint(lang);
-  return `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${who} Setting: ${dir?.setting || "a real place, natural light"} (show the place exactly as this setting says it is now, even if the reference image shows it damaged or unfinished). Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product}${hint ? ` ${hint}` : ""} Natural light, real skin texture, no added text, no watermark${o.product ? ", no logos other than the product's own label exactly as in its photo" : ", no logos"}.`;
+  // Fewer errors (owner, 4 Nov 2026, from real tests): hands empty when there's no product to hold, and any
+  // background screen off or static — the two things the models kept inventing (a coffee cup, a dashboard whose
+  // numbers changed every cut and looked fake).
+  const hands = o.product ? "" : " The person's hands are empty — they hold nothing (no cup, mug, glass, can, bottle, drink, phone, pen or any object); they only gesture naturally with their hands.";
+  const screens = " Any screen, monitor, TV, laptop, tablet or phone visible in the scene is switched OFF with a dark screen (or, if clearly on, shows one single static unchanging image); never a dashboard, graphs, charts, numbers or text that change from cut to cut.";
+  return `Photorealistic 9:16 still frame, the first frame of a real phone video clip (not a staged photo).${who} Setting: ${dir?.setting || "a real place, natural light"} (show the place exactly as this setting says it is now, even if the reference image shows it damaged or unfinished). Shot: ${dir?.framing || "handheld selfie, chest-up"}. A natural relaxed expression, mouth closed, the instant before speaking.${product}${hands}${screens}${hint ? ` ${hint}` : ""} Natural light, hyper-realistic with real skin texture and pores (a candid phone video, not a staged studio photo), no added text, no watermark${o.product ? ", no logos other than the product's own label exactly as in its photo" : ", no logos"}.`;
 }
 
 /** The frame prompt when the person's reference image couldn't be had (the first cut never drew one). */
