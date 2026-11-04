@@ -1,20 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SHOWN_PLANS } from "@/lib/catalog";
 
 // «¿Vamos rentables?» (owner, 24 Oct 2026): what each registration really costs (Meta + the gift ad), how many
 // paid, and how many more paying customers are needed to break even. Works without Meta's API: the cost per
 // registration is typed here (Meta's «costo por registro»), defaulting to $1.276.
 
 const IVA = 1.19, MP = 0.0415, USD_CREDIT = 0.0193;
-// first-month margin per plan if the customer uses ALL its credits (worst case), in US$
-const PLANES = [
-  { id: "basico", name: "Básico", usd: 25, credits: 500 },
-  { id: "emprende", name: "Emprende", usd: 55, credits: 1500 },
-  { id: "negocio", name: "Negocio", usd: 99, credits: 3000 },
-].map((p) => {
-  const net = (p.usd / IVA) * (1 - MP);
-  return { ...p, peor: net - p.credits * USD_CREDIT, normal: net - (p.credits * USD_CREDIT) / 2 };
+// first-month margin per plan if the customer uses ALL its credits (worst case), in US$ — the live plans only
+const PLANES = SHOWN_PLANS.map((p) => {
+  const net = (p.monthly / IVA) * (1 - MP);
+  return { id: p.id, name: p.name, usd: p.monthly, credits: p.credits, peor: net - p.credits * USD_CREDIT, normal: net - (p.credits * USD_CREDIT) / 2 };
 });
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
@@ -77,7 +74,7 @@ export default function Rentable({ registros, ventas, ingresosUsd, regalosUsd, g
           <b>{resultado >= 0 ? "Vamos ganando" : "Todavía no se recupera"}: {clp(resultado)}</b>
           <span className="text-muted"> · ventas netas {clp(netos)} (sin IVA ni comisión) − costo {clp(costo)}</span>
         </p>
-        {resultado < 0 && <p className="text-sm">Para empatar faltan <b>{faltan(PLANES[0])} Básico</b> o <b>{faltan(PLANES[1])} Emprende</b> <span className="text-muted">(primer mes, peor caso)</span></p>}
+        {resultado < 0 && PLANES.length >= 2 && <p className="text-sm">Para empatar faltan <b>{faltan(PLANES[0])} {PLANES[0].name}</b> o <b>{faltan(PLANES[1])} {PLANES[1].name}</b> <span className="text-muted">(primer mes, peor caso)</span></p>}
       </div>
 
       {/* the simulator */}
