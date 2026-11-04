@@ -37,17 +37,39 @@ export async function GET(req: Request) {
   const plan = PLANS.some((p) => p.id === q.get("plan")) ? q.get("plan")! : undefined;
 
   try {
-    const [pays, orders, clients, leaves, rate, cero] = await Promise.all([
+    const [pays, orders, clients, leaves, rate, cero, trialOrders] = await Promise.all([
       sbAll<PayRow>("payments?select=id,order_id,owner,amount,currency,created_at", "created_at.asc,id.asc"),
       sbAll<OrderLite>("orders?status=eq.pagado&select=id,owner,item,period,mp,visitor,created_at", "created_at.asc,id.asc"),
       sbAll<{ id: string }>("workspaces?kind=eq.client&select=id,created_at", "created_at.asc,id.asc"),
       readPrivateJSON<Leave[]>("cancelaciones.json").catch(() => null),
       usdClpRate().catch(() => 950),
       panelDesde(),
+      sbAll<{ owner: string; status: string; mp: { trial?: string; cancelled?: boolean } | null; created_at: string }>("orders?select=owner,status,mp,created_at", "created_at.asc,id.asc").catch(() => []),
     ]);
     // only real customers: Creadsia's own account and test workspaces never count
     // and, after «Empezar de cero», only what happened since then, without the accounts marked as tests
     const ok = new Set(clients.map((c) => c.id).filter((id) => !cero.pruebas.includes(id)));
+
+    // «Cobro de la prueba» (owner, 4 Nov 2026): de las pruebas con tarjeta cuya fecha de 1er cobro ya pasó,
+    // cuántas se cobraron bien, cuántas fallaron (sin fondos / rechazo) y cuántas cancelaron antes del cobro.
+    let venc = 0, cobroOk = 0, cobroFallo = 0, cancelAntes = 0, enCurso = 0;
+    for (const o of trialOrders) {
+      if (!o.mp?.trial || !ok.has(o.owner) || !counts(cero, o.owner, o.created_at)) continue;
+      const t = Date.parse(o.mp.trial);
+      if (Number.isNaN(t)) continue;
+      const cancelada = Boolean(o.mp.cancelled) || o.status === "cancelado";
+      if (t > now) { if (cancelada) cancelAntes++; else enCurso++; continue; }
+      venc++;
+      if (o.status === "pagado") cobroOk++;
+      else if (cancelada) cancelAntes++;
+      else cobroFallo++;
+    }
+    const llegaronCobro = cobroOk + cobroFallo;
+    const cobro_prueba = {
+      vencidas: venc, exito: cobroOk, fallo: cobroFallo, cancelaron: cancelAntes, en_curso: enCurso, llegaron: llegaronCobro,
+      tasa_cobro: llegaronCobro ? Math.round((cobroOk / llegaronCobro) * 1000) / 10 : null,
+      tasa_no_cancela: venc ? Math.round((llegaronCobro / venc) * 1000) / 10 : null,
+    };
     const P = pays.filter((p) => ok.has(p.owner) && counts(cero, p.owner, p.created_at));
     const O = orders.filter((o) => ok.has(o.owner));
     const plans = PLANS.map((p) => ({ id: p.id, name: p.name, monthly: p.monthly, yearlyPerMonth: p.yearlyPerMonth }));
@@ -130,6 +152,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       mes, meses, plan: plan ?? null, cero: cero.desde, updated: new Date().toISOString(), tasaClp: rate,
       hoy: { activas: activas.length, mrr: mrrHoy, enGracia: activas.filter((s) => s.end < now).length },
+      cobro_prueba,
       actual, anterior, historia, porPlan, motivos, comentarios,
       permanencia: avgTenureMonths(spells, now, plan),
       cohortes: cohortRetention(spells, months, monthStart, now),

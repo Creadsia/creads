@@ -15,6 +15,7 @@ interface Month {
 interface Data {
   mes: string; meses: number; plan: string | null; updated: string;
   hoy: { activas: number; mrr: number; enGracia: number };
+  cobro_prueba?: { vencidas: number; exito: number; fallo: number; cancelaron: number; en_curso: number; llegaron: number; tasa_cobro: number | null; tasa_no_cancela: number | null };
   actual: Month; anterior: Month; historia: Month[];
   porPlan: { id: string; nombre: string; activos: number; nuevos: number; perdidos: number; churn: number | null; mrr: number; mrrPerdido: number; permanencia: number | null; base: number }[];
   motivos: { motivo: string; n: number }[];
@@ -177,6 +178,28 @@ export default function Retencion() {
             <Kpi label="Gross revenue churn" value={a.mrrInicio ? pct(a.grossRevenueChurn) : NO} sub="MRR inicial perdido por cancelaciones y bajas de plan">{a.mrrInicio > 0 && <Trend cur={a.grossRevenueChurn} prev={b.mrrInicio ? b.grossRevenueChurn : null} good="down" />}</Kpi>
             <Kpi label="NRR (retención neta de ingresos)" value={a.mrrInicio ? pct(a.nrr) : NO} sub="Incluye subidas y bajadas de plan">{a.mrrInicio > 0 && <Trend cur={a.nrr} prev={b.mrrInicio ? b.nrr : null} good="up" />}</Kpi>
           </div>
+
+          {d.cobro_prueba && (
+            <div className={card}>
+              <h3 className="font-semibold">Cobro de la prueba</h3>
+              <p className="text-xs text-muted">De las pruebas con tarjeta cuya fecha del primer cobro ya pasó: cuántas se cobraron bien, cuántas fallaron (sin fondos o tarjeta rechazada) y cuántas cancelaron antes del cobro.</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Kpi label="Tasa de cobro exitoso" value={d.cobro_prueba.tasa_cobro == null ? NO : pct(d.cobro_prueba.tasa_cobro)} sub={d.cobro_prueba.llegaron ? `${d.cobro_prueba.exito} de ${d.cobro_prueba.llegaron} que llegaron al cobro` : "Aún no vence ninguna prueba"} tone={d.cobro_prueba.tasa_cobro == null ? undefined : d.cobro_prueba.tasa_cobro >= 80 ? "good" : d.cobro_prueba.tasa_cobro >= 50 ? undefined : "bad"} />
+                <Kpi label="Cobros que fallaron" value={String(d.cobro_prueba.fallo)} sub="Sin fondos o tarjeta rechazada" tone={d.cobro_prueba.fallo ? "bad" : undefined} />
+                <Kpi label="Cancelaron antes del cobro" value={String(d.cobro_prueba.cancelaron)} sub="Probaron y no siguieron" />
+              </div>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+                {[
+                  ["Pruebas vencidas", String(d.cobro_prueba.vencidas)],
+                  ["Llegaron al cobro", String(d.cobro_prueba.llegaron)],
+                  ["No cancelaron (de las vencidas)", d.cobro_prueba.tasa_no_cancela == null ? "—" : pct(d.cobro_prueba.tasa_no_cancela)],
+                  ["Todavía en prueba", String(d.cobro_prueba.en_curso)],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex flex-col"><dt className="text-xs text-muted">{k}</dt><dd className="font-semibold tabular-nums">{v}</dd></div>
+                ))}
+              </dl>
+            </div>
+          )}
 
           <div className={card}>
             <h3 className="font-semibold">El mes de {mlabel(d.mes)}{a.parcial ? " (en curso)" : ""}</h3>
