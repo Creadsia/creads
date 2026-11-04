@@ -43,6 +43,21 @@ export async function tuvoPrueba(ws: string) {
   return (await ordersOf(ws)).some((o) => Boolean(o.mp?.trial) && o.status !== "reemplazado");
 }
 
+/**
+ * Whether severe quality errors earn a FREE automatic redo for this account (owner, 3 Nov 2026: «en la prueba
+ * tiene que salir todo perfecto; cuando ya pagan, no»). On only while the account is in the free trial — the trial
+ * subscription is still pending (not yet charged, not cancelled) and the account hasn't paid. Never for «main»
+ * (the owner's unlimited account) nor for paying customers. The global FREE_REDOS flag still wins when on.
+ */
+export async function redosGratis(ws: string): Promise<boolean> {
+  if (ws === "main") return false;
+  const orders = await ordersOf(ws).catch(() => []);
+  const enPrueba = orders.some((o) => o.mp?.trial && !o.mp.cancelled && o.status === "pendiente");
+  if (!enPrueba) return false;
+  const pago = orders.some((o) => o.status === "pagado");
+  return !pago;
+}
+
 export function fechaCobro(days = PRUEBA_DIAS) {
   const d = new Date(Date.now() + days * 86400_000);
   return d;

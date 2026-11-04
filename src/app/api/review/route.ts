@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { freeRedoAvailable, grantFreeRedo } from "@/lib/credits";
 import { FREE_REDOS } from "@/lib/credit-math";
+import { redosGratis } from "@/lib/prueba";
 import { tooMany } from "@/lib/rate";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
@@ -93,13 +94,19 @@ export async function POST(req: Request) {
 
     // 3) remember: problems become rules for every future prompt
     const severeIssues = results.filter((r) => r.severe).flatMap((r) => r.issues);
-    const learned = await learnFrom(severeIssues, format, s.user.workspace === "main").catch(() => 0);
+    // Lessons are active right away when they come from the owner's own account; brand/product mistakes
+    // (a wrong or invented brand on a box, tag or label) activate even from a customer's video, because
+    // they are general rules worth applying to everyone (owner, 3 Nov 2026).
+    const brandError = severeIssues.some((i) => /producto distinto|logo|marca/i.test(i));
+    const learned = await learnFrom(severeIssues, format, s.user.workspace === "main" || brandError).catch(() => 0);
 
     await db.update("ads", adId, { settings: { ...settings, review: results, reviewedAt: new Date().toISOString() } });
-    // severe errors earn a free automatic redo (granted here, server-side: max 1 per clip, 2 per ad)
+    // severe errors earn a free automatic redo (granted here, server-side: max 1 per clip, 2 per ad).
+    // On during the free trial so it comes out perfect; off for paying customers (owner, 3 Nov 2026).
+    const freeOn = FREE_REDOS || (await redosGratis(s.user.workspace).catch(() => false));
     const freeRedo: Record<string, boolean> = {};
     for (const r of results) {
-      if (!r.severe || !FREE_REDOS) continue;
+      if (!r.severe || !freeOn) continue;
       await grantFreeRedo(s.user.workspace, adId, r.clipId);
       freeRedo[r.clipId] = await freeRedoAvailable(s.user.workspace, adId, r.clipId);
     }
