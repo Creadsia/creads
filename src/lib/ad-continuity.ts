@@ -7,7 +7,7 @@ import { formatById } from "./formats";
 
 /** What the image/video model must do with the customer's product photo. */
 export const PRODUCT_EXACT =
-  "the EXACT product from the product reference image: same shape, proportions, colours, materials, label and logo as in that photo; never redesign, simplify, recolour or swap it, never show any other brand or a different product";
+  "the EXACT product from the product reference image: same shape, proportions, colours, materials, label and logo as in that photo; never redesign, simplify, recolour or swap it, never show any other brand or a different product. Show ONLY the product itself as it appears in that photo: do NOT add any packaging, gift box, jewellery case, display card, hang tag, price tag, sticker, label, bag, sign or printed surface that is not already in the photo. The ONLY writing or logo allowed anywhere on screen is the product's own markings as they appear in that photo; never invent a brand name, letters, numbers or a logo on a box, tag or surface";
 
 /** What the model must do when nobody gave a product photo: nothing that looks like a real brand. */
 export const PRODUCT_GENERIC =
