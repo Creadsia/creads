@@ -2,6 +2,7 @@
 // Shared by the server (storage) and the browser (panel). No secrets ever go in here.
 
 import { PROGRAMA } from "./afiliados-calc";
+import { SHOWN_PLANS } from "./catalog";
 
 export type Moneda = "USD" | "CLP";
 
@@ -159,14 +160,15 @@ export const DEFAULT_FINANZAS: Finanzas = {
     stripeFijo: 0.3,
     ivaPct: 19,
     pctChile: 100,
+    // Los planes se toman del catálogo real (withCurrentPlans los sincroniza). Este valor por defecto refleja
+    // los planes vigentes al 4 nov 2026 por si algo lee el default directo.
     planes: [
-      { id: "basico", nombre: "Básico", mensual: 25, anual: 25, creditos: 500 },
-      { id: "starter", nombre: "Emprende", mensual: 55, anual: 55, creditos: 1500 },
-      { id: "plus", nombre: "Negocio", mensual: 99, anual: 99, creditos: 3000 },
-      { id: "studio", nombre: "Ultra", mensual: 129, anual: 109, creditos: 3000 },
+      { id: "testea", nombre: "Testea", mensual: 29, anual: 24, creditos: 400 },
+      { id: "escala", nombre: "Escala", mensual: 59, anual: 49, creditos: 1000 },
+      { id: "agencia", nombre: "Agencia", mensual: 149, anual: 124, creditos: 4000 },
     ],
     afiliado: { tipo: "recurrente", pct: PROGRAMA.pctTramo1, meses: PROGRAMA.maxMeses, meses1: PROGRAMA.mesesTramo1, pct2: PROGRAMA.pctTramo2, cpa: 50, vida: 8 },
-    proyeccion: { starter: 100, plus: 40, studio: 10, pctAfiliado: 30, pctPromo: 100 },
+    proyeccion: { testea: 100, escala: 40, agencia: 10, pctAfiliado: 30, pctPromo: 100 },
   },
 };
 
@@ -252,8 +254,24 @@ export function proyectar(f: Finanzas) {
 }
 
 /** Plan prices before the October 2026 increase: a saved book that still has them gets today's plans. */
-const OLD_PRICES: Record<string, number> = { starter: 79, plus: 219, studio: 449 };
+/** The plan definitions for the margin reports, taken from the live catalogue (never a stale copy). */
+export function planesCatalogo(): Plan[] {
+  return SHOWN_PLANS.map((p) => ({ id: p.id, nombre: p.name, mensual: p.monthly, anual: p.yearlyPerMonth, creditos: p.credits }));
+}
+
+/**
+ * Keep the finance book's plan definitions in sync with the live catalogue, so the margin and projection
+ * reports always use the current prices and credits (owner, 4 Nov 2026: «dejar los márgenes al día»). The saved
+ * book keeps its own cost settings (costo por crédito, IVA, comisión, afiliados); only the plan list and the
+ * projection's per-plan entries follow the catalogue.
+ */
 export function withCurrentPlans(f: Finanzas): Finanzas {
-  const old = f.config?.planes?.some((p) => OLD_PRICES[p.id] === p.mensual);
-  return old ? { ...f, config: { ...f.config, planes: DEFAULT_FINANZAS.config.planes } } : f;
+  const planes = planesCatalogo();
+  const same = f.config?.planes?.length === planes.length
+    && planes.every((p) => f.config.planes.some((q) => q.id === p.id && q.mensual === p.mensual && q.anual === p.anual && q.creditos === p.creditos));
+  if (same) return f;
+  const proyeccion = { ...f.config.proyeccion };
+  const seed: Record<string, number> = { testea: 100, escala: 40, agencia: 10 };
+  for (const p of planes) if (proyeccion[p.id] == null) proyeccion[p.id] = seed[p.id] ?? 0;
+  return { ...f, config: { ...f.config, planes, proyeccion } };
 }
