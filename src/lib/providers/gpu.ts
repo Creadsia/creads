@@ -47,7 +47,10 @@ function buildWorkflow(name: string, vars: Record<string, string | number>): Rec
     // JSON.stringify so strings/newlines are escaped correctly inside the JSON template.
     text = text.split(`"{{${k}}}"`).join(JSON.stringify(v));
   }
-  return JSON.parse(text) as Record<string, unknown>;
+  const graph = JSON.parse(text) as Record<string, unknown>;
+  // Drop doc-only keys (e.g. "_note"): ComfyUI treats every top-level key as a node and would reject them.
+  for (const k of Object.keys(graph)) if (k.startsWith("_")) delete graph[k];
+  return graph;
 }
 
 async function submitWorkflow(workflow: Record<string, unknown>, what: string): Promise<string> {
@@ -197,7 +200,9 @@ export const infiniteTalkGpu: VideoProvider = {
     const [w, h] = dims(req.aspect);
     const image = await uploadRef(face.url, "image");
     const voice = await uploadRef(audio.url, "audio");
-    const workflow = buildWorkflow("infinitetalk", { PROMPT: req.prompt || "a person talking to the camera, natural gestures", WIDTH: px(w), HEIGHT: px(h), IMAGE: image, AUDIO: voice, SEED: seed() });
+    // InfiniteTalk runs at 25 fps; num_frames follows the voice length (clamped so a bad duration can't hang the GPU).
+    const frames = Math.min(500, Math.max(25, Math.round((req.seconds || 5) * 25)));
+    const workflow = buildWorkflow("infinitetalk", { PROMPT: req.prompt || "a person talking to the camera, natural gestures", WIDTH: px(w), HEIGHT: px(h), FRAMES: frames, IMAGE: image, AUDIO: voice, SEED: seed() });
     return { provider: this.id, jobId: await submitWorkflow(workflow, "Habla (GPU)") };
   },
   async status(job: Job): Promise<JobStatus> {
