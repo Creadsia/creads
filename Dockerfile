@@ -46,15 +46,6 @@ RUN cd /ComfyUI/custom_nodes && \
     cd ComfyUI-WanVideoWrapper && \
     pip install -r requirements.txt
 
-# MultiTalk/InfiniteTalk's wav2vec2 forward crashes on the base image's transformers:
-# the refactored Wav2Vec2Encoder returns hidden_states=None even with output_hidden_states=True,
-# so MultiTalkWav2VecEmbeds fails with "'NoneType' object is not subscriptable" and produces no
-# video. Downgrading transformers is NOT viable (it drags huggingface_hub down and breaks the
-# diffusers import, so WanVideoWrapper fails to load and every node 400s). Instead, overwrite the
-# node's wav2vec2.py with a version that captures per-layer hidden states via forward hooks
-# (robust across transformers versions). See patches/wav2vec2.py.
-COPY patches/wav2vec2.py /ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py
-
 
 # Creads PRO (I2V single-person, 720p, no distill): download ONLY the models the I2V_single.json workflow uses,
 # so the whole image builds inside RunPod's 30-min limit (the unused Multi / 480p / distill models were removed).
@@ -72,6 +63,14 @@ RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/umt5-xxl-en
 RUN wget -q https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors -O /ComfyUI/models/clip_vision/clip_vision_h.safetensors
 RUN wget -q https://huggingface.co/Kijai/MelBandRoFormer_comfy/resolve/main/MelBandRoformer_fp16.safetensors -O /ComfyUI/models/diffusion_models/MelBandRoformer_fp16.safetensors
 
+
+# Overwrite MultiTalk's wav2vec2.py AFTER the heavy model downloads, so this tiny change never
+# invalidates the download layers' cache (putting that COPY before the downloads pushed a prior
+# build past RunPod's 30-min limit). The base image's new transformers returns encoder
+# hidden_states=None even with output_hidden_states=True, crashing MultiTalkWav2VecEmbeds;
+# downgrading transformers breaks the diffusers/WanVideoWrapper import, so instead we patch the
+# node to collect per-layer hidden states via forward hooks. See patches/wav2vec2.py.
+COPY patches/wav2vec2.py /ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py
 
 COPY . .
 RUN chmod +x /entrypoint.sh
