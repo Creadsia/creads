@@ -65,6 +65,9 @@ export async function pickModel(cfg: Pick<AutoProd, "modelo">): Promise<string> 
   const ok = videoProviders.filter((p) => p.configured() && !p.silent && !p.needsImage && !paused[p.id]);
   const chosen = ok.find((p) => p.id === cfg.modelo);
   if (chosen) return chosen.id;
+  // GPU propia prendida: InfiniteTalk (habla con movimiento natural, ~$0) es el modelo por defecto.
+  const gpuTalk = ok.find((p) => p.id === "infinitetalk-gpu");
+  if (gpuTalk) return gpuTalk.id;
   // Owner, 23 Oct 2026: MiniMax H3 Max is the default (every ad of the day came out right with it); Veo 3.1
   // Lite is never picked on its own (it failed every cut), only when the customer asks for it by name.
   const preferred = ok.find((p) => p.id === DEFAULT_MODEL);

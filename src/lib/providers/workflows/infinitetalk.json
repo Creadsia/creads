@@ -1,0 +1,11 @@
+{
+  "_note": "PLACEHOLDER — REPLACE WITH THE VALIDATED EXPORT. InfiniteTalk (photo + audio -> talking video with natural movement) runs through kijai's ComfyUI-WanVideoWrapper, whose exact node ids/inputs must come from a working graph on the GPU. Steps to finalize: on the pod install ComfyUI-WanVideoWrapper + ComfyUI-GGUF, download MeiGen-AI/InfiniteTalk + Wan-AI/Wan2.1-I2V-14B-480P + TencentGameMate/chinese-wav2vec2-base + Kijai/WanVideo_comfy_GGUF, load the 'wanvideo_I2V_InfiniteTalk_example' workflow, wire the face image to the image input and the voice to the audio input, then 'Save (API Format)' REPLACING the literal values below with these tokens: {{IMAGE}} (filename in input/), {{AUDIO}} (filename in input/), {{PROMPT}}, {{WIDTH}}, {{HEIGHT}}, {{SEED}}. The skeleton below is indicative only and will not run as-is.",
+  "1": { "class_type": "WanVideoModelLoader", "inputs": { "model": "Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors", "base_precision": "fp8_e4m3fn", "quantization": "fp8_e4m3fn" } },
+  "2": { "class_type": "LoadImage", "inputs": { "image": "{{IMAGE}}" } },
+  "3": { "class_type": "LoadAudio", "inputs": { "audio": "{{AUDIO}}" } },
+  "4": { "class_type": "WanVideoInfiniteTalkEmbeds", "inputs": { "audio": ["3", 0] } },
+  "5": { "class_type": "WanVideoImageToVideoEncode", "inputs": { "width": "{{WIDTH}}", "height": "{{HEIGHT}}", "image": ["2", 0] } },
+  "6": { "class_type": "WanVideoSampler", "inputs": { "model": ["1", 0], "image_embeds": ["5", 0], "talk_embeds": ["4", 0], "steps": 8, "seed": "{{SEED}}", "text": "{{PROMPT}}" } },
+  "7": { "class_type": "WanVideoDecode", "inputs": { "samples": ["6", 0] } },
+  "8": { "class_type": "SaveVideo", "inputs": { "filename_prefix": "creads_infinitetalk", "format": "mp4", "codec": "h264", "fps": 25, "images": ["7", 0] } }
+}
