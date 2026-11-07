@@ -31,6 +31,12 @@ export const voiceProviders: VoiceProvider[] = [chatterboxGpu, elevenlabs];
 /** The model that draws a scene's opening frame: Qwen-Image on our GPU when it's on (free, no third-party
  *  balance, Apache-2.0), else Nano Banana 2, else Nano Banana Pro. This is what broke when Google billing ran dry. */
 export function frameImageProvider(): ImageProvider {
+  // Qwen-Image isn't installed on our GPU yet and Google's Nano Banana billing is down, so draw the
+  // opening frame with OpenAI GPT Image 2.5 (ChatGPT-quality) whenever its key is present. The talking
+  // video still runs free on our GPU (see talkingProvider). Switch the first check back to qwenImageGpu
+  // once Qwen is installed on the pod, to make the opening frame free too.
+  const openai = findImage("gpt-image-2.5");
+  if (openai?.configured()) return openai;
   if (gpuConfigured()) return qwenImageGpu;
   return findImage("nano-banana-2")?.configured() ? findImage("nano-banana-2")! : nanoBananaPro;
 }
