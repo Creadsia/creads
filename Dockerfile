@@ -46,12 +46,14 @@ RUN cd /ComfyUI/custom_nodes && \
     cd ComfyUI-WanVideoWrapper && \
     pip install -r requirements.txt
 
-# MultiTalk/InfiniteTalk's wav2vec2 forward (ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py)
-# copies transformers' old Wav2Vec2 code path. transformers >= 4.52 deprecated use_return_dict
-# and refactored the encoder so it returns hidden_states=None even when output_hidden_states=True,
-# which crashes MultiTalkWav2VecEmbeds with "'NoneType' object is not subscriptable" and produces
-# no video. Pin to the last known-good version for this node. (WanVideoWrapper itself pins nothing.)
-RUN pip install --no-cache-dir "transformers==4.49.0"
+# MultiTalk/InfiniteTalk's wav2vec2 forward crashes on the base image's transformers:
+# the refactored Wav2Vec2Encoder returns hidden_states=None even with output_hidden_states=True,
+# so MultiTalkWav2VecEmbeds fails with "'NoneType' object is not subscriptable" and produces no
+# video. Downgrading transformers is NOT viable (it drags huggingface_hub down and breaks the
+# diffusers import, so WanVideoWrapper fails to load and every node 400s). Instead, overwrite the
+# node's wav2vec2.py with a version that captures per-layer hidden states via forward hooks
+# (robust across transformers versions). See patches/wav2vec2.py.
+COPY patches/wav2vec2.py /ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py
 
 
 # Creads PRO (I2V single-person, 720p, no distill): download ONLY the models the I2V_single.json workflow uses,
