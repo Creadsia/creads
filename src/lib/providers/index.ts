@@ -6,7 +6,7 @@ import { falImageProviders, falVideoProviders } from "./fal";
 import { heygenAvatarIV } from "./heygen";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 import { openaiImageProviders } from "./openai-image";
-import { gpuConfigured, infiniteTalkGpu, qwenImageGpu, wanBrollGpu } from "./gpu";
+import { gpuConfigured, infiniteTalkGpu, itkServerlessOn, qwenImageGpu, wanBrollGpu } from "./gpu";
 import { chatterboxGpu } from "./chatterbox";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
@@ -41,10 +41,11 @@ export function frameImageProvider(): ImageProvider {
   return findImage("nano-banana-2")?.configured() ? findImage("nano-banana-2")! : nanoBananaPro;
 }
 
-/** The talking-head model: InfiniteTalk on our GPU when it's on (free, natural movement), else the paid
- *  default chosen by pickModel (HeyGen/MiniMax). */
+/** The talking-head model: InfiniteTalk on our GPU when it's on — the RunPod serverless endpoint (scales to
+ *  many parallel workers) when configured, else the single always-on pod — otherwise the paid default chosen
+ *  by pickModel (HeyGen/MiniMax). */
 export function talkingProvider(): VideoProvider | undefined {
-  return gpuConfigured() && infiniteTalkGpu.configured() ? infiniteTalkGpu : undefined;
+  return infiniteTalkGpu.configured() ? infiniteTalkGpu : undefined;
 }
 
 /** The voice: Chatterbox on our GPU when it's on (free, cloned Chilean voice), else ElevenLabs. */
@@ -67,5 +68,6 @@ export function providerStatus() {
     database: has("SUPABASE_URL") && has("SUPABASE_SERVICE_ROLE_KEY"),
     foreplay: has("FOREPLAY_API_KEY"),
     gpu: gpuConfigured(),
+    gpuServerless: itkServerlessOn(),
   };
 }

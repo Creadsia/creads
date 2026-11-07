@@ -181,6 +181,77 @@ export const wanBrollGpu: VideoProvider = {
   download: (url: string) => fetchBytes(url),
 };
 
+// ── InfiniteTalk via RunPod Serverless (scales to many workers; pay per second) ───
+// When RUNPOD_API_KEY + RUNPOD_ITK_ENDPOINT are set, the talking-head job runs on our RunPod serverless
+// endpoint (custom worker — Creads PRO config: 720p base, no distill, 18 steps unipc — in the `itk-worker`
+// branch) instead of the single always-on pod. Many workers run in parallel and scale to zero when idle.
+// Worker API (our fork of wlsdml1114/Infinitetalk_Runpod_hub):
+//   POST https://api.runpod.ai/v2/{endpoint}/run  {input:{input_type,person_count,image_url,wav_url,prompt,width,height,force_offload}} -> {id}
+//   GET  https://api.runpod.ai/v2/{endpoint}/status/{id} -> {status, output:{video:"data:video/mp4;base64,..."}}
+const itkEndpoint = () => (process.env.RUNPOD_ITK_ENDPOINT ?? "").trim();
+const runpodKey = () => (process.env.RUNPOD_API_KEY ?? "").trim();
+/** Whether the talking head should run on our RunPod serverless endpoint (preferred over the pod when set). */
+export const itkServerlessOn = () => Boolean(itkEndpoint() && runpodKey());
+const runpodHeaders = () => ({ "content-type": "application/json", authorization: `Bearer ${runpodKey()}` });
+const runUrl = () => `https://api.runpod.ai/v2/${itkEndpoint()}/run`;
+const statusUrl = (id: string) => `https://api.runpod.ai/v2/${itkEndpoint()}/status/${id}`;
+
+// Talking-video render size (the InfiniteTalk model is 720p; we render photo-real vertical/feed sizes).
+const talkDims = (aspect: string): [number, number] =>
+  aspect === "9:16" ? [544, 960] : aspect === "16:9" ? [960, 544] : aspect === "4:5" ? [720, 896] : [720, 720];
+
+async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: string): Promise<string> {
+  const [w, h] = talkDims(req.aspect);
+  const body = {
+    input: {
+      input_type: "image",
+      person_count: "single",
+      prompt: req.prompt || "a person talking to the camera, natural gestures, photorealistic",
+      image_url: faceUrl,
+      wav_url: audioUrl,
+      width: px(w),
+      height: px(h),
+      force_offload: false, // 48GB+ GPU: keep the model on-GPU for ~1.5x faster inference
+    },
+  };
+  const res = await fetch(runUrl(), { method: "POST", headers: runpodHeaders(), body: JSON.stringify(body) });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error("runpod submit", res.status, detail.slice(0, 400));
+    throw new Error(`Habla (GPU serverless): RunPod rechazó el trabajo (${res.status}).`);
+  }
+  const d = (await res.json().catch(() => null)) as { id?: string } | null;
+  if (!d?.id) throw new Error("Habla (GPU serverless): RunPod no devolvió un trabajo.");
+  return `rp:${d.id}`; // marker so status()/download() know this job is on the serverless endpoint
+}
+
+async function runpodTalkStatus(jobId: string): Promise<JobStatus> {
+  const res = await fetch(statusUrl(jobId.slice(3)), { headers: runpodHeaders(), cache: "no-store" });
+  if (!res.ok) return { state: "running" };
+  const d = (await res.json().catch(() => null)) as { status?: string; output?: { video?: string; error?: string }; error?: string } | null;
+  switch (d?.status) {
+    case "COMPLETED":
+      return d?.output?.video ? { state: "done", url: `rpvideo:${jobId.slice(3)}` } : { state: "failed", error: d?.output?.error || "La GPU serverless no devolvió un video." };
+    case "FAILED":
+    case "CANCELLED":
+    case "TIMED_OUT":
+      return { state: "failed", error: String(d?.error ?? d?.output?.error ?? "La GPU serverless falló.").slice(0, 300) };
+    default:
+      return { state: "running" }; // IN_QUEUE / IN_PROGRESS
+  }
+}
+
+async function runpodTalkDownload(url: string): Promise<ArrayBuffer> {
+  const res = await fetch(statusUrl(url.slice("rpvideo:".length)), { headers: runpodHeaders(), cache: "no-store" });
+  if (!res.ok) throw new Error(`No se pudo bajar el video de la GPU serverless (${res.status}).`);
+  const d = (await res.json().catch(() => null)) as { output?: { video?: string } } | null;
+  const dataUrl = d?.output?.video;
+  if (!dataUrl) throw new Error("La GPU serverless no devolvió el video.");
+  const b64 = dataUrl.includes(",") ? dataUrl.slice(dataUrl.indexOf(",") + 1) : dataUrl;
+  const buf = Buffer.from(b64, "base64");
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
 // ── Talking head: InfiniteTalk (photo + voice → video with natural movement) ──────
 
 /** InfiniteTalk on the GPU — «avatar que habla» with natural head/body/hand movement (replaces
@@ -192,11 +263,15 @@ export const infiniteTalkGpu: VideoProvider = {
   usdPerSecond: 0,
   talking: true,
   aspects: ["9:16", "1:1", "4:5"],
-  configured: gpuConfigured,
+  // On when EITHER the serverless endpoint (preferred, scales) OR the single ComfyUI pod is configured.
+  configured: () => itkServerlessOn() || gpuConfigured(),
   async submit(req: VideoRequest): Promise<Job> {
     const face = req.refs?.find((r) => r.role === "face" || r.role === "first_frame");
     const audio = req.refs?.find((r) => r.role === "audio");
     if (!face || !audio) throw new Error("Habla (GPU): faltan la foto del avatar o el audio.");
+    // Serverless endpoint: hand the hosted face/voice URLs straight to the worker (it downloads them).
+    if (itkServerlessOn()) return { provider: this.id, jobId: await runpodSubmitTalk(req, face.url, audio.url) };
+    // Single pod (ComfyUI): upload the refs and submit the workflow directly.
     const [w, h] = dims(req.aspect);
     const image = await uploadRef(face.url, "image");
     const voice = await uploadRef(audio.url, "audio");
@@ -206,11 +281,12 @@ export const infiniteTalkGpu: VideoProvider = {
     return { provider: this.id, jobId: await submitWorkflow(workflow, "Habla (GPU)") };
   },
   async status(job: Job): Promise<JobStatus> {
+    if (job.jobId.startsWith("rp:")) return runpodTalkStatus(job.jobId);
     const r = await pollHistory(job.jobId);
     if (!r.done) return { state: "running" };
     if (r.error) return { state: "failed", error: r.error };
     const f = firstFile(r.outputs);
     return f ? { state: "done", url: viewUrl(f) } : { state: "failed", error: "Habla (GPU): la GPU no devolvió un video." };
   },
-  download: (url: string) => fetchBytes(url),
+  download: (url: string) => (url.startsWith("rpvideo:") ? runpodTalkDownload(url) : fetchBytes(url)),
 };
