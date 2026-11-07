@@ -4,6 +4,7 @@ import { imageProviders, videoProviders } from "@/lib/providers";
 import { falPricing } from "@/lib/providers/fal";
 import { ARK_MODELS, arkConfigured } from "@/lib/providers/byteplus";
 import { pausedModels } from "@/lib/model-pause";
+import { gpuConfigured, itkServerlessOn } from "@/lib/providers/gpu";
 
 // The studio's model list: which models are connected and what they cost (fal prices are live when available).
 export async function GET(req: Request) {
@@ -11,8 +12,12 @@ export async function GET(req: Request) {
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
   const [live, paused] = await Promise.all([falPricing(), pausedModels()]);
+  // When our own GPU is on (serverless or pod), the studio offers ONLY the GPU models (no paid providers):
+  // the customer's money is protected and no one can pick a model that bills a third party.
+  const gpuOn = gpuConfigured() || itkServerlessOn();
+  const videos = gpuOn ? videoProviders.filter((p) => p.id.endsWith("-gpu")) : videoProviders;
   return NextResponse.json({
-    video: videoProviders.map((p) => {
+    video: videos.map((p) => {
       // Seedance bought direct (BytePlus) has its own price, not fal's
       const l = arkConfigured() && ARK_MODELS[p.id] ? undefined : live[p.id];
       // Seedance is billed per 1,000 tokens; at 720p, 1 s ≈ 720×1280×24/1024 = 21,600 tokens.
