@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { findVideo, frameImageProvider } from "@/lib/providers";
+import { findVideo, frameImageProvider, talkingProvider } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
@@ -67,7 +67,14 @@ export async function POST(req: Request) {
     }
     const ad = await db.get("ads", String(clip.ad_id));
     if (!ad) return giveBack(NextResponse.json({ error: "Anuncio no encontrado." }, { status: 404 }));
-    const provider = findVideo(String(clip.model));
+    let provider = findVideo(String(clip.model));
+    // With our own GPU on, every talking cut (one with a script line) runs on InfiniteTalk (GPU), even if the
+    // cut still has a paid model saved from before the GPU was turned on — so no cut ever bills a third party.
+    const gpuTalk = talkingProvider();
+    if (gpuTalk && ad.format !== "historia" && String(clip.text ?? "").trim()) {
+      provider = gpuTalk;
+      if (clip.model !== gpuTalk.id) clip = (await db.update("clips", id, { model: gpuTalk.id })) ?? clip;
+    }
     if (!provider?.configured()) return giveBack(NextResponse.json({ error: "Ese modelo no está disponible ahora. Elige otro." }, { status: 503 }));
     if (await isPaused(provider.id)) return giveBack(NextResponse.json({ error: PAUSED_TEXT }, { status: 503 }));
 
