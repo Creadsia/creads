@@ -46,6 +46,13 @@ RUN cd /ComfyUI/custom_nodes && \
     cd ComfyUI-WanVideoWrapper && \
     pip install -r requirements.txt
 
+# MultiTalk/InfiniteTalk's wav2vec2 forward (ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py)
+# copies transformers' old Wav2Vec2 code path. transformers >= 4.52 deprecated use_return_dict
+# and refactored the encoder so it returns hidden_states=None even when output_hidden_states=True,
+# which crashes MultiTalkWav2VecEmbeds with "'NoneType' object is not subscriptable" and produces
+# no video. Pin to the last known-good version for this node. (WanVideoWrapper itself pins nothing.)
+RUN pip install --no-cache-dir "transformers==4.49.0"
+
 
 # Creads PRO (I2V single-person, 720p, no distill): download ONLY the models the I2V_single.json workflow uses,
 # so the whole image builds inside RunPod's 30-min limit (the unused Multi / 480p / distill models were removed).
