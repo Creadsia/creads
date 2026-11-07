@@ -453,16 +453,38 @@ def handler(job):
     if person_count == "multi" and wav_path_2:
         logger.info(f"두 번째 오디오 파일 크기: {os.path.getsize(wav_path_2)} bytes")
 
+    # ------------------------------------------------------------------
+    # Stage inputs into ComfyUI's input directory.
+    # Recent ComfyUI versions reject LoadImage/LoadAudio values that are
+    # absolute paths or point outside the input dir (security hardening),
+    # which made every job fail with "Invalid image/audio file". So we copy
+    # each resolved input into /ComfyUI/input and hand the nodes a bare
+    # filename (unique per task) instead of an absolute path.
+    # ------------------------------------------------------------------
+    comfy_input_dir = os.environ.get("COMFY_INPUT_DIR", "/ComfyUI/input")
+    os.makedirs(comfy_input_dir, exist_ok=True)
+
+    def _stage(src):
+        dst_name = f"{task_id}_{os.path.basename(src)}"
+        dst = os.path.join(comfy_input_dir, dst_name)
+        shutil.copyfile(src, dst)
+        logger.info(f"📥 입력 파일을 ComfyUI input으로 복사: {src} -> {dst}")
+        return dst_name
+
+    media_name = _stage(media_path)
+    wav_name = _stage(wav_path)
+    wav_name_2 = _stage(wav_path_2) if (person_count == "multi" and wav_path_2) else None
+
     # 워크플로우 노드 설정
     if input_type == "image":
         # I2V 워크플로우: 이미지 입력 설정
-        prompt["284"]["inputs"]["image"] = media_path
+        prompt["284"]["inputs"]["image"] = media_name
     else:
         # V2V 워크플로우: 비디오 입력 설정
-        prompt["228"]["inputs"]["video"] = media_path
+        prompt["228"]["inputs"]["video"] = media_name
 
     # 공통 설정
-    prompt["125"]["inputs"]["audio"] = wav_path
+    prompt["125"]["inputs"]["audio"] = wav_name
     prompt["241"]["inputs"]["positive_prompt"] = prompt_text
     prompt["245"]["inputs"]["value"] = width
     prompt["246"]["inputs"]["value"] = height
@@ -474,10 +496,10 @@ def handler(job):
         # 워크플로우 타입에 따라 두 번째 오디오 노드 설정
         if input_type == "image":  # I2V_multi.json의 경우
             if "307" in prompt:
-                prompt["307"]["inputs"]["audio"] = wav_path_2
+                prompt["307"]["inputs"]["audio"] = wav_name_2
         else:  # V2V_multi.json의 경우
             if "313" in prompt:
-                prompt["313"]["inputs"]["audio"] = wav_path_2
+                prompt["313"]["inputs"]["audio"] = wav_name_2
 
     ws_url = f"ws://{server_address}:8188/ws?clientId={client_id}"
     logger.info(f"Connecting to WebSocket: {ws_url}")
