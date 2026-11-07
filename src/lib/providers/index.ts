@@ -6,6 +6,7 @@ import { falImageProviders, falVideoProviders } from "./fal";
 import { heygenAvatarIV } from "./heygen";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 import { openaiImageProviders } from "./openai-image";
+import { fluxGpu, gpuConfigured, wanBrollGpu } from "./gpu";
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
 // `configured()` reports whether the provider's key is present.
@@ -18,9 +19,17 @@ export const videoProviders: VideoProvider[] = [
   veoStd,
   ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
   heygenAvatarIV, // «avatar que habla» vía HeyGen (A/B test; sólo cuando se pide modelo heygen-avatar-iv)
+  wanBrollGpu, // B-roll en GPU propia (silencioso; reemplaza a fal.ai cuando GPU_ENABLED=1)
 ];
 
-export const imageProviders: ImageProvider[] = [nanoBananaPro, ...falImageProviders, ...openaiImageProviders];
+export const imageProviders: ImageProvider[] = [fluxGpu, nanoBananaPro, ...falImageProviders, ...openaiImageProviders];
+
+/** The model that draws a scene's opening frame: FLUX on our GPU when it's on (free, no third-party balance),
+ *  else Nano Banana 2, else Nano Banana Pro. This is what used to break when Google billing ran dry. */
+export function frameImageProvider(): ImageProvider {
+  if (gpuConfigured()) return fluxGpu;
+  return findImage("nano-banana-2")?.configured() ? findImage("nano-banana-2")! : nanoBananaPro;
+}
 
 export const voiceProviders: VoiceProvider[] = [elevenlabs];
 
@@ -38,5 +47,6 @@ export function providerStatus() {
     voice: Object.fromEntries(voiceProviders.map((p) => [p.id, p.configured()])),
     database: has("SUPABASE_URL") && has("SUPABASE_SERVICE_ROLE_KEY"),
     foreplay: has("FOREPLAY_API_KEY"),
+    gpu: gpuConfigured(),
   };
 }

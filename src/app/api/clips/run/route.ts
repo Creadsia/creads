@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { findImage, findVideo } from "@/lib/providers";
+import { findVideo, frameImageProvider } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
@@ -120,9 +120,8 @@ export async function POST(req: Request) {
     const takesRefs = TAKES_REFS.has(provider.id) && Boolean(face || prod) && !persona;
     const needsFrame = !takesRefs && Boolean(face || prod || persona) && !clip.image_url && !(talking && Number(clip.idx) > 0) && !actor;
     const videoSecs = provider.id.startsWith("veo") ? (takesRefs ? 8 : seconds <= 4 ? 4 : seconds <= 6 ? 6 : 8) : seconds;
-    // opening frames: Nano Banana 2 (US$0.08, same look and face from the photos) — Pro only as a fallback
-    const nb2 = findImage("nano-banana-2");
-    const frameModel = nb2?.configured() ? nb2 : nanoBananaPro;
+    // opening frames: FLUX on our GPU when it's on (free, no third-party balance), else Nano Banana 2, Pro as fallback
+    const frameModel = frameImageProvider();
     const estimate = provider.usdPerSecond * videoSecs + (needsFrame ? frameModel.usdPerImage : 0)
       + (talking || actor ? line.length * 0.00022 : ownVoice ? (!story && st.lipsync === "pro" ? lipsyncProUsd(videoSecs, line) : lipsyncUsd(videoSecs, line)) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
