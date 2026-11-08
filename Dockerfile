@@ -52,24 +52,14 @@ RUN cd /ComfyUI/custom_nodes && \
 # This is both faster (6 steps vs 18) AND the only config that actually denoises to a real avatar;
 # the earlier "PRO" variant (720p, no LoRA, 18 steps, cfg 5, unipc) output pure noise.
 # IMPORTANT: .safetensors only — kijai's WanVideoModelLoader does not read GGUF (loads garbage -> noise).
+#
+# The ~18GB model set is NOT baked into the image: download_models.sh fetches it on the first
+# worker boot (see entrypoint.sh). Baking it here forced every rebuild to re-export huge layers
+# (#30 "exporting layers" alone took ~12 min), which repeatedly blew past RunPod's hard 30-minute
+# build limit. Keeping the image light makes builds finish in a few minutes and never time out;
+# the models land on the worker's disk at startup and a warm worker skips re-downloading.
 
-# InfiniteTalk single-person audio model (node 120)
-RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors
-
-# 480p base model (fp8_e4m3fn safetensors, node 122) + cfg-step-distill LoRA (node 138)
-RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors
-RUN mkdir -p /ComfyUI/models/loras && wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors -O /ComfyUI/models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors
-
-# VAE (node 129), text encoder (node 241), CLIP vision (node 238), Mel-Band RoFormer audio separation (node 301)
-RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_bf16.safetensors -O /ComfyUI/models/vae/Wan2_1_VAE_bf16.safetensors
-RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/umt5-xxl-enc-fp8_e4m3fn.safetensors -O /ComfyUI/models/text_encoders/umt5-xxl-enc-fp8_e4m3fn.safetensors
-RUN wget -q https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors -O /ComfyUI/models/clip_vision/clip_vision_h.safetensors
-RUN wget -q https://huggingface.co/Kijai/MelBandRoFormer_comfy/resolve/main/MelBandRoformer_fp16.safetensors -O /ComfyUI/models/diffusion_models/MelBandRoformer_fp16.safetensors
-
-
-# Overwrite MultiTalk's wav2vec2.py AFTER the heavy model downloads, so this tiny change never
-# invalidates the download layers' cache (putting that COPY before the downloads pushed a prior
-# build past RunPod's 30-min limit). The base image's new transformers returns encoder
+# Overwrite MultiTalk's wav2vec2.py. The base image's new transformers returns encoder
 # hidden_states=None even with output_hidden_states=True, crashing MultiTalkWav2VecEmbeds;
 # downgrading transformers breaks the diffusers/WanVideoWrapper import, so instead we patch the
 # node to collect per-layer hidden states via forward hooks. See patches/wav2vec2.py.

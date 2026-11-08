@@ -3,6 +3,12 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Download the model set on first worker boot (kept out of the Docker image so
+# builds stay small and never hit RunPod's 30-minute build limit). Idempotent:
+# a warm worker already has the files and skips straight past this.
+echo "Checking / downloading models..."
+bash /download_models.sh
+
 # Start ComfyUI in the background
 echo "Starting ComfyUI in the background..."
 python /ComfyUI/main.py --listen --use-sage-attention &
