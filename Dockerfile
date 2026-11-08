@@ -49,13 +49,15 @@ RUN cd /ComfyUI/custom_nodes && \
 
 # Creads PRO (I2V single-person, 720p, no distill): download ONLY the models the I2V_single.json workflow uses,
 # so the whole image builds inside RunPod's 30-min limit (the unused Multi / 480p / distill models were removed).
-# 720p base uses the Q6_K quant (~12GB): visually ~identical to Q8 but downloads/loads faster.
+# 720p base is the fp8_e4m3fn safetensors (~17GB). IMPORTANT: use .safetensors, not a GGUF —
+# kijai's WanVideoModelLoader does not read GGUF files (it loaded garbage weights and the model
+# output pure noise instead of an avatar). fp8 safetensors loads correctly with quantization=fp8_e4m3fn.
 
 # InfiniteTalk single-person audio model (node 120)
 RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors
 
-# 720p base model (Q6_K, ~12GB, node 122)
-RUN wget -q https://huggingface.co/city96/Wan2.1-I2V-14B-720P-gguf/resolve/main/wan2.1-i2v-14b-720p-Q6_K.gguf -O /ComfyUI/models/diffusion_models/wan2.1-i2v-14b-720p-Q6_K.gguf
+# 720p base model (fp8_e4m3fn safetensors, ~17GB, node 122)
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors
 
 # VAE (node 129), text encoder (node 241), CLIP vision (node 238), Mel-Band RoFormer audio separation (node 301)
 RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_bf16.safetensors -O /ComfyUI/models/vae/Wan2_1_VAE_bf16.safetensors
