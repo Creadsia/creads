@@ -3,9 +3,23 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Download the model set on first worker boot (kept out of the Docker image so
-# builds stay small and never hit RunPod's 30-minute build limit). Idempotent:
-# a warm worker already has the files and skips straight past this.
+# Models live on a RunPod network volume mounted at /runpod-volume, NOT in the
+# image and NOT on the 5GB container disk (which is far too small for the ~18GB
+# set — downloading into it fails with "no space left"). Point /ComfyUI/models at
+# the volume so both the downloader and ComfyUI use it. The first worker populates
+# the volume (~18GB, one time); every later worker finds the files already there
+# and starts in seconds. This keeps image builds tiny (no 30-min build timeout)
+# AND cold starts fast.
+if [ -d /runpod-volume ]; then
+    echo "Network volume detected: storing models on /runpod-volume/models"
+    mkdir -p /runpod-volume/models
+    rm -rf /ComfyUI/models
+    ln -s /runpod-volume/models /ComfyUI/models
+else
+    echo "WARNING: no /runpod-volume mounted — falling back to container disk (may run out of space)"
+fi
+
+# Download the model set if missing (idempotent: skips files already on the volume).
 echo "Checking / downloading models..."
 bash /download_models.sh
 
