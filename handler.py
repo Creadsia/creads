@@ -558,6 +558,28 @@ def handler(job):
         else:
             logger.info(f"노드 {node_id}는 비어있음")
 
+    # Fallback: the websocket/history scan above can miss the VHS_VideoCombine
+    # output (history 'gifs' not populated, history read before the file lands,
+    # or a changed output key in newer ComfyUI/VHS). Since save_output=true writes
+    # the mp4 to ComfyUI's output dir, scan it directly and take the newest file.
+    if not output_video_path:
+        import glob as _glob
+
+        logger.warning("history에서 비디오를 찾지 못해 output/temp 디렉토리에서 최신 mp4를 검색합니다.")
+        search_dirs = [
+            os.environ.get("COMFY_OUTPUT_DIR", "/ComfyUI/output"),
+            "/ComfyUI/output",
+            "/ComfyUI/temp",
+        ]
+        candidates = []
+        for d in search_dirs:
+            if os.path.isdir(d):
+                candidates += _glob.glob(os.path.join(d, "**", "*.mp4"), recursive=True)
+        candidates = [c for c in candidates if os.path.isfile(c) and os.path.getsize(c) > 0]
+        if candidates:
+            output_video_path = max(candidates, key=os.path.getmtime)
+            logger.info(f"폴백으로 비디오 발견: {output_video_path}")
+
     if not output_video_path:
         logger.error("출력 비디오를 찾을 수 없습니다. 모든 노드가 비어있습니다.")
         return {"error": "비디오를 찾을 수 없습니다."}
