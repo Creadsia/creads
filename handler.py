@@ -29,6 +29,10 @@ def truncate_base64_for_log(base64_str, max_length=50):
 server_address = os.getenv("SERVER_ADDRESS", "127.0.0.1")
 client_id = str(uuid.uuid4())
 
+# Last ComfyUI execution_error captured during get_videos (surfaced in the
+# handler's error response so the real cause is visible via the job status API).
+_LAST_COMFY_ERROR = None
+
 
 def download_file_from_url(url, output_path):
     """URL에서 파일을 다운로드하는 함수"""
@@ -167,26 +171,44 @@ def get_videos(ws, prompt, input_type="image", person_count="single"):
     prompt_id = queue_prompt(prompt, input_type, person_count)["prompt_id"]
     logger.info(f"워크플로우 실행 시작: prompt_id={prompt_id}")
 
+    global _LAST_COMFY_ERROR
+    _LAST_COMFY_ERROR = None
+
     output_videos = {}
     while True:
         out = ws.recv()
         if isinstance(out, str):
             message = json.loads(out)
-            if message["type"] == "executing":
+            mtype = message.get("type")
+            if mtype == "executing":
                 data = message["data"]
                 if data["node"] is not None:
                     logger.info(f"노드 실행 중: {data['node']}")
                 if data["node"] is None and data["prompt_id"] == prompt_id:
                     logger.info("워크플로우 실행 완료")
                     break
+            elif mtype == "execution_error":
+                # ComfyUI reports a node failure here. Capture it so the handler
+                # can surface the real cause instead of a bare "video not found".
+                data = message.get("data", {})
+                node_type = data.get("node_type", "?")
+                exc_type = data.get("exception_type", "?")
+                exc_msg = data.get("exception_message", "?")
+                _LAST_COMFY_ERROR = f"{node_type}: {exc_type}: {exc_msg}"
+                logger.error(f"❌ ComfyUI 실행 오류: {json.dumps(data)[:1500]}")
+                break
         else:
             continue
 
     logger.info(f"히스토리 조회 중: prompt_id={prompt_id}")
-    history = get_history(prompt_id)[prompt_id]
-    logger.info(f"출력 노드 수: {len(history['outputs'])}")
+    history_all = get_history(prompt_id)
+    if prompt_id not in history_all:
+        logger.warning(f"history에 prompt_id가 없습니다: {prompt_id}")
+        return output_videos
+    history = history_all[prompt_id]
+    logger.info(f"출력 노드 수: {len(history.get('outputs', {}))}")
 
-    for node_id in history["outputs"]:
+    for node_id in history.get("outputs", {}):
         node_output = history["outputs"][node_id]
         videos_output = []
         if "gifs" in node_output:
@@ -582,7 +604,9 @@ def handler(job):
 
     if not output_video_path:
         logger.error("출력 비디오를 찾을 수 없습니다. 모든 노드가 비어있습니다.")
-        return {"error": "비디오를 찾을 수 없습니다."}
+        if _LAST_COMFY_ERROR:
+            return {"error": f"ComfyUI generation failed: {_LAST_COMFY_ERROR}"}
+        return {"error": "비디오를 찾을 수 없습니다. (no mp4 produced; no ComfyUI error captured)"}
 
     # 비디오 파일 존재 여부 확인
     if not os.path.exists(output_video_path):
