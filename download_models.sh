@@ -17,17 +17,50 @@ mkdir -p "$DIFF" "$LORA" "$VAE" "$TENC" "$CLIPV"
 # hf_transfer makes huggingface downloads much faster when available.
 export HF_HUB_ENABLE_HF_TRANSFER=1
 
+# Final Content-Length for a URL, following HuggingFace's redirect to its CDN.
+remote_size() {
+  curl -sIL "$1" 2>/dev/null \
+    | awk 'BEGIN{IGNORECASE=1} /^content-length:/{v=$2} END{gsub(/[\r ]/,"",v); print v}'
+}
+
 dl() {
   local url="$1" out="$2"
+  local expected have got
+  expected="$(remote_size "$url")"
+
+  # Keep an existing copy ONLY if its size matches the server's. A concurrent
+  # download earlier corrupted the 16GB base model (truncated safetensors ->
+  # "Tensor extends past the end of the file"), and the old existence-only check
+  # happily reused the broken file forever. Verify the size and re-download if
+  # it is incomplete; if the server size can't be read, keep the file rather
+  # than risk a re-download loop.
   if [ -s "$out" ]; then
-    echo "✓ ya existe: $out"
-    return 0
+    have="$(stat -c%s "$out" 2>/dev/null || echo 0)"
+    if [ -n "$expected" ] && [ "$have" = "$expected" ]; then
+      echo "✓ ya existe (tamaño OK $have): $out"
+      return 0
+    fi
+    if [ -n "$expected" ]; then
+      echo "⚠ archivo incompleto/corrupto (tiene $have, esperado $expected) -> re-bajando: $out"
+      rm -f "$out"
+    else
+      echo "✓ ya existe (no se pudo verificar tamaño): $out"
+      return 0
+    fi
   fi
-  echo "⬇ bajando: $out"
+
+  echo "⬇ bajando: $out (esperado ${expected:-?} bytes)"
   for i in 1 2 3; do
-    if wget -q --show-progress=off "$url" -O "$out.tmp"; then
+    if wget -q "$url" -O "$out.tmp"; then
+      got="$(stat -c%s "$out.tmp" 2>/dev/null || echo 0)"
+      if [ -n "$expected" ] && [ "$got" != "$expected" ]; then
+        echo "   descarga incompleta (got $got, esperado $expected), reintento $i"
+        rm -f "$out.tmp"
+        sleep 3
+        continue
+      fi
       mv "$out.tmp" "$out"
-      echo "✓ listo: $out"
+      echo "✓ listo ($got bytes): $out"
       return 0
     fi
     echo "   reintento $i falló para $out"
