@@ -10,13 +10,17 @@
   },
   "122": {
     "inputs": {
-      "model": "Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors",
+      "model": "Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors",
       "base_precision": "fp16_fast",
       "quantization": "fp8_e4m3fn",
       "load_device": "offload_device",
       "attention_mode": "sageattn",
       "block_swap_args": [
         "134",
+        0
+      ],
+      "lora": [
+        "138",
         0
       ],
       "multitalk_model": [
@@ -41,12 +45,12 @@
   },
   "128": {
     "inputs": {
-      "steps": 18,
-      "cfg": 5.0,
-      "shift": 5.0,
+      "steps": 6,
+      "cfg": 1.0000000000000002,
+      "shift": 11.000000000000002,
       "seed": 2,
       "force_offload": true,
-      "scheduler": "unipc",
+      "scheduler": "dpm++_sde",
       "riflex_freq_index": 0,
       "denoise_strength": 1,
       "batched_cfg": false,
@@ -136,7 +140,7 @@
   },
   "134": {
     "inputs": {
-      "blocks_to_swap": 12,
+      "blocks_to_swap": 20,
       "offload_img_emb": false,
       "offload_txt_emb": false,
       "use_non_blocking": true,

@@ -47,17 +47,18 @@ RUN cd /ComfyUI/custom_nodes && \
     pip install -r requirements.txt
 
 
-# Creads PRO (I2V single-person, 720p, no distill): download ONLY the models the I2V_single.json workflow uses,
-# so the whole image builds inside RunPod's 30-min limit (the unused Multi / 480p / distill models were removed).
-# 720p base is the fp8_e4m3fn safetensors (~17GB). IMPORTANT: use .safetensors, not a GGUF —
-# kijai's WanVideoModelLoader does not read GGUF files (it loaded garbage weights and the model
-# output pure noise instead of an avatar). fp8 safetensors loads correctly with quantization=fp8_e4m3fn.
+# Creads: EXACT upstream InfiniteTalk recipe (wlsdml1114/Infinitetalk_Runpod_hub) — the proven,
+# fast config: 480p fp8 base + lightx2v cfg-step-distill LoRA, 6 steps, cfg 1, dpm++_sde, shift 11.
+# This is both faster (6 steps vs 18) AND the only config that actually denoises to a real avatar;
+# the earlier "PRO" variant (720p, no LoRA, 18 steps, cfg 5, unipc) output pure noise.
+# IMPORTANT: .safetensors only — kijai's WanVideoModelLoader does not read GGUF (loads garbage -> noise).
 
 # InfiniteTalk single-person audio model (node 120)
 RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-InfiniteTalk-Single_fp8_e4m3fn_scaled_KJ.safetensors
 
-# 720p base model (fp8_e4m3fn safetensors, ~17GB, node 122)
-RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-I2V-14B-720P_fp8_e4m3fn.safetensors
+# 480p base model (fp8_e4m3fn safetensors, node 122) + cfg-step-distill LoRA (node 138)
+RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors -O /ComfyUI/models/diffusion_models/Wan2_1-I2V-14B-480P_fp8_e4m3fn.safetensors
+RUN mkdir -p /ComfyUI/models/loras && wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors -O /ComfyUI/models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors
 
 # VAE (node 129), text encoder (node 241), CLIP vision (node 238), Mel-Band RoFormer audio separation (node 301)
 RUN wget -q https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Wan2_1_VAE_bf16.safetensors -O /ComfyUI/models/vae/Wan2_1_VAE_bf16.safetensors
