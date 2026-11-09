@@ -183,11 +183,18 @@ export const wanBrollGpu: VideoProvider = {
 
 // ── InfiniteTalk via RunPod Serverless (scales to many workers; pay per second) ───
 // When RUNPOD_API_KEY + RUNPOD_ITK_ENDPOINT are set, the talking-head job runs on our RunPod serverless
-// endpoint (custom worker — Creads PRO config: 720p base, no distill, 18 steps unipc — in the `itk-worker`
-// branch) instead of the single always-on pod. Many workers run in parallel and scale to zero when idle.
+// endpoint (custom worker in the `itk-worker` branch) instead of the single always-on pod. Many workers run
+// in parallel and scale to zero when idle.
+// Worker config (the proven, fast recipe — see Dockerfile/I2V_single.json in itk-worker):
+//   480p fp8 base (Wan2_1-I2V-14B-480P) + lightx2v cfg-step-distill LoRA, 6 steps, cfg 1, dpm++_sde, shift 11.
+//   The worker auto-sizes the clip from the audio length (we do NOT send max_frame) and reads force_offload
+//   from the input (default true = OOM-safe on a small GPU; set false only on a 48GB+ GPU for ~1.5x speed).
 // Worker API (our fork of wlsdml1114/Infinitetalk_Runpod_hub):
-//   POST https://api.runpod.ai/v2/{endpoint}/run  {input:{input_type,person_count,image_url,wav_url,prompt,width,height,force_offload}} -> {id}
+//   POST https://api.runpod.ai/v2/{endpoint}/run  {input:{input_type,person_count,image_url,wav_url,prompt,width,height}, policy:{executionTimeout}} -> {id}
 //   GET  https://api.runpod.ai/v2/{endpoint}/status/{id} -> {status, output:{video:"data:video/mp4;base64,..."}}
+// executionTimeout (ms) raises RunPod's 30-min per-job cap: on a small GPU the block-swap offload makes even a
+// short clip take many minutes, so without this a real clip is killed as TIMED_OUT. A bigger GPU makes it fast.
+const RUNPOD_EXEC_TIMEOUT_MS = 55 * 60 * 1000; // 55 min: safe headroom on the small GPU; harmless on a fast one
 const itkEndpoint = () => (process.env.RUNPOD_ITK_ENDPOINT ?? "").trim();
 const runpodKey = () => (process.env.RUNPOD_API_KEY ?? "").trim();
 /** Whether the talking head should run on our RunPod serverless endpoint (preferred over the pod when set). */
@@ -196,9 +203,11 @@ const runpodHeaders = () => ({ "content-type": "application/json", authorization
 const runUrl = () => `https://api.runpod.ai/v2/${itkEndpoint()}/run`;
 const statusUrl = (id: string) => `https://api.runpod.ai/v2/${itkEndpoint()}/status/${id}`;
 
-// Talking-video render size (the InfiniteTalk model is 720p; we render photo-real vertical/feed sizes).
+// Talking-video render size. The installed worker runs the 480p base + 480p distill LoRA, so we render at
+// 480p-class sizes (divisible by 16): rendering bigger than the model's native resolution is slower AND lower
+// quality (off-distribution). 480x832 is the canonical 480p vertical; a bigger GPU can revisit these upward.
 const talkDims = (aspect: string): [number, number] =>
-  aspect === "9:16" ? [544, 960] : aspect === "16:9" ? [960, 544] : aspect === "4:5" ? [720, 896] : [720, 720];
+  aspect === "9:16" ? [480, 832] : aspect === "16:9" ? [832, 480] : aspect === "4:5" ? [512, 640] : [512, 512];
 
 async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: string): Promise<string> {
   const [w, h] = talkDims(req.aspect);
@@ -211,8 +220,11 @@ async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: st
       wav_url: audioUrl,
       width: px(w),
       height: px(h),
-      force_offload: false, // 48GB+ GPU: keep the model on-GPU for ~1.5x faster inference
+      // force_offload omitted on purpose: the worker defaults it to true (OOM-safe on the current small GPU).
+      // The clip length is auto-calculated from the audio by the worker, so we don't send max_frame either.
     },
+    // Raise RunPod's 30-min per-job cap so a slow (block-swapped) render on the small GPU isn't killed midway.
+    policy: { executionTimeout: RUNPOD_EXEC_TIMEOUT_MS },
   };
   const res = await fetch(runUrl(), { method: "POST", headers: runpodHeaders(), body: JSON.stringify(body) });
   if (!res.ok) {
