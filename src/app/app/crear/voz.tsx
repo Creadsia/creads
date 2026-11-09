@@ -118,8 +118,10 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
   const set = (p: Partial<VoiceChoice>) => onChange({ ...value, ...p });
   const avatar = avatars.rows?.find((a) => a.id === value.avatarId);
   const gender = value.gender ?? genderOf(`${avatar?.description ?? ""} ${avatar?.name ?? ""}`) ?? "male";
-  // español neutro starts on Mexican voices (the accent comes from the voice; any other can be picked)
-  const accent = value.accent ?? (lang === "es" ? "es-MX" : "es-CL");
+  // English ads start on the English voices; español neutro on Mexican (the accent comes from the voice)
+  const accent = value.accent ?? (lang === "en" ? "en" : lang === "es" ? "es-MX" : "es-CL");
+  // the English group only makes sense for an English ad (kept out of the picker for Spanish ones)
+  const groups = accents.filter((a) => lang === "en" || a.locale !== "en");
   const mineList: AccentVoice[] = voices.filter((v) => v.category === "cloned").map((v) => ({ ref: v.id, name: v.name, gender: "", age: "", preview: v.preview, mine: true }));
   const shown: AccentVoice[] = accent === "mine" ? mineList : (accents.find((a) => a.locale === accent)?.voices ?? []).filter((v) => !v.gender || v.gender === gender);
   // until the customer picks, the voice follows the presenter: their own voice, else the first matching one
@@ -200,7 +202,7 @@ export default function Voz({ format, lang, cuts, value, onChange, onBack, onNex
       <div className="flex flex-col gap-2">
         <span className="text-sm font-semibold">🗣 Acento</span>
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Acento">
-          {[...accents.map((a) => ({ id: a.locale, label: a.label })), ...(mineList.length ? [{ id: "mine", label: "★ Tus voces" }] : [])].map((a) => (
+          {[...groups.map((a) => ({ id: a.locale, label: a.label })), ...(mineList.length ? [{ id: "mine", label: "★ Tus voces" }] : [])].map((a) => (
             <button key={a.id} type="button" role="radio" aria-checked={accent === a.id} onClick={() => set({ accent: a.id, manual: false })}
               className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${accent === a.id ? "border-transparent bg-[image:var(--grad)] text-white" : "border-line text-muted hover:text-ink"}`}>{a.label}</button>
           ))}

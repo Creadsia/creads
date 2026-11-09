@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { FEATURE_UNAVAILABLE as UNAVAILABLE_TEXT, publicError } from "@/lib/public-error";
-import { ACCENTS, accentVoices, setHidden } from "@/lib/voices";
+import { ACCENTS, accentVoices, englishVoices, setHidden } from "@/lib/voices";
 import { isOwner } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +13,11 @@ export async function GET(req: Request) {
   if (!s) return NextResponse.json({ error: SESSION_ENDED }, { status: 401 });
   if (!elevenlabs.configured()) return NextResponse.json({ error: UNAVAILABLE_TEXT }, { status: 503 });
   try {
-    const voices = await accentVoices();
-    return NextResponse.json({
-      curar: isOwner(s.user),
-      accents: ACCENTS.map((a) => ({ locale: a.locale, label: a.label, voices: voices.filter((v) => v.accent === a.locale).map(({ ref, name, gender, age, preview, mine, descriptive }) => ({ ref, name, gender, age, preview, mine: Boolean(mine), tono: descriptive || undefined })) })),
-    });
+    const [voices, english] = await Promise.all([accentVoices(), englishVoices(s.user.workspace).catch(() => [])]);
+    const spanish = ACCENTS.map((a) => ({ locale: a.locale, label: a.label, voices: voices.filter((v) => v.accent === a.locale).map(({ ref, name, gender, age, preview, mine, descriptive }) => ({ ref, name, gender, age, preview, mine: Boolean(mine), tono: descriptive || undefined })) }));
+    // English ads need English voices in the picker; the group goes first so it is the obvious choice.
+    const accents = english.length ? [{ locale: "en", label: "Inglés (EE. UU.)", voices: english }, ...spanish] : spanish;
+    return NextResponse.json({ curar: isOwner(s.user), accents });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudieron leer las voces.") }, { status: 502 });
   }

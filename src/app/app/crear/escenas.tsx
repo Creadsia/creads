@@ -36,6 +36,8 @@ interface Scene { dir: Dir; prompt: string }
 interface Model { id: string; label: string; configured: boolean; usdPerSecond: number; aspects: string[]; needsImage?: boolean; silent?: boolean; noFaces?: boolean; talking?: boolean; actor?: boolean }
 
 const DIR_CHIPS = ["Más dinámico: que camine y se mueva", "Que se vea el problema de cerca", "Que se vea su casa por fuera", "Hook con mucha energía", "Tono más emocional y cercano", "Al final que muestre el celular"];
+// where the scene prompts are cached so leaving and coming back does not force a regenerate
+const SCENES_KEY = "creads-escenas-prompts";
 const FRAME_USD = 0.134;
 const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
 const clipSecs = (t: string) => Math.min(15, Math.max(4, Math.ceil(words(t) / 2.7) + 1));
@@ -78,6 +80,22 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
     fetch("/api/voices/acentos").then((r) => r.json()).then((d) => setAccents(d.accents ?? [])).catch(() => {});
   }, []);
   useEffect(() => { if (!avatarId && avatars.rows?.length && f.av !== "none") setAvatarId(avatars.rows[0].id); }, [avatars.rows, avatarId, f.av]);
+
+  // The scene prompts survive leaving the page and coming back, so nobody has to press «Crear los prompts»
+  // again just to reach «Generar». Regenerating them used to drop the recorded voice (the generate button
+  // went disabled); keeping them avoids that. Saved per exact cuts + avatar + format, so a real change still
+  // asks for fresh prompts.
+  const scenesSig = () => JSON.stringify({ t: cuts.map((c) => c.texto), a: avatarId, asp: aspect, lang, format });
+  useEffect(() => {
+    try { if (scenes && scenes.length === cuts.length) localStorage.setItem(SCENES_KEY, JSON.stringify({ sig: scenesSig(), scenes })); } catch {}
+  }, [scenes]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (scenes || !cuts.length) return;
+    try {
+      const raw = JSON.parse(localStorage.getItem(SCENES_KEY) || "null");
+      if (raw && raw.sig === scenesSig() && Array.isArray(raw.scenes) && raw.scenes.length === cuts.length) setScenes(raw.scenes);
+    } catch {}
+  }, [cuts, avatarId, aspect]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avatar = avatars.rows?.find((a) => a.id === avatarId);
   const product = products.rows?.find((p) => p.id === productId);
@@ -383,7 +401,9 @@ export default function Escenas({ step, setStep, format, lang, title, cuts, scri
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" onClick={() => setStep(2)} className={ghostCls}>← Volver a las escenas</button>
                   <button type="button" disabled={!scenes || !m?.configured || !covers(usd) || !allRecorded} onClick={() => setConfirm(true)} className={btnCls}>Generar los {cuts.length} videos</button>
-                  {!allRecorded && <span className="text-sm text-muted">Primero graba y escucha la voz en el paso 3. <button type="button" onClick={onVoiceStep} className="underline">Ir a la voz</button></span>}
+                  {!scenes && <span className="text-sm text-muted">Crea los prompts de las escenas antes de generar. <button type="button" onClick={() => setStep(2)} className="underline">Ir a Escenas</button></span>}
+                  {scenes && allRecorded && !m?.configured && <span className="text-sm text-warn">Ese modelo no está disponible por ahora: elige otro arriba.</span>}
+                  {scenes && !allRecorded && <span className="text-sm text-muted">Primero graba y escucha la voz en el paso 3. <button type="button" onClick={onVoiceStep} className="underline">Ir a la voz</button></span>}
                   {!covers(usd) && <span className="text-sm text-warn">Te falta video para este anuncio. Elige un modelo más barato o <a href="/app/planes" className="font-semibold underline">suma créditos</a>.</span>}
                 </div>
               ) : (

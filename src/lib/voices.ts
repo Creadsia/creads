@@ -166,6 +166,41 @@ export function usEnglish(v: Voice, gender: "male" | "female" | ""): boolean {
   return !gender || (l.gender ?? "").toLowerCase() === gender;
 }
 
+/** A rough ad-fitness score for an English library voice from its ElevenLabs labels (no shared-library stats here). */
+function enLabelScore(v: Voice): number {
+  const l = v.labels ?? {};
+  const use = `${l.use_case ?? l.useCase ?? ""}`.toLowerCase();
+  const desc = `${l.descriptive ?? l.description ?? ""}`.toLowerCase();
+  const age = `${l.age ?? ""}`.toLowerCase();
+  let s = 0;
+  if (/advert|social|conversational|informative|characters_animation/.test(use)) s += 2;
+  if (/narrative|story|audiobook|meditation|asmr/.test(use)) s -= 1.5;
+  if (/young|middle[_ ]aged/.test(age)) s += 1; else if (/old/.test(age)) s -= 2;
+  if (/casual|confident|upbeat|warm|friendly|pleasant|energetic|natural|professional|crisp/.test(desc)) s += 0.8;
+  if (/whisper|raspy|gravelly|sad|robotic|nasal/.test(desc)) s -= 1.2;
+  if (v.category === "professional") s += 0.5;
+  return s;
+}
+
+/**
+ * US English library voices for the studio's voice picker when the ad is in English (lang "en"): men and
+ * women, the ones that fit ads first. Uses the account's own library voices (same ids the recorder reads),
+ * so the picker finally shows English voices instead of defaulting to a Chilean one on an English ad.
+ */
+export async function englishVoices(ws: string): Promise<{ ref: string; name: string; gender: string; age: string; preview?: string; mine: boolean; tono?: string }[]> {
+  const all = await voicesFor(ws);
+  const out: { ref: string; name: string; gender: string; age: string; preview?: string; mine: boolean; tono?: string }[] = [];
+  for (const gender of ["male", "female"] as const) {
+    const ranked = all
+      .filter((v) => usEnglish(v, gender))
+      .sort((a, b) => enLabelScore(b) - enLabelScore(a))
+      .slice(0, 8)
+      .map((v) => ({ ref: v.id, name: v.name, gender, age: `${v.labels?.age ?? ""}`, preview: v.preview, mine: false, tono: `${v.labels?.descriptive ?? ""}`.trim() || undefined }));
+    out.push(...ranked);
+  }
+  return out;
+}
+
 /** The same presenter always gets the same voice of the list (and different presenters different ones). */
 export function seededPick<T>(list: T[], seed: string): T | undefined {
   if (!list.length) return undefined;
