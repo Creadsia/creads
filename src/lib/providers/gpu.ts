@@ -220,8 +220,13 @@ async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: st
       wav_url: audioUrl,
       width: px(w),
       height: px(h),
-      // force_offload omitted on purpose: the worker defaults it to true (OOM-safe on the current small GPU).
-      // The clip length is auto-calculated from the audio by the worker, so we don't send max_frame either.
+      // Speed on the 48GB endpoint: the 480p fp8 model fits entirely in VRAM, so skip the CPU offload that
+      // only a small GPU needs. blocks_to_swap:0 = no per-step block offload; force_offload:false = keep the
+      // model on-GPU. Together these cut the render time many-fold vs. the workflow defaults (20 / true).
+      // If a future GPU is smaller, raise blocks_to_swap (e.g. 20) and set force_offload:true here.
+      blocks_to_swap: 0,
+      force_offload: false,
+      // The clip length is auto-calculated from the audio by the worker, so we don't send max_frame.
     },
     // Raise RunPod's 30-min per-job cap so a slow (block-swapped) render on the small GPU isn't killed midway.
     policy: { executionTimeout: RUNPOD_EXEC_TIMEOUT_MS },
