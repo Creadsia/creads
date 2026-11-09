@@ -1,4 +1,3 @@
-import { videoProviders } from "./providers";
 import { DEFAULT_STYLE } from "./caption-style";
 import type { AdLang } from "./ad-lang";
 import { adFramePrompt, autoPersona, personaWanted } from "./ad-continuity";
@@ -106,7 +105,7 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       const failed = ids.filter((_, i) => st[i] === "failed");
       const reintentos = { ...(j.reintentos ?? {}) };
       for (const id of failed) {
-        if ((reintentos[id] ?? 0) >= 1) throw new Error("Un corte falló dos veces. Revísalo en el estudio (Biblioteca) o pide el video de nuevo.");
+        if ((reintentos[id] ?? 0) >= 2) throw new Error("Un corte falló tres veces. Revísalo en el estudio (Biblioteca) o pide el video de nuevo.");
         reintentos[id] = (reintentos[id] ?? 0) + 1;
         await studio("/api/clips/run", { id }).catch(() => null);
       }
