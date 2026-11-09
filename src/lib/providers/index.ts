@@ -1,8 +1,6 @@
 import type { ImageProvider, TextAI, VideoProvider, VoiceProvider } from "./types";
 import { claude } from "./claude";
 import { elevenlabs } from "./elevenlabs";
-import { direct } from "./byteplus";
-import { falImageProviders, falVideoProviders } from "./fal";
 import { heygenAvatarIV } from "./heygen";
 import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 import { openaiImageProviders } from "./openai-image";
@@ -18,13 +16,12 @@ export const videoProviders: VideoProvider[] = [
   veoLite,
   veoFast,
   veoStd,
-  ...falVideoProviders.map(direct), // Seedance: BytePlus first, fal as the fallback
   heygenAvatarIV, // «avatar que habla» vía HeyGen (A/B test; sólo cuando se pide modelo heygen-avatar-iv)
   infiniteTalkGpu, // «avatar que habla» con movimiento natural, en GPU propia (reemplaza Kling/MiniMax cuando GPU_ENABLED=1)
   wanBrollGpu, // B-roll en GPU propia (silencioso; reemplaza a fal.ai cuando GPU_ENABLED=1)
 ];
 
-export const imageProviders: ImageProvider[] = [qwenImageGpu, nanoBananaPro, ...falImageProviders, ...openaiImageProviders];
+export const imageProviders: ImageProvider[] = [qwenImageGpu, nanoBananaPro, ...openaiImageProviders];
 
 export const voiceProviders: VoiceProvider[] = [chatterboxGpu, elevenlabs];
 

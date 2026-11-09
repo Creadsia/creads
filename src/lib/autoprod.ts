@@ -56,10 +56,10 @@ async function studio<T>(path: string, body?: unknown, timeoutMs = STEP_TIMEOUT,
   return d;
 }
 
-export const DEFAULT_MODEL = "minimax-h3-max";
+export const DEFAULT_MODEL = "infinitetalk-gpu";
 const NEVER_AUTO = new Set(["veo-3.1-lite"]);
 
-/** The model for automatic videos: the one chosen, else MiniMax H3 Max, else the cheapest reliable one that talks. */
+/** The model for automatic videos: the GPU one chosen, else InfiniteTalk on our own GPU (talks, ~$0). */
 export async function pickModel(cfg: Pick<AutoProd, "modelo">): Promise<string> {
   const paused = await pausedModels().catch(() => ({} as Record<string, unknown>));
   const ok = videoProviders.filter((p) => p.configured() && !p.silent && !p.needsImage && !paused[p.id]);
@@ -71,8 +71,8 @@ export async function pickModel(cfg: Pick<AutoProd, "modelo">): Promise<string> 
   const gpuTalk = ok.find((p) => p.id === "infinitetalk-gpu");
   if (gpuTalk) return gpuTalk.id;
   if (chosen) return chosen.id;
-  // Owner, 23 Oct 2026: MiniMax H3 Max is the default (every ad of the day came out right with it); Veo 3.1
-  // Lite is never picked on its own (it failed every cut), only when the customer asks for it by name.
+  // Owner, 9 Nov 2026: only GPT + ElevenLabs + our own GPU are available (fal.ai removed). InfiniteTalk on the
+  // GPU is the default; Veo 3.1 Lite is never picked on its own (it failed every cut), only when asked by name.
   const preferred = ok.find((p) => p.id === DEFAULT_MODEL);
   if (preferred) return preferred.id;
   const best = [...ok].filter((p) => !NEVER_AUTO.has(p.id)).sort((a, b) => a.usdPerSecond - b.usdPerSecond)[0];
