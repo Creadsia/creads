@@ -192,9 +192,11 @@ export const wanBrollGpu: VideoProvider = {
 // Worker API (our fork of wlsdml1114/Infinitetalk_Runpod_hub):
 //   POST https://api.runpod.ai/v2/{endpoint}/run  {input:{input_type,person_count,image_url,wav_url,prompt,width,height}, policy:{executionTimeout}} -> {id}
 //   GET  https://api.runpod.ai/v2/{endpoint}/status/{id} -> {status, output:{video:"data:video/mp4;base64,..."}}
-// executionTimeout (ms) raises RunPod's 30-min per-job cap: on a small GPU the block-swap offload makes even a
-// short clip take many minutes, so without this a real clip is killed as TIMED_OUT. A bigger GPU makes it fast.
-const RUNPOD_EXEC_TIMEOUT_MS = 55 * 60 * 1000; // 55 min: safe headroom on the small GPU; harmless on a fast one
+// executionTimeout (ms): the max a job may RUN on a worker (queue time excluded). On the 48GB endpoint with no
+// CPU offload a real talking cut takes ~2–5 min (≤10 even cold), so 15 min is ample headroom. Keeping it low is
+// deliberate: a worker that hangs (owner, 9 Nov 2026: cuts stuck ~25 min) is killed as TIMED_OUT and the cut
+// retries on a healthy worker, instead of sitting dead for up to an hour. Raise only if moving to a slower GPU.
+const RUNPOD_EXEC_TIMEOUT_MS = 15 * 60 * 1000; // 15 min: real cuts finish well under this; hung ones fail fast and retry
 const itkEndpoint = () => (process.env.RUNPOD_ITK_ENDPOINT ?? "").trim();
 const runpodKey = () => (process.env.RUNPOD_API_KEY ?? "").trim();
 /** Whether the talking head should run on our RunPod serverless endpoint (preferred over the pod when set). */
