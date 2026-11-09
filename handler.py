@@ -457,6 +457,31 @@ def handler(job):
         logger.warning("⚠️ 경고: WanVideoSampler 노드를 찾을 수 없습니다. 워크플로우 기본값을 사용합니다.")
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # Dynamic block swap (SPEED): the workflow ships blocks_to_swap=20, which offloads
+    # 20 transformer blocks to CPU RAM every step. That is a big slowdown and is only
+    # needed on a small GPU. On a 48GB+ GPU the 480p fp8 model fits entirely in VRAM, so
+    # blocks_to_swap=0 (no offload) renders many times faster. We let the caller pick the
+    # value from the input (default None = keep the workflow's value), so Creads can tune
+    # speed vs. VRAM from gpu.ts without rebuilding this worker. It targets the
+    # WanVideoBlockSwap node (id 134 in I2V_single.json).
+    blocks_to_swap = job_input.get("blocks_to_swap", None)
+    if blocks_to_swap is not None:
+        bs_node_id = None
+        if "134" in prompt and prompt["134"].get("class_type") == "WanVideoBlockSwap":
+            bs_node_id = "134"
+        else:
+            for node_id, node_data in prompt.items():
+                if node_data.get("class_type") == "WanVideoBlockSwap":
+                    bs_node_id = node_id
+                    break
+        if bs_node_id:
+            prompt[bs_node_id].setdefault("inputs", {})["blocks_to_swap"] = int(blocks_to_swap)
+            logger.info(f"✅ 노드 {bs_node_id} (WanVideoBlockSwap) 업데이트됨: blocks_to_swap={blocks_to_swap}")
+        else:
+            logger.warning("⚠️ WanVideoBlockSwap 노드를 찾을 수 없습니다. 워크플로우 기본값(blocks_to_swap)을 사용합니다.")
+    # ------------------------------------------------------------------
+
     # 파일 존재 여부 확인
     if not os.path.exists(media_path):
         logger.error(f"미디어 파일이 존재하지 않습니다: {media_path}")
