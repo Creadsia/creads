@@ -18,6 +18,7 @@ import Guardian from "./guardian";
 import Marketing from "./marketing";
 import Rentabilidad from "./rentabilidad";
 import ResumenGeneral from "./resumen-general";
+import GpuWorkers from "./gpu-workers";
 import AfiliadosAdmin from "./afiliados";
 import CasosAdmin from "./casos";
 import PortadaAdmin from "./portada";
@@ -1228,22 +1229,25 @@ function Estado() {
       ]
     : [];
   return (
-    <section className={card}>
-      <div>
-        <h2 className="font-display text-xl font-bold">Estado de los servicios</h2>
-        <p className="text-sm text-muted">Qué está conectado ahora mismo. «Falta la clave» significa que hay que agregarla en Vercel.</p>
-      </div>
-      {!h ? <p className="text-muted">Revisando…</p> : (
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
-          {items.map(([k, ok]) => (
-            <li key={k} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-sm">
-              <span className="font-semibold">{k}</span>
-              <Pill t={ok ? "good" : "warn"}>{ok ? "Conectado" : "Falta la clave"}</Pill>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <div className="flex flex-col gap-4">
+      <GpuWorkers />
+      <section className={card}>
+        <div>
+          <h2 className="font-display text-xl font-bold">Estado de los servicios</h2>
+          <p className="text-sm text-muted">Qué está conectado ahora mismo. «Falta la clave» significa que hay que agregarla en Vercel.</p>
+        </div>
+        {!h ? <p className="text-muted">Revisando…</p> : (
+          <ul className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2">
+            {items.map(([k, ok]) => (
+              <li key={k} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                <span className="font-semibold">{k}</span>
+                <Pill t={ok ? "good" : "warn"}>{ok ? "Conectado" : "Falta la clave"}</Pill>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }
 
