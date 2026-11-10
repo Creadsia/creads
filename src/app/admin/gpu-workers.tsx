@@ -7,7 +7,9 @@ import { useCallback, useEffect, useState } from "react";
 
 interface Estado {
   health: { workers: { idle: number; running: number; ready?: number; throttled?: number; initializing?: number }; jobs: { inProgress?: number; inQueue?: number } };
-  config: { workersMin: number; workersMax: number; idleTimeout: number };
+  config: { workersMin: number; workersMax: number; idleTimeout: number } | null;
+  manage?: boolean;
+  manageError?: string;
   usdHr: number;
 }
 
@@ -45,6 +47,7 @@ export default function GpuWorkers() {
   const w = e?.health.workers;
   const cfg = e?.config;
   const usdHr = e?.usdHr ?? 1.75;
+  const puedeControlar = Boolean(e?.manage && cfg);
   const activos = cfg?.workersMin ?? 0;
   const corriendo = (w?.running ?? 0);
   const caliente = activos > 0;
@@ -86,18 +89,23 @@ export default function GpuWorkers() {
             <span className="text-muted">Cada worker caliente: <b className="text-ink">{money(usdHr)}/h</b></span>
             <span className="text-muted">Ahora ({activos} {activos === 1 ? "caliente" : "calientes"}): <b className="text-ink">{money(costoActivosHr)}/h</b></span>
             {activos > 0 && <span className="text-muted">Si queda 24/7: <b className="text-ink">~{money(mesSiQueda)}/mes</b></span>}
-            <span className="text-muted">Máx: <b className="text-ink">{cfg?.workersMax}</b> · Idle: <b className="text-ink">{cfg?.idleTimeout}s</b></span>
+            <span className="text-muted">Máx: <b className="text-ink">{cfg?.workersMax ?? "—"}</b> · Idle: <b className="text-ink">{cfg ? `${cfg.idleTimeout}s` : "—"}</b></span>
           </div>
 
           {/* Control: prender/apagar y cuántos */}
           <div className="flex flex-col gap-2">
             <span className="text-[13px] font-semibold text-muted">Dejar calientes mientras trabajas:</span>
+            {!puedeControlar && (
+              <p className="rounded-lg border border-warn/40 bg-warn/[0.08] px-3 py-2 text-[13px] text-ink">
+                El estado se ve en vivo, pero para <b>prender/apagar desde aquí</b> falta una API key de RunPod con permisos de administración. Créala en RunPod → Settings → API Keys (acceso total) y ponla en Vercel como <b>RUNPOD_MANAGE_KEY</b>. Mientras, cámbialo en RunPod directo.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {[0, 1, 2, 3, 5].map((n) => {
-                const on = activos === n;
+                const on = puedeControlar && activos === n;
                 return (
-                  <button key={n} type="button" disabled={guardando !== null} onClick={() => set(n)}
-                    className={`flex min-w-[84px] flex-col items-center rounded-xl border px-3 py-2 transition-colors disabled:opacity-50 ${on ? "border-[var(--accent-text)] bg-[var(--accent-text)]/[0.08]" : "border-line hover:border-ink/30"}`}>
+                  <button key={n} type="button" disabled={guardando !== null || !puedeControlar} onClick={() => set(n)}
+                    className={`flex min-w-[84px] flex-col items-center rounded-xl border px-3 py-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${on ? "border-[var(--accent-text)] bg-[var(--accent-text)]/[0.08]" : "border-line hover:border-ink/30"}`}>
                     <span className="text-sm font-bold">{n === 0 ? "Apagar" : `${n} caliente${n > 1 ? "s" : ""}`}</span>
                     <span className="text-[12px] text-muted">{n === 0 ? "US$0/h" : `${money(n * usdHr)}/h`}</span>
                     {guardando === n && <span className="mt-0.5 text-[11px] text-accent-text">guardando…</span>}
@@ -107,7 +115,7 @@ export default function GpuWorkers() {
             </div>
             <p className="text-[13px] text-muted">
               «Caliente» = siempre listo, sin espera de arranque (bueno mientras generas). Cuesta aunque no se use.
-              <b className="text-ink"> Apágalo (0) cuando termines</b> para no gastar. Cambia al tiro en RunPod.
+              <b className="text-ink"> Apágalo (0) cuando termines</b> para no gastar.
             </p>
           </div>
         </>
