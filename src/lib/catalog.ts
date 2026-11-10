@@ -11,6 +11,8 @@ export const PLANS = es.pricing.plans.map((p) => ({
   id: p.id as ItemId,
   name: p.name,
   monthly: p.price,
+  /** «Precio antes» tachado para mostrar la rebaja (owner, 9 nov 2026). 0 = sin rebaja. */
+  antes: Number((p as { antes?: number }).antes ?? 0),
   /** Yearly plan, «2 meses gratis» (owner, 25 Oct 2026): pay 10, use 12, round prices. Per month as shown… */
   yearlyPerMonth: p.yearly,
   /** …and what is charged once for the 12 months (older plans: 12 × the monthly-equivalent price). */

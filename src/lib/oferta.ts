@@ -11,8 +11,9 @@ export const modoPack = () => process.env.MODO_PACK === "1";
 /** Card required at sign-up (the 7-day free trial): on unless the pack is on or REGALO_CON_TARJETA=0. */
 export const tarjetaObligatoria = () => !modoPack() && process.env.REGALO_CON_TARJETA !== "0";
 
-/** Gift credits loaded when the card is added (two cuts of up to 8 s, or a first batch of images). */
-export const REGALO_CREDITS = 200;
+/** Gift credits loaded when the card is added. Owner, 9 nov 2026: ~1 minuto / 4 cortes = su primer video
+ * completo (un video con avatar ≈ 25 créditos en GPU propia), para que la prueba saque su anuncio. */
+export const REGALO_CREDITS = 100;
 /** Days of free trial before the first charge. */
 export const PRUEBA_DIAS = 7;
 /** The plan the trial becomes (an id of es.pricing.plans). */

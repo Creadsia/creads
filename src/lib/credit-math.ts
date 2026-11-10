@@ -52,7 +52,9 @@ export const adsOf = (s: number) => (s >= 30 ? Math.floor(s / 30) : s > 0 ? 1 : 
 // a batch in its formats with the standard model (≈ US$0.16–0.19); one video = a 10 s talking-avatar video
 // (≈ US$2.25–2.40). Nano Banana Pro uses about two images.
 export const IMAGEN_CR = 10;
-export const VIDEO_CR = 125;
+// Un video con avatar: en GPU propia un video UGC (~15-20 s, 3-4 cortes) cuesta ~US$0.50 (owner, 9 nov 2026),
+// antes eran ~US$2.25 con MiniMax. Por eso baja de 125 a 25 créditos: el saldo rinde ~5x más videos.
+export const VIDEO_CR = 25;
 
 export const unidadesDe = (credits: number) => ({
   imagenes: Math.max(0, Math.floor(credits / IMAGEN_CR + 1e-9)),

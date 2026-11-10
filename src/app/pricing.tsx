@@ -74,7 +74,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
       {/* plans */}
       <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-3 md:items-start">
         {shown.map((p) => {
-          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number; productos?: number; destaca?: "imagenes" | "productos" };
+          const plan = p as typeof p & { featured?: boolean; imagenes?: number; videos?: number; productos?: number; destaca?: "imagenes" | "productos"; antes?: number };
           const featured = Boolean(plan.featured);
           const founder = !yearly && p.id === FUNDADOR.plan && quedan !== null && quedan > 0;
           const now = yearly ? p.yearly : founder ? FUNDADOR.usd : p.price;
@@ -101,6 +101,12 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                       <span className="rounded-md bg-rec px-2 py-0.5 text-xs font-bold text-white">{yearly ? ANNUAL_LABEL[es ? "es" : "en"] : es ? "Precio fundador" : "Founder price"}</span>
                     </div>
                   )}
+                  {!yearly && !founder && plan.antes && plan.antes > p.price && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <s className="text-muted">{money(plan.antes)}{t.perMonth}</s>
+                      <span className="rounded-md bg-[image:var(--grad)] px-2 py-0.5 text-xs font-bold text-white">−{Math.round((1 - p.price / plan.antes) * 100)}%</span>
+                    </div>
+                  )}
                   <p className="flex flex-wrap items-baseline gap-x-1.5">
                     <span className={`font-display text-[2.4rem] leading-none font-semibold tracking-tight tabular-nums ${featured ? "chroma" : ""}`}>{money(now)}</span>
                     <span className="text-muted">{t.perMonth}</span>
@@ -120,7 +126,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                     <details className="relative shrink-0">
                       <summary className="-m-3.5 grid h-11 w-11 cursor-pointer list-none place-items-center" aria-label={es ? "¿Cómo se gastan los créditos?" : "How do credits work?"}><span className="grid h-5 w-5 place-items-center rounded-full border border-line text-[13px] font-bold">?</span></summary>
                       <span className="absolute bottom-6 right-0 z-20 w-60 rounded-lg border border-line bg-surface p-3 text-xs text-ink shadow-xl">
-                        <b>{es ? "¿Cómo se gastan?" : "How do credits work?"}</b> {es ? "Un solo saldo que repartes como quieras: 10 créditos una imagen, 30 un video de producto, 120 un video con avatar. Si algo falla, el saldo vuelve." : "One balance you split however you like: 10 credits an image, 30 a product video, 120 an avatar video. If something fails, the balance comes back."}
+                        <b>{es ? "¿Cómo se gastan?" : "How do credits work?"}</b> {es ? "Un solo saldo que repartes como quieras: 10 créditos una imagen, 15 un video de producto, 25 un video con avatar. Si algo falla, el saldo vuelve." : "One balance you split however you like: 10 credits an image, 15 a product video, 25 an avatar video. If something fails, the balance comes back."}
                       </span>
                     </details>
                   </span>
