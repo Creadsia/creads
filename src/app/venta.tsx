@@ -10,13 +10,11 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
-import { HeroReelRow } from "./hero-reel";
+import ActorStage from "./actor-stage";
 import { Money, MoneyText } from "./money";
 import Ejemplos from "./ejemplos";
 import { GARANTIA } from "@/lib/garantia-textos";
-import Muro from "./muro";
 import GaleriaCreads from "./galeria-creads";
-import Contadores from "./contadores";
 import { InsigniasPago } from "./pay-badges";
 import { SoporteLinea } from "./whatsapp";
 import type { Contador, GaleriaPublicaItem, Novedad } from "@/lib/confianza";
@@ -34,12 +32,6 @@ const GASTO = [
   ["Video con avatar que habla, 15 s", "25 créditos"],
   ["Ángulos, hooks y editar textos, subtítulos, logo o música", "Gratis"],
 ] as const;
-
-/** Before / after: the plain product photo and what Creads made from it (all real outputs). */
-const ANTES_DESPUES = [
-  { foto: "/antes-despues/zap-foto.jpg", producto: "Zapatillas", imagen: "/ejemplos/stride-flash.jpg", video: { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "" } },
-  { foto: "/antes-despues/perfume-foto.jpg", producto: "Perfume", imagen: "/ejemplos/velour.jpg", video: { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "" } },
-];
 
 // The home page (owner's plan, 25 Oct 2026). Main audience: people who already spend on Meta ads (ecommerce,
 // affiliates and media buyers, info-product sellers); small businesses come second. One promise: test many
@@ -64,8 +56,6 @@ const planPrueba = SHOWN_PLANS.find((p) => p.id === PRUEBA_PLAN) ?? cheapest;
 
 /** The founder's photo, when it's in /public (owner, 25 Oct 2026). */
 const FOTO_FUNDADOR = existsSync(path.join(process.cwd(), "public", "fundador.jpg"));
-/** The 2-minute demo with sound (recorded by the owner): set NEXT_PUBLIC_DEMO_VIDEO in Vercel. */
-const DEMO_VIDEO = process.env.NEXT_PUBLIC_DEMO_VIDEO ?? "";
 
 const DEMOS = {
   cafe: { src: "/demos/cafeteria.mp4", poster: "/demos/cafeteria.jpg", label: "Cafetería" },
@@ -78,17 +68,7 @@ const DEMOS = {
   cocina: { src: "/demos/cocina.mp4", poster: "/demos/cocina.jpg", label: "Vida sana" },
 };
 
-// Product videos made with «Video de producto» (photo of the product → scene → 6 s motion), no text on top.
-const PRODUCTO_DEMOS = [
-  { src: "/demos/prod-blendgo.mp4", poster: "/demos/prod-blendgo.jpg", label: "Licuadora portátil" },
-  { src: "/demos/prod-serum.mp4", poster: "/demos/prod-serum.jpg", label: "Sérum" },
-  { src: "/demos/prod-cafe.mp4", poster: "/demos/prod-cafe.jpg", label: "Café" },
-  { src: "/demos/prod-audifonos.mp4", poster: "/demos/prod-audifonos.jpg", label: "Audífonos" },
-  { src: "/demos/prod-celular.mp4", poster: "/demos/prod-celular.jpg", label: "Celular" },
-  { src: "/demos/prod-zapatillas.mp4", poster: "/demos/prod-zapatillas.jpg", label: "Zapatillas" },
-  { src: "/demos/prod-perfume.mp4", poster: "/demos/prod-perfume.jpg", label: "Perfume" },
-];
-/** Two real UGC ads made with Creads, mixed into the wall so it isn't only products (owner, 25 Oct 2026). */
+/** Two real UGC ads made with Creads, kept as extra actors in the hero cast (owner, 25 Oct 2026). */
 const UGC_DEMOS = [
   { src: "/demos/ugc-proteina.mp4", poster: "/demos/ugc-proteina.jpg", label: "UGC · proteína" },
   { src: "/demos/ugc-depto.mp4", poster: "/demos/ugc-depto.jpg", label: "UGC · inmobiliaria" },
@@ -104,25 +84,22 @@ const UGC_NUEVOS = [
   { src: "/demos/ugc-mediabuyer.mp4", poster: "/demos/ugc-mediabuyer.jpg", label: "UGC · media buyer" },
 ].filter((d) => existsSync(path.join(process.cwd(), "public", d.src)));
 
-/** The product reel: several product videos cut fast, to the beat. */
-const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto y UGC hechos con Creads" };
-const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
-/** The wall under the hero: clean product videos with two UGC ads in between. */
-const MURO_VIDEOS = [PRODUCTO_DEMOS[4], UGC_DEMOS[0], PRODUCTO_DEMOS[0], PRODUCTO_DEMOS[5], UGC_DEMOS[1], PRODUCTO_DEMOS[1], PRODUCTO_DEMOS[6], PRODUCTO_DEMOS[2]];
+/** Elenco de actores IA para el hero (solo personas hablando, nada de productos «chantas»): los UGC nuevos
+ * primero y después los avatares que ya teníamos. El escenario del hero va cambiando de actor con estos. */
+const CARAS = [
+  ...UGC_NUEVOS,
+  DEMOS.doc, DEMOS.rubia, DEMOS.gym, DEMOS.dent, DEMOS.cafe, DEMOS.bano, DEMOS.cocina, DEMOS.creads,
+  ...UGC_DEMOS,
+];
+
+/** El video que se muestra «editándose» en la sección del editor (un UGC real), y el subtítulo karaoke. */
+const EDITOR_CLIP = CARAS[0] ?? DEMOS.doc;
+const EDITOR_CAP = ["ESTO", "ME", "CAMBIÓ", "EL", "NEGOCIO"] as const;
 
 const PASOS = [
   { title: "Pega el link de tu producto", text: "Creads lee tu página: qué vendes, a quién, el precio y la foto del producto. Si no tienes página, lo describes en dos frases." },
   { title: "Elige tus ángulos de venta", text: "Te propone 6: dolor, deseo, mecanismo, prueba social, creencia y oferta. Marcas los que quieres testear." },
   { title: "Descarga tus anuncios", text: "10 anuncios en 4:5 para el feed y 9:16 para stories y reels, con tu marca, en un ZIP ordenado y con el archivo para importarlos en Meta." },
-] as const;
-
-/** Creads vs. the other ways to get 10 ads (qualitative, no third-party figures). */
-const CAMINOS = ["Diseñador freelance", "Creador UGC", "Agencia", "ChatGPT o Canva"] as const;
-const COMPARA = [
-  ["Tiempo", "Días por cada pedido", "Una o dos semanas por video", "Semanas", "Horas de prueba y error", "Minutos"],
-  ["Coordinación", "Brief, revisiones y correcciones", "Buscarlo, enviar producto, revisar", "Reuniones y aprobaciones", "Tú haces todo", "Pegas un link"],
-  ["Formatos", "Cada tamaño se pide aparte", "Uno, el que grabe", "Según lo contratado", "Ajustar cada tamaño a mano", "4:5, 9:16 y cuadrado de una vez"],
-  ["Variaciones", "Cada una es otro pedido", "Otra grabación", "Se cotizan aparte", "Una por una", "10 nuevas del ganador en un clic"],
 ] as const;
 
 /** The two questions about trying it: the 7-day free trial with card (default since 26 Oct 2026) or the Pack Prueba. */
@@ -197,73 +174,33 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
       </header>
 
       <main className="flex flex-col gap-16 pb-16 sm:gap-24">
-        {/* 1 · Hero: the promise, the button and the demo */}
+        {/* 1 · Hero: «escenario de actores» — el mismo anuncio con el actor IA que elijas (único de Creads). */}
         <section className={`stage relative -mt-px overflow-hidden ${gutter}`}>
-          {/* Mobile hero: video-first so the phone converts at the max (owner, 2 Nov 2026 — «el celular que
-              convierta al máximo»). A clean looping reel of UGC + product ads (muted, tap to hear), one selling
-              headline, a killer CTA and the 7-day free trial up front. Desktop keeps the two-column layout below. */}
-          <div className={`${wrap} relative flex flex-col items-center gap-3 pt-3 pb-2 lg:hidden`}>
-            <div aria-hidden="true" className="pointer-events-none absolute -top-10 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[90px]" />
-            {/* Dos filas limpias de videos en movimiento (estilo HeyGen), alrededor del titular. UGC + productos. */}
-            <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] w-screen max-w-none">
-              <HeroReelRow clips={[UGC_DEMOS[0], PRODUCTO_DEMOS[0], DEMOS.doc, PRODUCTO_DEMOS[1], DEMOS.rubia]} dur="56s" />
-            </div>
-            <h1 className="relative text-center font-display text-[1.8rem] leading-[1.05] font-semibold">
-              Anuncios que venden,<span className="chroma block">sin grabar ni diseñar.</span>
-            </h1>
-            <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] w-screen max-w-none">
-              <HeroReelRow clips={[PRODUCTO_DEMOS[6], UGC_DEMOS[1], PRODUCTO_DEMOS[5], DEMOS.bano, PRODUCTO_DEMOS[2]]} rev dur="50s" />
-            </div>
-            <div className="relative flex w-full flex-col items-center gap-2 pt-1">
-              <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_HUMANO} · cancelas con un clic`}>{empezar}</Cta>
-              {!pack && <span className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-[13px] font-semibold text-accent-text">🎁 {REGALO_HUMANO} · {PRUEBA_DIAS} días · sin compromiso</span>}
-            </div>
-            <p className="relative max-w-[36ch] text-center text-[15px] text-muted">
-              Pega el link de tu producto y baja 10 anuncios con tu marca, listos para Meta y TikTok, en minutos.
-            </p>
-            <ul className="relative flex flex-wrap justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
-              {["Listos en minutos", "Con tu logo y tu marca", "4:5, 9:16 y cuadrado"].map((x) => <li key={x} className="flex items-center gap-1"><Check />{x}</li>)}
-            </ul>
-          </div>
-          <div className={`${wrap} relative hidden items-center gap-10 py-10 sm:py-14 lg:grid lg:grid-cols-[1.05fr_0.95fr]`}>
-            <div className="flex min-w-0 flex-col gap-5">
-              <p className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">El anuncio que vende se quema en días. Gana el que testea más rápido.</p>
-              <h1 className="font-display text-[2.5rem] leading-[1.02] font-semibold sm:text-[3.8rem]">
-                Hasta 200 anuncios al mes. <span className="chroma mt-2 block text-[0.55em] leading-tight">Sin diseñador, sin grabar.</span>
+          <div aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[640px] -translate-x-1/2 rounded-full bg-[image:var(--grad)] opacity-20 blur-[130px]" />
+          <div className={`${wrap} relative grid items-center gap-8 py-10 sm:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12`}>
+            <div className="flex min-w-0 flex-col items-center gap-5 text-center lg:items-start lg:text-left">
+              <p className="w-fit rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-sm font-semibold text-accent-text">Actores IA que venden por ti</p>
+              <h1 className="font-display text-[2.3rem] leading-[1.0] font-semibold sm:text-[3.1rem] lg:text-[3.7rem]">
+                El mismo anuncio,<span className="chroma block">con la cara que quieras.</span>
               </h1>
-              <p className="max-w-[52ch] text-lg text-muted">
-                Imágenes, videos de producto, UGC y avatares que hablan, con tu marca y listos para subir a Meta.
+              <p className="max-w-[46ch] text-lg text-muted">
+                UGC, avatares y voces con tu marca. Elige el actor, pega el link de tu producto y baja decenas de anuncios listos para Meta y TikTok, en minutos.
               </p>
-              <p className="flex w-fit items-center gap-2 rounded-xl border border-accent/40 bg-accent/[0.08] px-3.5 py-2 text-[15px] font-semibold text-accent-text">
-                🎁 Prueba gratis: {REGALO_LARGO}.
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row lg:items-start">
                 <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_HUMANO} · cancelas con un clic`}>{empezar}</Cta>
-                <a href="#como" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo funciona</a>
+                <a href="#ejemplos" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver ejemplos</a>
               </div>
-              <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
-                {["6 ángulos de venta desde el link de tu producto", "Feed 4:5, stories 9:16 y cuadrado, con tu logo", "7 días de garantía", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check /><MoneyText text={x} rate={rate} /></li>)}
+              <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-sm text-muted lg:justify-start">
+                {["Hasta 200 anuncios al mes", "Con tu logo y tu marca", "7 días gratis"].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
               </ul>
-              <p className="text-xs text-muted">«Hasta 200 anuncios» es el plan Agencia: 200 imágenes al mes, cada una en 3 formatos listos para subir, o hasta 80 videos con avatar.</p>
             </div>
-
-            <div className="flex min-w-0 flex-col items-center gap-3">
-              {DEMO_VIDEO ? (
-                <figure className="flex w-full flex-col gap-2">
-                  <video src={DEMO_VIDEO} controls playsInline preload="metadata" className="aspect-video w-full rounded-3xl border border-line bg-black" aria-label="Demo de Creads (2 minutos)" />
-                  <figcaption className="text-center text-sm text-muted">Demo de 2 minutos, con sonido: de un link a 10 anuncios.</figcaption>
-                </figure>
-              ) : (
-                <div className="relative flex w-full justify-center py-4">
-                  <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-30 blur-[110px]" />
-                  <DemoPhone {...(HAY_REEL ? REEL : PRODUCTO_DEMOS[0])} big className="relative w-60 sm:w-72" />
-                </div>
-              )}
+            <div className="relative flex min-w-0 items-center justify-center lg:justify-end">
+              <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[100px]" />
+              <div className="relative">
+                <ActorStage clips={CARAS.slice(0, 6)} />
+                <p className="mt-3 text-center text-xs text-muted">Toca una cara para cambiar el actor. Todos creados con IA.</p>
+              </div>
             </div>
-          </div>
-          {/* the wall: clean product videos moving */}
-          <div className="relative -mx-[max(16px,env(safe-area-inset-left,0px))] pb-12 sm:pb-16">
-            <Muro videos={MURO_VIDEOS} />
           </div>
         </section>
 
@@ -287,137 +224,42 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
           </div>
         </section>
 
-        {/* 2b · Product videos: three of them side by side, the style under each */}
-        <section className={`stage relative overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="producto-title">
-          <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[120px]" />
-          <div className={`${wrap} relative grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]`}>
-            <div className="flex flex-col gap-4">
-              <h2 id="producto-title" className={h2}>Tu producto, en <span className="chroma">movimiento</span></h2>
-              <p className="max-w-[46ch] text-lg text-muted">Sube una foto de tu producto y elige un estilo. En minutos tienes un video de 6 segundos que parece de estudio: sin modelos, sin grabar, sin editar.</p>
-              <ul className="flex flex-wrap gap-2">
-                {["Salpicadura", "Giro 360", "Flotando", "Macro", "Unboxing", "En su lugar"].map((x) => (
-                  <li key={x} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm font-semibold">{x}</li>
-                ))}
-              </ul>
-              <p className="text-sm text-muted">Tecnología, moda, belleza, comida, suplementos: sirve para cualquier producto que se venda por foto.</p>
-              <div className="self-start"><Cta href="/app/video-producto" sub="Usa el mismo saldo de tu plan.">Haz el video de tu producto</Cta></div>
-            </div>
-            <div className="grid grid-cols-3 items-center gap-3 sm:gap-5">
-              {([[PRODUCTO_DEMOS[5], "Salpicadura"], [PRODUCTO_DEMOS[4], "Salpicadura"], [PRODUCTO_DEMOS[6], "Salpicadura"]] as const).map(([d, estilo], i) => (
-                <div key={d.src} className={i === 1 ? "-mt-10" : "mt-10"}>
-                  <DemoPhone {...d} label={`${d.label} · ${estilo}`} big={i === 1} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 2c · Before / after: your photo → your ads */}
-        <section className={gutter} aria-labelledby="antes-title">
-          <div className={`${wrap} flex flex-col gap-6`}>
-            <div className="flex max-w-2xl flex-col gap-2">
-              <h2 id="antes-title" className={h2}>De una foto a tus anuncios</h2>
-              <p className="text-muted">Tu foto y lo que Creads hizo con ella.</p>
-            </div>
-            <div className="flex flex-col gap-4">
-              {ANTES_DESPUES.map((a) => (
-                <div key={a.producto} className="grid items-center gap-4 rounded-3xl border border-line bg-surface p-4 sm:p-5 md:grid-cols-[0.8fr_auto_2fr]">
-                  <figure className="flex flex-col gap-2">
-                    <div className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-white">
-                      <Image src={a.foto} alt={`Foto original: ${a.producto.toLowerCase()}`} fill sizes="(min-width: 768px) 260px, 90vw" className="object-contain" />
-                    </div>
-                    <figcaption className="text-sm font-semibold text-muted">Tu foto · {a.producto}</figcaption>
-                  </figure>
-                  <span aria-hidden="true" className="mx-auto font-display text-3xl text-muted md:rotate-0">→</span>
-                  <div className="grid grid-cols-2 items-start gap-3 sm:gap-4">
-                    <figure className="flex flex-col gap-2">
-                      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-line">
-                        <Image src={a.imagen} alt={`Anuncio de ${a.producto.toLowerCase()} hecho con Creads`} fill sizes="(min-width: 768px) 280px, 45vw" className="object-cover" />
-                      </div>
-                      <figcaption className="text-sm font-semibold text-muted">Anuncio de imagen</figcaption>
-                    </figure>
-                    <div className="flex flex-col gap-2">
-                      <DemoPhone {...a.video} className="mx-auto w-full max-w-[220px]" />
-                      <span className="text-center text-sm font-semibold text-muted">Video de producto</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 2d · Editor: subtítulos animados, cortes/secuencia, logo, música — todo adentro de Creads */}
+        {/* 2b · Editor: UN solo video con subtítulos karaoke (palabra por palabra), estilo TikTok. Limpio y pro. */}
         <section id="editor" className={`stage relative scroll-mt-20 overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="editor-title">
           <style>{`
-            @keyframes creadsCapWord { 0%,100% { color: var(--color-ink); } 40%,70% { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; } }
-            @keyframes creadsPlay { 0% { left: 6%; } 100% { left: 94%; } }
-            .creads-cap-w { animation: creadsCapWord 2.6s ease-in-out infinite; }
-            .creads-play { animation: creadsPlay 4.2s linear infinite; }
-            @media (prefers-reduced-motion: reduce) { .creads-cap-w, .creads-play { animation: none; } .creads-cap-w { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; } }
+            @keyframes creadsKw { 0%, 22%, 100% { transform: none; } 7%, 15% { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; transform: translateY(-2px) scale(1.1); } }
+            .creads-kw { display: inline-block; animation: creadsKw ${EDITOR_CAP.length * 0.42}s linear infinite; }
+            @media (prefers-reduced-motion: reduce) { .creads-kw { animation: none; } }
           `}</style>
           <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-20 blur-[120px]" />
           <div className={`${wrap} relative grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]`}>
             <div className="flex flex-col gap-4">
-              <span className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">Editor incluido · gratis</span>
-              <h2 id="editor-title" className={h2}>Lo editas tú, <span className="chroma">sin salir de Creads</span></h2>
-              <p className="max-w-[46ch] text-lg text-muted">Subtítulos que se animan palabra por palabra, cortes al ritmo, tu logo, música y zooms. Todo lo que hace una agencia, en un editor simple hecho para vender.</p>
+              <span className="w-fit rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-sm font-semibold text-accent-text">Editor incluido · gratis</span>
+              <h2 id="editor-title" className={h2}>Subtítulos que <span className="chroma">frenan el scroll</span></h2>
+              <p className="max-w-[46ch] text-lg text-muted">Cada palabra se enciende en el momento justo, como los anuncios que más venden. Lo editas tú, sin salir de Creads: sin programas, sin saber editar.</p>
               <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
-                {["Subtítulos animados", "Cortes y secuencia", "Tu logo y tus colores", "Música y efectos", "Zooms y destaques", "Exporta 9:16 y 4:5"].map((x) => (
+                {["Subtítulos palabra por palabra", "Tu logo y tus colores", "Música y efectos", "Zooms y destaques", "Cortes al ritmo", "Exporta 9:16 y 4:5"].map((x) => (
                   <li key={x} className="flex items-center gap-1.5 text-muted"><Check />{x}</li>
                 ))}
               </ul>
-              <div className="self-start"><Cta href="/app/editor" sub="Incluido en todos los planes.">Abre el editor</Cta></div>
+              <div className="self-center sm:self-start"><Cta href="/app/editor" sub="Incluido en todos los planes.">Abre el editor</Cta></div>
             </div>
-            {/* Maqueta del editor: preview con subtítulo animado + barra de herramientas + línea de tiempo (la secuencia de cortes) */}
-            <div className="rounded-3xl border border-line bg-surface p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)] sm:p-4">
-              <div className="mb-3 flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
-                <span className="ml-2 text-xs font-semibold text-muted">Editor Creads</span>
-              </div>
-              <div className="flex gap-3">
-                {/* preview 9:16 */}
-                <div className="relative aspect-[9/16] w-32 shrink-0 overflow-hidden rounded-2xl border border-line bg-black sm:w-40">
-                  <Image src={DEMOS.doc.poster} alt="" fill sizes="160px" className="object-cover opacity-90" />
-                  <div className="absolute inset-x-2 bottom-3 text-center">
-                    <p className="inline-block rounded-md bg-black/55 px-2 py-1 text-[13px] font-extrabold leading-tight text-white backdrop-blur-sm sm:text-[15px]">
-                      ESTO <span className="creads-cap-w">CAMBIA</span> TODO
-                    </p>
-                  </div>
-                </div>
-                {/* panel derecho: herramientas + propiedades */}
-                <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {["Subtítulos", "Cortes", "Música", "Logo", "Texto", "Zoom"].map((x, i) => (
-                      <span key={x} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${i === 0 ? "bg-[image:var(--grad)] text-white" : "border border-line text-muted"}`}>{x}</span>
-                    ))}
-                  </div>
-                  <div className="flex flex-col gap-1.5 rounded-xl border border-line bg-surface-2 p-3 text-xs text-muted">
-                    <div className="flex items-center justify-between"><span>Animación</span><span className="font-semibold text-ink">Palabra por palabra</span></div>
-                    <div className="flex items-center justify-between"><span>Tipografía</span><span className="font-semibold text-ink">Unbounded</span></div>
-                    <div className="flex items-center justify-between"><span>Resaltado</span><span className="h-3 w-8 rounded bg-[image:var(--grad)]" /></div>
-                    <div className="flex items-center justify-between"><span>Formato</span><span className="font-semibold text-ink">9:16 · 4:5</span></div>
-                  </div>
-                </div>
-              </div>
-              {/* línea de tiempo = la secuencia de cortes */}
-              <div className="relative mt-3 rounded-xl border border-line bg-surface-2 p-2.5">
-                <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-muted"><span>Secuencia · 5 cortes</span><span>0:00 — 0:18</span></div>
-                <div className="flex gap-1.5">
-                  {([DEMOS.doc, PRODUCTO_DEMOS[0], DEMOS.rubia, PRODUCTO_DEMOS[5], DEMOS.bano] as const).map((c, i) => (
-                    <div key={c.poster} className="relative aspect-video flex-1 overflow-hidden rounded-md border border-line">
-                      <Image src={c.poster} alt="" fill sizes="80px" className="object-cover" />
-                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">0:0{i + 2}</span>
-                    </div>
+            {/* UN solo video, grande, con el subtítulo karaoke encima + chips de estilo de subtítulo */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative aspect-[9/16] w-64 overflow-hidden rounded-[2rem] border-[6px] border-[#1d1d22] bg-black shadow-[0_40px_90px_-30px_rgba(0,0,0,0.85)] sm:w-72">
+                {/* Zoom anclado arriba: recorta el subtítulo quemado del clip para mostrar limpio solo el del editor. */}
+                <video src={EDITOR_CLIP.src} poster={EDITOR_CLIP.poster} muted loop playsInline autoPlay preload="metadata" aria-hidden="true" className="absolute inset-0 h-full w-full origin-top scale-[1.6] object-cover" />
+                <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[38%] bg-gradient-to-t from-black via-black/70 to-transparent" />
+                <p className="caption absolute inset-x-0 bottom-[16%] flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-4 text-center text-[1.5rem] leading-tight sm:text-[1.75rem]">
+                  {EDITOR_CAP.map((w, k) => (
+                    <span key={`${w}-${k}`} className="creads-kw" style={{ animationDelay: `${k * 0.42}s` }}>{w}</span>
                   ))}
-                </div>
-                {/* onda de audio */}
-                <div className="mt-1.5 flex h-5 items-center gap-0.5 overflow-hidden rounded bg-bg/60 px-1">
-                  {Array.from({ length: 48 }).map((_, i) => (
-                    <span key={i} className="w-full rounded-full bg-accent/40" style={{ height: `${20 + Math.abs(Math.sin(i * 1.3)) * 70}%` }} />
-                  ))}
-                </div>
-                <span aria-hidden="true" className="creads-play absolute top-8 bottom-2 w-0.5 rounded bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {["Impacto", "Limpio", "Neón", "Noticia"].map((x, i) => (
+                  <span key={x} className={`rounded-full px-3 py-1 text-xs font-semibold ${i === 0 ? "bg-[image:var(--grad)] text-white" : "border border-line text-muted"}`}>{x}</span>
+                ))}
               </div>
             </div>
           </div>
@@ -459,54 +301,6 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <div className={wrap}><GaleriaCreads items={confianza.galeria} /></div>
           </section>
         )}
-
-        {/* 4 · Comparison */}
-        <section className={gutter} aria-labelledby="compara-title">
-          <div className={`${wrap} flex flex-col gap-6`}>
-            <div className="flex max-w-2xl flex-col gap-2">
-              <h2 id="compara-title" className={h2}>10 anuncios para testear, cinco caminos</h2>
-              <p className="text-muted">Para encontrar un anuncio ganador necesitas probar muchos. Así se compara cada forma de hacerlos.</p>
-            </div>
-            {confianza.contadores.length > 0 && <Contadores datos={confianza.contadores} />}
-            {/* phones: one card per question, Creads first (owner, 25 Oct 2026: the 760px table lost the row names) */}
-            <ul className="flex flex-col gap-3 md:hidden">
-              {COMPARA.map(([k, ...v]) => (
-                <li key={k} className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
-                  <b className="text-[15px]">{k}</b>
-                  <p className="flex items-start gap-1.5 rounded-xl bg-good/[0.08] px-3 py-2 font-semibold"><Check className="mt-1 text-good" />Creads: {v[4]}</p>
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[13px]">
-                    {CAMINOS.map((c, i) => (
-                      <div key={c}><dt className="font-semibold text-muted">{c}</dt><dd className="text-muted">{v[i]}</dd></div>
-                    ))}
-                  </dl>
-                </li>
-              ))}
-            </ul>
-            <div className="hidden overflow-x-auto rounded-3xl border border-line md:block">
-              <table className="w-full min-w-[760px] text-left text-sm sm:text-[15px]">
-                <thead>
-                  <tr className="bg-surface-2 text-xs sm:text-sm">
-                    <th scope="col" className="p-3 sm:p-4"><span className="sr-only">Comparación</span></th>
-                    <th scope="col" className="bg-ink p-3 font-semibold text-bg sm:p-4">Creads</th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Diseñador freelance</th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Creador UGC</th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">Agencia</th>
-                    <th scope="col" className="p-3 font-semibold text-muted sm:p-4">ChatGPT o Canva</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line bg-surface">
-                  {COMPARA.map(([k, ...v]) => (
-                    <tr key={k}>
-                      <th scope="row" className="p-3 font-semibold sm:p-4">{k}</th>
-                      <td className="bg-good/[0.06] p-3 font-semibold sm:p-4"><span className="flex items-start gap-1.5"><Check className="mt-0.5 text-good" />{v[4]}</span></td>
-                      {v.slice(0, 4).map((x, i) => <td key={i} className="p-3 text-muted sm:p-4">{x}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
 
         {/* 5 · Plans */}
         <section id="pricing" className={`scroll-mt-20 ${gutter}`} aria-labelledby="pricing-title">
