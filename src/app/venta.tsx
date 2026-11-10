@@ -82,6 +82,8 @@ const UGC_NUEVOS = [
   { src: "/demos/ugc-cafeteria.mp4", poster: "/demos/ugc-cafeteria.jpg", label: "UGC · cafetería" },
   { src: "/demos/ugc-automotora.mp4", poster: "/demos/ugc-automotora.jpg", label: "UGC · automotora" },
   { src: "/demos/ugc-mediabuyer.mp4", poster: "/demos/ugc-mediabuyer.jpg", label: "UGC · media buyer" },
+  { src: "/demos/ugc-peluqueria.mp4", poster: "/demos/ugc-peluqueria.jpg", label: "UGC · peluquería" },
+  { src: "/demos/ugc-gym.mp4", poster: "/demos/ugc-gym.jpg", label: "UGC · gym en casa" },
 ].filter((d) => existsSync(path.join(process.cwd(), "public", d.src)));
 
 /** Elenco de actores IA para el hero (solo personas hablando, nada de productos «chantas»): los UGC nuevos
