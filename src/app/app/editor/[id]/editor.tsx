@@ -542,6 +542,22 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
             })}
           </div>
           {musicaUrl && <audio ref={audio} src={musicaUrl} loop preload="auto" />}
+          {/* Barra flotante bajo el video (estilo VEED): accesos rápidos a lo que sí sale en el export. */}
+          {wide && (
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-2xl border border-line bg-surface/95 p-1 shadow-[0_14px_40px_-16px_rgba(0,0,0,.35)] backdrop-blur">
+              <button type="button" onClick={() => abrir("formato")} className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold text-ink hover:bg-surface-2">
+                <Icon name="crop" className="h-4 w-4 text-muted" />{p.formato}
+              </button>
+              <span className="h-5 w-px bg-line" />
+              <button type="button" onClick={() => cambiar((x) => ({ ...x, subtitulos: !x.subtitulos }))} aria-pressed={p.subtitulos} className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold hover:bg-surface-2 ${p.subtitulos ? "text-accent-text" : "text-muted"}`}>
+                <Icon name="cc" className="h-4 w-4" />Subtítulos
+              </button>
+              <span className="h-5 w-px bg-line" />
+              <button type="button" onClick={() => (p.musica ? musicaOn(false) : abrir("audio"))} aria-pressed={Boolean(p.musica)} className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold hover:bg-surface-2 ${p.musica ? "text-accent-text" : "text-muted"}`}>
+                <Icon name="music" className="h-4 w-4" />Música
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
