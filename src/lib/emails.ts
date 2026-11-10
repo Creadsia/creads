@@ -95,7 +95,7 @@ export function welcomeEmail(to: string, name: string | null, regalo?: string | 
         title: "Tu primer anuncio va por nuestra cuenta",
         paragraphs: [
           esc(hello(name)),
-          "Gracias por crear tu cuenta en Creads IA. Ya te cargamos 200 créditos de regalo para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
+          "Gracias por crear tu cuenta en Creads IA. Ya te cargamos 1 minuto de video gratis para tu primer anuncio en video (unos 12 segundos, con una persona hablando de tu negocio), sin tarjeta.",
           "Entra a <b>Automático</b>, cuéntale qué vendes y a quién, y Creads te hace el guion, la persona, el video y la revisión.",
         ],
         cta: { label: "Hacer mi anuncio de regalo", href: `${link}/automatico` },
@@ -421,7 +421,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Tienes 7 días gratis con 200 créditos de regalo al agregar tu tarjeta; después, los planes parten en US$29 al mes.";
+  const plan = o.hasPlan ? "" : " Tienes 7 días gratis con 1 minuto de video gratis al agregar tu tarjeta; después, los planes parten en US$25 al mes.";
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",
@@ -561,13 +561,13 @@ export function pagoArregladoEmail(to: string, name: string | null, unsub: strin
       paragraphs: [
         esc(hello(name)),
         "Intentaste activar tu prueba gratis de 7 días y tuvimos un problema técnico con el pago que no te dejó terminar. <b>Ya está solucionado.</b>",
-        "Vuelve a entrar y agrega tu tarjeta: toma un minuto, hoy no se cobra nada y entras con <b>200 créditos de regalo</b> para tus primeros anuncios.",
+        "Vuelve a entrar y agrega tu tarjeta: toma un minuto, hoy no se cobra nada y entras con <b>1 minuto de video gratis</b> para tus primeros anuncios.",
       ],
       cta: { label: "Activar mi prueba gratis", href: link },
       after: ["Perdona la molestia. Si tienes cualquier duda, responde este correo: lo lee una persona.", unsub],
       unsub,
     }),
-    text: plain([hello(name), "", "Intentaste activar tu prueba gratis y tuvimos un problema técnico con el pago. Ya está solucionado.", "Vuelve a activar tu prueba de 7 días (hoy no se cobra nada, con 200 créditos de regalo):", link, "", "Perdona la molestia.", "", `No recibir más estos correos: ${unsub}`]),
+    text: plain([hello(name), "", "Intentaste activar tu prueba gratis y tuvimos un problema técnico con el pago. Ya está solucionado.", "Vuelve a activar tu prueba de 7 días (hoy no se cobra nada, con 1 minuto de video gratis):", link, "", "Perdona la molestia.", "", `No recibir más estos correos: ${unsub}`]),
   };
 }
 

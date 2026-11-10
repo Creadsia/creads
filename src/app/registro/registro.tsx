@@ -159,7 +159,7 @@ export default function Registro({ google, tarjeta = false, prueba, refCode = ""
                 <li className="flex gap-2"><Check /><span><b>6 ángulos de venta para tu producto</b>, sin costo: dolor, deseo, mecanismo, prueba social, creencia y oferta.</span></li>
                 <li className="flex gap-2"><Check /><span><MoneyText text="Tus primeros 10 anuncios por US$9 (Pack Prueba, pago único): en 4:5 y 9:16, con tu marca, listos para Meta." /></span></li>
                 <li className="flex gap-2"><Check /><span><b>Garantía:</b> si tus primeros anuncios no te sirven, los rehacemos o te devolvemos el pago.</span></li>
-                <li className="flex gap-2"><Check /><span><MoneyText text="Si te suscribes dentro de 7 días, los US$9 se descuentan de tu primer mes. Planes desde US$29 al mes, sin permanencia." /></span></li>
+                <li className="flex gap-2"><Check /><span><MoneyText text="Si te suscribes dentro de 7 días, los US$9 se descuentan de tu primer mes. Planes desde US$25 al mes, sin permanencia." /></span></li>
               </>
             )}
           </ul>

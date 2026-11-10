@@ -120,7 +120,7 @@ export default function Rentabilidad() {
               `${p.todo.imagen.piezas} → ${usd(p.todo.imagen.usd)}`, `${p.todo.producto.piezas} → ${usd(p.todo.producto.usd)}`, `${p.todo.avatar.piezas} → ${usd(p.todo.avatar.usd)}`,
               <span key="w" className={p.pctPeor > 40 ? "text-bad" : p.pctPeor > 30 ? "text-warn" : ""}>{usd(p.costoPeor)} ({p.pctPeor}%)</span>,
               <b key="q" className={p.queda < 0 ? "text-bad" : "text-good"}>{usd(p.queda)}</b>])} />
-          <p className="text-xs text-muted">Costo de lista de cada pieza: imagen en 3 formatos {usd(PIEZAS.imagen.usd)}, video de producto {usd(PIEZAS.producto.usd)}, video con avatar de 10 s {usd(PIEZAS.avatar.usd)}. «Peor caso» es la forma de gastar el saldo que más nos cuesta; regla: hasta 30% del precio (Agencia, excepción de lanzamiento). Comisión de Mercado Pago estimada en 4,4% + US$0,30.</p>
+          <p className="text-xs text-muted">Costo de lista de cada pieza: imagen en 3 formatos {usd(PIEZAS.imagen.usd)}, video de producto {usd(PIEZAS.producto.usd)}, video con avatar de 15 s {usd(PIEZAS.avatar.usd)}. «Peor caso» es la forma de gastar el saldo que más nos cuesta; regla: hasta 30% del precio (Agencia, excepción de lanzamiento). Comisión de Mercado Pago estimada en 4,4% + US$0,30.</p>
         </section>
       )}
 

@@ -95,6 +95,7 @@ export const DEFAULT_FINANZAS: Finanzas = {
     { id: "m-workspace", fecha: "2026-10-13", tipo: "gasto", servicio: "Google Workspace", detalle: "Correo hola@creadsia.com (revisar monto y fecha)", monto: null, moneda: "USD" },
   ],
   fijos: [
+    { id: "gpu-worker", servicio: "GPU RunPod (worker prendido)", para: "El servidor de video propio, siempre caliente para generar al tiro", montoUsd: 1260, frecuencia: "mensual", estado: "activo", nota: "1 worker fijo a US$1,75/h × 24 h × 30 días. Los workers extra (hasta 10 en hora peak) se suman aparte según uso. Si lo apagas de noche, baja a ~US$600-800/mes." },
     { id: "vercel", servicio: "Vercel Pro", para: "Publica la página y la plataforma", montoUsd: 20, frecuencia: "mensual", estado: "activo" },
     { id: "workspace", servicio: "Google Workspace", para: "Correo hola@creadsia.com", montoUsd: null, frecuencia: "mensual", estado: "activo", nota: "Anotar el monto exacto de la factura" },
     { id: "dominio", servicio: "Namecheap · creadsia.com", para: "Dominio", montoUsd: null, frecuencia: "anual", estado: "activo", nota: "Anotar lo que se pagó por el año" },
@@ -163,9 +164,9 @@ export const DEFAULT_FINANZAS: Finanzas = {
     // Los planes se toman del catálogo real (withCurrentPlans los sincroniza). Este valor por defecto refleja
     // los planes vigentes al 4 nov 2026 por si algo lee el default directo.
     planes: [
-      { id: "testea", nombre: "Testea", mensual: 29, anual: 24, creditos: 400 },
-      { id: "escala", nombre: "Escala", mensual: 59, anual: 49, creditos: 1000 },
-      { id: "agencia", nombre: "Agencia", mensual: 149, anual: 124, creditos: 4000 },
+      { id: "testea", nombre: "Testea", mensual: 25, anual: 21, creditos: 500 },
+      { id: "escala", nombre: "Escala", mensual: 49, anual: 41, creditos: 1000 },
+      { id: "agencia", nombre: "Agencia", mensual: 99, anual: 83, creditos: 2000 },
     ],
     afiliado: { tipo: "recurrente", pct: PROGRAMA.pctTramo1, meses: PROGRAMA.maxMeses, meses1: PROGRAMA.mesesTramo1, pct2: PROGRAMA.pctTramo2, cpa: 50, vida: 8 },
     proyeccion: { testea: 100, escala: 40, agencia: 10, pctAfiliado: 30, pctPromo: 100 },

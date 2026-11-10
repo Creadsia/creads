@@ -24,7 +24,7 @@ LO QUE HACE LA PLATAFORMA HOY
 - Panel interno del dueño: Lanzamiento, Estadísticas (estilo Shopify), Oficina de agentes, errores y alarmas, saldos de proveedores, clientes, planes, finanzas.
 
 PRECIOS (siempre en US$)
-- Desde el 21 oct 2026: Emprende US$55/mes (≈ 4 anuncios de 30 s + 20 imágenes) y Negocio US$99/mes (≈ 8 anuncios + 40 imágenes). Sin descuentos, sin plan anual. Ultra ya no se vende. Recargas: 500 créditos US$29, 1.000 US$55, 3.000 US$139.
+- Desde el 9 nov 2026: Testea US$25/mes (500 créditos ≈ 50 imágenes o 20 videos con avatar), Escala US$49/mes (1.000 créditos ≈ 100 imágenes o 40 videos) y Agencia US$99/mes (2.000 créditos ≈ 200 imágenes o 80 videos). Precios de lista con el precio anterior tachado (Testea antes US$40, Escala US$75, Agencia US$135). Sin plan fundador (quedó redundante). Plan anual = 2 meses gratis. Con GPU propia un video con avatar de ~15 s cuesta ~US$0,50 y usa 25 créditos; una imagen, 10. Recargas: 500 créditos US$29, 1.000 US$55, 3.000 US$139.
 - Los créditos vencen al terminar el período pagado; las recargas se compran sobre un plan activo y vencen con él.
 
 REGLAS DE LA MARCA

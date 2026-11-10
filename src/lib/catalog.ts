@@ -24,7 +24,7 @@ export const PLANS = es.pricing.plans.map((p) => ({
   hidden: Boolean((p as { hidden?: boolean }).hidden),
   /** The plan the page highlights (Escala). */
   featured: Boolean((p as { featured?: boolean }).featured),
-  /** What the monthly balance is worth, as shown to customers («hasta 47 imágenes o 3 videos»). */
+  /** What the monthly balance is worth, as shown to customers («hasta 50 imágenes o 20 videos»). */
   imagenes: Number((p as { imagenes?: number }).imagenes ?? 0),
   videos: Number((p as { videos?: number }).videos ?? 0),
   /** «Video de producto» (6 s, product in motion with the headline, ≈ 30 credits) */

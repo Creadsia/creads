@@ -67,7 +67,7 @@ export const HELP: HelpArticle[] = [
   {
     id: "planes", cat: "creditos",
     q: "¿Qué planes hay?",
-    a: "Testea US$29 al mes (470 créditos), Escala US$59 al mes (950 créditos; US$49 los primeros 3 meses para los primeros 50 clientes) y Agencia US$149 al mes (4.000 créditos). Partes con 7 días gratis y 200 créditos de regalo. Todo se paga con esos créditos: videos, imágenes y voces. Un segundo de video con persona IA usa unos 11 créditos. Sin permanencia: cancelas cuando quieras.",
+    a: "Testea US$25 al mes (500 créditos), Escala US$49 al mes (1.000 créditos) y Agencia US$99 al mes (2.000 créditos). Partes con 7 días gratis y 1 minuto de video gratis. Todo se paga con esos créditos: videos, imágenes y voces. Una imagen usa 10 créditos y un video con avatar de 15 s, unos 25. Sin permanencia: cancelas cuando quieras.",
     link: { label: "Ver planes", href: "/app/planes" },
     tags: "precio starter plus studio mensual anual descuento",
   },

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/track";
 import { ANNUAL_LABEL, FUNDADOR, PLANS, PRUEBA } from "@/lib/catalog";
-import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS } from "@/lib/oferta";
+import { PRUEBA_DIAS, PRUEBA_PLAN } from "@/lib/oferta";
 import type { Content } from "@/content/en";
 import PayBadges from "./pay-badges";
 import { Money, MoneyText } from "./money";
@@ -219,16 +219,16 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
 function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.ReactNode }) {
   const plan = PLANS.find((p) => p.id === PRUEBA_PLAN)!;
   const filas: [string, React.ReactNode][] = es
-    ? [[`${PRUEBA_DIAS} días`, "Gratis"], ["Créditos de regalo", REGALO_CREDITS], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
-    : [[`${PRUEBA_DIAS} days`, "Free"], ["Gift credits", REGALO_CREDITS], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
+    ? [[`${PRUEBA_DIAS} días`, "Gratis"], ["De regalo", "1 min de video"], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
+    : [[`${PRUEBA_DIAS} days`, "Free"], ["Gift", "1 min of video"], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
   return (
     <div className="grid gap-4 rounded-3xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
       <div className="flex min-w-0 flex-col gap-2">
         <b className="font-display text-xl font-semibold">{es ? `${PRUEBA_DIAS} días gratis` : `${PRUEBA_DIAS}-day free trial`}</b>
         <span className="text-sm text-muted">
           {es
-            ? <>Prueba Creads {PRUEBA_DIAS} días con {REGALO_CREDITS} créditos de regalo para tus primeros anuncios. Si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes); si no, cancelas con un clic.</>
-            : <>Try Creads for {PRUEBA_DIAS} days with {REGALO_CREDITS} gift credits for your first batch. If you like it, carry on with {plan.name} ({plan.credits} credits a month); if not, cancel with one click.</>}
+            ? <>Prueba Creads {PRUEBA_DIAS} días con 1 minuto de video gratis (4 cortes de 15 s) para sacar tu primer anuncio. Si te gusta, sigues con {plan.name} ({plan.credits} créditos al mes); si no, cancelas con un clic.</>
+            : <>Try Creads for {PRUEBA_DIAS} days with 1 free minute of video (4 cuts of 15 s) for your first ad. If you like it, carry on with {plan.name} ({plan.credits} credits a month); if not, cancel with one click.</>}
         </span>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
           {filas.map(([k, v]) => (

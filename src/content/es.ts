@@ -4,7 +4,7 @@ import type { Content } from "./en";
 export const es: Content = {
   lang: "es",
   meta: {
-    title: "Creads IA · Hasta 400 anuncios al mes, sin diseñador",
+    title: "Creads IA · Hasta 200 anuncios al mes, sin diseñador",
     description:
       "Pega el link de tu producto y recibe 10 anuncios para Meta: imágenes, videos UGC y avatares que hablan, en español o inglés, con tu marca, en 4:5 y 9:16. Pruébalo 7 días gratis.",
   },
@@ -19,10 +19,10 @@ export const es: Content = {
     switchLabel: "View in English",
   },
   bar: {
-    text: "7 días gratis · Testea US$29 · Escala US$49 · Agencia US$149 al mes · Cancelas cuando quieras",
+    text: "7 días gratis · Testea US$25 · Escala US$49 · Agencia US$99 al mes · Cancelas cuando quieras",
     cta: "Ver planes",
     items: [
-      { tag: "NUEVO", text: "Prueba Creads 7 días gratis: 200 créditos de regalo" },
+      { tag: "NUEVO", text: "Prueba Creads 7 días gratis: 1 minuto de video gratis" },
       { tag: "NUEVO", text: "Automático: cuéntale tu negocio a Creads y te entrega el anuncio listo" },
       { tag: "NUEVO", text: "Demo con presentador: varios UGC de tu producto en un solo video" },
       { tag: "NUEVO", text: "Crea tus anuncios desde Claude o ChatGPT con el conector de Creads" },
@@ -40,7 +40,7 @@ export const es: Content = {
     { label: "Video", href: "/ia/video", badge: "", ex: "video" },
             { label: "Recrear video", href: "/ia/recrear", badge: "NUEVO", ex: "recrear" },
             { label: "API y MCP", href: "/#conectar", badge: "NUEVO" },
-    { label: "Precios", href: "/#pricing", badge: "US$29" },
+    { label: "Precios", href: "/#pricing", badge: "US$25" },
   ],
   menuEx: {
     see: "Ver ejemplos",
@@ -157,7 +157,7 @@ export const es: Content = {
     ["100%", "de los cortes revisados antes de armar"],
   ],
   hero: {
-    promo: "7 días gratis · Testea US$29 · Escala US$49 · Agencia US$149 al mes",
+    promo: "7 días gratis · Testea US$25 · Escala US$49 · Agencia US$99 al mes",
     title: "Tu anuncio con IA. Listo para lanzar.",
     lead: "Espía los anuncios que llevan semanas activos en tu rubro. Creads escribe el guion, crea hasta 8 escenas con Veo, Kling o Seedance, les pone voz y subtítulos, y revisa cada una. En unos 15 minutos tienes tu video editado, en el formato que necesites.",
     who: ["Afiliados", "Media buyers", "Agencias", "Marcas y e-commerce"],
@@ -196,7 +196,7 @@ export const es: Content = {
     format: "9:16",
     language: "Español",
     create: "Crear",
-    sent: "Elige tu plan abajo y créalo hoy. Pruebas 7 días gratis y sigues desde US$29 al mes.",
+    sent: "Elige tu plan abajo y créalo hoy. Pruebas 7 días gratis y sigues desde US$25 al mes.",
   },
   wall: {
     title: "Ejemplos",
@@ -445,9 +445,9 @@ export const es: Content = {
   },
   pricing: {
     title: "Elige tu plan y empieza a crear hoy",
-    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Prueba 7 días gratis, después desde US$29 al mes y cancelas cuando quieras.",
+    lead: "Anuncios terminados, no clips sueltos: guion, cortes, voz, subtítulos y revisión de calidad en cada plan. Prueba 7 días gratis, después desde US$25 al mes y cancelas cuando quieras.",
     offerTag: "Prueba gratis",
-    offer: "7 días gratis con 200 créditos de regalo · planes desde US$29 al mes",
+    offer: "7 días gratis con 1 minuto de video gratis · planes desde US$25 al mes",
     offerNote: "Se aplica sola al pagar. No necesitas código.",
     monthly: "Mensual",
     yearly: "Anual",
@@ -483,9 +483,9 @@ export const es: Content = {
         {
           title: "Lo que haces cada mes",
           rows: [
-            ["Créditos al mes", "400", "1.000", "4.000"],
-            ["Imágenes de anuncio (aprox.)", "40", "100", "400"],
-            ["Videos con avatar de 10 s (aprox.)", "3", "8", "32"],
+            ["Créditos al mes", "500", "1.000", "2.000"],
+            ["Imágenes de anuncio (aprox.)", "50", "100", "200"],
+            ["Videos con avatar (aprox.)", "20", "40", "80"],
             ["Imágenes para anuncios (con tus créditos)", "yes", "yes", "yes"],
             ["Espiar anuncios de la competencia", "yes", "yes", "yes"],
             ["Guiones de venta con IA", "yes", "yes", "yes"],
@@ -696,7 +696,7 @@ export const es: Content = {
   },
   start: {
     title: "Empieza a crear con Creads",
-    lead: "Crea tu cuenta en un minuto. Pruebas 7 días gratis y después sigues desde US$29 al mes. Tu primer anuncio puede estar listo hoy.",
+    lead: "Crea tu cuenta en un minuto. Pruebas 7 días gratis y después sigues desde US$25 al mes. Tu primer anuncio puede estar listo hoy.",
     cta: "Empezar gratis",
     see: "Comparar planes",
     formTitle: "Tu correo y a qué te dedicas",

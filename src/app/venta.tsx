@@ -2,8 +2,8 @@ import Image from "next/image";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Content } from "@/content/en";
-import { FUNDADOR, PRUEBA, SHOWN_PLANS, usd } from "@/lib/catalog";
-import { PRUEBA_DIAS, PRUEBA_PLAN, REGALO_CREDITS } from "@/lib/oferta";
+import { PRUEBA, SHOWN_PLANS, usd } from "@/lib/catalog";
+import { PRUEBA_DIAS, PRUEBA_PLAN } from "@/lib/oferta";
 import { Logo } from "./brand";
 import Pricing from "./pricing";
 import ThemeToggle from "./theme-toggle";
@@ -26,12 +26,12 @@ import type { TestimonioPublico } from "@/lib/casos";
 export interface Confianza { galeria: GaleriaPublicaItem[]; contadores: Contador[]; testimonios: TestimonioPublico[]; novedades: Novedad[]; roadmap: boolean }
 const SIN_DATOS: Confianza = { galeria: [], contadores: [], testimonios: [], novedades: [], roadmap: false };
 
-/** «Así se gasta tu saldo»: what each piece uses (the same numbers as the app charges). */
+/** «Así se gasta tu saldo»: what each piece uses (the same numbers as the app charges, src/lib/credit-math.ts). */
 const GASTO = [
   ["Imagen con texto, en feed 4:5, stories 9:16 y cuadrado", "10 créditos"],
   ["La misma imagen con Nano Banana Pro (mayor calidad)", "20 créditos"],
-  ["Video de producto de 6 s (escena + movimiento + titular)", "30 créditos"],
-  ["Video con avatar que habla, 10 s", "unos 120 créditos"],
+  ["Video de producto de 6 s (escena + movimiento + titular)", "15 créditos"],
+  ["Video con avatar que habla, 15 s", "25 créditos"],
   ["Ángulos, hooks y editar textos, subtítulos, logo o música", "Gratis"],
 ] as const;
 
@@ -54,6 +54,10 @@ const h2 = "font-display text-[1.7rem] leading-[1.1] font-semibold sm:text-[2.3r
 
 /** Sign-up (with the card for the 7-day free trial; or the Pack Prueba with MODO_PACK=1), then the first batch. */
 const START = "/registro";
+/** El regalo de la prueba en palabras (owner, 9 nov 2026): REGALO_CREDITS=100 ≈ 1 minuto de video / 4 cortes de
+ * 15 s, para que la prueba saque su primer anuncio completo. Más fuerte que decir «100 créditos». */
+const REGALO_HUMANO = "1 minuto de video gratis";
+const REGALO_LARGO = "1 minuto de video gratis (4 cortes de 15 s) para tu primer anuncio";
 const cheapest = [...SHOWN_PLANS].sort((a, b) => a.monthly - b.monthly)[0];
 /** The plan the free trial becomes (Testea): its real price, never written by hand. */
 const planPrueba = SHOWN_PLANS.find((p) => p.id === PRUEBA_PLAN) ?? cheapest;
@@ -113,7 +117,7 @@ const COMPARA = [
 /** The two questions about trying it: the 7-day free trial with card (default since 26 Oct 2026) or the Pack Prueba. */
 const FAQ_ENTRADA = {
   prueba: [
-    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis con ${REGALO_CREDITS} créditos de regalo para tus primeros anuncios. Si te gusta, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia. Si no, cancelas en «Planes» con un clic.`],
+    ["¿Puedo probar antes de pagar?", `Sí: tienes ${PRUEBA_DIAS} días gratis con ${REGALO_LARGO}. Alcanza para sacar tu primer anuncio completo sin pagar nada hoy. Si te gusta, sigues con el plan ${planPrueba.name} a US$${planPrueba.monthly} al mes, sin permanencia. Si no, cancelas en «Planes» con un clic.`],
   ],
   pack: [
     ["¿Puedo probar antes de suscribirme?", `Sí, con el Pack Prueba: un pago único de US$${PRUEBA.usd}, sin suscripción, que alcanza para tus primeros anuncios: 12 imágenes, 4 videos de producto o 1 video con avatar. Crear la cuenta y ver los 6 ángulos de venta para tu producto no cuesta nada. Si te suscribes dentro de 7 días, los US$${PRUEBA.usd} se descuentan de tu primer mes.`],
@@ -122,7 +126,7 @@ const FAQ_ENTRADA = {
 } as const;
 
 const FAQ_RESTO = [
-  ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 100 imágenes, 33 videos de producto o 8 videos con avatar de 10 s, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
+  ["¿Cómo funciona el saldo?", "Cada plan trae un saldo al mes que gastas en imágenes o videos, como quieras: por ejemplo, Escala alcanza para 100 imágenes, 66 videos de producto o 40 videos con avatar, o la mezcla que quieras. Antes de crear siempre ves cuánto usa. Si algo falla, el saldo vuelve solo."],
   ["¿Para qué tipo de negocio sirve?", "Para quien ya invierte en anuncios de Meta y necesita testear ángulos nuevos todo el tiempo: tiendas online, afiliados y media buyers, infoproductos. También para pymes que quieren anuncios propios sin agencia."],
   ["¿En qué idioma salen los anuncios?", "En español o en inglés, tú eliges cada vez. Los videos pueden tener voz con acento chileno, argentino, colombiano, venezolano o mexicano, o en inglés."],
   ["¿Qué pasa si mis anuncios no me sirven?", "Tienes 7 días de garantía en tu primer pago: escríbenos a hola@creadsia.com y te devolvemos tu pago. Los detalles están en «7 días de garantía», más arriba."],
@@ -157,7 +161,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
         <div className={`${wrap} flex items-center justify-between gap-3 py-3 ${gutter}`}>
           <Logo href="/" />
           <nav aria-label="Secciones" className="hidden items-center gap-1 text-[15px] md:flex">
-            {[["#como", "Cómo funciona"], ["#ejemplos", "Ejemplos"], ["#pricing", "Planes"], ["#preguntas", "Preguntas"]].map(([h, l]) => (
+            {[["#como", "Cómo funciona"], ["#editor", "Editor"], ["#ejemplos", "Ejemplos"], ["#pricing", "Planes"], ["#preguntas", "Preguntas"]].map(([h, l]) => (
               <a key={h} href={h} className="rounded-lg px-3 py-2 text-muted hover:bg-surface hover:text-ink">{l}</a>
             ))}
           </nav>
@@ -172,7 +176,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
               </summary>
               <nav aria-label="Secciones" className="absolute right-0 mt-2 flex w-56 flex-col rounded-2xl border border-line bg-surface p-2 shadow-xl">
-                {[["#como", "Cómo funciona"], ["#ejemplos", "Ejemplos"], ["#pricing", "Planes"], ["#preguntas", "Preguntas"], ["/app", "Entrar"], ["/en", "English"]].map(([h, l]) => (
+                {[["#como", "Cómo funciona"], ["#editor", "Editor"], ["#ejemplos", "Ejemplos"], ["#pricing", "Planes"], ["#preguntas", "Preguntas"], ["/app", "Entrar"], ["/en", "English"]].map(([h, l]) => (
                   <a key={h} href={h} className="flex min-h-11 items-center rounded-lg px-3 text-[15px] font-semibold hover:bg-surface-2">{l}</a>
                 ))}
               </nav>
@@ -200,8 +204,8 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
               <HeroReelRow clips={[PRODUCTO_DEMOS[6], UGC_DEMOS[1], PRODUCTO_DEMOS[5], DEMOS.bano, PRODUCTO_DEMOS[2]]} rev dur="50s" />
             </div>
             <div className="relative flex w-full flex-col items-center gap-2 pt-1">
-              <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_CREDITS} créditos de regalo · cancelas con un clic`}>{empezar}</Cta>
-              {!pack && <span className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-[13px] font-semibold text-accent-text">⚡ {PRUEBA_DIAS} días gratis · sin compromiso</span>}
+              <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_HUMANO} · cancelas con un clic`}>{empezar}</Cta>
+              {!pack && <span className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-[13px] font-semibold text-accent-text">🎁 {REGALO_HUMANO} · {PRUEBA_DIAS} días · sin compromiso</span>}
             </div>
             <p className="relative max-w-[36ch] text-center text-[15px] text-muted">
               Pega el link de tu producto y baja 10 anuncios con tu marca, listos para Meta y TikTok, en minutos.
@@ -214,19 +218,22 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <div className="flex min-w-0 flex-col gap-5">
               <p className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">El anuncio que vende se quema en días. Gana el que testea más rápido.</p>
               <h1 className="font-display text-[2.5rem] leading-[1.02] font-semibold sm:text-[3.8rem]">
-                Hasta 400 anuncios al mes. <span className="chroma mt-2 block text-[0.55em] leading-tight">Sin diseñador, sin grabar.</span>
+                Hasta 200 anuncios al mes. <span className="chroma mt-2 block text-[0.55em] leading-tight">Sin diseñador, sin grabar.</span>
               </h1>
               <p className="max-w-[52ch] text-lg text-muted">
                 Imágenes, videos de producto, UGC y avatares que hablan, con tu marca y listos para subir a Meta.
               </p>
+              <p className="flex w-fit items-center gap-2 rounded-xl border border-accent/40 bg-accent/[0.08] px-3.5 py-2 text-[15px] font-semibold text-accent-text">
+                🎁 Prueba gratis: {REGALO_LARGO}.
+              </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_CREDITS} créditos de regalo · cancelas con un clic`}>{empezar}</Cta>
+                <Cta sub={pack ? "Pago único, sin suscripción. Se descuenta si te suscribes en 7 días." : `Hoy no pagas nada · ${REGALO_HUMANO} · cancelas con un clic`}>{empezar}</Cta>
                 <a href="#como" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver cómo funciona</a>
               </div>
               <ul className="grid gap-1.5 text-sm text-muted sm:grid-cols-2">
                 {["6 ángulos de venta desde el link de tu producto", "Feed 4:5, stories 9:16 y cuadrado, con tu logo", "7 días de garantía", `Planes desde ${usd(cheapest.monthly)} al mes`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check /><MoneyText text={x} rate={rate} /></li>)}
               </ul>
-              <p className="text-xs text-muted">«Hasta 400 anuncios» es el plan Agencia: 400 imágenes al mes, cada una en 3 formatos listos para subir.</p>
+              <p className="text-xs text-muted">«Hasta 200 anuncios» es el plan Agencia: 200 imágenes al mes, cada una en 3 formatos listos para subir, o hasta 80 videos con avatar.</p>
             </div>
 
             <div className="flex min-w-0 flex-col items-center gap-3">
@@ -265,7 +272,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 </li>
               ))}
             </ol>
-            <div className="self-start"><Cta sub={pack ? "Ver tus 6 ángulos no cuesta nada." : `Tus primeros anuncios salen de tus ${REGALO_CREDITS} créditos de regalo.`}>{empezar}</Cta></div>
+            <div className="self-start"><Cta sub={pack ? "Ver tus 6 ángulos no cuesta nada." : `Tu primer anuncio sale de tu ${REGALO_HUMANO}.`}>{empezar}</Cta></div>
           </div>
         </section>
 
@@ -325,6 +332,82 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 2d · Editor: subtítulos animados, cortes/secuencia, logo, música — todo adentro de Creads */}
+        <section id="editor" className={`stage relative scroll-mt-20 overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="editor-title">
+          <style>{`
+            @keyframes creadsCapWord { 0%,100% { color: var(--color-ink); } 40%,70% { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; } }
+            @keyframes creadsPlay { 0% { left: 6%; } 100% { left: 94%; } }
+            .creads-cap-w { animation: creadsCapWord 2.6s ease-in-out infinite; }
+            .creads-play { animation: creadsPlay 4.2s linear infinite; }
+            @media (prefers-reduced-motion: reduce) { .creads-cap-w, .creads-play { animation: none; } .creads-cap-w { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; } }
+          `}</style>
+          <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-20 blur-[120px]" />
+          <div className={`${wrap} relative grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]`}>
+            <div className="flex flex-col gap-4">
+              <span className="w-fit rounded-full border border-line bg-surface/70 px-3 py-1 text-sm text-muted backdrop-blur">Editor incluido · gratis</span>
+              <h2 id="editor-title" className={h2}>Lo editas tú, <span className="chroma">sin salir de Creads</span></h2>
+              <p className="max-w-[46ch] text-lg text-muted">Subtítulos que se animan palabra por palabra, cortes al ritmo, tu logo, música y zooms. Todo lo que hace una agencia, en un editor simple hecho para vender.</p>
+              <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
+                {["Subtítulos animados", "Cortes y secuencia", "Tu logo y tus colores", "Música y efectos", "Zooms y destaques", "Exporta 9:16 y 4:5"].map((x) => (
+                  <li key={x} className="flex items-center gap-1.5 text-muted"><Check />{x}</li>
+                ))}
+              </ul>
+              <div className="self-start"><Cta href="/app/editor" sub="Incluido en todos los planes.">Abre el editor</Cta></div>
+            </div>
+            {/* Maqueta del editor: preview con subtítulo animado + barra de herramientas + línea de tiempo (la secuencia de cortes) */}
+            <div className="rounded-3xl border border-line bg-surface p-3 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)] sm:p-4">
+              <div className="mb-3 flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
+                <span className="ml-2 text-xs font-semibold text-muted">Editor Creads</span>
+              </div>
+              <div className="flex gap-3">
+                {/* preview 9:16 */}
+                <div className="relative aspect-[9/16] w-32 shrink-0 overflow-hidden rounded-2xl border border-line bg-black sm:w-40">
+                  <Image src={DEMOS.doc.poster} alt="" fill sizes="160px" className="object-cover opacity-90" />
+                  <div className="absolute inset-x-2 bottom-3 text-center">
+                    <p className="inline-block rounded-md bg-black/55 px-2 py-1 text-[13px] font-extrabold leading-tight text-white backdrop-blur-sm sm:text-[15px]">
+                      ESTO <span className="creads-cap-w">CAMBIA</span> TODO
+                    </p>
+                  </div>
+                </div>
+                {/* panel derecho: herramientas + propiedades */}
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {["Subtítulos", "Cortes", "Música", "Logo", "Texto", "Zoom"].map((x, i) => (
+                      <span key={x} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${i === 0 ? "bg-[image:var(--grad)] text-white" : "border border-line text-muted"}`}>{x}</span>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-1.5 rounded-xl border border-line bg-surface-2 p-3 text-xs text-muted">
+                    <div className="flex items-center justify-between"><span>Animación</span><span className="font-semibold text-ink">Palabra por palabra</span></div>
+                    <div className="flex items-center justify-between"><span>Tipografía</span><span className="font-semibold text-ink">Unbounded</span></div>
+                    <div className="flex items-center justify-between"><span>Resaltado</span><span className="h-3 w-8 rounded bg-[image:var(--grad)]" /></div>
+                    <div className="flex items-center justify-between"><span>Formato</span><span className="font-semibold text-ink">9:16 · 4:5</span></div>
+                  </div>
+                </div>
+              </div>
+              {/* línea de tiempo = la secuencia de cortes */}
+              <div className="relative mt-3 rounded-xl border border-line bg-surface-2 p-2.5">
+                <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold text-muted"><span>Secuencia · 5 cortes</span><span>0:00 — 0:18</span></div>
+                <div className="flex gap-1.5">
+                  {([DEMOS.doc, PRODUCTO_DEMOS[0], DEMOS.rubia, PRODUCTO_DEMOS[5], DEMOS.bano] as const).map((c, i) => (
+                    <div key={c.poster} className="relative aspect-video flex-1 overflow-hidden rounded-md border border-line">
+                      <Image src={c.poster} alt="" fill sizes="80px" className="object-cover" />
+                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-[9px] font-semibold text-white">0:0{i + 2}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* onda de audio */}
+                <div className="mt-1.5 flex h-5 items-center gap-0.5 overflow-hidden rounded bg-bg/60 px-1">
+                  {Array.from({ length: 48 }).map((_, i) => (
+                    <span key={i} className="w-full rounded-full bg-accent/40" style={{ height: `${20 + Math.abs(Math.sin(i * 1.3)) * 70}%` }} />
+                  ))}
+                </div>
+                <span aria-hidden="true" className="creads-play absolute top-8 bottom-2 w-0.5 rounded bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+              </div>
             </div>
           </div>
         </section>
@@ -412,7 +495,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
           <div className={`${wrap} flex flex-col gap-6`}>
             <div className="flex max-w-2xl flex-col gap-2">
               <h2 id="pricing-title" className={h2}>Un saldo, lo gastas como quieras</h2>
-              <p className="text-muted">Imágenes o videos, tú decides cada mes. Sin permanencia. Escala a <Money usd={FUNDADOR.usd} rate={rate} /> los primeros {FUNDADOR.months} meses para los primeros {FUNDADOR.cupos} clientes.</p>
+              <p className="text-muted">Imágenes o videos, tú decides cada mes. Sin permanencia. Cancelas cuando quieras.</p>
             </div>
             <Pricing t={t.pricing} lang="es" rate={rate} renews={renews} compact pack={pack} />
             <div className="flex flex-col gap-3 rounded-3xl border border-line bg-surface p-5 sm:p-6">

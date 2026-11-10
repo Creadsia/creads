@@ -61,7 +61,7 @@ export const unidadesDe = (credits: number) => ({
   videos: Math.max(0, Math.floor(credits / VIDEO_CR + 1e-9)),
 });
 
-/** «47 imágenes o 3 videos» */
+/** «50 imágenes o 20 videos» */
 export function fmtSaldo(credits: number) {
   const u = unidadesDe(credits);
   const im = `${u.imagenes.toLocaleString("es-CL")} imagen${u.imagenes === 1 ? "" : "es"}`;

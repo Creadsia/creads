@@ -482,8 +482,8 @@ export const en = {
         {
           title: "What you make each month",
           rows: [
-            ["30 s video ads", "≈ 4", "≈ 8"],
-            ["Ad images", "20", "40"],
+            ["Avatar videos (approx.)", "20", "40"],
+            ["Ad images", "50", "100"],
             ["Spy on competitors' ads", "yes", "yes"],
             ["AI sales scripts", "yes", "yes"],
           ],

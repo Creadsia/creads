@@ -177,7 +177,7 @@ export default function Planes() {
         </div>
         <div className="hidden flex-col gap-1 rounded-2xl border border-line bg-surface p-4 sm:flex">
           <span className="text-xs font-semibold text-muted">Cómo se usan</span>
-          <span className="text-sm text-muted">Cada anuncio de imagen (en 4:5 y 9:16) usa 1 imagen. Un video de 10 s con avatar que habla usa 1 video. Nano Banana Pro cuenta como 2 imágenes. Editar y revisar no usan saldo. Si algo falla, vuelve solo.</span>
+          <span className="text-sm text-muted">Cada anuncio de imagen (en 4:5 y 9:16) usa 1 imagen. Un video con avatar que habla usa 1 video. Nano Banana Pro cuenta como 2 imágenes. Editar y revisar no usan saldo. Si algo falla, vuelve solo.</span>
         </div>
       </section>
 
@@ -213,7 +213,7 @@ export default function Planes() {
               </label>
             ))}
           </div>
-          {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Testea</b>? Es el más económico y trae saldo para hasta 47 imágenes o 3 videos al mes.</p>}
+          {reason === "Precio demasiado elevado" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">¿Probaste el plan <b>Testea</b>? Es el más económico y trae saldo para hasta 50 imágenes o 20 videos al mes.</p>}
           {(reason === "Los resultados de la IA no me convencieron" || reason === "Problemas técnicos") && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Escríbenos a <b>hola@creadsia.com</b> con el anuncio que no te gustó: lo revisamos contigo y, si fue un error nuestro, te devolvemos esos créditos.</p>}
           {reason === "No uso suficientes créditos" && <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Si te falta tiempo, prueba <b>Crear guion</b>: pegas un anuncio que funciona y en minutos tienes 3 versiones listas para crear.</p>}
           <textarea value={detail} onChange={(e) => setDetail(e.target.value)} rows={2} aria-label="Cuéntanos más (opcional)" placeholder="Cuéntanos más (opcional)" className="min-w-0 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-ink" />
@@ -291,7 +291,7 @@ export default function Planes() {
                     <span className="flex flex-wrap items-baseline gap-1.5"><b className="font-display text-4xl font-semibold">{money(founder ? FUNDADOR.usd : perMonth)}</b><span className="text-sm text-muted">/mes</span>{founder && <s className="text-sm text-muted">{money(p.monthly)}</s>}{!founder && period === "mensual" && p.antes > 0 && p.antes > perMonth && <><s className="text-sm text-muted">{money(p.antes)}</s><span className="self-center rounded-md bg-[image:var(--grad)] px-1.5 py-0.5 text-xs font-bold text-white">−{Math.round((1 - perMonth / p.antes) * 100)}%</span></>}</span>
                     <span className="text-xs text-muted">{founder ? <>Precio fundador los primeros {FUNDADOR.months} meses · quedan {pay?.fundador?.quedan} de {FUNDADOR.cupos} cupos</> : period === "anual" ? <>{money(p.yearlyPerMonth * 12)} al año</> : first !== null ? <>Primer mes {money(first)}</> : "Facturado cada mes"}</span>
                   </div>
-                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Hasta <b>{p.imagenes} imágenes</b>, <b>{p.videos} videos</b> con avatar de 10 s o <b>{p.productos} videos de producto</b> al mes, o la mezcla que quieras{period === "anual" ? " (12 meses)" : ""}.</p>
+                  <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm">Hasta <b>{p.imagenes} imágenes</b>, <b>{p.videos} videos</b> con avatar o <b>{p.productos} videos de producto</b> al mes, o la mezcla que quieras{period === "anual" ? " (12 meses)" : ""}.</p>
                   <ul className="flex flex-col gap-2 text-sm">
                     {p.features.map((f) => <li key={f} className="flex gap-2"><Check />{f}</li>)}
                   </ul>

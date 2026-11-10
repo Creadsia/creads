@@ -40,7 +40,7 @@ const FAQ = [
   ["¿Puedo hacer anuncios en Google con la marca Creads?", "No puedes pujar por «Creads» ni sus variantes en buscadores. Sí puedes hacer anuncios con tu propio contenido (reseñas, tutoriales, comparativas). El detalle está en los términos."],
 ] as const;
 
-// the Escala plan (US$59 a month)
+// the Escala plan (US$49 a month)
 const ejemplo = 59;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const ejemploTotal = r2(ejemplo * (P.pctTramo1 / 100) * P.mesesTramo1 + ejemplo * (P.pctTramo2 / 100) * (P.maxMeses - P.mesesTramo1));

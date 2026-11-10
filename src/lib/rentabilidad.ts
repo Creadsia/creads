@@ -195,8 +195,9 @@ export function cheaperSteps(models: CostoModelo[], spend: Partial<Record<Family
 /** Real cost of each piece (provider list prices, Oct 2026; see the «costos-reales» doc) and what it charges. */
 export const PIEZAS = {
   imagen: { usd: 0.18, creditos: 10, label: "imágenes (3 formatos)" },
-  producto: { usd: 0.57, creditos: 30, label: "videos de producto" },
-  avatar: { usd: 2.29, creditos: 120, label: "videos con avatar de 10 s" },
+  producto: { usd: 0.3, creditos: 15, label: "videos de producto" },
+  // GPU propia (owner, 9 nov 2026): un UGC/avatar de ~15 s cuesta ~US$0.50, antes US$2.29 con MiniMax. 25 créditos.
+  avatar: { usd: 0.5, creditos: 25, label: "videos con avatar (15 s)" },
 } as const;
 
 export interface PlanPiezaRow {

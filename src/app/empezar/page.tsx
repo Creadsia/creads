@@ -13,7 +13,7 @@ import { PRUEBA_DIAS, REGALO_CREDITS } from "@/lib/oferta";
 
 export const metadata: Metadata = {
   title: "Empieza con Creads IA",
-  description: "Elige tu plan y pruébalo 7 días gratis. Después, desde US$29 al mes. Cancelas cuando quieras.",
+  description: "Elige tu plan y pruébalo 7 días gratis. Después, desde US$25 al mes. Cancelas cuando quieras.",
   robots: { index: false, follow: true },
 };
 export const dynamic = "force-dynamic";
