@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CAPTION_PRESETS, type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
+import { CAPTION_CATS, CAPTION_PRESETS, type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
 import { ANIMACIONES, FORMATOS, FUENTES, type Texto, VELOCIDADES } from "@/lib/editor-tipos";
 import { ANIM_NOMBRE, Chip, type Ed, FORMATO_INFO, Icon, PRESETS, RATIO, Seccion, Segmented, Slider, SubtituloLinea, Switch, Swatches, fmt, len } from "./piezas";
 
@@ -218,20 +218,31 @@ function Subtitulos({ ed }: { ed: Ed }) {
       <Switch on={p.subtitulos} onChange={(v) => ed.cambiar((x) => ({ ...x, subtitulos: v }))} label="Mostrar subtítulos" hint="Palabra por palabra, con lo que se dice en cada corte." />
       <div className={`flex flex-col gap-6 ${p.subtitulos ? "" : "pointer-events-none opacity-40"}`} aria-disabled={!p.subtitulos}>
         <Seccion title="Estilo">
-          <div className="grid grid-cols-2 gap-2">
-            {CAPTION_PRESETS.map((pr) => {
-              const look = normalizeStyle({ ...st, ...pr.style, x: undefined, y: undefined });
-              const on = igual(pr.style);
-              return (
-                <button key={pr.id} type="button" aria-pressed={on} title={pr.hint} onClick={() => ed.setEstiloSub({ ...pr.style, position: st.position, x: st.x, y: st.y })}
-                  className={`group flex flex-col gap-1.5 rounded-xl border p-1.5 text-left transition-colors ${on ? "border-[var(--sel)] bg-[var(--sel)]/[0.07]" : "border-line bg-surface-2/40 hover:border-ink/25"}`}>
-                  <span className="relative block h-[68px] overflow-hidden rounded-lg bg-[radial-gradient(circle_at_30%_20%,#2a2440,#0b0b10)]">
-                    <SubtituloLinea st={{ ...look, position: "centro" }} words={demo.slice(0, Math.min(3, look.words))} now={demo[Math.min(1, look.words - 1)].s} formato="9:16" fw={170} fh={68} />
-                  </span>
-                  <span className="px-1 pb-0.5 text-[13px] font-semibold text-ink">{pr.name}</span>
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-4">
+            {CAPTION_CATS.map((cat) => (
+              <div key={cat} className="flex flex-col gap-2">
+                <h4 className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+                  {cat}
+                  {(cat === "Populares" || cat === "Dinámicos") && <span className="rounded bg-[var(--sel)]/15 px-1.5 py-0.5 text-[10px] font-extrabold text-accent-text">IA</span>}
+                </h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {CAPTION_PRESETS.filter((pr) => pr.cat === cat).map((pr) => {
+                    const look = normalizeStyle({ ...st, ...pr.style, x: undefined, y: undefined });
+                    const on = igual(pr.style);
+                    return (
+                      <button key={pr.id} type="button" aria-pressed={on} title={pr.hint} onClick={() => ed.setEstiloSub({ ...pr.style, position: st.position, x: st.x, y: st.y })}
+                        className={`group relative flex flex-col overflow-hidden rounded-xl border text-left transition-colors ${on ? "border-[var(--sel)] ring-1 ring-[var(--sel)]" : "border-line hover:border-ink/30"}`}>
+                        <span className="relative block aspect-[9/13] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,#2a2440,#0b0b10)]">
+                          <SubtituloLinea st={{ ...look, position: "centro" }} words={demo.slice(0, Math.min(3, look.words))} now={demo[Math.min(1, look.words - 1)].s} formato="9:16" fw={96} fh={138} />
+                          {on && <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[var(--sel)] text-[10px] font-bold text-white">✓</span>}
+                        </span>
+                        <span className="truncate bg-surface px-1.5 py-1 text-[11px] font-semibold text-ink">{pr.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </Seccion>
         <Seccion title="Posición" aside={pos === "libre" ? (

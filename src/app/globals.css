@@ -91,6 +91,21 @@
   color: #f3f4f6;
 }
 
+/* The video editor is always light, VEED-style, whatever the app theme (owner, 10 nov 2026: «que se vea igual a VEED»). */
+.ed-root {
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --surface-2: #f0f1f4;
+  --ink: #0e0f13;
+  --muted: #6b7280;
+  --line: #e7e8ec;
+  --accent: #0e0f13;
+  --accent-ink: #ffffff;
+  --accent-text: #6d28d9;
+  --warn: #c2410c;
+  color-scheme: light;
+}
+
 @theme inline {
   /* smallest text on the site: 13px (owner, 25 Oct 2026: labels and small print were 11–12px) */
   --text-xs: 0.8125rem;

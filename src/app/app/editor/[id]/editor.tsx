@@ -517,8 +517,8 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
           </aside>
         )}
 
-        <div ref={canvas} className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#14151b,#050608_70%)]">
-          <div ref={frame} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-md bg-black shadow-[0_20px_60px_-20px_rgba(0,0,0,.9)] ring-1 ring-white/10" style={{ width: fw, height: fh }}
+        <div ref={canvas} className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[radial-gradient(ellipse_at_50%_35%,#eef0f4,#dfe2e8_78%)]">
+          <div ref={frame} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl bg-black shadow-[0_28px_70px_-24px_rgba(0,0,0,.45)] ring-1 ring-black/10" style={{ width: fw, height: fh }}
             onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === video.current) { if (sel?.tipo === "texto") setSel(null); else if (subSel) setSubSel(false); else playPause(); } }}>
             <video ref={video} playsInline onTimeUpdate={onTime} className="absolute inset-0 h-full w-full object-cover" />
             {p.subtitulos && frase && fw > 0 && <SubtituloLinea st={estiloSub} words={frase.words} now={t} formato={p.formato} fw={fw} fh={fh} selected={subSel} onPointerDown={arrastrarSub} />}

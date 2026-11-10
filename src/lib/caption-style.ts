@@ -154,21 +154,25 @@ export const assInline = (hex: string) => `&H${hex.slice(5, 7)}${hex.slice(3, 5)
  * Ready-made subtitle styles (one click sets everything): from calm UGC to luxury, Creads' neon and the
  * high-energy TikTok look. The customer can still change any detail after picking one.
  */
-export const CAPTION_PRESETS: { id: string; name: string; hint: string; style: Partial<CaptionStyle> }[] = [
-  { id: "ugc", name: "UGC tranqui", hint: "Natural, como un video real de celular", style: { look: "suave", font: "poppins", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 3, position: "abajo", punct: true } },
-  { id: "normal", name: "Normal", hint: "Clásico con borde, se lee en todo", style: { look: "clasico", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: true } },
-  { id: "resaltado", name: "Palabra resaltada", hint: "La palabra que se dice en amarillo", style: { look: "resaltar", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: false } },
-  { id: "impacto", name: "Impacto TikTok", hint: "Grande, mayúsculas, con salto", style: { look: "salto", font: "anton", size: 32, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
-  { id: "palabra", name: "Una a una", hint: "Una palabra a la vez, grande", style: { look: "palabra", font: "archivo", size: 34, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 1, position: "centro", punct: false } },
-  { id: "luxury", name: "Luxury", hint: "Crema y dorado, entra suave", style: { look: "subir", font: "poppins", size: 22, color: "#F5F1EA", accent: "#D4AF37", case: "normal", words: 3, position: "abajo", punct: true } },
-  { id: "karaoke", name: "Karaoke", hint: "El color avanza mientras habla", style: { look: "karaoke", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 3, position: "abajo", punct: false } },
-  { id: "creads", name: "Creads neón", hint: "Brillo rosado, el estilo de Creads", style: { look: "neon", font: "archivo", size: 28, color: "#FFFFFF", accent: "#FF4FD8", case: "upper", words: 2, position: "abajo", punct: false } },
-  { id: "etiqueta", name: "Etiqueta", hint: "Texto sobre una caja de color", style: { look: "etiqueta", font: "inter", size: 24, color: "#FFFFFF", accent: "#FF3B3B", case: "normal", words: 3, position: "abajo", punct: false } },
-  { id: "pop", name: "Pop color", hint: "Rebota al entrar, amarillo", style: { look: "pop", font: "poppins", size: 28, color: "#FFE100", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
-  { id: "noticia", name: "Noticia", hint: "Caja oscura, letra condensada", style: { look: "caja", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 4, position: "abajo", punct: false } },
-  { id: "tiktok", name: "Contorno TikTok", hint: "Borde negro grueso, se lee sobre todo", style: { look: "grueso", font: "montserrat", size: 28, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 3, position: "abajo", punct: false } },
-  { id: "sombra", name: "Sombra dura", hint: "Limpio con una sombra marcada", style: { look: "sombra", font: "poppins", size: 26, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 3, position: "abajo", punct: false } },
-  { id: "borde", name: "Borde de color", hint: "El borde en el color de tu marca", style: { look: "borde", font: "archivo", size: 28, color: "#FFFFFF", accent: "#8A5CFF", case: "upper", words: 2, position: "abajo", punct: false } },
-  { id: "minimal", name: "Minimal", hint: "Fino y elegante, poco invasivo", style: { look: "limpio", font: "inter", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 4, position: "abajo", punct: true } },
-  { id: "realce", name: "Realce noticia", hint: "Caja oscura y la palabra en amarillo", style: { look: "realce", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 4, position: "abajo", punct: false } },
+/** Categorías de estilos de subtítulos (como VEED: se muestran agrupadas en el panel). */
+export const CAPTION_CATS = ["Populares", "Dinámicos", "Sociales", "Negocio"] as const;
+export type CaptionCat = (typeof CAPTION_CATS)[number];
+
+export const CAPTION_PRESETS: { id: string; name: string; hint: string; cat: CaptionCat; style: Partial<CaptionStyle> }[] = [
+  { id: "resaltado", name: "Palabra resaltada", hint: "La palabra que se dice en amarillo", cat: "Populares", style: { look: "resaltar", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: false } },
+  { id: "impacto", name: "Impacto TikTok", hint: "Grande, mayúsculas, con salto", cat: "Populares", style: { look: "salto", font: "anton", size: 32, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
+  { id: "karaoke", name: "Karaoke", hint: "El color avanza mientras habla", cat: "Populares", style: { look: "karaoke", font: "montserrat", size: 26, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "tiktok", name: "Contorno TikTok", hint: "Borde negro grueso, se lee sobre todo", cat: "Populares", style: { look: "grueso", font: "montserrat", size: 28, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "palabra", name: "Una a una", hint: "Una palabra a la vez, grande", cat: "Dinámicos", style: { look: "palabra", font: "archivo", size: 34, color: "#FFFFFF", accent: "#3DFF6E", case: "upper", words: 1, position: "centro", punct: false } },
+  { id: "pop", name: "Pop color", hint: "Rebota al entrar, amarillo", cat: "Dinámicos", style: { look: "pop", font: "poppins", size: 28, color: "#FFE100", accent: "#FFE100", case: "upper", words: 2, position: "centro", punct: false } },
+  { id: "creads", name: "Creads neón", hint: "Brillo rosado, el estilo de Creads", cat: "Dinámicos", style: { look: "neon", font: "archivo", size: 28, color: "#FFFFFF", accent: "#FF4FD8", case: "upper", words: 2, position: "abajo", punct: false } },
+  { id: "etiqueta", name: "Etiqueta", hint: "Texto sobre una caja de color", cat: "Sociales", style: { look: "etiqueta", font: "inter", size: 24, color: "#FFFFFF", accent: "#FF3B3B", case: "normal", words: 3, position: "abajo", punct: false } },
+  { id: "noticia", name: "Noticia", hint: "Caja oscura, letra condensada", cat: "Sociales", style: { look: "caja", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 4, position: "abajo", punct: false } },
+  { id: "borde", name: "Borde de color", hint: "El borde en el color de tu marca", cat: "Sociales", style: { look: "borde", font: "archivo", size: 28, color: "#FFFFFF", accent: "#8A5CFF", case: "upper", words: 2, position: "abajo", punct: false } },
+  { id: "sombra", name: "Sombra dura", hint: "Limpio con una sombra marcada", cat: "Sociales", style: { look: "sombra", font: "poppins", size: 26, color: "#FFFFFF", accent: "#FFFFFF", case: "upper", words: 3, position: "abajo", punct: false } },
+  { id: "ugc", name: "UGC tranqui", hint: "Natural, como un video real de celular", cat: "Negocio", style: { look: "suave", font: "poppins", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "normal", name: "Normal", hint: "Clásico con borde, se lee en todo", cat: "Negocio", style: { look: "clasico", font: "montserrat", size: 24, color: "#FFFFFF", accent: "#FFE100", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "luxury", name: "Luxury", hint: "Crema y dorado, entra suave", cat: "Negocio", style: { look: "subir", font: "poppins", size: 22, color: "#F5F1EA", accent: "#D4AF37", case: "normal", words: 3, position: "abajo", punct: true } },
+  { id: "minimal", name: "Minimal", hint: "Fino y elegante, poco invasivo", cat: "Negocio", style: { look: "limpio", font: "inter", size: 22, color: "#FFFFFF", accent: "#FFFFFF", case: "normal", words: 4, position: "abajo", punct: true } },
+  { id: "realce", name: "Realce noticia", hint: "Caja oscura y la palabra en amarillo", cat: "Negocio", style: { look: "realce", font: "bebas", size: 30, color: "#FFFFFF", accent: "#FFE100", case: "upper", words: 4, position: "abajo", punct: false } },
 ];
