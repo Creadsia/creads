@@ -49,8 +49,9 @@ export const PRUEBA = { id: "pack-prueba" as ItemId, credits: 125, usd: 9, note:
 /** Days after buying the pack in which its price comes off the first month of a plan. */
 export const PRUEBA_DESCUENTO_DIAS = 7;
 
-/** Precio fundador: Escala at US$49 for the first 3 months, for the first 50 customers (real counter). */
-export const FUNDADOR = { plan: "escala" as ItemId, usd: 49, months: 3, cupos: 50 };
+/** Precio fundador: desactivado (cupos 0) el 9 nov 2026 — Escala ahora vale $49 de lista (antes $75 tachado),
+ * así que la oferta fundador quedó redundante y tapaba el descuento. Con cupos 0, Escala muestra la rebaja normal. */
+export const FUNDADOR = { plan: "escala" as ItemId, usd: 49, months: 3, cupos: 0 };
 
 /**
  * No cheaper first month (the founder price and the pack discount replace it). The launch-offer machinery stays
