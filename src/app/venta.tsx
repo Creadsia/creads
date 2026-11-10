@@ -93,6 +93,17 @@ const UGC_DEMOS = [
   { src: "/demos/ugc-proteina.mp4", poster: "/demos/ugc-proteina.jpg", label: "UGC · proteína" },
   { src: "/demos/ugc-depto.mp4", poster: "/demos/ugc-depto.jpg", label: "UGC · inmobiliaria" },
 ];
+/** UGC nuevos ultra-reales (owner, 9 nov 2026): personas IA hablando a cámara, distintos rubros. Cada uno se
+ * muestra solo si su archivo existe, así se van sumando a la portada a medida que se generan en la GPU. */
+const UGC_NUEVOS = [
+  { src: "/demos/ugc-skincare.mp4", poster: "/demos/ugc-skincare.jpg", label: "UGC · skincare" },
+  { src: "/demos/ugc-fitness.mp4", poster: "/demos/ugc-fitness.jpg", label: "UGC · fitness" },
+  { src: "/demos/ugc-tienda.mp4", poster: "/demos/ugc-tienda.jpg", label: "UGC · tienda online" },
+  { src: "/demos/ugc-cafeteria.mp4", poster: "/demos/ugc-cafeteria.jpg", label: "UGC · cafetería" },
+  { src: "/demos/ugc-automotora.mp4", poster: "/demos/ugc-automotora.jpg", label: "UGC · automotora" },
+  { src: "/demos/ugc-mediabuyer.mp4", poster: "/demos/ugc-mediabuyer.jpg", label: "UGC · media buyer" },
+].filter((d) => existsSync(path.join(process.cwd(), "public", d.src)));
+
 /** The product reel: several product videos cut fast, to the beat. */
 const REEL = { src: "/demos/reel-producto.mp4", poster: "/demos/reel-producto.jpg", label: "Videos de producto y UGC hechos con Creads" };
 const HAY_REEL = existsSync(path.join(process.cwd(), "public", "demos", "reel-producto.mp4"));
@@ -426,7 +437,14 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             </div>
             <div className="flex flex-col gap-3">
               <h3 className="text-lg font-bold">Videos UGC y avatares que hablan</h3>
-              <p className="max-w-2xl text-sm text-muted">Las personas no existen: las creó la IA, con voz y labios sincronizados.</p>
+              <p className="max-w-2xl text-sm text-muted">Las personas no existen: las creó la IA, con voz y labios sincronizados. Imposible notar la diferencia.</p>
+              {UGC_NUEVOS.length > 0 && (
+                <div className="scroll-row mb-1 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible lg:grid-cols-6">
+                  {UGC_NUEVOS.map((d) => (
+                    <DemoPhone key={d.src} {...d} className="w-[52vw] max-w-[220px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
+                  ))}
+                </div>
+              )}
               <div className="scroll-row flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible lg:grid-cols-8">
                 {(["dent", "doc", "cafe", "creads", "gym", "rubia", "bano", "cocina"] as const).map((k) => (
                   <DemoPhone key={k} {...DEMOS[k]} className="w-[42vw] max-w-[180px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
