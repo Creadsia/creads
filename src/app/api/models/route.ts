@@ -14,7 +14,11 @@ export async function GET(req: Request) {
   // When our own GPU is on (serverless or pod), the studio offers ONLY the GPU models for video and GPT/GPU for
   // images (no paid third-party providers): the customer's money is protected and no one can bill a third party.
   const gpuOn = gpuConfigured() || itkServerlessOn();
-  const videos = gpuOn ? videoProviders.filter((p) => p.id.endsWith("-gpu")) : videoProviders;
+  // With our GPU on we offer only the GPU models — plus Seedance (ByteDance) when its key is present, as a
+  // paid quality option the owner turned on. No other third-party video model is exposed.
+  const videos = gpuOn
+    ? videoProviders.filter((p) => p.id.endsWith("-gpu") || (p.id.startsWith("seedance-") && p.configured()))
+    : videoProviders;
   const images = gpuOn
     ? imageProviders.filter((p) => p.id.endsWith("-gpu") || p.id.startsWith("gpt-image"))
     : imageProviders;
