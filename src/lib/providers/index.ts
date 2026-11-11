@@ -6,6 +6,14 @@ import { nanoBananaPro, veoFast, veoLite, veoStd } from "./gemini";
 import { openaiImageProviders } from "./openai-image";
 import { gpuConfigured, infiniteTalkGpu, itkServerlessOn, qwenImageGpu, wanBrollGpu } from "./gpu";
 import { chatterboxGpu } from "./chatterbox";
+import { falVideoProviders } from "./fal";
+import { direct } from "./byteplus";
+
+// Seedance (ByteDance) as a paid quality option alongside our GPU: bought on BytePlus (about half of
+// fal.ai's price) with fal as automatic fallback. Only these three ids; Kling/Hailuo/etc. stay off.
+export const seedanceProviders: VideoProvider[] = falVideoProviders
+  .filter((p) => p.id.startsWith("seedance-"))
+  .map(direct);
 
 // Registry of providers. Gemini (Veo, Nano Banana Pro) is live; the rest are stubs until wired.
 // `configured()` reports whether the provider's key is present.
@@ -19,6 +27,7 @@ export const videoProviders: VideoProvider[] = [
   heygenAvatarIV, // «avatar que habla» vía HeyGen (A/B test; sólo cuando se pide modelo heygen-avatar-iv)
   infiniteTalkGpu, // «avatar que habla» con movimiento natural, en GPU propia (reemplaza Kling/MiniMax cuando GPU_ENABLED=1)
   wanBrollGpu, // B-roll en GPU propia (silencioso; reemplaza a fal.ai cuando GPU_ENABLED=1)
+  ...seedanceProviders, // Seedance (BytePlus/fal): opción de calidad pagada, convive con la GPU
 ];
 
 export const imageProviders: ImageProvider[] = [qwenImageGpu, nanoBananaPro, ...openaiImageProviders];
