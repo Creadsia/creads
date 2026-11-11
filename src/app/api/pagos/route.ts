@@ -70,6 +70,9 @@ export async function POST(req: Request) {
     const [w, paid, rate, mine] = await Promise.all([workspaceRow(ws), hasPaidBefore(ws), usdClp(), ordersOf(ws)]);
     // one monthly subscription at a time: two would both charge the card every month
     const active = mine.find((o) => o.status === "pagado" && o.mp?.kind === "subscription" && !o.mp.cancelled);
+    // a card trial still running (gift given, not yet charged, not cancelled): the customer may top up or
+    // activate/switch their plan right away — buying a plan cancels the trial first (handled below)
+    const enPrueba = mine.some((o) => o.mp?.trial && !o.mp.cancelled && o.status === "pendiente");
     if (active && PLANS.some((p) => p.id === b?.item)) {
       return NextResponse.json({ error: `Ya tienes la renovación automática de ${active.quote.label}. Para cambiar de plan, primero cancela esa renovación aquí mismo (tu plan sigue activo hasta la fecha pagada) y luego elige el nuevo.` }, { status: 409 });
     }
@@ -81,7 +84,7 @@ export async function POST(req: Request) {
     if (b?.item === PRUEBA.id && mine.some((o) => o.item === PRUEBA.id && o.status === "pagado")) {
       return NextResponse.json({ error: "El Pack Prueba se compra una sola vez. Elige un plan para seguir creando (si lo haces dentro de 7 días, se descuenta lo que pagaste)." }, { status: 400 });
     }
-    if (String(b?.item ?? "").startsWith("pack-") && b?.item !== PRUEBA.id && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10))) {
+    if (String(b?.item ?? "").startsWith("pack-") && b?.item !== PRUEBA.id && !(w.paid_until && w.paid_until >= new Date().toISOString().slice(0, 10)) && !enPrueba) {
       return NextResponse.json({ error: "Las recargas se suman a un plan activo. Elige primero un plan (o renueva el tuyo) y después suma segundos cuando los necesites." }, { status: 400 });
     }
     // buying a plan during the card trial: the trial's subscription is cancelled first (two would both charge)
