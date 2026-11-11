@@ -98,6 +98,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   const [box, setBox] = useState({ w: 0, h: 0 });
   const cur = useRef(0); // the cut being played
   const [musicaUrl, setMusicaUrl] = useState<string | null>(null);
+  const [subiendoClip, setSubiendoClip] = useState(false);
   const [ultimaMusica, setUltimaMusica] = useState<Proyecto["musica"]>(null);
   // the subtitle look: starts as the ad's own; a change made here is saved apart and only used by the export
   const [estiloSub, setEstiloSubRaw] = useState<CaptionStyle>(() => normalizeStyle(undefined));
@@ -375,6 +376,43 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       cambiar((x) => ({ ...x, musica: { url, nombre: f.name.replace(/\.[^.]+$/, "").slice(0, 60), vol: 25 } }));
     } catch (e) { setAviso(e instanceof Error ? e.message : "No se pudo subir la música."); }
   }
+  // Upload an external video (a phone recording, a screen capture) and add it as a new clip of the ad.
+  // It's registered as a real clip so it also goes into the export (unless this is a preview with no saving).
+  async function subirClip(f: File | undefined) {
+    if (!f || !d) return;
+    if (!f.type.startsWith("video/")) { setAviso("Sube un video MP4 o MOV (grábalo con la cámara normal del celular)."); return; }
+    if (d.cortes.length >= 30) { setAviso("Puedes tener hasta 30 clips."); return; }
+    setSubiendoClip(true);
+    try {
+      const url = await uploadFile(f);
+      const nombre = f.name.replace(/\.[^.]+$/, "").slice(0, 60);
+      let clipId = `ext-${Date.now().toString(36)}`;
+      // register it as a real clip of this ad, so the export (which runs on the server) also includes it
+      if (!inicial) {
+        const r = await fetch(`/api/ads/${id}/clips`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url, nombre }) });
+        const x = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(x.error || "No se pudo agregar el video.");
+        clipId = x.id;
+      }
+      const nuevo: Clip = { id: clipId, idx: d.cortes.length, url, texto: nombre, palabras: [] };
+      setD((m) => (m ? { ...m, cortes: [...m.cortes, nuevo] } : m));
+      // read its real length, then drop it at the end of the timeline
+      const vd = document.createElement("video");
+      vd.preload = "metadata"; vd.src = url;
+      const soltar = (dur: number) => {
+        setDurs((mm) => ({ ...mm, [clipId]: dur }));
+        cambiar((pp) => ({ ...pp, cortes: [...pp.cortes, { clipId, a: 0, b: dur }] }));
+        setSel({ tipo: "corte", i: (pRef.current?.cortes.length ?? 0) });
+      };
+      vd.onloadedmetadata = () => soltar(vd.duration || 8);
+      vd.onerror = () => soltar(8);
+      setAviso("Listo: tu video quedó al final de la línea de tiempo.");
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "No se pudo subir el video.");
+    } finally {
+      setSubiendoClip(false);
+    }
+  }
   function musicaOn(on: boolean) {
     if (on && ultimaMusica) cambiar((x) => ({ ...x, musica: ultimaMusica }));
     if (!on) { audio.current?.pause(); cambiar((x) => ({ ...x, musica: null })); }
@@ -436,7 +474,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   const ed: Ed = {
     d, p, t, total, starts, durs, playing, sel, setSel, tool, abrir, setTool, cambiar, gesto, setCorte, setTexto, buscar, pausar, setT, clipOf, strips,
-    frases, estiloSub, setEstiloSub, corregirSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
+    frases, estiloSub, setEstiloSub, corregirSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, subirClip, subiendoClip, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
   };
   const r = RATIO[p.formato];
   const padC = wide ? 40 : 16;

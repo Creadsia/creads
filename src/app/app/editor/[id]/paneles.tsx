@@ -103,16 +103,22 @@ function Cortes({ ed }: { ed: Ed }) {
 
       <Seccion title="Clips de tu anuncio">
         <div className="grid grid-cols-3 gap-2">
-          {d.cortes.map((x) => (
+          {d.cortes.map((x, k) => (
             <button key={x.id} type="button" onClick={() => ed.agregarCorte(x.id)} title={x.texto} className="group relative overflow-hidden rounded-lg border border-line text-left hover:border-ink/30">
               <Still ed={ed} clipId={x.id} className="aspect-[9/14] w-full" />
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-1.5 pt-4 pb-1 text-[12px] font-semibold text-white">
-                Clip {x.idx + 1}<span className="grid h-6 w-6 place-items-center rounded-full bg-white/20 group-hover:bg-[image:var(--grad)]"><Icon name="plus" className="h-3.5 w-3.5" /></span>
+                Clip {k + 1}<span className="grid h-6 w-6 place-items-center rounded-full bg-white/20 group-hover:bg-[image:var(--grad)]"><Icon name="plus" className="h-3.5 w-3.5" /></span>
               </span>
             </button>
           ))}
         </div>
         <p className="text-[13px] text-muted">Toca un clip para sumarlo al final.</p>
+        <label className={`${small} w-full cursor-pointer justify-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${ed.subiendoClip ? "pointer-events-none opacity-60" : ""}`}>
+          <Icon name="upload" className="h-4 w-4" />{ed.subiendoClip ? "Subiendo tu video…" : "Subir un video mío"}
+          <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={ed.subiendoClip}
+            onChange={(e) => { ed.subirClip(e.target.files?.[0]); e.target.value = ""; }} />
+        </label>
+        <p className="text-[13px] text-muted">Sube un video tuyo (MP4 o MOV, hasta 50 MB): una grabación con el celular, una toma de pantalla de Creads, lo que quieras. Se suma como un clip más y puedes recortarlo igual que los otros.</p>
       </Seccion>
     </div>
   );
