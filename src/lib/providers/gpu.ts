@@ -228,7 +228,13 @@ async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: st
       // If a future GPU is smaller, raise blocks_to_swap (e.g. 20) and set force_offload:true here.
       blocks_to_swap: 0,
       force_offload: false,
-      // The clip length is auto-calculated from the audio by the worker, so we don't send max_frame.
+      // Cap the render length so one long cut can't run past the executionTimeout and get killed (TIMED_OUT):
+      // the worker otherwise auto-sizes from the audio with NO ceiling, so a long line renders for >15 min and
+      // RunPod kills it (owner, 10 Nov 2026: Vicente's long cuts failed with no error = timed out). 25 fps, so
+      // 500 frames = 20 s — the same ceiling the single-pod path already uses. Normal cuts (a short line) are
+      // unaffected; a cut whose voice is longer is clamped here instead of failing, and long scripts should be
+      // split into several cuts upstream.
+      max_frame: Math.min(500, Math.max(25, Math.round((req.seconds || 5) * 25))),
     },
     // Raise RunPod's 30-min per-job cap so a slow (block-swapped) render on the small GPU isn't killed midway.
     policy: { executionTimeout: RUNPOD_EXEC_TIMEOUT_MS },
