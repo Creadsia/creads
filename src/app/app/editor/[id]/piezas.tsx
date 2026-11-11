@@ -48,6 +48,8 @@ export interface Ed {
   dividir: () => void; duplicar: () => void; borrar: () => void; mover: (i: number, dir: -1 | 1) => void;
   moverA: (from: number, to: number) => void;
   nuevoTexto: (preset: Partial<Texto>) => void; agregarCorte: (clipId: string) => void;
+  /** uploads an external video (MP4/MOV) and adds it to the ad as a new clip at the end of the timeline */
+  subirClip: (f: File | undefined) => void; subiendoClip: boolean;
   musicaUrl: string | null; subirMusica: (f: File | undefined) => void; musicaOn: (on: boolean) => void;
   ultimaMusica: Proyecto["musica"]; setMusicaVol: (v: number) => void;
   setVelocidad: (v: number) => void;
