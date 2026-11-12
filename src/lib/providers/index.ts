@@ -7,7 +7,7 @@ import { openaiImageProviders } from "./openai-image";
 import { gpuConfigured, infiniteTalkGpu, itkServerlessOn, qwenImageGpu, wanBrollGpu } from "./gpu";
 import { chatterboxGpu } from "./chatterbox";
 import { falVideoProviders } from "./fal";
-import { direct } from "./byteplus";
+import { arkConfigured, direct } from "./byteplus";
 
 // Seedance (ByteDance) as a paid quality option alongside our GPU: bought on BytePlus (about half of
 // fal.ai's price) with fal as automatic fallback. Only these three ids; Kling/Hailuo/etc. stay off.
@@ -72,6 +72,7 @@ export function providerStatus() {
     image: Object.fromEntries(imageProviders.map((p) => [p.id, p.configured()])),
     voice: Object.fromEntries(voiceProviders.map((p) => [p.id, p.configured()])),
     database: has("SUPABASE_URL") && has("SUPABASE_SERVICE_ROLE_KEY"),
+    byteplus: arkConfigured(), // Seedance runs on BytePlus when its key is set (else on fal)
     foreplay: has("FOREPLAY_API_KEY"),
     gpu: gpuConfigured(),
     gpuServerless: itkServerlessOn(),

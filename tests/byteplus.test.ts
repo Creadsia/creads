@@ -2,7 +2,7 @@
 // Run: npx tsx --test tests/byteplus.test.ts
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DIRECT_SHARE, arkTask } from "../src/lib/providers/byteplus";
+import { DIRECT_SHARE, arkTask, direct } from "../src/lib/providers/byteplus";
 import { findVideo } from "../src/lib/providers";
 
 process.env.FAL_KEY = "fal-test";
@@ -81,8 +81,10 @@ test("BytePlus out of balance (or down): the same job goes to fal, the customer 
   assert.equal((await p.status(job)).state, "running");
 });
 
-test("other models are untouched", () => {
+test("direct() only wraps Seedance: any other model is returned untouched, price unchanged by the key", () => {
   process.env.BYTEPLUS_API_KEY = "bp-test";
-  assert.equal(findVideo("kling-3.0")!.usdPerSecond, 0.14);
+  const veo = findVideo("veo-3.1-fast")!;
+  assert.equal(direct(veo), veo, "a non-Seedance provider is returned as-is (not wrapped)");
+  assert.equal(direct(veo).usdPerSecond, 0.1, "the BytePlus key doesn't change a non-Seedance price");
   delete process.env.BYTEPLUS_API_KEY;
 });
