@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import type { Corte, Formato, Proyecto, Texto } from "@/lib/editor-tipos";
+import type { BaseTransform, Corte, Formato, Medio, Proyecto, Texto } from "@/lib/editor-tipos";
 import { type CaptionStyle, fontOf, fontPx, marginPx, shapeWord } from "@/lib/caption-style";
 import type { Word } from "@/lib/textmatch";
 
@@ -10,8 +10,8 @@ import type { Word } from "@/lib/textmatch";
 
 export interface Clip { id: string; idx: number; texto: string; url: string; palabras: Word[] }
 export interface Datos { titulo: string; aspecto: string; final: string | null; cortes: Clip[]; proyecto: Proyecto | null; musica: string | null; subtitulosEstilo?: unknown }
-export type Sel = { tipo: "corte" | "texto"; i: number } | null;
-export type Tool = "cortes" | "texto" | "subtitulos" | "audio" | "formato" | "velocidad";
+export type Sel = { tipo: "corte" | "texto" | "medio"; i: number } | null;
+export type Tool = "cortes" | "texto" | "medios" | "subtitulos" | "audio" | "formato" | "velocidad";
 export interface Strip { step: number; frames: string[]; ar: number }
 /** A subtitle word on the edited timeline. `k` = «clipId:index» identifies it for spelling fixes; `orig` is
  *  the word as transcribed (so a fix that types the original back just clears the fix). */
@@ -22,6 +22,7 @@ export interface Frase { s: number; e: number; words: SubWord[] }
 export const TOOLS: { id: Tool; label: string; icon: string; desc: string }[] = [
   { id: "cortes", label: "Cortes", icon: "film", desc: "Recorta, ordena y arma los clips de tu video." },
   { id: "texto", label: "Texto", icon: "text", desc: "Pon títulos, ofertas y llamados sobre el video." },
+  { id: "medios", label: "Video encima", icon: "layers", desc: "Pon un video o imagen sobre el video y ajusta su tamaño y opacidad." },
   { id: "subtitulos", label: "Subtítulos", icon: "cc", desc: "Estilo, color y posición de los subtítulos." },
   { id: "audio", label: "Audio", icon: "music", desc: "Volumen de la voz y música de fondo." },
   { id: "velocidad", label: "Velocidad", icon: "gauge", desc: "Acelera todo el video sin perder el sonido." },
@@ -50,6 +51,11 @@ export interface Ed {
   nuevoTexto: (preset: Partial<Texto>) => void; agregarCorte: (clipId: string) => void;
   /** uploads an external video (MP4/MOV) and adds it to the ad as a new clip at the end of the timeline */
   subirClip: (f: File | undefined) => void; subiendoClip: boolean;
+  /** uploads a video or image and lays it ON TOP of the video (picture-in-picture) at the current second */
+  subirMedio: (f: File | undefined) => void; subiendoMedio: boolean;
+  setMedio: (i: number, patch: Partial<Medio>) => void;
+  /** zoom/pan of the background layer; pass escala ≤ 1 to turn it off */
+  setBase: (patch: Partial<BaseTransform>) => void;
   musicaUrl: string | null; subirMusica: (f: File | undefined) => void; musicaOn: (on: boolean) => void;
   ultimaMusica: Proyecto["musica"]; setMusicaVol: (v: number) => void;
   setVelocidad: (v: number) => void;
@@ -105,6 +111,8 @@ const PATHS: Record<string, string> = {
   fit: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   gauge: "M4 18a8 8 0 1 1 16 0M12 14l4-3.5M9 18h6",
   reset: "M4 10a8 8 0 1 1 1 6M4 10V5m0 5h5",
+  layers: "M12 3 3 8l9 5 9-5-9-5ZM4 12l8 4.5L20 12M4 16l8 4.5L20 16",
+  zoom: "M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM15.5 15.5 20 20M9 11h4M11 9v4",
 };
 
 export function Icon({ name, className = "h-[18px] w-[18px]", fill = false }: { name: string; className?: string; fill?: boolean }) {
@@ -155,7 +163,7 @@ export function Slider({ label, value, min, max, step = 1, onChange, unit = "%",
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="flex items-baseline justify-between text-[13px]"><span className="font-semibold text-ink">{label}</span><span className="font-mono text-[13px] tabular-nums text-muted">{unit === "s" ? `${value.toFixed(2)} s` : `${Math.round(value)}${unit}`}</span></span>
+      <span className="flex items-baseline justify-between text-[13px]"><span className="font-semibold text-ink">{label}</span><span className="font-mono text-[13px] tabular-nums text-muted">{unit === "s" ? `${value.toFixed(2)} s` : unit === "x" ? `${value.toFixed(1)}x` : `${Math.round(value)}${unit}`}</span></span>
       <input type="range" min={min} max={max} step={step} value={value} onPointerDown={onStart} onChange={(e) => onChange(Number(e.target.value))}
         className="ed-range h-11 w-full cursor-pointer lg:h-6" style={{ "--pct": `${pct}%` } as CSSProperties} />
     </label>

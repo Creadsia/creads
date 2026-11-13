@@ -6,8 +6,8 @@ import { ff } from "./montage";
 // re-cut from its own clips: order, trims, texts on top, subtitles, music and the format. Nothing is generated
 // again (no AI models): the browser previews it and the montage engine renders it once on export.
 
-import type { Formato, Fuente, Proyecto, Texto } from "./editor-tipos";
-import { ANIMACIONES, FORMATOS, FUENTES, clampVelocidad } from "./editor-tipos";
+import type { BaseTransform, Formato, Fuente, Medio, MedioTipo, Proyecto, Texto } from "./editor-tipos";
+import { ANIMACIONES, FORMATOS, FUENTES, MAX_SEG, MEDIO_TIPOS, clampBase, clampVelocidad } from "./editor-tipos";
 export * from "./editor-tipos";
 // The pure timing-scaling helpers (clampVelocidad, escalar, escalarPalabras, escalarTextos) live in
 // editor-tipos.ts so the browser can use them too, and are re-exported here for the export route and the tests.
@@ -20,17 +20,32 @@ export function limpiarProyecto(v: unknown, clips: Set<string>): Proyecto {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   const cortes = (Array.isArray(o.cortes) ? o.cortes : []).slice(0, 30).map((c) => c as Record<string, unknown>)
     .filter((c) => typeof c.clipId === "string" && clips.has(c.clipId))
-    .map((c) => { const a = num(c.a, 0, 600, 0); return { clipId: String(c.clipId), a, b: Math.max(a + 0.3, num(c.b, 0, 600, a + 1)) }; });
+    .map((c) => { const a = num(c.a, 0, MAX_SEG, 0); return { clipId: String(c.clipId), a, b: Math.max(a + 0.3, num(c.b, 0, MAX_SEG, a + 1)) }; });
   const textos = (Array.isArray(o.textos) ? o.textos : []).slice(0, 20).map((t) => t as Record<string, unknown>).map((t, i) => {
-    const desde = num(t.desde, 0, 600, 0);
+    const desde = num(t.desde, 0, MAX_SEG, 0);
     return {
       id: typeof t.id === "string" ? t.id.slice(0, 20) : `t${i}`, texto: String(t.texto ?? "").replace(/[{}\\]/g, "").slice(0, 160),
-      desde, hasta: Math.max(desde + 0.3, num(t.hasta, 0, 600, desde + 2)), x: num(t.x, 0, 100, 50), y: num(t.y, 0, 100, 20), tam: num(t.tam, 2, 20, 7),
+      desde, hasta: Math.max(desde + 0.3, num(t.hasta, 0, MAX_SEG, desde + 2)), x: num(t.x, 0, 100, 50), y: num(t.y, 0, 100, 20), tam: num(t.tam, 2, 20, 7),
       color: hex(t.color, "#FFFFFF"), fondo: t.fondo === null ? null : hex(t.fondo, "#000000"),
       fuente: (FUENTES as readonly string[]).includes(String(t.fuente)) ? (t.fuente as Fuente) : "Montserrat ExtraBold",
       animacion: (ANIMACIONES as readonly string[]).includes(String(t.animacion)) ? (t.animacion as Texto["animacion"]) : "pop",
     };
   }).filter((t) => t.texto.trim());
+  // Overlay media (video/image on top). The url's ownership is checked by the export route (like the music),
+  // so here we only make the shape and numbers safe. Kept optional: an ad without medios behaves exactly as before.
+  const medios: Medio[] = (Array.isArray(o.medios) ? o.medios : []).slice(0, 8).map((m) => m as Record<string, unknown>)
+    .filter((m) => typeof m.url === "string" && m.url.length <= 600)
+    .map((m, i): Medio => {
+      const desde = num(m.desde, 0, MAX_SEG, 0);
+      const tipo: MedioTipo = (MEDIO_TIPOS as readonly string[]).includes(String(m.tipo)) ? (m.tipo as MedioTipo) : "video";
+      return {
+        id: typeof m.id === "string" ? m.id.slice(0, 24) : `m${i}`, url: String(m.url), tipo,
+        desde, hasta: Math.max(desde + 0.3, num(m.hasta, 0, MAX_SEG, desde + 3)),
+        x: num(m.x, 0, 100, 50), y: num(m.y, 0, 100, 50), w: num(m.w, 5, 100, 40),
+        opacidad: num(m.opacidad, 1, 100, 100), a: num(m.a, 0, MAX_SEG, 0),
+      };
+    });
+  const base: BaseTransform | null = clampBase(o.base);
   const m = o.musica as Record<string, unknown> | null | undefined;
   // subtitle word fixes: keep only «clipId:index» keys for clips still in the ad, short plain-text values
   const sc = o.subCorr && typeof o.subCorr === "object" ? (o.subCorr as Record<string, unknown>) : {};
@@ -40,7 +55,7 @@ export function limpiarProyecto(v: unknown, clips: Set<string>): Proyecto {
     if (mt && clips.has(mt[1]) && typeof sc[k] === "string") subCorr[k] = String(sc[k]).replace(/[{}\\\n\r]/g, "").slice(0, 60);
   }
   return {
-    cortes, textos, subtitulos: o.subtitulos !== false, subCorr,
+    cortes, textos, ...(medios.length ? { medios } : {}), ...(base ? { base } : {}), subtitulos: o.subtitulos !== false, subCorr,
     musica: m && typeof m.url === "string" ? { url: m.url, nombre: String(m.nombre ?? "Música").slice(0, 80), vol: num(m.vol, 0, 100, 25) } : null,
     vozVol: num(o.vozVol, 0, 150, 100),
     formato: (FORMATOS as readonly string[]).includes(String(o.formato)) ? (o.formato as Formato) : "9:16",
@@ -90,6 +105,49 @@ export async function pasadaTextos(dir: string, bytes: Uint8Array | Buffer, ass:
   await writeFile(file, ass);
   await ff(["-y", "-v", "error", "-i", input, "-vf", `${antes ? `${antes},` : ""}ass=filename='${e(file)}':fontsdir='${e(FONTS)}'`,
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", out], 240_000);
+  return readFile(out);
+}
+
+/** An overlay as the render needs it: its downloaded file and its window already on the final (sped-up) timeline. */
+export interface MedioRender {
+  file: string; tipo: MedioTipo;
+  desde: number; hasta: number;  // seconds on the final output timeline
+  x: number; y: number; w: number; opacidad: number; a: number;
+}
+
+/** Lays the videos/images on top of the cut (picture-in-picture) and, when asked, zooms/pans the background.
+ *  One extra encode; the sound is copied untouched (the overlays are silent, so the voice and music don't change).
+ *  Times are already on the final timeline. Returns the mp4 bytes. Only called when there's something to do. */
+export async function pasadaMedios(dir: string, bytes: Uint8Array | Buffer, medios: MedioRender[], base: BaseTransform | null, W: number, H: number) {
+  const input = path.join(dir, "ed-m-in.mp4"), out = path.join(dir, "ed-medios.mp4");
+  await writeFile(input, bytes);
+  const args: string[] = ["-y", "-v", "error", "-i", input];
+  for (const m of medios) { if (m.tipo === "imagen") args.push("-loop", "1", "-i", m.file); else args.push("-i", m.file); }
+  const parts: string[] = [];
+  let cur = "[0:v]";
+  if (base) {
+    const E = base.escala.toFixed(4), xf = (base.x / 100).toFixed(4), yf = (base.y / 100).toFixed(4);
+    parts.push(`[0:v]scale=${W}*${E}:${H}*${E},crop=${W}:${H}:(iw-${W})*${xf}:(ih-${H})*${yf},setsar=1[bg]`);
+    cur = "[bg]";
+  }
+  medios.forEach((m, i) => {
+    const idx = i + 1, lab = `[ov${i}]`;
+    const w = Math.max(2, Math.round((W * m.w) / 100));
+    const op = (m.opacidad / 100).toFixed(3), xe = (m.x / 100).toFixed(4), ye = (m.y / 100).toFixed(4);
+    const d = m.desde.toFixed(3), h = m.hasta.toFixed(3);
+    if (m.tipo === "video") {
+      const len = Math.max(0.1, m.hasta - m.desde).toFixed(3);
+      parts.push(`[${idx}:v]trim=start=${m.a.toFixed(3)}:duration=${len},setpts=PTS-STARTPTS,scale=${w}:-1,format=yuva420p,colorchannelmixer=aa=${op},setpts=PTS+${d}/TB${lab}`);
+    } else {
+      parts.push(`[${idx}:v]scale=${w}:-1,format=yuva420p,colorchannelmixer=aa=${op}${lab}`);
+    }
+    const next = `[m${i}]`;
+    parts.push(`${cur}${lab}overlay=x='W*${xe}-w/2':y='H*${ye}-h/2':enable='between(t,${d},${h})':eof_action=pass${next}`);
+    cur = next;
+  });
+  args.push("-filter_complex", parts.join(";"), "-map", cur, "-map", "0:a?",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", out);
+  await ff(args, 280_000);
   return readFile(out);
 }
 

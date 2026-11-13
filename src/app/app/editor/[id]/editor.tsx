@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { dl, uploadFile, Working } from "../../_parts/ui";
-import { FORMATOS, clampVelocidad, type Corte, type Proyecto, type Texto } from "@/lib/editor-tipos";
+import { FORMATOS, clampVelocidad, type BaseTransform, type Corte, type Medio, type Proyecto, type Texto } from "@/lib/editor-tipos";
 import { type CaptionStyle, normalizeStyle } from "@/lib/caption-style";
 import type { Word } from "@/lib/textmatch";
 import { type Clip, type Datos, type Ed, type Frase, Icon, IconBtn, RATIO, SELECT, type Sel, type Strip, type SubWord, SubtituloLinea, TOOLS, type Tool, ToolBtn, fmt, len } from "./piezas";
@@ -68,6 +68,40 @@ const CSS = `
 @media (prefers-reduced-motion:reduce){.ed-anim-pop,.ed-anim-aparecer,.ed-anim-subir,.ed-sheet{animation:none}}
 `;
 
+/** A video or image laid on top of the preview (picture-in-picture). A video overlay follows the playhead; both
+ *  can be dragged to move and resized from the corners. The export renders the same placement with ffmpeg. */
+function OverlayMedia({ m, fw, t, playing, selected, onGrab, onResize }: {
+  m: Medio; fw: number; t: number; playing: boolean; selected: boolean;
+  onGrab: (e: React.PointerEvent) => void; onResize: (e: React.PointerEvent) => void;
+}) {
+  const vref = useRef<HTMLVideoElement>(null);
+  const vis = t >= m.desde && t < m.hasta;
+  useEffect(() => {
+    const v = vref.current; if (!v || m.tipo !== "video") return;
+    if (vis) {
+      const want = m.a + Math.max(0, t - m.desde);
+      if (Math.abs(v.currentTime - want) > 0.3) { try { v.currentTime = want; } catch { /* seeking before load */ } }
+      if (playing) { if (v.paused) v.play().catch(() => undefined); } else if (!v.paused) v.pause();
+    } else if (!v.paused) v.pause();
+  }, [t, playing, vis, m.tipo, m.a, m.desde]);
+  if (!vis && !selected) return null;
+  const corners = ["-top-[9px] -left-[9px] cursor-nwse-resize", "-top-[9px] -right-[9px] cursor-nesw-resize", "-bottom-[9px] -left-[9px] cursor-nesw-resize", "-bottom-[9px] -right-[9px] cursor-nwse-resize"] as const;
+  return (
+    <span onPointerDown={onGrab} className="absolute -translate-x-1/2 -translate-y-1/2 cursor-move touch-none"
+      style={{ left: `${m.x}%`, top: `${m.y}%`, width: (m.w / 100) * fw, opacity: vis ? m.opacidad / 100 : 0.4, outline: selected ? `1.5px solid ${SELECT}` : undefined, outlineOffset: 3, borderRadius: 4 }}>
+      {m.tipo === "video"
+        ? <video ref={vref} src={m.url} muted playsInline preload="auto" className="block w-full rounded-[2px]" />
+        /* eslint-disable-next-line @next/next/no-img-element */
+        : <img src={m.url} alt="" className="block w-full rounded-[2px]" />}
+      {selected && corners.map((c) => (
+        <span key={c} onPointerDown={onResize} aria-hidden="true" className={`absolute grid h-6 w-6 place-items-center ${c}`}>
+          <span className="h-2.5 w-2.5 rounded-sm border-[1.5px] bg-white" style={{ borderColor: SELECT }} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function Editor({ id, inicial }: { id: string; inicial?: Datos }) {
   const [d, setD] = useState<Datos | null>(null);
   const [err, setErr] = useState("");
@@ -99,6 +133,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   const cur = useRef(0); // the cut being played
   const [musicaUrl, setMusicaUrl] = useState<string | null>(null);
   const [subiendoClip, setSubiendoClip] = useState(false);
+  const [subiendoMedio, setSubiendoMedio] = useState(false);
   const [ultimaMusica, setUltimaMusica] = useState<Proyecto["musica"]>(null);
   // the subtitle look: starts as the ad's own; a change made here is saved apart and only used by the export
   const [estiloSub, setEstiloSubRaw] = useState<CaptionStyle>(() => normalizeStyle(undefined));
@@ -284,6 +319,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
     if (sel.tipo === "corte" && p.cortes.length > 1) cambiar((x) => ({ ...x, cortes: x.cortes.filter((_, k) => k !== sel.i) }));
     if (sel.tipo === "corte" && p.cortes.length < 2) { setAviso("El video necesita al menos un corte."); return; }
     if (sel.tipo === "texto") cambiar((x) => ({ ...x, textos: x.textos.filter((_, k) => k !== sel.i) }));
+    if (sel.tipo === "medio") cambiar((x) => ({ ...x, medios: (x.medios ?? []).filter((_, k) => k !== sel.i) }));
     setSel(null);
   }
   const mover = (i: number, dir: -1 | 1) => { const j = i + dir; if (!p || j < 0 || j >= p.cortes.length) return; cambiar((x) => { const c = [...x.cortes]; [c[i], c[j]] = [c[j], c[i]]; return { ...x, cortes: c }; }); setSel({ tipo: "corte", i: j }); };
@@ -295,6 +331,14 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       const src = p.textos[sel.i];
       cambiar((x) => ({ ...x, textos: [...x.textos, { ...src, id: `t${Date.now().toString(36)}`, y: Math.min(92, src.y + 8) }] }));
       setSel({ tipo: "texto", i: p.textos.length });
+      return;
+    }
+    if (sel?.tipo === "medio") {
+      const ms = p.medios ?? [];
+      if (ms.length >= 8) { setAviso("Puedes poner hasta 8 videos o imágenes encima."); return; }
+      const src = ms[sel.i];
+      cambiar((x) => ({ ...x, medios: [...(x.medios ?? []), { ...src, id: `m${Date.now().toString(36)}`, y: Math.min(92, src.y + 8) }] }));
+      setSel({ tipo: "medio", i: ms.length });
       return;
     }
     if (p.cortes.length >= 30) { setAviso("Puedes tener hasta 30 cortes."); return; }
@@ -317,6 +361,13 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
   }
   const setCorte = (i: number, patch: Partial<Corte>) => cambiar((x) => ({ ...x, cortes: x.cortes.map((c, k) => (k === i ? { ...c, ...patch } : c)) }), `corte:${i}:${Object.keys(patch).join()}`);
   const setTexto = (i: number, patch: Partial<Texto>) => cambiar((x) => ({ ...x, textos: x.textos.map((tx, k) => (k === i ? { ...tx, ...patch } : tx)) }), `texto:${i}:${Object.keys(patch).join()}`);
+  const setMedio = (i: number, patch: Partial<Medio>) => cambiar((x) => ({ ...x, medios: (x.medios ?? []).map((m, k) => (k === i ? { ...m, ...patch } : m)) }), `medio:${i}:${Object.keys(patch).join()}`);
+  const setBase = (patch: Partial<BaseTransform>) => cambiar((x) => {
+    const b = { escala: 1, x: 50, y: 50, ...(x.base ?? {}), ...patch };
+    const escala = Math.min(3, Math.max(1, Math.round(b.escala * 100) / 100));
+    if (escala <= 1.001) { const { base: _omit, ...rest } = x; void _omit; return rest; } // no zoom = no transform
+    return { ...x, base: { escala, x: Math.round(Math.min(100, Math.max(0, b.x))), y: Math.round(Math.min(100, Math.max(0, b.y))) } };
+  }, "base");
   // spelling fix on one subtitle word: store «clipId:index → new word»; typing the original back (or clearing) removes the fix
   const corregirSub = (k: string, texto: string, orig: string) => cambiar((x) => {
     const next = { ...(x.subCorr ?? {}) };
@@ -368,6 +419,36 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
     const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
   }
+  // drag an overlay (video/image) on the preview, or a corner to resize it
+  function arrastrarMedio(i: number, e: React.PointerEvent) {
+    const r = frame.current?.getBoundingClientRect(); if (!r || !p) return;
+    e.preventDefault(); e.stopPropagation();
+    setSel({ tipo: "medio", i }); setTool("medios");
+    const apply = gesto();
+    const m0 = (p.medios ?? [])[i]; if (!m0) return;
+    const x0 = e.clientX, y0 = e.clientY;
+    const move = (ev: PointerEvent) => {
+      const x = Math.round(Math.min(100, Math.max(0, m0.x + ((ev.clientX - x0) / r.width) * 100)));
+      const y = Math.round(Math.min(100, Math.max(0, m0.y + ((ev.clientY - y0) / r.height) * 100)));
+      apply((pp) => ({ ...pp, medios: (pp.medios ?? []).map((m, k) => (k === i ? { ...m, x, y } : m)) }));
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
+  function escalarMedio(i: number, e: React.PointerEvent) {
+    const r = frame.current?.getBoundingClientRect(); if (!r || !p) return;
+    e.preventDefault(); e.stopPropagation();
+    const apply = gesto();
+    const m0 = (p.medios ?? [])[i]; if (!m0) return;
+    const cx = r.left + (m0.x / 100) * r.width, cy = r.top + (m0.y / 100) * r.height;
+    const d0 = Math.max(8, Math.hypot(e.clientX - cx, e.clientY - cy));
+    const move = (ev: PointerEvent) => {
+      const w = Math.round(Math.min(100, Math.max(5, m0.w * (Math.hypot(ev.clientX - cx, ev.clientY - cy) / d0))));
+      apply((pp) => ({ ...pp, medios: (pp.medios ?? []).map((m, k) => (k === i ? { ...m, w } : m)) }));
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
   async function subirMusica(f: File | undefined) {
     if (!f) return;
     try {
@@ -411,6 +492,28 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
       setAviso(e instanceof Error ? e.message : "No se pudo subir el video.");
     } finally {
       setSubiendoClip(false);
+    }
+  }
+  // Upload a video or image and lay it ON TOP of the video (picture-in-picture). It's not a clip: it's an overlay
+  // stored in the project (silent), placed at the current second. The file lives in the user's own storage, so
+  // the export downloads it and overlays it.
+  async function subirMedio(f: File | undefined) {
+    if (!f || !p) return;
+    const esVideo = f.type.startsWith("video/"), esImagen = f.type.startsWith("image/");
+    if (!esVideo && !esImagen) { setAviso("Sube un video (MP4/MOV) o una imagen (PNG/JPG)."); return; }
+    if ((p.medios ?? []).length >= 8) { setAviso("Puedes poner hasta 8 videos o imágenes encima."); return; }
+    setSubiendoMedio(true);
+    try {
+      const url = await uploadFile(f);
+      const desde = Math.min(t, Math.max(0, total - 1));
+      const nuevo: Medio = { id: `m${Date.now().toString(36)}`, url, tipo: esImagen ? "imagen" : "video", desde, hasta: Math.max(desde + 0.5, Math.min(total, desde + 3)), x: 50, y: 32, w: 40, opacidad: 100, a: 0 };
+      cambiar((x) => ({ ...x, medios: [...(x.medios ?? []), nuevo] }));
+      setSel({ tipo: "medio", i: (pRef.current?.medios ?? []).length });
+      setTool("medios");
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "No se pudo subir el archivo.");
+    } finally {
+      setSubiendoMedio(false);
     }
   }
   function musicaOn(on: boolean) {
@@ -474,7 +577,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   const ed: Ed = {
     d, p, t, total, starts, durs, playing, sel, setSel, tool, abrir, setTool, cambiar, gesto, setCorte, setTexto, buscar, pausar, setT, clipOf, strips,
-    frases, estiloSub, setEstiloSub, corregirSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, subirClip, subiendoClip, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
+    frases, estiloSub, setEstiloSub, corregirSub, dividir, duplicar, borrar, mover, moverA, nuevoTexto, agregarCorte, subirClip, subiendoClip, subirMedio, subiendoMedio, setMedio, setBase, musicaUrl, subirMusica, musicaOn, ultimaMusica, setMusicaVol, setVelocidad,
   };
   const r = RATIO[p.formato];
   const padC = wide ? 40 : 16;
@@ -557,8 +660,13 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
         <div ref={canvas} className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[radial-gradient(ellipse_at_50%_35%,#eef0f4,#dfe2e8_78%)]">
           <div ref={frame} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl bg-black shadow-[0_28px_70px_-24px_rgba(0,0,0,.45)] ring-1 ring-black/10" style={{ width: fw, height: fh }}
-            onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === video.current) { if (sel?.tipo === "texto") setSel(null); else if (subSel) setSubSel(false); else playPause(); } }}>
-            <video ref={video} playsInline onTimeUpdate={onTime} className="absolute inset-0 h-full w-full object-cover" />
+            onPointerDown={(e) => { if (e.target === e.currentTarget || e.target === video.current) { if (sel) setSel(null); else if (subSel) setSubSel(false); else playPause(); } }}>
+            <video ref={video} playsInline onTimeUpdate={onTime} className="absolute inset-0 h-full w-full object-cover"
+              style={p.base ? { transformOrigin: "top left", transform: `translate(${(-fw * (p.base.escala - 1) * p.base.x) / 100}px, ${(-fh * (p.base.escala - 1) * p.base.y) / 100}px) scale(${p.base.escala})` } : undefined} />
+            {p.medios?.map((m, i) => (
+              <OverlayMedia key={m.id} m={m} fw={fw} t={t} playing={playing} selected={sel?.tipo === "medio" && sel.i === i}
+                onGrab={(e) => arrastrarMedio(i, e)} onResize={(e) => escalarMedio(i, e)} />
+            ))}
             {p.subtitulos && frase && fw > 0 && <SubtituloLinea st={estiloSub} words={frase.words} now={t} formato={p.formato} fw={fw} fh={fh} selected={subSel} onPointerDown={arrastrarSub} />}
             {p.textos.map((tx, i) => {
               const vis = t >= tx.desde && t < tx.hasta;
@@ -666,7 +774,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
               {sel ? (
                 <div className="grid h-16 grid-cols-5">
                   {[
-                    { icon: "pen", label: "Editar", on: () => abrir(sel.tipo === "corte" ? "cortes" : "texto") },
+                    { icon: "pen", label: "Editar", on: () => abrir(sel.tipo === "corte" ? "cortes" : sel.tipo === "medio" ? "medios" : "texto") },
                     { icon: "scissors", label: "Dividir", on: dividir },
                     { icon: "copy", label: "Duplicar", on: duplicar },
                     { icon: "trash", label: "Borrar", on: borrar },
@@ -678,9 +786,9 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
                   ))}
                 </div>
               ) : (
-                <div className="grid h-16 grid-cols-6">
+                <div className="grid h-16 grid-cols-7">
                   {TOOLS.map((x) => (
-                    <button key={x.id} type="button" onClick={() => abrir(x.id)} title={x.desc} className="flex min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[11px] font-semibold text-muted active:text-ink">
+                    <button key={x.id} type="button" onClick={() => abrir(x.id)} title={x.desc} className="flex min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-semibold text-muted active:text-ink">
                       <Icon name={x.icon} className="h-5 w-5 text-ink" /><span className="max-w-full truncate">{x.label}</span>
                     </button>
                   ))}

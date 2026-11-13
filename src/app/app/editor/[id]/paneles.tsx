@@ -35,6 +35,7 @@ function PalabraEditable({ w, orig, fixed, onSave, onFocus }: { w: string; orig:
 export function Panel({ ed }: { ed: Ed }) {
   if (ed.tool === "cortes") return <Cortes ed={ed} />;
   if (ed.tool === "texto") return <Textos ed={ed} />;
+  if (ed.tool === "medios") return <Medios ed={ed} />;
   if (ed.tool === "subtitulos") return <Subtitulos ed={ed} />;
   if (ed.tool === "audio") return <Audio ed={ed} />;
   if (ed.tool === "velocidad") return <Velocidad ed={ed} />;
@@ -208,6 +209,94 @@ function Textos({ ed }: { ed: Ed }) {
           </ul>
         </Seccion>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- overlay media (video/image on top) + background zoom
+
+function Medios({ ed }: { ed: Ed }) {
+  const { p, sel, t, total } = ed;
+  const medios = p.medios ?? [];
+  const i = sel?.tipo === "medio" ? sel.i : -1;
+  const m = i >= 0 ? medios[i] : null;
+  const set = (patch: Parameters<Ed["setMedio"]>[1]) => ed.setMedio(i, patch);
+  const base = p.base ?? { escala: 1, x: 50, y: 50 };
+  return (
+    <div className="flex flex-col gap-6">
+      {m && (
+        <Seccion title={m.tipo === "imagen" ? "Imagen de encima" : "Video de encima"} aside={<button type="button" onClick={() => ed.setSel(null)} className="text-[13px] font-semibold text-muted hover:text-ink">Listo</button>}>
+          <Slider label="Opacidad" min={1} max={100} value={m.opacidad} onChange={(v) => set({ opacidad: v })} />
+          <Slider label="Tamaño" min={5} max={100} value={m.w} onChange={(v) => set({ w: v })} />
+          <div className="grid grid-cols-2 gap-2 text-[13px]">
+            <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface-2/50 p-2.5">
+              <label className="flex items-center justify-between gap-1 text-muted">Aparece
+                <span className="flex items-center gap-1"><input type="number" inputMode="decimal" step={0.1} min={0} max={total} value={Number(m.desde.toFixed(2))} onChange={(e) => set({ desde: Math.max(0, Math.min(Number(e.target.value) || 0, m.hasta - 0.3)) })}
+                  className="h-9 w-16 rounded-md border border-line bg-surface px-1.5 text-right font-mono text-[13px] text-ink tabular-nums" />s</span>
+              </label>
+              <button type="button" className="min-h-9 text-left font-semibold text-accent-text" onClick={() => set({ desde: Math.min(t, m.hasta - 0.3) })}>Desde aquí</button>
+            </div>
+            <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface-2/50 p-2.5">
+              <label className="flex items-center justify-between gap-1 text-muted">Se va
+                <span className="flex items-center gap-1"><input type="number" inputMode="decimal" step={0.1} min={0} max={total} value={Number(m.hasta.toFixed(2))} onChange={(e) => set({ hasta: Math.min(total, Math.max(Number(e.target.value) || 0, m.desde + 0.3)) })}
+                  className="h-9 w-16 rounded-md border border-line bg-surface px-1.5 text-right font-mono text-[13px] text-ink tabular-nums" />s</span>
+              </label>
+              <button type="button" className="min-h-9 text-left font-semibold text-accent-text" onClick={() => set({ hasta: Math.max(t, m.desde + 0.3) })}>Hasta aquí</button>
+            </div>
+          </div>
+          <button type="button" className={small} onClick={() => set({ desde: 0, hasta: total })}>Todo el video</button>
+          {m.tipo === "video" && (
+            <Slider label="Empieza del video (seg.)" unit="s" min={0} max={Math.max(1, m.hasta - m.desde + m.a)} step={0.1} value={m.a} onChange={(v) => set({ a: v })} />
+          )}
+          <p className="text-[13px] text-muted">Arrastra el video de encima para moverlo, o sus esquinas para cambiar el tamaño.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={small} onClick={ed.duplicar}><Icon name="copy" className="h-4 w-4" />Duplicar</button>
+            <button type="button" className={`${small} hover:text-bad`} onClick={ed.borrar}><Icon name="trash" className="h-4 w-4" />Quitar</button>
+          </div>
+        </Seccion>
+      )}
+
+      <Seccion title={m ? "Poner otro encima" : "Poner un video o imagen encima"}>
+        <div className="grid grid-cols-2 gap-2">
+          <label className={`${small} cursor-pointer justify-center ${ed.subiendoMedio ? "pointer-events-none opacity-60" : ""}`}>
+            <Icon name="film" className="h-4 w-4" />Video
+            <input type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" disabled={ed.subiendoMedio}
+              onChange={(e) => { ed.subirMedio(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          <label className={`${small} cursor-pointer justify-center ${ed.subiendoMedio ? "pointer-events-none opacity-60" : ""}`}>
+            <Icon name="crop" className="h-4 w-4" />Imagen
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={ed.subiendoMedio}
+              onChange={(e) => { ed.subirMedio(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+        </div>
+        <p className="text-[13px] text-muted">{ed.subiendoMedio ? "Subiendo…" : `Se pone encima en el segundo donde estás (${fmt(t)}) y dura unos segundos. Después lo mueves, lo achicas y le bajas la opacidad. El sonido del video de encima no se usa.`}</p>
+      </Seccion>
+
+      {!m && medios.length > 0 && (
+        <Seccion title="Lo que va encima">
+          <ul className="flex flex-col gap-1.5">
+            {medios.map((x, k) => (
+              <li key={x.id}>
+                <button type="button" onClick={() => { ed.setSel({ tipo: "medio", i: k }); ed.buscar(x.desde + 0.01, false); }} className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5 text-left hover:border-ink/25">
+                  <span className="flex items-center gap-2 truncate text-sm font-semibold text-ink"><Icon name={x.tipo === "imagen" ? "crop" : "film"} className="h-4 w-4 shrink-0 text-muted" />{x.tipo === "imagen" ? "Imagen" : "Video"} · {x.w}% · {x.opacidad}%</span>
+                  <span className="shrink-0 font-mono text-[13px] text-muted tabular-nums">{fmt(x.desde)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Seccion>
+      )}
+
+      <Seccion title="Zoom del fondo" aside={p.base ? <button type="button" onClick={() => ed.setBase({ escala: 1, x: 50, y: 50 })} className="inline-flex items-center gap-1 text-[13px] font-semibold text-accent-text hover:underline"><Icon name="reset" className="h-3.5 w-3.5" />Quitar</button> : undefined}>
+        <Slider label="Acercar el video de abajo" min={1} max={3} step={0.05} unit="x" value={base.escala} onChange={(v) => ed.setBase({ escala: v })} />
+        {p.base && (
+          <>
+            <Slider label="Mover ←→" min={0} max={100} value={base.x} onChange={(v) => ed.setBase({ x: v })} />
+            <Slider label="Mover ↑↓" min={0} max={100} value={base.y} onChange={(v) => ed.setBase({ y: v })} />
+          </>
+        )}
+        <p className="text-[13px] text-muted">Acerca y mueve el video que está primero (el de abajo), para encuadrarlo distinto o dejar espacio al que va encima.</p>
+      </Seccion>
     </div>
   );
 }

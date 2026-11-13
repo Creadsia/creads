@@ -5,7 +5,7 @@ import { tooMany } from "@/lib/rate";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { type BuildClip, build, captions, download, frameSize, probe, segLen, workdir } from "@/lib/montage";
 import { normalizeStyle } from "@/lib/caption-style";
-import { escalar, escalarPalabras, escalarTextos, limpiarProyecto, pasadaAudio, pasadaTextos, textosAss } from "@/lib/editor";
+import { type MedioRender, escalar, escalarMedios, escalarPalabras, escalarTextos, limpiarProyecto, pasadaAudio, pasadaMedios, pasadaTextos, textosAss } from "@/lib/editor";
 import { publicError } from "@/lib/public-error";
 import type { Word } from "@/lib/textmatch";
 import { hasPaid } from "@/lib/regalo";
@@ -80,6 +80,30 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const style = normalizeStyle(st.editorCaptions ?? st.captions ?? undefined); // the editor's own pick wins
     const cap = p.subtitulos && timeline.length ? captions(escalarPalabras(timeline, vel), W, H, p.formato, style, salida, []) : null;
     let bytes: Uint8Array | Buffer = await build(dir, parts, p.formato, cap?.ass ?? null, vel);
+
+    // Videos/images laid on top (picture-in-picture) and the optional background zoom/pan. Overlays are silent
+    // (visual only), so the voice/music passes below are untouched. Each file must be of this workspace (like the
+    // music). Times go onto the sped-up timeline, same as the texts. Skipped entirely when there's nothing to do.
+    const mediosOk = (p.medios ?? []).filter((m) => ownsMedia(m.url, ws));
+    if (mediosOk.length || p.base) {
+      const esc = escalarMedios(mediosOk, vel);
+      const mFiles = new Map<string, string>();
+      const render: MedioRender[] = [];
+      for (let k = 0; k < esc.length; k++) {
+        const m = esc[k];
+        let file = mFiles.get(m.url);
+        if (!file) {
+          file = path.join(dir, `ov${mFiles.size}.${m.tipo === "imagen" ? "img" : "mp4"}`);
+          await download(await fetchableUrl(m.url, ws), file);
+          mFiles.set(m.url, file);
+        }
+        const desde = Math.max(0, Math.min(salida, m.desde));
+        const hasta = Math.max(desde + 0.1, Math.min(salida, m.hasta));
+        render.push({ file, tipo: m.tipo, desde, hasta, x: m.x, y: m.y, w: m.w, opacidad: m.opacidad, a: m.a });
+      }
+      bytes = await pasadaMedios(dir, bytes, render, p.base ?? null, W, H);
+    }
+
     const marca = ws !== "main" && !(await hasPaid(ws).catch(() => false));
     const textosBase = escalarTextos(p.textos, vel);
     const textos = marca ? [...textosBase, { id: "sello", texto: "Hecho con Creads IA", desde: 0, hasta: salida + 1, x: 30, y: 7, tam: 4.5, color: "#FFFFFF", fondo: "#8A5CFF", fuente: "Montserrat ExtraBold" as const, animacion: "ninguna" as const }] : textosBase;
