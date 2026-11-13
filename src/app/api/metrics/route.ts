@@ -9,6 +9,7 @@ import { libroDe, listAfiliados } from "@/lib/afiliados";
 import { type Range, type StatRow, addDays, dayCL, dayList } from "@/lib/stats";
 import { type CanalPedido, embudoPorCanal } from "@/lib/embudo-canal";
 import { usdPerCredit } from "@/lib/credits";
+import { PRUEBA_DIAS } from "@/lib/oferta";
 import { DEFAULT_USD_PER_CREDIT } from "@/lib/credit-math";
 
 export const dynamic = "force-dynamic";
@@ -148,7 +149,7 @@ export async function GET(req: Request) {
       },
       total, diario, embudo_por_canal, ...(detalle ? { detalle } : {}),
       notas: {
-        tarjetas_agregadas: "Cuentas que pusieron la tarjeta y empezaron la prueba gratis de 7 días.",
+        tarjetas_agregadas: `Cuentas que pusieron la tarjeta y empezaron la prueba gratis de ${PRUEBA_DIAS} días.`,
         checkouts_iniciados: "Pedidos de plan o créditos creados (no incluye las pruebas gratis).",
         activaciones: "Cuentas que hicieron su primera generación (desde el 25 oct 2026).",
         pagos_fallidos: "Pagos rechazados por Mercado Pago, también renovaciones (desde el 25 oct 2026).",
