@@ -42,7 +42,7 @@ test("the trial becomes Testea: its real price and its monthly credits", () => {
   assert.ok(onSale(PRUEBA_PLAN, "mensual"));
   const p = planPrueba();
   assert.deepEqual(p, { id: "testea", name: "Testea", usd: 29, credits: 470 });
-  assert.deepEqual(resumenPrueba(), { dias: 7, regalo: REGALO_CREDITS, plan: "Testea", usd: 29, credits: 470 });
+  assert.deepEqual(resumenPrueba(), { dias: 3, regalo: REGALO_CREDITS, plan: "Testea", usd: 29, credits: 470 });
   // the order of the trial (same quote as empezarPrueba): Testea's price, and each charge gives Testea's credits
   const q = quote(PRUEBA_PLAN, "mensual", { firstPurchase: false })!;
   assert.equal(q.total, 29);
@@ -71,7 +71,7 @@ test("lock rule: who has to add the card before using the studio", () => {
 test("emails: the trial says Testea, its price in dollars and its credits", async () => {
   await withEnv({ MODO_PACK: undefined }, () => {
     const w = welcomeEmail("a@x.cl", "Ana", null, false, resumenPrueba());
-    assert.match(w.subject, /prueba gratis de 7 días/);
+    assert.match(w.subject, /prueba gratis de 3 días/);
     assert.ok(w.html.includes("Testea") && w.html.includes("US$29 al mes") && w.html.includes("200 créditos de regalo"));
     assert.ok(!w.html.includes("Básico") && !w.html.includes("US$9"));
   });
