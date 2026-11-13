@@ -87,7 +87,7 @@ test("an approved request becomes a finished video, one step per round", async (
   assert.equal((await loadMarketing()).pedidos.find((p) => p.id === ped.id)?.estado, "listo");
 });
 
-test("a clip that fails twice stops the job with a plain message", async () => {
+test("a clip that fails three times stops the job with a plain message", async () => {
   const { addPedido, loadMarketing, commitMarketing } = await import("../src/lib/marketing");
   const { enqueue, advanceProduction } = await import("../src/lib/autoprod");
   await commitMarketing((s) => { s.produccion = []; });
@@ -95,10 +95,12 @@ test("a clip that fails twice stops the job with a plain message", async () => {
   await enqueue(ped);
   await advanceProduction(); await advanceProduction();
   clipState.c1 = "failed"; clipState.c2 = "done";
-  await advanceProduction(); // retry once
+  await advanceProduction(); // 1er fallo → se reintenta
   clipState.c1 = "failed";
-  await advanceProduction();
+  await advanceProduction(); // 2º fallo → se reintenta
+  clipState.c1 = "failed";
+  await advanceProduction(); // 3er fallo → se detiene el trabajo
   const j = (await loadMarketing()).produccion![0];
   assert.equal(j.estado, "error");
-  assert.match(j.error ?? "", /falló dos veces/);
+  assert.match(j.error ?? "", /falló tres veces/);
 });
