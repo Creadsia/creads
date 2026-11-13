@@ -15,7 +15,7 @@ export const tarjetaObligatoria = () => !modoPack() && process.env.REGALO_CON_TA
  * completo (un video con avatar ≈ 25 créditos en GPU propia), para que la prueba saque su anuncio. */
 export const REGALO_CREDITS = 100;
 /** Days of free trial before the first charge. */
-export const PRUEBA_DIAS = 7;
+export const PRUEBA_DIAS = 3;
 /** The plan the trial becomes (an id of es.pricing.plans). */
 export const PRUEBA_PLAN = "testea" as const;
 

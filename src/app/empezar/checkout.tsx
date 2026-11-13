@@ -33,7 +33,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
   const isPack = item.startsWith("pack-");
   // «7 días gratis»: a monthly subscription whose first charge comes after the trial (the card is added on Mercado Pago)
   const trial = Boolean(prueba) && period === "mensual" && !isPack;
-  const dias = prueba?.dias ?? 7;
+  const dias = prueba?.dias ?? 3;
   const fechaCobro = new Date(Date.now() + dias * 86400_000).toLocaleDateString("es-CL", { day: "numeric", month: "long" });
   // the founder price (Escala, first 3 months) while places are left: the server applies the same rule
   const [fundador, setFundador] = useState(false);
@@ -88,7 +88,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
       // The account exists but the trial couldn't open. Show it clearly and let them retry from here —
       // never send them to the studio, where they'd meet the card lock with no explanation.
       setBusy("");
-      setErr({ text: td.error || "Creamos tu cuenta, pero no pudimos abrir tu prueba de 7 días en Mercado Pago. No se te ha cobrado nada: vuelve a tocar el botón para reintentar." });
+      setErr({ text: td.error || `Creamos tu cuenta, pero no pudimos abrir tu prueba de ${dias} días en Mercado Pago. No se te ha cobrado nada: vuelve a tocar el botón para reintentar.` });
       return;
     }
     const eventId = newEventId();
