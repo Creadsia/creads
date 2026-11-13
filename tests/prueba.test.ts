@@ -41,14 +41,14 @@ test("the trial becomes Testea: its real price and its monthly credits", () => {
   assert.equal(PRUEBA_PLAN, "testea");
   assert.ok(onSale(PRUEBA_PLAN, "mensual"));
   const p = planPrueba();
-  assert.deepEqual(p, { id: "testea", name: "Testea", usd: 29, credits: 470 });
-  assert.deepEqual(resumenPrueba(), { dias: 3, regalo: REGALO_CREDITS, plan: "Testea", usd: 29, credits: 470 });
+  assert.deepEqual(p, { id: "testea", name: "Testea", usd: 25, credits: 500 });
+  assert.deepEqual(resumenPrueba(), { dias: 3, regalo: REGALO_CREDITS, plan: "Testea", usd: 25, credits: 500 });
   // the order of the trial (same quote as empezarPrueba): Testea's price, and each charge gives Testea's credits
   const q = quote(PRUEBA_PLAN, "mensual", { firstPurchase: false })!;
-  assert.equal(q.total, 29);
-  assert.equal(q.monthlyCredits, 470);
+  assert.equal(q.total, 25);
+  assert.equal(q.monthlyCredits, 500);
   assert.match(q.label, /Testea/);
-  assert.deepEqual(orderGrant({ item: PRUEBA_PLAN, period: "mensual", quote: q } as never), { credits: 470, months: 1, plan: "Testea" });
+  assert.deepEqual(orderGrant({ item: PRUEBA_PLAN, period: "mensual", quote: q } as never), { credits: 500, months: 1, plan: "Testea" });
   // a trial started before 26 Oct 2026 (Básico) keeps what it was sold
   const old = quote("basico", "mensual", { firstPurchase: false })!;
   assert.deepEqual(orderGrant({ item: "basico", period: "mensual", quote: old } as never), { credits: 500, months: 1, plan: "Básico" });
@@ -72,15 +72,15 @@ test("emails: the trial says Testea, its price in dollars and its credits", asyn
   await withEnv({ MODO_PACK: undefined }, () => {
     const w = welcomeEmail("a@x.cl", "Ana", null, false, resumenPrueba());
     assert.match(w.subject, /prueba gratis de 3 días/);
-    assert.ok(w.html.includes("Testea") && w.html.includes("US$29 al mes") && w.html.includes("200 créditos de regalo"));
+    assert.ok(w.html.includes("Testea") && w.html.includes("US$25 al mes") && w.html.includes(`${REGALO_CREDITS} créditos de regalo`));
     assert.ok(!w.html.includes("Básico") && !w.html.includes("US$9"));
   });
   await withEnv({ MODO_PACK: "1" }, () => {
     assert.match(welcomeEmail("a@x.cl", "Ana").html, /Pack Prueba de US\$9/);
   });
-  const e = trialEndingEmail("a@x.cl", null, { fecha: "2 de noviembre", plan: "Testea", usd: 29, clp: 27990, credits: 470, ads: 1 });
-  assert.ok(e.html.includes("US$29 al mes") && e.html.includes("470 créditos") && e.html.includes("$27.990"));
-  assert.ok(!e.html.includes("500 créditos"));
+  const e = trialEndingEmail("a@x.cl", null, { fecha: "2 de noviembre", plan: "Testea", usd: 25, clp: 23990, credits: 500, ads: 1 });
+  assert.ok(e.html.includes("US$25 al mes") && e.html.includes("500 créditos") && e.html.includes("$23.990"));
+  assert.ok(!e.html.includes("470 créditos"));
 });
 
 test("trial on the plan chosen at /empezar: only plans on sale, Testea otherwise", async () => {

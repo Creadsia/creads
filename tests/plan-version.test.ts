@@ -16,8 +16,8 @@ test("a plan quote records the plan version and the monthly credits", () => {
   assert.equal(q.monthlyCredits, PLANS.find((p) => p.id === "escala")!.credits);
 });
 
-test("Agencia now gives 4.000 credits a month", () => {
-  assert.equal(PLANS.find((p) => p.id === "agencia")!.credits, 4000);
+test("Agencia gives 2.000 credits a month", () => {
+  assert.equal(PLANS.find((p) => p.id === "agencia")!.credits, 2000);
 });
 
 test("a renewal gives the credits promised in the order, not the current catalog", () => {
