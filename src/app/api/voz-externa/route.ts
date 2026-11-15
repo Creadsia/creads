@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const secret = (process.env.CREADS_PUBLISH_SECRET || process.env.CRON_SECRET || "").trim();
   if (secret.length < 16 || !same(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
-  let body: { texto?: string; voiceId?: string; lang?: "es" | "en"; speed?: number };
+  let body: { texto?: string; voiceId?: string; voz?: string; indice?: number; lang?: "es" | "en"; speed?: number };
   try { body = (await req.json()) as typeof body; } catch { return NextResponse.json({ error: "JSON inválido." }, { status: 400 }); }
 
   const texto = String(body.texto ?? "").trim();
@@ -28,7 +28,12 @@ export async function POST(req: Request) {
     let voiceId = String(body.voiceId ?? "").trim();
     if (!voiceId) {
       const vs = await vp.voices();
-      voiceId = vs[0]?.id ?? "";
+      if (vs.length) {
+        const q = String(body.voz ?? "").trim().toLowerCase();
+        if (q) voiceId = (vs.find((v) => v.name.toLowerCase().includes(q)) ?? vs[0]).id;
+        else if (Number.isInteger(body.indice)) voiceId = vs[(((body.indice as number) % vs.length) + vs.length) % vs.length].id;
+        else voiceId = vs[0].id;
+      }
     }
     if (!voiceId) return NextResponse.json({ error: "No hay ninguna voz disponible en la cuenta." }, { status: 503 });
 
