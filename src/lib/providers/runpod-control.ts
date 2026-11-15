@@ -55,14 +55,53 @@ export async function gpuConfig(): Promise<GpuConfig> {
   };
 }
 
-/** Deja `min` workers siempre calientes (0 = apagado). idleTimeout en segundos (opcional). */
-export async function gpuSetActive(min: number, idleTimeout?: number): Promise<GpuConfig> {
-  const body: Record<string, number> = { workersMin: Math.max(0, Math.min(10, Math.round(min))) };
-  if (idleTimeout != null) body.idleTimeout = Math.max(1, Math.min(3600, Math.round(idleTimeout)));
+/** Los tres modos del motor:
+ *  - apagado:    workersMin 0, workersMax 0  → nada corre (ni aunque llegue un cliente). US$0.
+ *  - automatico: workersMin 0, workersMax N  → se prende en frío SOLO cuando llega un trabajo. US$0 en reposo,
+ *                el cliente espera el arranque (~20-40 s) la primera vez. El modo ideal con poco tráfico.
+ *  - caliente:   workersMin N (≥1)           → N workers siempre listos, sin espera. Cuesta aunque no se use. */
+export type GpuMode = "apagado" | "automatico" | "caliente";
+
+/** Deduce el modo actual a partir de la config de RunPod. `n` = calientes (modo caliente) o tope (automatico). */
+export function gpuModeFrom(c: Pick<GpuConfig, "workersMin" | "workersMax">): { mode: GpuMode; n: number } {
+  if (c.workersMin > 0) return { mode: "caliente", n: c.workersMin };
+  if (c.workersMax > 0) return { mode: "automatico", n: c.workersMax };
+  return { mode: "apagado", n: 0 };
+}
+
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(n)));
+
+/** Tope máximo de workers que el panel permite pedir. RunPod igual lo recorta al límite real de la cuenta. */
+export const WORKERS_TOPE_MAX = Number(process.env.RUNPOD_WORKERS_TOPE_MAX ?? "50") || 50;
+/** Tope por defecto del modo Automático: alto, para que un pedido grande (p.ej. 15 videos) prenda muchos a la vez. */
+export const AUTO_TOPE_DEF = clamp(Number(process.env.RUNPOD_AUTO_TOPE ?? "20") || 20, 1, WORKERS_TOPE_MAX);
+
+/** Cambia el escalado del endpoint. Setea solo los campos que le pasas (workersMin, workersMax, idleTimeout). */
+export async function gpuSetScale(s: { workersMin?: number; workersMax?: number; idleTimeout?: number }): Promise<GpuConfig> {
+  const body: Record<string, number> = {};
+  if (s.workersMin != null) body.workersMin = clamp(s.workersMin, 0, 10); // calientes: hasta 10 (no tiene sentido pagar más fijos)
+  if (s.workersMax != null) body.workersMax = clamp(s.workersMax, 0, WORKERS_TOPE_MAX); // tope de autoescalado: alto
+  if (s.idleTimeout != null) body.idleTimeout = clamp(s.idleTimeout, 1, 3600);
+  // El tope nunca puede ser menor que los calientes.
+  if (body.workersMin != null && body.workersMax != null && body.workersMax < body.workersMin) body.workersMax = body.workersMin;
   const d = await j<Record<string, unknown>>(`https://rest.runpod.io/v1/endpoints/${endpoint()}`, manageHeaders(), { method: "PATCH", body: JSON.stringify(body) });
   return {
-    workersMin: Number(d.workersMin ?? body.workersMin),
-    workersMax: Number(d.workersMax ?? 0),
-    idleTimeout: Number(d.idleTimeout ?? idleTimeout ?? 0),
+    workersMin: Number(d.workersMin ?? body.workersMin ?? 0),
+    workersMax: Number(d.workersMax ?? body.workersMax ?? 0),
+    idleTimeout: Number(d.idleTimeout ?? body.idleTimeout ?? 0),
   };
+}
+
+/** Aplica un modo. `n` = cuántos calientes (modo caliente) o el tope de autoescalado (modo automatico, def. alto). */
+export async function gpuSetMode(mode: GpuMode, n?: number): Promise<GpuConfig> {
+  if (mode === "apagado") return gpuSetScale({ workersMin: 0, workersMax: 0 });
+  if (mode === "automatico") return gpuSetScale({ workersMin: 0, workersMax: clamp(n || AUTO_TOPE_DEF, 1, WORKERS_TOPE_MAX), idleTimeout: 300 });
+  // caliente: N siempre prendidos, con tope alto para que igual escale si entran varios pedidos a la vez.
+  const min = clamp(n || 1, 1, 10);
+  return gpuSetScale({ workersMin: min, workersMax: Math.max(min, AUTO_TOPE_DEF), idleTimeout: 300 });
+}
+
+/** Compat: deja `min` calientes (0 = apagado total). Prefiere gpuSetMode. */
+export async function gpuSetActive(min: number, idleTimeout?: number): Promise<GpuConfig> {
+  return gpuSetScale({ workersMin: min, ...(idleTimeout != null ? { idleTimeout } : {}) });
 }
