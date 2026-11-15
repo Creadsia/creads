@@ -398,6 +398,26 @@ export async function publishReel(cuenta: Cuenta, adId: string, caption: string)
   return p.id;
 }
 
+/**
+ * Publishes a Reel from a ready public video URL made OUTSIDE Creads (the office's agent «Vale»):
+ * Instagram downloads the video from that https URL. Null = modo ensayo (no Meta token). The human
+ * gate is the approval in the office BEFORE this runs; the Meta token never leaves Creads.
+ */
+export async function publishVideoUrl(igUserId: string, videoUrl: string, caption: string): Promise<string | null> {
+  if (!(await metaToken())) return null;
+  const c = await graph<{ id: string }>(`${igUserId}/media`, { method: "POST", params: { media_type: "REELS", video_url: videoUrl, caption: caption.slice(0, 2200), share_to_feed: true } });
+  const end = Date.now() + 150_000;
+  for (;;) {
+    const st = await graph<{ status_code?: string }>(c.id, { params: { fields: "status_code" } }).catch(() => ({ status_code: "" }));
+    if (st.status_code === "FINISHED") break;
+    if (st.status_code === "ERROR" || st.status_code === "EXPIRED") throw new MetaError("Instagram no pudo procesar el video.");
+    if (Date.now() > end) throw new MetaError("Instagram se está demorando en procesar el video. Intenta de nuevo en unos minutos.");
+    await new Promise((r) => setTimeout(r, 6000));
+  }
+  const p = await graph<{ id: string }>(`${igUserId}/media_publish`, { method: "POST", params: { creation_id: c.id } });
+  return p.id;
+}
+
 /** Publishes a finished Creads ad as a video on the account's Facebook page. Null = modo ensayo. */
 export async function publishFacebook(cuenta: Cuenta, adId: string, caption: string): Promise<string | null> {
   if (!(await metaToken())) return null;
