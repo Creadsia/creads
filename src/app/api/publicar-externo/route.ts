@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { loadMarketing, publishVideoUrl } from "@/lib/marketing";
+import { metaConn } from "@/lib/meta-conexiones";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -28,7 +29,12 @@ export async function POST(req: Request) {
     const m = await loadMarketing().catch(() => null);
     igUserId = m?.cuentas?.[0]?.igUserId ?? "";
   }
-  if (!/^\d{5,25}$/.test(igUserId)) return NextResponse.json({ error: "No hay cuenta de Instagram para publicar (agrega una en Marketing → Cuentas de Instagram de la marca)." }, { status: 400 });
+  // Fallback: the Instagram connected in Marketing → Conexiones con Meta.
+  if (!igUserId) {
+    const c = await metaConn().catch(() => null);
+    igUserId = c?.igUserId ?? "";
+  }
+  if (!/^\d{5,25}$/.test(igUserId)) return NextResponse.json({ error: "No hay cuenta de Instagram conectada (conéctala en Marketing → Conexiones con Meta, o agrégala en Cuentas de Instagram de la marca)." }, { status: 400 });
 
   try {
     const mediaId = await publishVideoUrl(igUserId, videoUrl, caption);
