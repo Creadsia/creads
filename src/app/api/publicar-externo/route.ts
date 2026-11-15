@@ -12,7 +12,7 @@ export const maxDuration = 300;
 const same = (a: string, b: string) => { const x = Buffer.from(a), y = Buffer.from(b); return x.byteLength === y.byteLength && timingSafeEqual(x, y); };
 
 export async function POST(req: Request) {
-  const secret = (process.env.CRON_SECRET ?? "").trim();
+  const secret = (process.env.CREADS_PUBLISH_SECRET || process.env.CRON_SECRET || "").trim();
   if (secret.length < 16 || !same(req.headers.get("authorization") ?? "", `Bearer ${secret}`)) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
   let body: { videoUrl?: string; caption?: string; igUserId?: string };
