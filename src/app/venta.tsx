@@ -181,7 +181,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
           <div aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-[440px] w-[640px] -translate-x-1/2 rounded-full bg-[image:var(--grad)] opacity-20 blur-[130px]" />
           <div className={`${wrap} relative grid items-center gap-8 py-10 sm:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12`}>
             <div className="flex min-w-0 flex-col items-center gap-5 text-center lg:items-start lg:text-left">
-              <p className="w-fit rounded-full border border-accent/40 bg-accent/[0.08] px-3 py-1 text-sm font-semibold text-accent-text">Actores IA que venden por ti</p>
+              <p className="inline-flex w-fit items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-1 text-[13px] font-medium tracking-tight text-ink"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-brand" />Actores IA que venden por ti</p>
               <h1 className="font-display text-[2.3rem] leading-[1.0] font-semibold sm:text-[3.1rem] lg:text-[3.7rem]">
                 El mismo anuncio,<span className="chroma block">con la cara que quieras.</span>
               </h1>
