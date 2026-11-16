@@ -81,11 +81,11 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
-                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(17, 17, 20,0.75)] md:order-none"
+                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--brand)_border-box] shadow-[0_40px_100px_-40px_rgba(17, 17, 20,0.75)] md:order-none"
                 : "border border-line bg-surface"}`}>
               {featured && (
                 <div className="flex items-center justify-center gap-2 bg-[image:var(--grad)] px-4 py-2 text-sm font-bold text-white">
-                  <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="m10 1.8 2.5 5.1 5.6.8-4 4 1 5.6L10 14.6l-5.1 2.7 1-5.6-4-4 5.6-.8L10 1.8Z" /></svg>
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 text-brand" fill="currentColor" aria-hidden="true"><path d="m10 1.8 2.5 5.1 5.6.8-4 4 1 5.6L10 14.6l-5.1 2.7 1-5.6-4-4 5.6-.8L10 1.8Z" /></svg>
                   {es ? "Plan estrella" : "Most popular"}
                 </div>
               )}
@@ -222,7 +222,7 @@ function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.Rea
     ? [[`${PRUEBA_DIAS} días`, "Gratis"], ["De regalo", "1 min de video"], [`Tras ${PRUEBA_DIAS} días · Plan ${plan.name}`, <>{money(plan.monthly)}/mes</>]]
     : [[`${PRUEBA_DIAS} days`, "Free"], ["Gift", "1 min of video"], [`After ${PRUEBA_DIAS} days · ${plan.name} plan`, <>{money(plan.monthly)}/mo</>]];
   return (
-    <div className="grid gap-4 rounded-3xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+    <div className="grid gap-4 rounded-3xl border-2 border-transparent p-5 [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--brand)_border-box] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
       <div className="flex min-w-0 flex-col gap-2">
         <b className="font-display text-xl font-semibold">{es ? `${PRUEBA_DIAS} días gratis` : `${PRUEBA_DIAS}-day free trial`}</b>
         <span className="text-sm text-muted">

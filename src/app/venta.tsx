@@ -216,7 +216,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             <ol className="grid gap-3 md:grid-cols-3">
               {PASOS.map((st, i) => (
                 <li key={st.title} className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-5">
-                  <b className="font-display text-3xl font-semibold text-transparent [-webkit-text-stroke:1px_var(--color-ink)]" aria-hidden="true">{i + 1}</b>
+                  <b className="font-display text-3xl font-semibold text-transparent [-webkit-text-stroke:1.5px_var(--color-brand)]" aria-hidden="true">{i + 1}</b>
                   <h3 className="text-lg leading-tight font-bold">{st.title}</h3>
                   <p className="text-sm text-muted">{st.text}</p>
                 </li>
