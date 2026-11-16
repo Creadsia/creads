@@ -591,7 +591,7 @@ export default function Editor({ id, inicial }: { id: string; inicial?: Datos })
 
   const exportBtn = (
     <button type="button" onClick={exportar} disabled={exp.busy}
-      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[image:var(--grad)] px-4 text-sm font-bold text-white shadow-[0_8px_24px_-10px_rgba(255,43,214,0.8)] transition-transform hover:-translate-y-px active:scale-[0.98] disabled:opacity-80 lg:h-10 lg:px-5">
+      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[image:var(--grad)] px-4 text-sm font-bold text-white shadow-[0_8px_24px_-10px_rgba(17, 17, 20,0.8)] transition-transform hover:-translate-y-px active:scale-[0.98] disabled:opacity-80 lg:h-10 lg:px-5">
       {exp.busy ? <Working since={exp.since} label="Exportando…" /> : <><Icon name="upload" className="h-4 w-4" />Exportar</>}
     </button>
   );

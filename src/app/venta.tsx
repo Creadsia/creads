@@ -130,7 +130,7 @@ function Check({ className = "text-good" }: { className?: string }) {
 
 function Cta({ children, href = START, sub }: { children: React.ReactNode; href?: string; sub?: React.ReactNode }) {
   return (
-    <a href={href} className="flex w-full flex-col items-center rounded-xl bg-[image:var(--grad)] px-6 py-3 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px sm:w-auto">
+    <a href={href} className="flex w-full flex-col items-center rounded-xl bg-[image:var(--grad)] px-6 py-3 text-center font-semibold text-white shadow-[0_12px_30px_-14px_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-px sm:w-auto">
       <span className="text-[17px]">{children}</span>
       {sub && <span className="text-xs font-normal text-white/85">{sub}</span>}
     </a>

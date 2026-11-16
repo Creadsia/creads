@@ -290,7 +290,7 @@ export default function Checkout({ item: first, period: firstPeriod, rate, renew
 
             <Garantia compact que="plan" />
             <button type="submit" disabled={Boolean(busy)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-3.5 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[image:var(--grad)] px-5 py-3.5 text-base font-bold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)] transition-transform hover:-translate-y-px disabled:opacity-70">
               {busy === "cuenta" ? "Creando tu cuenta…" : busy === "pago" ? "Abriendo Mercado Pago…" : trial ? <><span className="sm:hidden">Empezar {dias} días gratis</span><span className="hidden sm:inline">Crear cuenta y empezar {dias} días gratis</span></> : <>Crear cuenta y pagar {usd(q.total)}</>}
             </button>
             <p className="text-center text-xs font-semibold text-good">{GARANTIA.boton}</p>

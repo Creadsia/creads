@@ -51,7 +51,7 @@ export default function MasterclassForm() {
           <input name="whatsapp" type="tel" required autoComplete="tel" inputMode="tel" placeholder="+56 9 1234 5678" className={field} />
         </label>
       </div>
-      <button type="submit" disabled={state === "sending"} className="rounded-xl bg-[image:var(--grad)] px-5 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] disabled:opacity-60">
+      <button type="submit" disabled={state === "sending"} className="rounded-xl bg-[image:var(--grad)] px-5 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)] disabled:opacity-60">
         {state === "sending" ? "Guardando…" : "Quiero la masterclass gratis"}
       </button>
       {state === "error" && <p role="alert" className="text-sm text-bad">{err}</p>}

@@ -199,7 +199,7 @@ export function Segmented<T extends string | number>({ value, options, onChange,
         const on = o.v === value;
         return (
           <button key={String(o.v)} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.v)}
-            className={`min-h-9 flex-1 rounded-lg px-2 text-[13px] font-semibold transition-colors ${on ? "bg-[image:var(--grad)] text-white shadow-[0_4px_14px_-6px_rgba(255,43,214,.9)]" : "text-muted hover:text-ink"}`}>
+            className={`min-h-9 flex-1 rounded-lg px-2 text-[13px] font-semibold transition-colors ${on ? "bg-[image:var(--grad)] text-white shadow-[0_4px_14px_-6px_rgba(17, 17, 20,.9)]" : "text-muted hover:text-ink"}`}>
             {o.label}
           </button>
         );

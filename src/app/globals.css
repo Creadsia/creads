@@ -125,11 +125,9 @@ h3 {
   font-weight: 600;
 }
 
-/* The brand moment: type split into magenta and cyan channels, like a signal on a scope. */
+/* Rebrand "Apple": the headline is flat ink now — no colour split, no shadow. */
 .chroma {
-  text-shadow:
-    -0.045em 0 0 color-mix(in srgb, var(--chroma-a) 85%, transparent),
-    0.045em 0 0 color-mix(in srgb, var(--chroma-b) 85%, transparent);
+  /* intentionally flat; kept as a hook in case a subtle accent returns later */
 }
 
 /* Vertical marquee for the hero wall. */
@@ -227,7 +225,7 @@ h3 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 28px rgba(255, 43, 214, 0.45));
+  filter: drop-shadow(0 0 28px rgba(17, 17, 20, 0.45));
 }
 @keyframes creads-spot { from { opacity: 0; transform: scale(0.94); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
 .spot-in { animation: creads-spot 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }

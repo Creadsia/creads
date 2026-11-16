@@ -112,7 +112,7 @@ export default function CreditsPopup() {
 
         <div className="relative flex flex-col gap-4 px-5 pt-4 pb-2 sm:px-6 sm:pt-6">
           <div className="flex items-start justify-between gap-3">
-            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(255,43,214,0.8)]" aria-hidden="true">⚡</span>
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(17, 17, 20,0.8)]" aria-hidden="true">⚡</span>
             <button ref={closeBtn} type="button" onClick={close} aria-label="Cerrar" className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink">✕</button>
           </div>
           <div className="flex flex-col gap-1.5">

@@ -61,7 +61,7 @@ export default function TrialPopup() {
         <span aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-48 w-72 -translate-x-1/2 rounded-full opacity-50 blur-[70px]" style={{ background: "var(--grad)" }} />
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--grad)" }} />
         <div className="relative flex flex-col gap-4 px-5 pt-6 pb-3 sm:px-6">
-          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(255,43,214,0.8)]" aria-hidden="true">🎁</span>
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[image:var(--grad)] text-2xl shadow-[0_12px_30px_-10px_rgba(17, 17, 20,0.8)]" aria-hidden="true">🎁</span>
           <div className="flex flex-col gap-1.5">
             <h2 id="trial-t" className="font-display text-2xl leading-tight font-semibold">Último paso: activa tu prueba gratis de {dias} días</h2>
             <p className="text-[15px] leading-snug text-muted">Agrega tu tarjeta y entras al tiro con <b className="text-ink">{info.regalo ?? 200} créditos de regalo</b> para tus primeros anuncios. Hoy no se cobra nada.</p>
@@ -73,7 +73,7 @@ export default function TrialPopup() {
             <li className="text-muted">{info.credits ? `${info.credits} créditos cada mes. ` : ""}{info.clp ? `Mercado Pago lo cobra en pesos: $${info.clp.toLocaleString("es-CL")} al mes. ` : ""}Cancelas cuando quieras en Planes, antes del cobro, con un clic.</li>
           </ul>
           <TarjetaMP monto={info.clp ?? 1} onListo={() => { window.location.href = "/app/automatico?bienvenida=1"; }} fallback={
-            <button type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)] disabled:opacity-60">
+            <button type="button" onClick={agregar} disabled={busy} className="w-full rounded-xl bg-[image:var(--grad)] px-4 py-3.5 text-base font-bold text-white shadow-[0_14px_36px_-12px_rgba(17, 17, 20,0.75)] disabled:opacity-60">
               {busy ? "Abriendo Mercado Pago…" : "Agregar tarjeta · hoy $0"}
             </button>
           } />

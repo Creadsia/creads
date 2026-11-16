@@ -85,7 +85,7 @@ export default function RecreateDemos({ t, media }: { t: Content["recreate"]; me
               <Tag>{t.before}</Tag>
               {stage.seen && <Clip src={d.before} label={t.before} playKey={tab.k} />}
             </figure>
-            <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl ring-2 ring-[color:var(--accent)] shadow-[0_24px_60px_-24px_rgba(255,43,214,0.6)]">
+            <figure className="relative aspect-[9/16] overflow-hidden rounded-2xl ring-2 ring-[color:var(--accent)] shadow-[0_24px_60px_-24px_rgba(17, 17, 20,0.6)]">
               <Tag strong>{t.after}</Tag>
               {stage.seen && <Clip src={d.after} label={t.after} playKey={tab.k} />}
             </figure>

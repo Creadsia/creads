@@ -284,7 +284,7 @@ export function Flow({ t, ctaHref }: { t: Content["flow"]; ctaHref: string }) {
         ))}
       </ol>
       <div className="flex flex-wrap items-center gap-4">
-        <a href={ctaHref} className="rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">{t.cta}</a>
+        <a href={ctaHref} className="rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)] transition-transform hover:-translate-y-px">{t.cta}</a>
         <span className="text-sm text-muted">{t.note}</span>
       </div>
     </div>
@@ -769,7 +769,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
               </h1>
               <p className="max-w-[54ch] text-lg text-muted">{t.hero.lead}</p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-                <a href="#pricing" className="flex shrink-0 flex-col items-center whitespace-nowrap rounded-xl bg-[image:var(--grad)] px-6 py-3.5 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">
+                <a href="#pricing" className="flex shrink-0 flex-col items-center whitespace-nowrap rounded-xl bg-[image:var(--grad)] px-6 py-3.5 text-center font-semibold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)] transition-transform hover:-translate-y-px">
                   <span className="text-[17px]">{t.hero.cta}</span>
                   <span className="text-xs font-normal text-white/85">{t.hero.from} {fromPrice(t.lang, rate)} {t.hero.firstMonth}</span>
                 </a>
@@ -1063,7 +1063,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
 
             {/* Example of the affiliate panel, over two clips from the wall */}
             <div className="relative mx-auto w-full max-w-[520px] min-w-0" aria-label={t.affiliates.example}>
-              <div className="relative rounded-3xl border border-line bg-surface/90 p-5 shadow-[0_40px_120px_-40px_rgba(255,43,214,0.45)] backdrop-blur sm:p-6">
+              <div className="relative rounded-3xl border border-line bg-surface/90 p-5 shadow-[0_40px_120px_-40px_rgba(17, 17, 20,0.45)] backdrop-blur sm:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-semibold"><Mark size={18} /> {t.affiliates.panel}</span>
                   <span className="rounded-md bg-surface-2 px-2 py-1 text-[13px] text-muted">{t.affiliates.example}</span>
@@ -1122,7 +1122,7 @@ export default function Landing({ t, rate = 950, renews = true }: { t: Content; 
             <h2 className="relative max-w-3xl text-[2.2rem] font-black [font-stretch:118%] sm:text-6xl">{t.start.title}</h2>
             <p className="relative max-w-[52ch] text-lg text-muted"><MoneyText text={t.start.lead} /></p>
             <div className="relative flex flex-col items-center gap-3 sm:flex-row">
-              <a href="/empezar?plan=starter&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)]">
+              <a href="/empezar?plan=starter&periodo=mensual" className="rounded-xl bg-[image:var(--grad)] px-7 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)]">
                 {t.start.cta}
               </a>
               <a href="#pricing" className="rounded-xl border border-line px-6 py-3.5 font-semibold hover:bg-surface-2">{t.start.see}</a>
