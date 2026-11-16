@@ -193,7 +193,7 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 <a href="#ejemplos" className="rounded-xl border border-line bg-surface/60 px-5 py-3 text-center font-semibold backdrop-blur hover:bg-surface">Ver ejemplos</a>
               </div>
               <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-sm text-muted lg:justify-start">
-                {["Hasta 200 anuncios al mes", "Con tu logo y tu marca", "7 días gratis"].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
+                {["Hasta 200 anuncios al mes", "Con tu logo y tu marca", `${PRUEBA_DIAS} días gratis`].map((x) => <li key={x} className="flex items-center gap-1.5"><Check />{x}</li>)}
               </ul>
             </div>
             <div className="relative flex min-w-0 items-center justify-center lg:justify-end">

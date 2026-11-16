@@ -421,7 +421,7 @@ export type ActivationStep = 1 | 3 | 7;
 
 /** Tips in the first week, so new customers get to their first ad (and keep making them). */
 export function activationEmail(to: string, name: string | null, o: { step: ActivationStep; hasPlan: boolean; ads: number; unsub: string }): Email {
-  const plan = o.hasPlan ? "" : " Tienes 7 días gratis con 1 minuto de video gratis al agregar tu tarjeta; después, los planes parten en US$25 al mes.";
+  const plan = o.hasPlan ? "" : ` Tienes ${PRUEBA_DIAS} días gratis con 1 minuto de video gratis al agregar tu tarjeta; después, los planes parten en US$25 al mes.`;
   const variants: Record<ActivationStep, { subject: string; title: string; paragraphs: string[]; cta: { label: string; href: string } }> = {
     1: {
       subject: "Tu primer anuncio en 10 minutos",
