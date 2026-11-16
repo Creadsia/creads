@@ -309,6 +309,22 @@ export const TOOLS: Tool[] = [
       return { text: d.anuncios.slice(0, 20).map((x) => `• ${x.titulo} (${x.id}): ${x.estado}${x.video_url ? ` · ${x.video_url}` : ""}`).join("\n"), data: { anuncios: d.anuncios } };
     },
   },
+  {
+    name: "creads_publicar_reel", title: "Publicar un Reel en Instagram",
+    description: "Publishes a video as an Instagram Reel on the brand's own connected Instagram account. Only the account OWNER can use it. Give the video as a public https URL that Instagram can download, or as a Creads media link of this account (https://www.creadsia.com/api/media/…), plus the caption (used exactly as given). It takes about a minute while Instagram processes the video. Confirm with the user before publishing: it posts publicly.",
+    inputSchema: { type: "object", properties: {
+      video: { type: "string", minLength: 8, maxLength: 1000, description: "The video to publish: a public https URL Instagram can download, or a Creads media link of this account." },
+      caption: { type: "string", maxLength: 2200, description: "The Reel caption (text + hashtags), used exactly as given. The first line is the hook; don't change it." },
+      cuenta: { type: "string", maxLength: 100, description: "Optional: which connected Instagram account (its name or its ig user id). Default: the brand's first account." },
+    }, required: ["video"], additionalProperties: false },
+    annotations: { title: "Publicar un Reel en Instagram", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    run: async (a, call) => {
+      const r = await call<{ ok?: boolean; mediaId?: string | null; ensayo?: boolean; error?: string }>("/api/publicar-reel", { video: str(a.video, 1000), caption: str(a.caption, 2200), cuenta: str(a.cuenta, 100) });
+      if (r.ok === false || r.error) return { text: `No se pudo publicar: ${r.error ?? "error desconocido"}`, data: { ok: false } };
+      if (r.ensayo) return { text: "Guardado en modo ensayo: Instagram no está conectado en Marketing → Conexiones con Meta. Conéctalo para publicar de verdad.", data: { ensayo: true } };
+      return { text: `Publicado en Instagram ✓ (id ${r.mediaId}).`, data: { mediaId: r.mediaId ?? null } };
+    },
+  },
 ];
 
 const ok = (id: unknown, result: Json) => ({ jsonrpc: "2.0", id, result });
