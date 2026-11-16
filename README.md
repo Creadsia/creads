@@ -14,3 +14,5 @@ Abre http://localhost:3000. Para que la lista de espera guarde correos, copia `.
 
 ## Revisar servicios conectados
 `/api/health` muestra qué servicios tienen su clave configurada (nunca muestra las claves).
+
+<!-- Prueba de flujo de desarrollo (rama prueba-dev-creads). Se puede borrar. -->
