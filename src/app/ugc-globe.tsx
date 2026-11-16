@@ -1,22 +1,35 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // The hero visual: a 3D globe of UGC faces wired together like a neural net (owner, 16 Nov 2026).
-// Replaces the single big phone. Decorative (aria-hidden); the headline carries the meaning.
-// Auto-rotates, drag to spin (desktop), gentle mouse parallax, depth blur, pauses off-screen and on reduced-motion.
+// A handful of front clips actually play (muted, looping); the rest are posters, so it feels alive but stays light.
+// Decorative (aria-hidden). Auto-rotates, drag to spin, mouse parallax, depth blur, pauses off-screen / reduced-motion.
 
-const UGC = [
+const POSTERS = [
   "ugc-skincare", "ugc-fitness", "ugc-cafeteria", "ugc-automotora", "ugc-gym", "ugc-peluqueria",
   "ugc-mediabuyer", "ugc-tienda", "ugc-proteina", "ugc-depto", "ugc-vsl-colageno",
   "cafeteria", "gym", "dentista", "bano", "creads",
-].map((n) => `/demos/${n}.jpg`);
+];
 const N = 34;
+// Light clips that actually play, spread around the sphere. Kept small for fast load.
+const PLAY: { slot: number; name: string }[] = [
+  { slot: 1, name: "creads" }, { slot: 4, name: "ugc-proteina" }, { slot: 7, name: "dentista" },
+  { slot: 10, name: "cafeteria" }, { slot: 13, name: "ugc-depto" }, { slot: 17, name: "ugc-peluqueria" },
+  { slot: 20, name: "gym" }, { slot: 23, name: "bano" }, { slot: 27, name: "ugc-fitness" },
+  { slot: 30, name: "ugc-tienda" },
+];
 
 export default function UgcGlobe() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tileRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [videoCount, setVideoCount] = useState(0);
+
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setVideoCount(reduce ? 0 : window.innerWidth < 760 ? 3 : PLAY.length);
+  }, []);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -96,8 +109,12 @@ export default function UgcGlobe() {
       raf = requestAnimationFrame(loop);
     };
 
+    const setVideos = (on: boolean) => {
+      wrap.querySelectorAll("video").forEach((v) => { if (on) v.play().catch(() => {}); else v.pause(); });
+    };
     const io = new IntersectionObserver((es) => {
       visible = es[0].isIntersecting;
+      setVideos(visible);
       if (visible && !raf) loop();
     }, { rootMargin: "120px" });
     io.observe(wrap);
@@ -137,6 +154,11 @@ export default function UgcGlobe() {
     };
   }, []);
 
+  const playFor = (k: number) => {
+    const idx = PLAY.findIndex((p) => p.slot === k);
+    return idx !== -1 && idx < videoCount ? PLAY[idx] : null;
+  };
+
   return (
     <div
       ref={wrapRef}
@@ -146,16 +168,23 @@ export default function UgcGlobe() {
     >
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />
       <div className="absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
-        {Array.from({ length: N }).map((_, k) => (
-          <div
-            key={k}
-            ref={(el) => { tileRefs.current[k] = el; }}
-            className="absolute left-1/2 top-1/2 -ml-[29px] -mt-[42px] h-[84px] w-[58px] overflow-hidden rounded-xl border-[1.5px] border-white/90 bg-[#e6e2dc] shadow-[0_10px_24px_-12px_rgba(20,18,16,0.45)] will-change-transform"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- static local poster */}
-            <img src={UGC[k % UGC.length]} alt="" className="h-full w-full object-cover" draggable={false} />
-          </div>
-        ))}
+        {Array.from({ length: N }).map((_, k) => {
+          const vid = playFor(k);
+          return (
+            <div
+              key={k}
+              ref={(el) => { tileRefs.current[k] = el; }}
+              className="absolute left-1/2 top-1/2 -ml-[29px] -mt-[42px] h-[84px] w-[58px] overflow-hidden rounded-xl border-[1.5px] border-white/90 bg-[#e6e2dc] shadow-[0_10px_24px_-12px_rgba(20,18,16,0.45)] will-change-transform"
+            >
+              {vid ? (
+                <video src={`/demos/${vid.name}.mp4`} poster={`/globo/${vid.name}.webp`} muted loop autoPlay playsInline preload="auto" className="h-full w-full object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- static local poster
+                <img src={`/globo/${POSTERS[k % POSTERS.length]}.webp`} alt="" className="h-full w-full object-cover" decoding="async" draggable={false} />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
