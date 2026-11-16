@@ -10,7 +10,7 @@ import ThemeToggle from "./theme-toggle";
 import FunnelNudges from "./funnel-nudges";
 import WhatsAppButton from "./whatsapp";
 import DemoPhone from "./demo-phone";
-import ActorStage from "./actor-stage";
+import UgcGlobe from "./ugc-globe";
 import { Money, MoneyText } from "./money";
 import Ejemplos from "./ejemplos";
 import { GARANTIA } from "@/lib/garantia-textos";
@@ -198,9 +198,9 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             </div>
             <div className="relative flex min-w-0 items-center justify-center lg:justify-end">
               <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[image:var(--grad)] opacity-25 blur-[100px]" />
-              <div className="relative">
-                <ActorStage clips={CARAS.slice(0, 6)} />
-                <p className="mt-3 text-center text-xs text-muted">Toca una cara para cambiar el actor. Todos creados con IA.</p>
+              <div className="relative w-full">
+                <UgcGlobe />
+                <p className="mt-2 text-center text-xs text-muted">Cientos de caras IA, conectadas. Elige la tuya.</p>
               </div>
             </div>
           </div>
