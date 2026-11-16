@@ -9,52 +9,35 @@
 :root {
   /* Creads IA — "signal" look: black-and-paper base, a magenta/cyan chroma split reserved for brand moments,
      and one working accent (cyan) for actions. Light values here, dark values below. */
-  --bg: #f4f5f7;
+  /* Rebrand "Apple" (16 Nov 2026): sober black-and-paper, no neon. One ink accent. */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #eceef2;
-  --ink: #0a0b0d;
-  --muted: #5a606b;
-  --line: #dadde3;
-  --accent: #0a0b0d;
+  --surface-2: #f5f5f7;
+  --ink: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #d2d2d7;
+  --accent: #1d1d1f;
   --accent-ink: #ffffff;
-  --accent-text: #00809c;
+  --accent-text: #1d1d1f;
   --caption: #ffe100;
-  --good: #14804a;
+  --good: #1a7a46;
   --bad: #c2362c;
   --warn: #a96500;
-  --chroma-a: #ff2bd6; /* magenta channel */
-  --chroma-b: #19e3ff; /* cyan channel */
-  --grad: linear-gradient(100deg, #ff2bd6 0%, #8a5cff 48%, #19e3ff 100%);
+  --chroma-a: #1d1d1f; /* de-neoned: neutral ink */
+  --chroma-b: #6e6e73; /* de-neoned: neutral grey */
+  --grad: linear-gradient(100deg, #1d1d1f 0%, #3a3a3c 100%);
   --rec: #ff3b30;
   /* charts (Panel → Estadísticas): validated categorical steps, light / dark */
   --viz-1: #00809c;
   --viz-2: #7c5ce0;
   --viz-3: #c9407f;
-  --font-display: "Unbounded Variable", "Arial Black", system-ui, sans-serif;
+  --font-display: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #000000;
-    --surface: #0d0e11;
-    --surface-2: #17191e;
-    --ink: #f3f4f6;
-    --muted: #8b919c;
-    --line: #23262d;
-    --accent: #f3f4f6;
-    --accent-ink: #000000;
-    --accent-text: #5ce9ff;
-    --good: #4fd18b;
-    --bad: #ff7a70;
-    --warn: #f0b35a;
-    --viz-1: #1aa3c0;
-    --viz-2: #8b6cf0;
-    --viz-3: #e0559c;
-    color-scheme: dark;
-  }
-}
+/* Rebrand "Apple": claro para TODOS por defecto. Ya no se oscurece automáticamente con el
+   modo oscuro del sistema; el modo oscuro solo aplica si el visitante lo elige (data-theme="dark"). */
 
 :root[data-theme="dark"] {
   --viz-1: #1aa3c0;
@@ -75,20 +58,10 @@
   color-scheme: dark;
 }
 
-/* The hero "stage": always dark, whatever the page theme, so the generated clips glow. */
+/* The hero "stage": light "Apple" paper (rebrand 16 Nov 2026). The generated clips carry the colour now. */
 .stage {
-  --bg: #000000;
-  --surface: #0d0e11;
-  --surface-2: #17191e;
-  --ink: #f3f4f6;
-  --muted: #9aa0ab;
-  --line: #262931;
-  --accent: #f3f4f6;
-  --accent-ink: #000000;
-  --accent-text: #5ce9ff;
-  color-scheme: dark;
-  background: #000;
-  color: #f3f4f6;
+  background: var(--bg);
+  color: var(--ink);
 }
 
 /* The video editor is always light, VEED-style, whatever the app theme (owner, 10 nov 2026: «que se vea igual a VEED»). */
