@@ -108,7 +108,7 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
           {/* 3. the finished ad */}
           <div className="flex flex-col items-center gap-2.5">
             <span className="self-start text-sm font-semibold text-muted">{t.outLabel}</span>
-            <figure className="relative aspect-[9/16] w-[min(58vw,190px)] overflow-hidden rounded-[1.6rem] border-[5px] border-[#1c1e24] bg-surface-2 shadow-[0_40px_100px_-30px_rgba(255,43,214,0.55)]">
+            <figure className="relative aspect-[9/16] w-[min(58vw,190px)] overflow-hidden rounded-[1.6rem] border-[5px] border-[#1c1e24] bg-surface-2 shadow-[0_40px_100px_-30px_rgba(17, 17, 20,0.55)]">
               {m.video
                 ? <LoopVideo key={n.k} src={m.video} poster={m.still ? posterOf(m.still) : undefined} className="absolute inset-0 h-full w-full object-cover" />
                 : (
@@ -130,7 +130,7 @@ export default function Outcome({ t, media, ctaHref }: { t: Content["outcome"]; 
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <a href={ctaHref} className="rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,43,214,0.7)] transition-transform hover:-translate-y-px">{t.cta}</a>
+          <a href={ctaHref} className="rounded-xl bg-[image:var(--grad)] px-6 py-3.5 font-semibold text-white shadow-[0_12px_32px_-12px_rgba(17, 17, 20,0.7)] transition-transform hover:-translate-y-px">{t.cta}</a>
           <span className="text-sm text-muted">{t.note}</span>
         </div>
       </div>

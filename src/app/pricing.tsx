@@ -81,7 +81,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
           return (
             <article key={p.id}
               className={`relative flex flex-col overflow-hidden rounded-3xl ${featured
-                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(224,108,200,0.75)] md:order-none"
+                ? "order-first border-2 border-transparent [background:linear-gradient(var(--surface),var(--surface))_padding-box,var(--grad)_border-box] shadow-[0_40px_100px_-40px_rgba(17, 17, 20,0.75)] md:order-none"
                 : "border border-line bg-surface"}`}>
               {featured && (
                 <div className="flex items-center justify-center gap-2 bg-[image:var(--grad)] px-4 py-2 text-sm font-bold text-white">
@@ -133,7 +133,7 @@ export default function Pricing({ t, lang, rate = 950, renews = true, compact = 
                 </div>
                 <div className="flex flex-col gap-2">
                   <a href={startHref(p.id, yearly)}
-                    className={`rounded-xl px-5 py-3 text-center text-base font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]" : "bg-ink text-bg"}`}>
+                    className={`rounded-xl px-5 py-3 text-center text-base font-semibold transition-transform hover:-translate-y-px ${featured ? "bg-[image:var(--grad)] text-white shadow-[0_14px_36px_-12px_rgba(17, 17, 20,0.75)]" : "bg-ink text-bg"}`}>
                     {t.cta} {p.name}
                   </a>
                   <p className="text-center text-xs text-muted">{(es ? GARANTIA : GARANTIA_EN).boton}</p>
@@ -240,7 +240,7 @@ function PruebaBox({ es, money }: { es: boolean; money: (n: number) => React.Rea
         </dl>
       </div>
       <div className="flex flex-col items-stretch gap-1.5 sm:items-center">
-        <a href="/registro" className="rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold whitespace-nowrap text-white shadow-[0_14px_36px_-12px_rgba(255,43,214,0.75)]">{es ? `Probar ${PRUEBA_DIAS} días gratis` : `Try ${PRUEBA_DIAS} days free`}</a>
+        <a href="/registro" className="rounded-xl bg-[image:var(--grad)] px-5 py-3 text-center font-semibold whitespace-nowrap text-white shadow-[0_14px_36px_-12px_rgba(17, 17, 20,0.75)]">{es ? `Probar ${PRUEBA_DIAS} días gratis` : `Try ${PRUEBA_DIAS} days free`}</a>
         <span className="text-center text-xs text-muted">{es ? "Cancelas cuando quieras" : "Cancel anytime"}</span>
       </div>
     </div>

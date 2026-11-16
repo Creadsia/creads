@@ -242,7 +242,7 @@ function UpgradeButton() {
   const { info } = useCredits();
   if (!info || info.unlimited || info.owner || (info.paidUntil && !info.expired)) return null;
   return (
-    <button type="button" onClick={openUpgrade} className="whitespace-nowrap rounded-full bg-[image:var(--grad)] px-3 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(255,43,214,0.8)] active:scale-[0.98]">
+    <button type="button" onClick={openUpgrade} className="whitespace-nowrap rounded-full bg-[image:var(--grad)] px-3 py-1.5 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(17, 17, 20,0.8)] active:scale-[0.98]">
       Mejorar
     </button>
   );
