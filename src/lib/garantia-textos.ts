@@ -1,13 +1,15 @@
 // The guarantee, word for word (owner's plan, 25 Oct 2026): the same text on the cards, checkout, FAQ and
 // Terms. Browser-safe. No amounts (owner, 25 Oct 2026: «te devolvemos tu pago», never a figure in pesos).
 
+import { PRUEBA_DIAS } from "./oferta";
+
 export const GARANTIA_DIAS = 7;
 /** Share of the balance a customer may have used and still get the plan's first payment back. */
 export const GARANTIA_USO_MAX = 0.2;
 
 export const GARANTIA = {
   /** The 7-day free trial with card (since 26 Oct 2026): nothing is charged if cancelled before the first charge. */
-  prueba: `Prueba gratis de ${GARANTIA_DIAS} días: si no te sirve, cancelas con un clic y no pagas nada.`,
+  prueba: `Prueba gratis de ${PRUEBA_DIAS} días: si no te sirve, cancelas con un clic y no pagas nada.`,
   /** The Pack Prueba (only while it's on sale, MODO_PACK=1). */
   pack: `Garantía de tus primeros anuncios: si no te sirven para publicar, escríbenos dentro de ${GARANTIA_DIAS} días y te devolvemos tu pago.`,
   planes: `${GARANTIA_DIAS} días de garantía: si los anuncios no te sirven, te devolvemos el 100% de tu primer pago, aunque hayas usado hasta el ${Math.round(GARANTIA_USO_MAX * 100)}% de tu saldo.`,

@@ -7,10 +7,11 @@ import { tarjetaObligatoria } from "@/lib/regalo";
 import { resumenPrueba } from "@/lib/prueba";
 import { cookies } from "next/headers";
 import { COOKIE_REF, normCode } from "@/lib/afiliados-calc";
+import { PRUEBA_DIAS } from "@/lib/oferta";
 
 export const metadata: Metadata = {
-  title: "Prueba Creads IA 7 días gratis",
-  description: "Prueba Creads 7 días gratis con 1 minuto de video gratis para tus primeros anuncios. Cancelas cuando quieras.",
+  title: `Prueba Creads IA ${PRUEBA_DIAS} días gratis`,
+  description: `Prueba Creads ${PRUEBA_DIAS} días gratis con 1 minuto de video gratis para tus primeros anuncios. Cancelas cuando quieras.`,
   alternates: { canonical: "/registro" },
 };
 export const dynamic = "force-dynamic";

@@ -94,7 +94,7 @@ export default function ResumenGeneral() {
           <Grupo titulo="Ahora mismo">
             <Big label="Suscriptores activos" value={activas == null ? "—" : String(activas)} hint="Clientes con plan vigente hoy" tone={activas ? "good" : undefined} />
             <Big label="Plata al mes (MRR)" value={mrr == null ? "—" : usd(mrr)} hint="Lo que entra cada mes si nadie cancela" />
-            <Big label="Pruebas en curso" value={cobro?.en_curso == null ? "—" : String(cobro.en_curso)} hint="Dejaron tarjeta, aún en los 7 días gratis" />
+            <Big label="Pruebas en curso" value={cobro?.en_curso == null ? "—" : String(cobro.en_curso)} hint="Dejaron tarjeta, aún en los días gratis" />
             <Big label="Valor de un cliente (LTV)" value={ltv == null ? "—" : usd(ltv)} hint="Lo que deja en promedio mientras se queda" />
           </Grupo>
 
