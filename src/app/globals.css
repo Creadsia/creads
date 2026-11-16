@@ -9,23 +9,24 @@
 :root {
   /* Creads IA — "signal" look: black-and-paper base, a magenta/cyan chroma split reserved for brand moments,
      and one working accent (cyan) for actions. Light values here, dark values below. */
-  /* Rebrand "Apple" (16 Nov 2026): sober black-and-paper, no neon. One ink accent. */
+  /* Rebrand "Apple + cálido" (16 Nov 2026): papel cálido, negro suave, acento naranjo sutil en detalles. */
   --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f5f5f7;
-  --ink: #1d1d1f;
-  --muted: #6e6e73;
-  --line: #d2d2d7;
-  --accent: #1d1d1f;
+  --surface-2: #f7f5f2;
+  --ink: #1d1b19;
+  --muted: #6b665f;
+  --line: #e8e4de;
+  --accent: #1d1b19;
   --accent-ink: #ffffff;
-  --accent-text: #1d1d1f;
+  --accent-text: #e8591f;
+  --brand: #e8591f;
   --caption: #ffe100;
   --good: #1a7a46;
   --bad: #c2362c;
   --warn: #a96500;
   --chroma-a: #1d1d1f; /* de-neoned: neutral ink */
   --chroma-b: #6e6e73; /* de-neoned: neutral grey */
-  --grad: linear-gradient(100deg, #1d1d1f 0%, #3a3a3c 100%);
+  --grad: linear-gradient(100deg, #1d1b19 0%, #39352f 100%);
   --rec: #ff3b30;
   /* charts (Panel → Estadísticas): validated categorical steps, light / dark */
   --viz-1: #00809c;
@@ -92,6 +93,7 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-text: var(--accent-text);
+  --color-brand: var(--brand);
   --color-caption: var(--caption);
   --color-rec: var(--rec);
   --color-good: var(--good);

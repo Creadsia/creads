@@ -29,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {/* Apply the saved light/dark choice and the visitor's money (pesos in Chile) before the first paint. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("creads-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}try{if(/(?:^|; )creads_pais=CL(?:;|$)/.test(document.cookie))document.documentElement.setAttribute("data-cl","")}catch(e){}`,
+            __html: `document.documentElement.dataset.theme="light";try{if(/(?:^|; )creads_pais=CL(?:;|$)/.test(document.cookie))document.documentElement.setAttribute("data-cl","")}catch(e){}`,
           }}
         />
       </head>
