@@ -32,8 +32,6 @@ test("readOrder: es-CL, es (español neutro) and en; other Spanish locales are n
   assert.equal(sttLang("es-CL"), "es");
   assert.equal(sttLang("en"), "en");
   assert.equal(sttLang(undefined), "en");
-  const es = readOrder({ guion: G, idioma: "es", dramatizacion: true }) as { aviso?: string };
-  assert.equal(es.aviso, "Dramatización · actor IA");
 });
 
 test("readOrder: the product photo is a media link of the account (absolute links are trimmed), anything else is refused", () => {

@@ -25,7 +25,7 @@ const POINTS = [
   ["Revisado antes de entregar", "Creads escucha cada palabra y mira cada escena. Si hay un error grave, lo rehace solo una vez antes de entregarte."],
   ["Varias marcas, un equipo", "Cada cliente en su espacio, con su equipo y sus avatares. Un solo saldo de créditos."],
   ["API y conector", "Pide anuncios desde tu propio sistema, o desde Claude o ChatGPT con el conector de Creads."],
-  ["Historias dramatizadas", "Formato testimonial con actor IA y la etiqueta «Dramatización · actor IA», para que tus campañas no tengan problemas con Meta."],
+  ["Historias con actor IA", "Formato testimonial con actores IA, listo para tus campañas y sin marcas de agua encima del video."],
 ] as const;
 
 export default function Agencias() {

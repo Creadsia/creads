@@ -126,7 +126,6 @@ export const TOOLS: Tool[] = [
       modelo: { type: "string", maxLength: 40, description: "Optional: video model id (e.g. kling-3.0, veo-3.1-fast, seedance-2.0). Empty = MiniMax H3 Max (the reliable default). Prefer creads_video_producto for product videos (older apps: «producto:<estilo>» here, with the photo link in indicaciones)." },
       velocidad: { type: "number", minimum: 1, maximum: 1.2, description: "Optional: a faster voice, 1.0 (normal) to 1.2 (the fastest). Use 1.15–1.2 when the user asks for a quick, energetic delivery or «1.2x»." },
       lugares: { type: "string", maxLength: 500, description: "Optional: the places the person moves through, in the story's order (e.g. «afuera de la casa mostrando la grieta; el sótano junto a la pared; la cocina con el notebook; el porche»). Same face and clothes in all. Empty = the whole ad in ONE place (the safest)." },
-      dramatizacion: { type: "boolean", default: false, description: "true = the ad shows a small label the whole time: «Dramatización · actor IA» («Dramatization · AI actor» in English). Use it whenever an AI person tells a first-person story or result that didn't happen to them (a testimonial-style script): it is then allowed and honest." },
     }, required: ["guion"], additionalProperties: false },
     annotations: { title: "Crear anuncio en video", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     run: async (a, call) => {
