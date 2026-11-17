@@ -1,4 +1,4 @@
-import { findImage, findVideo } from "./providers";
+import { etiquetaCliente, findImage, findVideo } from "./providers";
 import { fetchableUrl, ownsMedia, saveMedia } from "./media";
 import { explainFailure, serviceOfModel } from "./balances";
 import { type User, isOwner } from "./auth";
@@ -38,7 +38,7 @@ export async function empezarVideoProducto(user: User, o: { producto: string; es
   if (!img || !vid) throw new VideoError("El video de producto no está disponible en este momento. No se usó tu saldo.", 503);
 
   // 1 · the scene
-  const imgCharge = await payFor(user, img.usdPerImage, `Video de producto · escena · ${img.label}`, serviceOfModel(img.id));
+  const imgCharge = await payFor(user, img.usdPerImage, `Video de producto · escena · ${etiquetaCliente(img)}`, serviceOfModel(img.id));
   let escena: string;
   try {
     const { bytes, mime } = await img.generate({
@@ -53,7 +53,7 @@ export async function empezarVideoProducto(user: User, o: { producto: string; es
 
   // 2 · the animation
   const usd = +(vid.usdPerSecond * SECONDS).toFixed(2);
-  const charge = await payFor(user, usd, `Video de producto · ${vid.label}`, serviceOfModel(vid.id));
+  const charge = await payFor(user, usd, `Video de producto · ${etiquetaCliente(vid)}`, serviceOfModel(vid.id));
   try {
     const job = await vid.submit({ prompt: movimientoPrompt({ estilo }), seconds: SECONDS, aspect: "9:16", resolution: "1080p", withAudio: false, refs: [{ url: await fetchableUrl(escena, ws), role: "first_frame" }] });
     const v: VideoProducto = {

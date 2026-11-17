@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { fullSession } from "@/lib/access";
-import { findImage } from "@/lib/providers";
+import { etiquetaCliente, findImage } from "@/lib/providers";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const svc = serviceOfModel(provider.id);
   let ref = "";
   try {
-    ref = (await payFor(s.user, provider.usdPerImage, `Imagen · ${provider.label}`, svc)).ref;
+    ref = (await payFor(s.user, provider.usdPerImage, `Imagen · ${etiquetaCliente(provider)}`, svc)).ref;
     const open = await Promise.all(refs.map(async (r) => ({ ...r, url: await fetchableUrl(r.url, s.user.workspace) })));
     const { bytes, mime } = await provider.generate({ prompt, aspect, refs: open });
     const url = await saveMedia(s.user.workspace, "images", bytes, mime);

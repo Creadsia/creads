@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
-import { findVideo, frameImageProvider, talkingProvider } from "@/lib/providers";
+import { etiquetaCliente, findVideo, frameImageProvider, talkingProvider } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
       + (talking || actor ? line.length * 0.00022 : ownVoice ? (!story && st.lipsync === "pro" ? lipsyncProUsd(videoSecs, line) : lipsyncUsd(videoSecs, line)) : 0);
     // A free automatic redo uses the voucher the server-side review granted for this clip (if any).
     const freeRedoOf = b?.free === true && before === "done" ? String(ad.id) : undefined;
-    await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${provider.label}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
+    await payFor(s.user, estimate, `${story ? "Toma" : "Corte"} ${Number(clip.idx) + 1} · ${etiquetaCliente(provider)}`, serviceOfModel(provider.id), { ref: id, freeRedoOf });
     charged = true; // paid or free, a failure below gives it back (a free redo gets its voucher back)
 
     let refs: MediaRef[] = [];
