@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { tooMany } from "@/lib/rate";
-import { findImage, findVideo } from "@/lib/providers";
+import { etiquetaCliente, findImage, findVideo } from "@/lib/providers";
 import { fetchableUrl, ownsMedia, saveMedia } from "@/lib/media";
 import { explainFailure, serviceOfModel } from "@/lib/balances";
 import { isOwner } from "@/lib/auth";
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
   // 1 · the scene (the real product, no text)
   let escena = "";
-  const imgCharge = await payFor(s.user, img.usdPerImage, `Video de producto · escena · ${img.label}`, serviceOfModel(img.id)).catch((e) => e as Error);
+  const imgCharge = await payFor(s.user, img.usdPerImage, `Video de producto · escena · ${etiquetaCliente(img)}`, serviceOfModel(img.id)).catch((e) => e as Error);
   if (imgCharge instanceof Error) return NextResponse.json({ error: await failMessage(imgCharge, s.user, serviceOfModel(img.id)) }, { status: failStatus(imgCharge) });
   try {
     const m = await cargarMarca(ws);
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
 
   // 2 · the video
   const usd = +(vid.usdPerSecond * SECONDS).toFixed(2);
-  const charge = await payFor(s.user, usd, `Video de producto · ${vid.label}`, serviceOfModel(vid.id)).catch((e) => e as Error);
+  const charge = await payFor(s.user, usd, `Video de producto · ${etiquetaCliente(vid)}`, serviceOfModel(vid.id)).catch((e) => e as Error);
   if (charge instanceof Error) return NextResponse.json({ error: await failMessage(charge, s.user, serviceOfModel(vid.id)) }, { status: failStatus(charge) });
   try {
     const job = await vid.submit({ prompt: movimientoPrompt({ estilo }), seconds: SECONDS, aspect: "9:16", resolution: "1080p", withAudio: false, refs: [{ url: await fetchableUrl(escena, ws), role: "first_frame" }] });

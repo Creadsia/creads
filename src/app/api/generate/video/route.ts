@@ -3,7 +3,7 @@ import { billedSeconds } from "@/lib/historias";
 import { tooMany } from "@/lib/rate";
 import { createHash } from "node:crypto";
 import { fullSession } from "@/lib/access";
-import { findVideo } from "@/lib/providers";
+import { etiquetaCliente, findVideo } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, mediaRefOf, mediaSaved, ownsMedia, saveMedia } from "@/lib/media";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   }
   const id = String(row.id);
   try {
-    await payFor(s.user, usd, `Video · ${provider.label}`, svc, { ref: id });
+    await payFor(s.user, usd, `Video · ${etiquetaCliente(provider)}`, svc, { ref: id });
   } catch (err) {
     await db.remove("clips", id).catch(() => null);
     return NextResponse.json({ error: await failMessage(err, s.user, svc) }, { status: failStatus(err) });

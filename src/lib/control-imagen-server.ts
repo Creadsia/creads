@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { findImage, imageProviders, textAI } from "./providers";
+import { etiquetaCliente, findImage, imageProviders, textAI } from "./providers";
 import { parseJSON } from "./providers/claude";
 import type { MediaRef } from "./providers/types";
 import { fetchableUrl, saveMedia } from "./media";
@@ -141,7 +141,7 @@ export async function vistaPrevia(ctx: Ctx, previo: Trabajo | null, pedido: Pedi
     ? { ...previo, pedido, diseno, modeloBorrador: mb.id, modeloFinal }
     : { id: randomUUID(), ws: ctx.user.workspace, creado: new Date().toISOString(), pedido, diseno, modeloBorrador: mb.id, modeloFinal, etapa: "borrador", borradores: 0, autoTrabajo: 0, piezas: {}, historial: [] };
   const p = proveedor(mb.id);
-  const charge = await payFor(ctx.user, p.usdPerImage, `Imagen · vista previa (${p.label})`, serviceOfModel(p.id));
+  const charge = await payFor(ctx.user, p.usdPerImage, `Imagen · vista previa (${etiquetaCliente(p)})`, serviceOfModel(p.id));
   try {
     t.borradores++;
     const pieza = await producir(ctx, t, "borrador", { prompt: (a) => promptPieza({ ...pedido, arreglos: a }, FORMATO_BORRADOR, diseno.posicion), refs: productoRef(pedido), modelo: mb.id, nueva: true });
@@ -163,7 +163,7 @@ export async function aprobar(ctx: Ctx, t: Trabajo) {
   const cargos: { f: FormatoPieza; ref: string; credits: number }[] = [];
   try {
     for (const f of todo) {
-      const c = await payFor(ctx.user, p.usdPerImage, `Imagen final ${f} (${p.label})`, serviceOfModel(p.id));
+      const c = await payFor(ctx.user, p.usdPerImage, `Imagen final ${f} (${etiquetaCliente(p)})`, serviceOfModel(p.id));
       cargos.push({ f, ref: c.ref, credits: c.credits });
     }
   } catch (err) {
@@ -224,7 +224,7 @@ export async function editarImagen(ctx: Ctx, t: Trabajo, clave: ClavePieza, inst
   const previo = t.piezas[clave]!;
   const p = proveedor(previo.modelo);
   const f = clave === "borrador" ? FORMATO_BORRADOR : clave;
-  const charge = await payFor(ctx.user, p.usdPerImage, `Imagen · edición (${p.label})`, serviceOfModel(p.id));
+  const charge = await payFor(ctx.user, p.usdPerImage, `Imagen · edición (${etiquetaCliente(p)})`, serviceOfModel(p.id));
   try {
     const refs: MediaRef[] = [{ url: previo.limpia, role: "style" }, ...productoRef(t.pedido)];
     const pieza = await producir(ctx, t, clave, { prompt: () => promptEdicion(t.pedido, instruccionEn, f, t.diseno.posicion), refs, modelo: p.id, previo, nueva: false });
@@ -257,7 +257,7 @@ export async function rehacer(ctx: Ctx, t: Trabajo, clave: ClavePieza, motivo: M
   const prompt = (a: string[]) => (clave === "borrador" ? promptPieza({ ...t.pedido, arreglos: a }, FORMATO_BORRADOR, t.diseno.posicion) : promptFormato({ ...t.pedido, arreglos: a }, clave, t.diseno.posicion));
   const pieza = await producir(ctx, t, clave, { prompt, refs, modelo: previo.modelo, previo: { ...previo, rehechos: previo.rehechos + 1 }, nueva: false, arreglos: [fix] });
   t.piezas[clave] = pieza;
-  t.historial.push(nota(`Rehecho gratis ${clave}: ${m.label}`, 0, detalle));
+  t.historial.push(nota(`Rehecho gratis ${clave}: ${etiquetaCliente(m)}`, 0, detalle));
   await guardarTrabajo(t);
   return { trabajo: t, creditos: 0 };
 }

@@ -64,6 +64,11 @@ export const textAI: TextAI = claude;
 export const findVideo = (id: string) => videoProviders.find((p) => p.id === id);
 export const findImage = (id: string) => imageProviders.find((p) => p.id === id);
 
+/** Customer-facing name of a model for charges and messages: our own-GPU models (InfiniteTalk, Qwen, Wan)
+ *  show as «Creads IA» so the internal name never reaches the customer; public models keep their name
+ *  (owner, 17 Nov 2026: the customer sees «Creads IA», not «InfiniteTalk (GPU propia)»). */
+export const etiquetaCliente = (p: { id: string; label: string }) => (p.id.endsWith("-gpu") ? "Creads IA" : p.label);
+
 /** Which services have keys configured (for /api/health and the admin panel). */
 export function providerStatus() {
   return {
