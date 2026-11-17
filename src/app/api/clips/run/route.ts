@@ -3,7 +3,6 @@ import { tooMany } from "@/lib/rate";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { etiquetaCliente, findVideo, frameImageProvider, talkingProvider } from "@/lib/providers";
 import { PAUSED_TEXT, isPaused } from "@/lib/model-pause";
-import { nanoBananaPro } from "@/lib/providers/gemini";
 import type { AspectRatio, MediaRef } from "@/lib/providers/types";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { serviceOfModel } from "@/lib/balances";
@@ -177,7 +176,7 @@ export async function POST(req: Request) {
         aspect,
         refs: [...(person ? [{ url: person, role: "face" as const }] : []), ...(prod ? [{ url: prod, role: "product" as const }] : [])],
       };
-      const ff = await frameModel.generate(frameReq).catch((e) => (frameModel === nanoBananaPro ? Promise.reject(e) : nanoBananaPro.generate(frameReq)));
+      const ff = await frameModel.generate(frameReq);
       image = await saveMedia(ws, "frames", ff.bytes, ff.mime);
       // the first cut's frame is the others' reference: saved right away so they don't wait for the video job
       if (persona && Number(clip.idx) === 0) await db.update("clips", id, { image_url: image }).catch(() => {});

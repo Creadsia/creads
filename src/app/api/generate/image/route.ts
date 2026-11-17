@@ -33,8 +33,8 @@ export async function POST(req: Request) {
     : [];
   if (prompt.length < 10) return NextResponse.json({ error: "Describe la imagen con un poco más de detalle." }, { status: 400 });
 
-  // default: Nano Banana 2 (about half the cost of Pro, same family); Pro stays one click away
-  const provider = findImage(body?.model || "nano-banana-2") ?? findImage("nano-banana-pro");
+  // default: GPT Image 2.5 (owner, 17 Nov 2026: Nano Banana removed, GPT is the fixed image model)
+  const provider = findImage(body?.model || "gpt-image-2.5") ?? findImage("gpt-image-2.5");
   if (!provider) return NextResponse.json({ error: "Modelo desconocido." }, { status: 400 });
   if (!provider.configured()) return NextResponse.json({ error: isOwner(s.user) ? `El modelo de imagen «${provider.label}» no está configurado: falta su clave en Vercel.` : UNAVAILABLE_TEXT }, { status: 503 });
 
