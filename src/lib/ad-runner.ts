@@ -38,8 +38,6 @@ export interface AdJob {
   lugares?: string;
   /** Faster voice (1.0–1.2), when the customer asks for a quicker delivery. */
   velocidad?: number;
-  /** A label on screen for the whole ad («Dramatización · actor IA»): a first-person story told by an AI person. */
-  aviso?: string;
   /** The customer's corrections to the subtitles («CREATZIA.COM» → «creadsia.com»). */
   correcciones?: { de: string; a: string }[];
 }
@@ -48,7 +46,6 @@ export interface AdJob {
 export const montageBody = (j: AdJob, sello: boolean) => ({
   adId: j.adId, captions: j.subtitulos !== false, style: { ...DEFAULT_STYLE, sello, ...(j.look?.c1 ? { accent: j.look.c1 } : {}) }, pro: j.edicion !== "simple",
   ...(j.indicaciones ? { indicaciones: j.indicaciones } : {}), ...(j.look ? { look: j.look } : {}), ...(j.correcciones?.length ? { correcciones: j.correcciones } : {}),
-  ...(j.aviso ? { aviso: j.aviso } : {}),
 });
 export type Studio = <T>(path: string, body?: unknown, timeoutMs?: number) => Promise<T>;
 

@@ -4,7 +4,7 @@ import path from "node:path";
 import { SESSION_ENDED, session } from "@/lib/access";
 import { formatById } from "@/lib/formats";
 import { normalizeStyle } from "@/lib/caption-style";
-import { type BuildClip, applyFixes, avisoPass, build, captions, cleanFixes, ff, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
+import { type BuildClip, applyFixes, build, captions, cleanFixes, ff, respell, download, frameSize, probe, segLen, selfCheck, trimPoints, workdir } from "@/lib/montage";
 import { elevenlabs } from "@/lib/providers/elevenlabs";
 import { fetchableUrl, saveMedia } from "@/lib/media";
 import { publicError } from "@/lib/public-error";
@@ -45,9 +45,8 @@ export async function POST(req: Request) {
     const clips = (await db.list("clips", `ad_id=eq.${adId}&order=idx.asc`)) as unknown as ClipRow[];
     if (!clips.length || clips.some((c) => c.status !== "done" || !c.url)) return NextResponse.json({ error: "Espera a que todos los cortes estén listos." }, { status: 400 });
     // no forced «Hecho con Creads IA» mark (owner, 24 Oct 2026: the customer takes their finished video, clean)
-    const settings = (ad.settings ?? {}) as { lang?: string; review?: { clipId: string; url?: string; words: Word[] }[]; aviso?: string };
-    // the «Dramatización · actor IA» label: asked now, or kept from the first montage (subtitle edits rebuild it)
-    const aviso = b?.quitarAviso === true ? "" : str(b?.aviso, 40) || str(settings.aviso, 40);
+    const settings = (ad.settings ?? {}) as { lang?: string; review?: { clipId: string; url?: string; words: Word[] }[] };
+    // the «Dramatización · actor IA» on-screen label was removed from every ad (owner, 16 Nov 2026)
     const lang = sttLang(settings.lang ?? "en"); // transcription and subtitles: es-CL and es → "es"
     const variant = readLang(settings.lang, "en"); // the closing card's wording (Chilean, neutral or US)
     const aspect = String(ad.aspect || "9:16");
@@ -120,13 +119,11 @@ export async function POST(req: Request) {
       }
     }
 
-    if (aviso) bytes = await avisoPass(dir, bytes, W, H, aviso, duration);
-
     const stamp = Date.now();
     const ws = s.user.workspace;
     const url = await saveMedia(ws, "finals", bytes, "video/mp4", `${adId}-${stamp}.mp4`);
     const srtUrl = cap && cap.cues ? await saveMedia(ws, "finals", new TextEncoder().encode(cap.srt), "text/plain", `${adId}-${stamp}.srt`) : null;
-    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), look: pro ? { plantilla: look.id, c1: look.c1, c2: look.c2, sonidos: look.sfx !== "ninguno" } : undefined, srt: srtUrl, duration: Math.round(duration * 10) / 10, captions: cap && cap.cues ? style : null, pro: proPlan, correcciones: fixes.length ? fixes : undefined, aviso: aviso || undefined } });
+    const row = await db.update("ads", adId, { final_url: url, status: "done", settings: { ...(ad.settings as object), look: pro ? { plantilla: look.id, c1: look.c1, c2: look.c2, sonidos: look.sfx !== "ninguno" } : undefined, srt: srtUrl, duration: Math.round(duration * 10) / 10, captions: cap && cap.cues ? style : null, pro: proPlan, correcciones: fixes.length ? fixes : undefined } });
     return NextResponse.json({ ad: row, url, srt: srtUrl, duration, pro: proPlan });
   } catch (err) {
     return NextResponse.json({ error: publicError(err, "No se pudo armar el anuncio.") }, { status: 502 });

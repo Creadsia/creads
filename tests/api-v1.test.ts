@@ -76,18 +76,16 @@ test("readOrder: «persona-real» is accepted with an avatar (Automático used t
   } finally { if (prev === undefined) delete process.env.FAL_KEY; else process.env.FAL_KEY = prev; }
 });
 
-test("readOrder: dramatization label by language and voice speed capped at 1.2", () => {
+test("readOrder: voice speed capped at 1.2, no dramatization label is ever set", () => {
   const g = "I got three quotes, fixed my foundation and the cracks are gone.";
   const en = readOrder({ guion: g, idioma: "en", dramatizacion: true, velocidad: 1.5 });
   assert.ok(typeof en !== "string");
-  assert.equal(en.aviso, "Dramatization · AI actor");
   assert.equal(en.velocidad, 1.2);
+  assert.equal((en as { aviso?: string }).aviso, undefined);
   const es = readOrder({ guion: g, dramatizacion: true, velocidad: 1 });
   assert.ok(typeof es !== "string");
-  assert.equal(es.aviso, "Dramatización · actor IA");
   assert.equal(es.velocidad, undefined);
-  const none = readOrder({ guion: g });
-  assert.ok(typeof none !== "string" && !none.aviso);
+  assert.equal((es as { aviso?: string }).aviso, undefined);
 });
 
 test("avisoAss: one label for the whole ad, top right", async () => {
