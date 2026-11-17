@@ -45,15 +45,15 @@ test("final formats are drawn from the approved draft; edits keep everything els
 test("prices: the draft uses the cheapest model that's on, approving costs 3 finals, text edits and redos are free", () => {
   const ms = [
     { id: "nano-banana-pro", label: "Pro", usd: 0.134, configured: true },
-    { id: "nano-banana-2", label: "NB2", usd: 0.08, configured: true },
+    { id: "gpt-image-2.5", label: "GPT", usd: 0.06, configured: true },
     { id: "flux-3-klein", label: "Klein", usd: 0.009, configured: false },
     { id: "flux-3", label: "FLUX", usd: 0.048, configured: true },
   ];
   assert.equal(modeloBorrador(ms)?.id, "flux-3");
   assert.equal(modeloBorrador(ms.map((m) => ({ ...m, configured: true })))?.id, "flux-3-klein");
-  assert.equal(modeloFinal(ms)?.id, "nano-banana-2");
+  assert.equal(modeloFinal(ms)?.id, "gpt-image-2.5"); // default: GPT Image 2.5 (Nano Banana removed)
   assert.equal(modeloFinal(ms, "nano-banana-pro")?.id, "nano-banana-pro");
-  assert.equal(modeloFinal(ms, "flux-3-klein")?.id, "nano-banana-2"); // off → default
+  assert.equal(modeloFinal(ms, "flux-3-klein")?.id, "gpt-image-2.5"); // off → default
   assert.equal(modeloBorrador([]), null);
   assert.deepEqual(costosPasos(0.009, 0.08), { vistaPrevia: 0.009, aprobar: 0.24, editarTexto: 0, editarImagen: 0.08, rehacer: 0 });
 });

@@ -305,7 +305,7 @@ export function modeloBorrador(ms: ModeloPrecio[]) {
 /** The final model: the one asked for if it's on, else Nano Banana 2, else the cheapest on. */
 export function modeloFinal(ms: ModeloPrecio[], pedido?: string) {
   const on = ms.filter((m) => m.configured && m.usd > 0);
-  return on.find((m) => m.id === pedido) ?? on.find((m) => m.id === "nano-banana-2") ?? modeloBorrador(ms);
+  return on.find((m) => m.id === pedido) ?? on.find((m) => m.id === "gpt-image-2.5") ?? modeloBorrador(ms);
 }
 /** What each step costs (US$ of model cost, shown to the customer as credits). Overlay and free redos: 0. */
 export function costosPasos(borradorUsd: number, finalUsd: number) {
