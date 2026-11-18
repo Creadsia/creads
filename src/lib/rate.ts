@@ -47,6 +47,8 @@ const BUCKETS = {
   hooksIp: [24 * 60 * 60, 3], // free hook generator (/generador-de-hooks, no account) per connection per day
   hooksAll: [24 * 60 * 60, 800], // ... for everyone together per day (about US$0.03 each: a ceiling of ~US$25 a day)
   leadIp: [60 * 60, 10], // free-tool leads (Meta template download) per connection per hour
+  tryonIp: [60 * 60, 6], // "Ver en mi espacio" AI try-on (no account, external store) per connection per hour
+  tryonAll: [24 * 60 * 60, 300], // ... for everyone together per day (≈US$0.06 each: a ceiling of ~US$18/day)
 } as const;
 export type Bucket = keyof typeof BUCKETS;
 /** [window in seconds, max tries] of a bucket. */
@@ -81,6 +83,8 @@ export function clientIp(req: Request) {
 
 const MSG: Record<Bucket, string> = {
   apiKeys: "Hiciste muchas claves en poco rato. Intenta en una hora.",
+  tryonIp: "Probaste varias alfombras seguidas. Espera un ratito y vuelve a intentar.",
+  tryonAll: "La prueba con IA está muy ocupada hoy. Intenta más tarde.",
   human: "Ya nos llegó tu mensaje: te respondemos por correo lo antes posible.",
   oauth: "Demasiados intentos de conexión. Intenta en una hora.",
   oauthRegister: "Demasiados intentos de conexión. Intenta en unos minutos.",
