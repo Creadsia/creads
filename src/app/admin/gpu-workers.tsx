@@ -90,24 +90,49 @@ export default function GpuWorkers() {
 
       {e && (
         <>
-          {/* Estado en vivo */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[
-              ["Calientes (fijos)", String(activos), activos > 0 ? "text-good" : "text-muted"],
-              ["Corriendo ahora", String(corriendo), corriendo > 0 ? "text-ink" : "text-muted"],
-              ["En espera (idle)", String(w?.idle ?? 0), "text-muted"],
-              ["Trabajos en curso", String(e.health.jobs.inProgress ?? 0), (e.health.jobs.inProgress ?? 0) > 0 ? "text-ink" : "text-muted"],
-            ].map(([k, v, c]) => (
-              <div key={k} className="rounded-xl border border-line bg-surface-2/50 px-3 py-2">
-                <div className={`text-xl font-bold tabular-nums ${c}`}>{v}</div>
-                <div className="text-[12px] text-muted">{k}</div>
-              </div>
-            ))}
-          </div>
+          {/* Estado en vivo, en palabras simples (owner, 17 nov 2026: «necesito que eso esté muy claro»).
+              RunPod llama «idle» a una GPU prendida que no está haciendo nada: igual se cobra hasta que se apaga. */}
+          {(() => {
+            const trabajando = w?.running ?? 0;
+            const sinTrabajo = w?.idle ?? 0;
+            const prendidas = trabajando + sinTrabajo + (w?.initializing ?? 0);
+            const cola = e.health.jobs.inQueue ?? 0;
+            const enCurso = e.health.jobs.inProgress ?? 0;
+            const gastoHr = prendidas * usdHr;
+            return (
+              <>
+                <p className={`rounded-xl border px-4 py-3 text-[15px] ${sinTrabajo > 0 && cola === 0 ? "border-warn/50 bg-warn/[0.08]" : "border-line bg-surface-2/40"}`}>
+                  {prendidas === 0
+                    ? <><b>Todo apagado.</b> No hay GPUs prendidas: no estás pagando nada ahora.</>
+                    : <>
+                        <b>{prendidas} {prendidas === 1 ? "GPU prendida" : "GPUs prendidas"}</b>: {trabajando} {trabajando === 1 ? "trabajando" : "trabajando"} y{" "}
+                        <b className={sinTrabajo > 0 ? "text-warn" : ""}>{sinTrabajo} sin trabajo</b>. Cuestan ahora ~<b>{money(gastoHr)}/h</b>.{" "}
+                        {cola > 0 ? <>Hay <b>{cola}</b> {cola === 1 ? "pedido esperando" : "pedidos esperando"} su turno.</> : <>No hay pedidos esperando turno.</>}
+                        {sinTrabajo > 0 && cola === 0 && <> Las que están sin trabajo <b>se cobran igual</b> hasta que se apagan solas{cfg ? ` (en ${cfg.idleTimeout} s sin trabajo)` : ""}.</>}
+                      </>}
+                </p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {[
+                    ["GPUs trabajando", String(trabajando), trabajando > 0 ? "text-ink" : "text-muted"],
+                    ["GPUs prendidas sin trabajo (cobrando)", String(sinTrabajo), sinTrabajo > 0 ? "text-warn" : "text-muted"],
+                    ["Pedidos esperando turno", String(cola), cola > 0 ? "text-ink" : "text-muted"],
+                    ["Pedidos generándose", String(enCurso), enCurso > 0 ? "text-ink" : "text-muted"],
+                    ["Fijas siempre prendidas", cfg ? String(activos) : "?", activos > 0 ? "text-warn" : "text-muted"],
+                  ].map(([k, v, c]) => (
+                    <div key={k} className="rounded-xl border border-line bg-surface-2/50 px-3 py-2">
+                      <div className={`text-xl font-bold tabular-nums ${c}`}>{v}</div>
+                      <div className="text-[12px] text-muted">{k}</div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[12px] text-muted">Un pedido que pasa 40 minutos sin terminar se cancela solo en RunPod, y si un corte queda trabado en Creads se marca como fallido y el cliente recupera sus créditos.</p>
+              </>
+            );
+          })()}
 
           {/* Costo */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-line bg-surface-2/40 px-4 py-3 text-sm">
-            <span className="text-muted">Cada worker: <b className="text-ink">{money(usdHr)}/h</b> (solo mientras genera)</span>
+            <span className="text-muted">Cada worker: <b className="text-ink">{money(usdHr)}/h</b> (mientras esté prendido)</span>
             {modo === "caliente" && <span className="text-muted">Fijos ({activos}): <b className="text-ink">{money(costoActivosHr)}/h</b> · 24/7 ~<b className="text-ink">{money(mesSiQueda)}/mes</b></span>}
             {modo === "automatico" && <span className="text-good">En reposo: <b>US$0/h</b> · prende hasta {topeActual} bajo demanda</span>}
             {modo === "apagado" && <span className="text-muted">Apagado: <b className="text-ink">US$0/h</b> · no corre nada</span>}

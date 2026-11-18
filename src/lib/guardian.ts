@@ -4,6 +4,7 @@ import { alarm, recentErrors } from "./errlog";
 import { chargedSince, refundJob } from "./credits";
 import { sbRpc } from "./supabase";
 import { findVideo, videoProviders } from "./providers";
+import { cancelRunpodJob } from "./providers/gpu";
 import { pauseModel, pausedModels } from "./model-pause";
 import { sendWhatsApp, whatsappMode } from "./whatsapp";
 import { once } from "./marketing";
@@ -158,7 +159,10 @@ async function cleanStuck(c: GuardConfig): Promise<{ total: number; fixed: numbe
   let fixed = 0, esperando = 0;
   const claim = async (r: (typeof rows)[number]) => {
     const got = await sbRest<unknown[]>(`clips?id=eq.${r.id}&status=eq.${r.status}&updated_at=lt.${cutoff}`, { method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify({ status: "failed", error: STUCK_TEXT, updated_at: new Date().toISOString() }) });
-    return Array.isArray(got) && got.length > 0;
+    const ok = Array.isArray(got) && got.length > 0;
+    // a stuck job on our own GPU keeps a worker busy (and billed): end it there too (owner, 17 Nov 2026)
+    if (ok && r.provider_job?.startsWith("rp:")) await cancelRunpodJob(r.provider_job).catch(() => false);
+    return ok;
   };
   for (const r of rows) {
     try {
@@ -176,7 +180,9 @@ async function cleanStuck(c: GuardConfig): Promise<{ total: number; fixed: numbe
         state = (await Promise.race([provider.status({ provider: provider.id, jobId: r.provider_job }), new Promise<never>((_, no) => setTimeout(() => no(new Error("t")), 10_000))]).catch(() => ({ state: "unknown" }))).state;
       }
       if (state === "done") { esperando++; continue; } // finished: the customer's next visit saves it
-      if (state === "failed" || (!r.provider_job) || veryOld) {
+      // our own GPU caps a job at 40 min (ttl), so one still «running» past the stuck limit is lost: end it now
+      const ownGpu = Boolean(r.provider_job?.startsWith("rp:"));
+      if (state === "failed" || (!r.provider_job) || veryOld || ownGpu) {
         if (await claim(r)) { await refundJob(r.owner, r.id, "Devuelto: la generación se quedó trabada"); fixed++; }
       }
     } catch { /* the next round tries again */ }
