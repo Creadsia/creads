@@ -24,8 +24,8 @@ import {
 
 const raw = (anuncios: number, marcas: number) => ({ anuncios, marcas, actualizado: "2026-10-25T00:00:00Z" });
 
-test("confianza: counters stay hidden below their threshold (defaults 1000 / 50)", () => {
-  assert.deepEqual(contadoresVisibles(raw(999, 49), {}), []);
+test("confianza: counters stay hidden below their threshold (defaults 500 / 50)", () => {
+  assert.deepEqual(contadoresVisibles(raw(499, 49), {}), []);
   assert.deepEqual(contadoresVisibles(null, {}), []);
   const both = contadoresVisibles(raw(1234, 57), {});
   assert.deepEqual(both.map((c) => [c.id, c.texto]), [["anuncios", "1.200+"], ["marcas", "50+"]]);
@@ -35,7 +35,7 @@ test("confianza: counters stay hidden below their threshold (defaults 1000 / 50)
 
 test("confianza: thresholds come from env; bad values fall back; zero never shows", () => {
   assert.deepEqual(umbralesContadores({ CONTADOR_MIN_ANUNCIOS: "200", CONTADOR_MIN_MARCAS: "abc" }), { anuncios: 200, marcas: 50 });
-  assert.deepEqual(umbralesContadores({ CONTADOR_MIN_ANUNCIOS: "0", CONTADOR_MIN_MARCAS: "" }), { anuncios: 1000, marcas: 50 });
+  assert.deepEqual(umbralesContadores({ CONTADOR_MIN_ANUNCIOS: "0", CONTADOR_MIN_MARCAS: "" }), { anuncios: 500, marcas: 50 });
   assert.equal(contadoresVisibles(raw(250, 0), { CONTADOR_MIN_ANUNCIOS: "200", CONTADOR_MIN_MARCAS: "1" }).length, 1);
 });
 
