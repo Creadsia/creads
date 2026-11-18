@@ -221,7 +221,7 @@ export function contadoresVisibles(raw: ContadoresCrudos | null, env: Record<str
   if (!raw) return [];
   const min = umbralesContadores(env);
   const out: Contador[] = [];
-  if (raw.anuncios > 0 && raw.anuncios >= min.anuncios) out.push({ id: "anuncios", valor: raw.anuncios, texto: formatoContador(raw.anuncios), etiqueta: "anuncios e imágenes hechos con Creads" });
+  if (raw.anuncios > 0 && raw.anuncios >= min.anuncios) out.push({ id: "anuncios", valor: raw.anuncios, texto: formatoContador(raw.anuncios), etiqueta: "imágenes, videos y anuncios generados con Creads" });
   if (raw.marcas > 0 && raw.marcas >= min.marcas) out.push({ id: "marcas", valor: raw.marcas, texto: formatoContador(raw.marcas), etiqueta: "marcas creando en los últimos 30 días" });
   return out;
 }

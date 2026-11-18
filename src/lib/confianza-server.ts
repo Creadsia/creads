@@ -73,8 +73,8 @@ export const tieneEntradas = async (l: Lista) => (await portadaPublica())[l].len
 
 /**
  * Real totals from the database. «Anuncios»: images produced (table images; the «gen:image» clips are the same
- * images, so they are not added again) + finished video ads (ads with their final file) + standalone AI videos
- * finished («gen:video» clips). «Marcas»: brand kits whose account produced something in the last 30 days (or
+ * images, so they are not added again) + finished video ads (ads with their final file) + every finished video
+ * clip (standalone AI videos and the cuts of each ad). «Marcas»: brand kits whose account produced something in the last 30 days (or
  * saved the kit then). Test accounts are left out; Creadsia's own account is left out of «marcas».
  */
 export async function contarCrudo(now = Date.now()): Promise<ContadoresCrudos> {
@@ -84,7 +84,9 @@ export async function contarCrudo(now = Date.now()): Promise<ContadoresCrudos> {
   const [imagenes, anuncios, videos, kits, clipOwners, imgOwners] = await Promise.all([
     countRows("images", notTest.slice(0, -1)),
     countRows("ads", `${notTest}final_url=not.is.null`),
-    countRows("clips", `${notTest}kind=eq.gen:video&status=eq.done`),
+    // every finished video clip: standalone AI videos and each cut of an ad (owner, 18 Nov 2026: «hemos sacado
+    // muchos más» — the cuts are real generations too). gen:image clips are the same rows as «images».
+    countRows("clips", `${notTest}status=eq.done&or=(kind.is.null,kind.neq.gen:image)`),
     listPrivateFiles("marca"),
     sbAll<{ owner: string }>(`clips?status=eq.done&created_at=gte.${since}&select=owner`, "created_at.asc,id.asc"),
     sbAll<{ owner: string }>(`images?created_at=gte.${since}&select=owner`, "created_at.asc,id.asc"),
