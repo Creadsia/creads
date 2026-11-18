@@ -119,9 +119,12 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
         return paso !== j.paso || failed.length ? { paso, reintentos } : {};
       }
       if (done === ids.length) return { estado: j.revisado ? "armando" : "revisando", paso: "Cortes listos", reintentos };
-      if (Date.now() - Date.parse(j.updatedAt) > 3 * 3600_000 && !failed.length) throw new Error("La generación lleva más de 3 horas sin terminar.");
+      // A cut that makes zero progress for an hour is stuck: fail the ad so it leaves the queue fast and frees
+      // room for what's coming (any still-running cut is reaped and refunded by the Guardián). Each finished cut
+      // moves updatedAt, so a slow-but-advancing ad never trips this.
+      if (Date.now() - Date.parse(j.updatedAt) > 60 * 60_000 && !failed.length) throw new Error("La generación se quedó trabada (más de una hora sin avanzar).");
       const paso = `${done} de ${ids.length} cortes listos`;
-      return failed.length || paso !== j.paso ? { paso, reintentos } : {}; // progress resets the 3-hour clock
+      return failed.length || paso !== j.paso ? { paso, reintentos } : {}; // progress resets the stuck clock
     }
     if (j.estado === "revisando") {
       const r = await studio<{ results: { clipId: string; severe?: boolean; freeRedo?: boolean; redraw?: boolean; issues: string[] }[] }>("/api/review", { adId: j.adId }, 290_000);
