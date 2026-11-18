@@ -27,7 +27,6 @@ const SIN_DATOS: Confianza = { galeria: [], contadores: [], testimonios: [], nov
 /** «Así se gasta tu saldo»: what each piece uses (the same numbers as the app charges, src/lib/credit-math.ts). */
 const GASTO = [
   ["Imagen con texto, en feed 4:5, stories 9:16 y cuadrado", "10 créditos"],
-  ["La misma imagen con Nano Banana Pro (mayor calidad)", "20 créditos"],
   ["Video de producto de 6 s (escena + movimiento + titular)", "15 créditos"],
   ["Video con avatar que habla, 15 s", "25 créditos"],
   ["Ángulos, hooks y editar textos, subtítulos, logo o música", "Gratis"],
@@ -310,7 +309,8 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
               <p className="max-w-2xl text-sm text-muted">Las personas no existen: las creó la IA, con voz y labios sincronizados. Imposible notar la diferencia.</p>
               {UGC_NUEVOS.length > 0 && (
                 <div className="scroll-row mb-1 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible lg:grid-cols-6">
-                  {UGC_NUEVOS.map((d) => (
+                  {/* only the first 6: one clean row (owner, 18 Nov 2026: peluquería and gym en casa looked out of place) */}
+                  {UGC_NUEVOS.slice(0, 6).map((d) => (
                     <DemoPhone key={d.src} {...d} className="w-[52vw] max-w-[220px] shrink-0 snap-start sm:w-auto sm:max-w-none" />
                   ))}
                 </div>
