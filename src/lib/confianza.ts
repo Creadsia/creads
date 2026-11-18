@@ -204,7 +204,7 @@ export interface Contador { id: "anuncios" | "marcas"; valor: number; texto: str
 
 const umbral = (v: string | undefined, d: number) => { const n = Number(v); return v !== undefined && v.trim() !== "" && Number.isFinite(n) && n >= 1 ? Math.floor(n) : d; };
 export const umbralesContadores = (env: Record<string, string | undefined>) => ({
-  anuncios: umbral(env.CONTADOR_MIN_ANUNCIOS, 1000),
+  anuncios: umbral(env.CONTADOR_MIN_ANUNCIOS, 500), // owner, 18 Nov 2026: show it from 500 (real, rounded down)
   marcas: umbral(env.CONTADOR_MIN_MARCAS, 50),
 });
 
@@ -221,7 +221,7 @@ export function contadoresVisibles(raw: ContadoresCrudos | null, env: Record<str
   if (!raw) return [];
   const min = umbralesContadores(env);
   const out: Contador[] = [];
-  if (raw.anuncios > 0 && raw.anuncios >= min.anuncios) out.push({ id: "anuncios", valor: raw.anuncios, texto: formatoContador(raw.anuncios), etiqueta: "anuncios hechos con Creads" });
+  if (raw.anuncios > 0 && raw.anuncios >= min.anuncios) out.push({ id: "anuncios", valor: raw.anuncios, texto: formatoContador(raw.anuncios), etiqueta: "anuncios e imágenes hechos con Creads" });
   if (raw.marcas > 0 && raw.marcas >= min.marcas) out.push({ id: "marcas", valor: raw.marcas, texto: formatoContador(raw.marcas), etiqueta: "marcas creando en los últimos 30 días" });
   return out;
 }

@@ -21,7 +21,7 @@ import type { Contador, GaleriaPublicaItem, Novedad } from "@/lib/confianza";
 import type { TestimonioPublico } from "@/lib/casos";
 
 /** Real data for the trust blocks (owner's plan, 25 Oct 2026): every block hides itself when its list is empty. */
-export interface Confianza { galeria: GaleriaPublicaItem[]; contadores: Contador[]; testimonios: TestimonioPublico[]; novedades: Novedad[]; roadmap: boolean }
+export interface Confianza { galeria: GaleriaPublicaItem[]; contadores: Contador[]; testimonios: TestimonioPublico[]; novedades: Novedad[]; roadmap: boolean; /** AI models switched on now */ modelos?: number }
 const SIN_DATOS: Confianza = { galeria: [], contadores: [], testimonios: [], novedades: [], roadmap: false };
 
 /** «Así se gasta tu saldo»: what each piece uses (the same numbers as the app charges, src/lib/credit-math.ts). */
@@ -205,6 +205,30 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
             </div>
           </div>
         </section>
+
+        {/* 1b · Creads en números (owner, 18 Nov 2026: «la típica sección de que hemos generado muchos anuncios»).
+            Only true numbers: the real counter from the database (rounded down, grows by itself, hidden below its
+            threshold), the AI models switched on right now, and facts of the offer. Never typed-in figures. */}
+        {(() => {
+          const stats: { n: React.ReactNode; label: string }[] = [
+            ...confianza.contadores.map((c) => ({ n: c.texto, label: c.etiqueta })),
+            ...(confianza.modelos && confianza.modelos >= 5 ? [{ n: String(confianza.modelos), label: "modelos de IA en un solo estudio" }] : []),
+            { n: "ES · EN", label: "anuncios en español e inglés" },
+            { n: pack ? precioPack : `${PRUEBA_DIAS} días`, label: pack ? "tus primeros 10 anuncios" : "gratis para probar, sin permanencia" },
+          ];
+          return (
+            <section className={gutter} aria-label="Creads en números">
+              <dl className={`${wrap} grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4`}>
+                {stats.slice(0, 4).map((x) => (
+                  <div key={x.label} className="flex flex-col items-center gap-1 rounded-2xl border border-line bg-surface px-4 py-5 text-center">
+                    <dt className="order-2 text-sm text-muted">{x.label}</dt>
+                    <dd className="order-1 font-display text-3xl font-semibold tabular-nums sm:text-4xl">{x.n}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          );
+        })()}
 
         {/* 2 · How it works: 3 steps */}
         <section id="como" className={`scroll-mt-20 ${gutter}`} aria-labelledby="como-title">

@@ -5,6 +5,7 @@ import { usdClpRate } from "@/lib/usd-clp";
 import { contadoresReales, galeriaPublica, novedadesRecientes, roadmapPublico } from "@/lib/confianza-server";
 import { testimoniosPublicados } from "@/lib/casos";
 import { modoPack } from "@/lib/oferta";
+import { imageProviders, videoProviders, voiceProviders } from "@/lib/providers";
 
 export const revalidate = 300; // rebuilt every 5 minutes (the gallery and testimonials from the admin show up quickly)
 export const dynamic = "force-static"; // served from cache: fast for every visitor
@@ -23,5 +24,7 @@ export default async function Home() {
   const [rate, galeria, contadores, testimonios, novedades, roadmap] = await Promise.all([
     usdClpRate().catch(() => 950), galeriaPublica(), contadoresReales(), testimoniosPublicados().catch(() => []), novedadesRecientes(3), roadmapPublico(),
   ]);
-  return <Venta t={es} rate={rate} renews={process.env.MP_ONE_TIME !== "1"} confianza={{ galeria, contadores, testimonios, novedades, roadmap: roadmap.length > 0 }} pack={modoPack()} />;
+  // AI models switched on right now (video, image, voice): the «modelos» number on the page is always true
+  const modelos = [...videoProviders, ...imageProviders, ...voiceProviders].filter((m) => { try { return m.configured(); } catch { return false; } }).length;
+  return <Venta t={es} rate={rate} renews={process.env.MP_ONE_TIME !== "1"} confianza={{ galeria, contadores, testimonios, novedades, roadmap: roadmap.length > 0, modelos }} pack={modoPack()} />;
 }
