@@ -114,6 +114,11 @@ export async function runStep(j: AdJob, studio: Studio, pickModel: () => Promise
       }
       const done = st.filter((x) => x === "done").length;
       if (blocked) {
+        // A cut blocked for a configuration reason (no voice, no avatar, a model that refuses the photo) will
+        // never start by waiting — the studio marks those "No se usó tu saldo". Fail the ad now so it leaves
+        // the queue fast instead of sitting "En espera" for a day. Transient blocks (no credits yet, a paused
+        // model) still wait and recover on their own.
+        if (/No se usó tu saldo/i.test(blocked)) throw new Error(blocked);
         if (Date.now() - Date.parse(j.updatedAt) > 24 * 3600_000) throw new Error(`El anuncio quedó a medias: ${blocked}`);
         const paso = `En espera: ${blocked}`;
         return paso !== j.paso || failed.length ? { paso, reintentos } : {};
