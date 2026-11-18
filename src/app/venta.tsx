@@ -226,10 +226,12 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
           </div>
         </section>
 
-        {/* 2b · Editor: UN solo video con subtítulos karaoke (palabra por palabra), estilo TikTok. Limpio y pro. */}
+        {/* 2b · Editor: UN solo video con subtítulos karaoke (palabra por palabra), estilo TikTok. Limpio y pro.
+            The lit word is the solid brand orange: since the rebrand --grad is near-black, and gradient-clipped text
+            under the black outline turned every lit word into a grey smudge (owner, 18 Nov 2026: «se ve pésimo»). */}
         <section id="editor" className={`stage relative scroll-mt-20 overflow-hidden py-14 sm:py-20 ${gutter}`} aria-labelledby="editor-title">
           <style>{`
-            @keyframes creadsKw { 0%, 22%, 100% { transform: none; } 7%, 15% { color: transparent; background-image: var(--grad); -webkit-background-clip: text; background-clip: text; transform: translateY(-2px) scale(1.1); } }
+            @keyframes creadsKw { 0%, 22%, 100% { transform: none; } 7%, 15% { color: var(--brand); transform: translateY(-2px) scale(1.1); } }
             .creads-kw { display: inline-block; animation: creadsKw ${EDITOR_CAP.length * 0.42}s linear infinite; }
             @media (prefers-reduced-motion: reduce) { .creads-kw { animation: none; } }
           `}</style>
