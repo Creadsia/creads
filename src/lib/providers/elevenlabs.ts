@@ -41,21 +41,44 @@ export const elevenlabs: VoiceProvider = {
   configured: () => Boolean(process.env.ELEVENLABS_API_KEY),
 
   async voices() {
-    const res = await fetch(`${API}/v2/voices?page_size=100&include_total_count=false`, {
-      headers: { "xi-api-key": key() },
-      cache: "no-store",
-    });
+    // ElevenLabs' /v2/voices had an outage (500s with 20–40 min latency, 18 Nov 2026) while the rest of
+    // the account worked. We try /v2 first and fall back to the stable /v1/voices (the endpoint their own
+    // app uses), each with a short timeout so a hung endpoint never blocks the studio. Both return the
+    // same voice fields, so one mapper serves both.
+    const map = (data: { voices?: unknown }): Voice[] =>
+      ((Array.isArray(data?.voices) ? data.voices : []) as Record<string, unknown>[])
+        .map((v) => ({
+          id: String(v.voice_id),
+          name: String(v.name ?? "Sin nombre"),
+          category: String(v.category ?? ""),
+          preview: typeof v.preview_url === "string" ? v.preview_url : undefined,
+          labels: (v.labels as Record<string, string>) ?? undefined,
+        }))
+        // The customer's own (cloned) voices first, then alphabetical.
+        .sort((a, b) => Number(b.category === "cloned") - Number(a.category === "cloned") || a.name.localeCompare(b.name));
+
+    const get = async (path: string): Promise<Response> => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12_000);
+      try {
+        return await fetch(`${API}${path}`, { headers: { "xi-api-key": key() }, cache: "no-store", signal: ctrl.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    // 1) the newer endpoint; 2) on any failure or timeout, the stable one.
+    let res: Response | null = null;
+    try {
+      res = await get("/v2/voices?page_size=100&include_total_count=false");
+    } catch {
+      res = null;
+    }
+    if (res?.ok) return map(await res.json());
+
+    res = await get("/v1/voices?show_legacy=true");
     if (!res.ok) return fail(res, "ElevenLabs");
-    const data = await res.json();
-    const list: Voice[] = (data?.voices ?? []).map((v: Record<string, unknown>) => ({
-      id: String(v.voice_id),
-      name: String(v.name ?? "Sin nombre"),
-      category: String(v.category ?? ""),
-      preview: typeof v.preview_url === "string" ? v.preview_url : undefined,
-      labels: (v.labels as Record<string, string>) ?? undefined,
-    }));
-    // The customer's own (cloned) voices first, then alphabetical.
-    return list.sort((a, b) => Number(b.category === "cloned") - Number(a.category === "cloned") || a.name.localeCompare(b.name));
+    return map(await res.json());
   },
 
   async clone(name, sample) {
