@@ -170,28 +170,41 @@ export async function advanceAd(job: ApiAd, studio: Studio): Promise<ApiAd> {
 export async function sweepOpenAds(maxMs = 240_000): Promise<{ moved: number; done: number }> {
   const t0 = Date.now();
   let moved = 0, done = 0;
-  for (const ref of await openList()) {
-    if (Date.now() - t0 > maxMs) break;
-    let job = await loadAd(ref.ws, ref.id);
-    if (!job || DONE.has(job.estado)) { await markClosed(ref.ws, ref.id); continue; }
-    if (Date.now() - Date.parse(job.checkedAt ?? job.updatedAt) < 90_000) continue; // someone is watching it
-    let token = "";
-    try {
-      token = await createServiceSession(job.userId, "CreadsGuardian/1.0 (anuncio en segundo plano)");
-      const studio = studioWith({ cookie: `creads_session=${token}` });
-      for (let i = 0; i < 4 && job && !DONE.has(job.estado) && Date.now() - t0 < maxMs; i++) {
-        const before = `${job.estado}|${job.paso}|${job.updatedAt}`;
-        job = await advanceAd(job, studio);
-        moved++;
-        if (`${job.estado}|${job.paso}|${job.updatedAt}` === before) break; // waiting on a provider: next round
+  const refs = await openList();
+  // Fairness: this used to walk the list one ad at a time from the front, so a few slow ads (a long montage,
+  // or a provider that hangs) ate the whole budget and the rest of the queue never advanced — finished cuts
+  // sat "generando" because nobody moved the ad on. Now several ads run at once and each gets a time slice, so
+  // one slow ad can't starve the rest and every ad gets a turn each round. Per-ad work is unchanged.
+  const CONCURRENCY = 6;
+  const AD_SLICE = 60_000; // one ad can hold a worker at most this long per sweep
+  let next = 0;
+  const worker = async () => {
+    while (Date.now() - t0 < maxMs) {
+      const ref = refs[next++];
+      if (!ref) return;
+      let job = await loadAd(ref.ws, ref.id);
+      if (!job || DONE.has(job.estado)) { await markClosed(ref.ws, ref.id); continue; }
+      if (Date.now() - Date.parse(job.checkedAt ?? job.updatedAt) < 90_000) continue; // someone is watching it
+      let token = "";
+      try {
+        token = await createServiceSession(job.userId, "CreadsGuardian/1.0 (anuncio en segundo plano)");
+        const studio = studioWith({ cookie: `creads_session=${token}` });
+        const adDeadline = Date.now() + AD_SLICE;
+        for (let i = 0; i < 4 && job && !DONE.has(job.estado) && Date.now() < adDeadline && Date.now() - t0 < maxMs; i++) {
+          const before = `${job.estado}|${job.paso}|${job.updatedAt}`;
+          job = await advanceAd(job, studio);
+          moved++;
+          if (`${job.estado}|${job.paso}|${job.updatedAt}` === before) break; // waiting on a provider: next round
+        }
+        if (job && DONE.has(job.estado)) done++;
+      } catch (e) {
+        console.error("sweepOpenAds", ref.id, e instanceof Error ? e.message : e);
+      } finally {
+        if (token) await endSession(token).catch(() => {});
       }
-      if (job && DONE.has(job.estado)) done++;
-    } catch (e) {
-      console.error("sweepOpenAds", ref.id, e instanceof Error ? e.message : e);
-    } finally {
-      if (token) await endSession(token).catch(() => {});
     }
-  }
+  };
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   return { moved, done };
 }
 
