@@ -203,6 +203,20 @@ export const FAL_VIDEO: FalVideo[] = [
     build: seedance,
   },
   {
+    // Seedance 2.5 Flash (BytePlus, live 2026-11-15): ~34% cheaper and 2× faster than 2.5. Only 480p/720p
+    // (no 1080p/4K), so byteplus.ts caps it to 720p. Real BytePlus cost: 720p US$0.15/s. Base set to ~2× that,
+    // like Seedance 2.5, so direct() charges ~US$0.225/s with BytePlus connected. BytePlus-only in practice
+    // (fal is kept only as the fallback shape; FAL_KEY is off since 9 Nov).
+    id: "seedance-2.5-flash",
+    noFaces: true,
+    label: "Seedance 2.5 Flash",
+    usdPerSecond: 0.3,
+    i2v: "bytedance/seedance-2.5/flash/image-to-video",
+    t2v: "bytedance/seedance-2.5/flash/text-to-video",
+    durations: range(4, 15),
+    build: seedance,
+  },
+  {
     id: "hailuo-2.3",
     silent: true,
     label: "Hailuo 2.3",

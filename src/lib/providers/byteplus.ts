@@ -11,6 +11,7 @@ const PREFIX = "ark:";
 /** Our model id → BytePlus model id. */
 export const ARK_MODELS: Record<string, string> = {
   "seedance-2.5": "dreamina-seedance-2-5-260628",
+  "seedance-2.5-flash": "dreamina-seedance-2-5-flash-261115",
   "seedance-2.0": "dreamina-seedance-2-0-260128",
   "seedance-2.0-fast": "dreamina-seedance-2-0-fast-260128",
 };
@@ -42,7 +43,7 @@ export function arkTask(model: string, req: VideoRequest, image?: string) {
       { type: "text", text: req.prompt },
       ...(image ? [{ type: "image_url", image_url: { url: image }, role: "first_frame" }] : []),
     ],
-    resolution: req.resolution,
+    resolution: /flash/.test(model) ? "720p" : req.resolution, // Flash only does 480p/720p (no 1080p/4K)
     ratio: image ? "adaptive" : ratio(req.aspect),
     duration: nearest(req.seconds, SECONDS),
     generate_audio: req.withAudio,

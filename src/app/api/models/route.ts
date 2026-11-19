@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { checkAccess } from "@/lib/access";
+import { checkAccess, session } from "@/lib/access";
 import { imageProviders, videoProviders } from "@/lib/providers";
 import { pausedModels } from "@/lib/model-pause";
 import { gpuConfigured, itkServerlessOn } from "@/lib/providers/gpu";
+import { workspaceRow } from "@/lib/billing";
+import { unlimited } from "@/lib/credits";
 
 // The studio's model list: which models are connected and what they cost.
 // Available stack (owner, 9 Nov 2026): GPT (images), ElevenLabs (voices) and our own GPU (video). fal.ai removed.
@@ -11,14 +13,22 @@ export async function GET(req: Request) {
   if (denied) return NextResponse.json({ error: denied }, { status: 401 });
 
   const paused = await pausedModels();
+  // Seedance (incl. Flash) is a paid-plan option (owner, 19 Nov 2026): only Escala (US$49) and Agencia (US$99),
+  // plus the owner's unlimited account. Everyone else (Testea, trial, no plan) never sees it. The plan is stored
+  // as the plan name on the workspace, so «escala»/«agencia» (also with the «anual» suffix) match by substring.
+  const s = await session(req);
+  const ws = s?.user.workspace;
+  const planId = ws ? await workspaceRow(ws).then((w) => (w.plan ?? "").toLowerCase()).catch(() => "") : "";
+  const seedanceOk = ws ? unlimited(ws) || /escala|agencia/.test(planId) : false;
   // When our own GPU is on (serverless or pod), the studio offers ONLY the GPU models for video and GPT/GPU for
   // images (no paid third-party providers): the customer's money is protected and no one can bill a third party.
   const gpuOn = gpuConfigured() || itkServerlessOn();
-  // With our GPU on we offer only the GPU models — plus Seedance (ByteDance) when its key is present, as a
-  // paid quality option the owner turned on. No other third-party video model is exposed.
-  const videos = gpuOn
+  // With our GPU on we offer only the GPU models — plus Seedance (ByteDance) when its key is present AND the
+  // plan allows it, as a paid quality option. No other third-party video model is exposed.
+  const videos = (gpuOn
     ? videoProviders.filter((p) => p.id.endsWith("-gpu") || (p.id.startsWith("seedance-") && p.configured()))
-    : videoProviders;
+    : videoProviders
+  ).filter((p) => !p.id.startsWith("seedance-") || seedanceOk);
   const images = gpuOn
     ? imageProviders.filter((p) => p.id.endsWith("-gpu") || p.id.startsWith("gpt-image"))
     : imageProviders;
