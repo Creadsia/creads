@@ -17,6 +17,7 @@ import { GARANTIA } from "@/lib/garantia-textos";
 import GaleriaCreads from "./galeria-creads";
 import { InsigniasPago } from "./pay-badges";
 import { SoporteLinea } from "./whatsapp";
+import CopyUrl from "./copy-url";
 import type { Contador, GaleriaPublicaItem, Novedad } from "@/lib/confianza";
 import type { TestimonioPublico } from "@/lib/casos";
 
@@ -371,6 +372,29 @@ export default function Venta({ t, rate = 950, renews = true, confianza = SIN_DA
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* 6b · Claude, ChatGPT and the API (owner, 17 Nov 2026: the connector went missing when this page replaced the old home) */}
+        <section id="conectar" className={`scroll-mt-20 ${gutter}`} aria-labelledby="conectar-title">
+          <div className={`${wrap} grid gap-6 rounded-3xl border border-line bg-surface p-6 sm:p-8 lg:grid-cols-[1fr_1.1fr]`}>
+            <div className="flex min-w-0 flex-col gap-3">
+              <h2 id="conectar-title" className={h2}>{t.connect.title}</h2>
+              <p className="text-muted">{t.connect.lead}</p>
+              <div className="flex min-w-0 flex-col gap-2">
+                <span className="text-sm font-semibold text-muted">Dirección del conector (MCP)</span>
+                <CopyUrl url={t.connect.url} copy={t.connect.copy} copied={t.connect.copied} />
+              </div>
+              <a href="/app/api" className="self-start text-[15px] font-semibold underline decoration-line underline-offset-4 hover:decoration-ink">{t.connect.cta}</a>
+            </div>
+            <dl className="flex min-w-0 flex-col gap-4">
+              {t.connect.items.map((x) => (
+                <div key={x.name} className="flex flex-col gap-1 rounded-2xl border border-line p-4">
+                  <dt className="font-bold">{x.name}</dt>
+                  <dd className="text-sm leading-relaxed text-muted">{x.how}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 

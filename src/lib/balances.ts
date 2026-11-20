@@ -10,7 +10,7 @@ import { readPrivateJSON, selectRows, writePrivateJSON } from "./supabase";
 // - Google (Veo, Nano Banana) and Claude: no balance API. Google is estimated from the top-ups the
 //   owner wrote down in the panel minus what Creads recorded as spent; Claude only shows a link.
 
-export type Service = "fal" | "google" | "eleven" | "claude" | "openai";
+export type Service = "fal" | "google" | "eleven" | "claude" | "openai" | "gpu";
 
 export const SERVICE_INFO: Record<Service, { name: string; what: string; recharge: string }> = {
   fal: { name: "fal.ai", what: "Kling, Seedance, Hailuo, Wan, Grok, imágenes y herramientas", recharge: "https://fal.ai/dashboard/billing" },
@@ -18,6 +18,7 @@ export const SERVICE_INFO: Record<Service, { name: string; what: string; recharg
   eleven: { name: "ElevenLabs", what: "Voces, clonación, doblaje, música y efectos", recharge: "https://elevenlabs.io/app/subscription" },
   claude: { name: "Claude (Anthropic)", what: "Escribe los prompts y revisa los anuncios", recharge: "https://console.anthropic.com/settings/billing" },
   openai: { name: "OpenAI", what: "Imágenes GPT Image 2.5", recharge: "https://platform.openai.com/settings/organization/billing" },
+  gpu: { name: "RunPod (GPU propia)", what: "Avatar que habla y modelos en GPU propia", recharge: "https://console.runpod.io/user/billing" },
 };
 
 const ELEVEN_TOOLS = new Set(["doblaje", "musica", "efectos"]);
@@ -29,6 +30,7 @@ export function serviceOf(kind: string | null | undefined, model: string | null 
   if (k.startsWith("tool:")) return ELEVEN_TOOLS.has(k.slice(5)) ? "eleven" : "fal";
   if (m.startsWith("veo") || m.startsWith("nano-banana-pro") || m === "nano banana pro") return "google";
   if (m.startsWith("gpt-image") || m.startsWith("gpt image")) return "openai";
+  if (m.endsWith("-gpu")) return "gpu"; // our own GPU (RunPod): paid by the hour there, never from fal's balance
   return "fal";
 }
 
@@ -267,7 +269,7 @@ export interface ServiceStatus {
 
 interface SpendRow { kind: string | null; model: string | null; usd: number | null; created_at: string }
 
-const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i, openai: /openai/i };
+const matches: Record<Service, RegExp> = { fal: /\bfal\b/i, google: /google|gemini/i, eleven: /eleven/i, claude: /anthropic|claude/i, openai: /openai/i, gpu: /runpod/i };
 
 export async function overview(fresh = true): Promise<{ services: ServiceStatus[]; umbrales: Umbrales; today: number; alerts: { service: Service; name: string; text: string }[] }> {
   const [umbrales, file, finanzas, fal, eleven] = await Promise.all([

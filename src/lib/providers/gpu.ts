@@ -197,6 +197,7 @@ export const wanBrollGpu: VideoProvider = {
 // deliberate: a worker that hangs (owner, 9 Nov 2026: cuts stuck ~25 min) is killed as TIMED_OUT and the cut
 // retries on a healthy worker, instead of sitting dead for up to an hour. Raise only if moving to a slower GPU.
 const RUNPOD_EXEC_TIMEOUT_MS = 15 * 60 * 1000; // 15 min: real cuts finish well under this; hung ones fail fast and retry
+const RUNPOD_TTL_MS = 40 * 60 * 1000; // 40 min from the moment it's sent, queue included
 const itkEndpoint = () => (process.env.RUNPOD_ITK_ENDPOINT ?? "").trim();
 const runpodKey = () => (process.env.RUNPOD_API_KEY ?? "").trim();
 /** Whether the talking head should run on our RunPod serverless endpoint (preferred over the pod when set). */
@@ -237,7 +238,10 @@ async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: st
       max_frame: Math.min(500, Math.max(25, Math.round((req.seconds || 5) * 25))),
     },
     // Raise RunPod's 30-min per-job cap so a slow (block-swapped) render on the small GPU isn't killed midway.
-    policy: { executionTimeout: RUNPOD_EXEC_TIMEOUT_MS },
+    // ttl: the job's whole life (waiting in line + running). RunPod's default is 24 h, so a job nobody picks up
+    // could sit there for a day; after 40 min RunPod drops it and the cut fails and retries (owner, 17 Nov 2026:
+    // «si ya pasaron más de 2 horas que se borren… mejor salir al tiro de eso y volver a generar»).
+    policy: { executionTimeout: RUNPOD_EXEC_TIMEOUT_MS, ttl: RUNPOD_TTL_MS },
   };
   const res = await fetch(runUrl(), { method: "POST", headers: runpodHeaders(), body: JSON.stringify(body) });
   if (!res.ok) {
@@ -248,6 +252,13 @@ async function runpodSubmitTalk(req: VideoRequest, faceUrl: string, audioUrl: st
   const d = (await res.json().catch(() => null)) as { id?: string } | null;
   if (!d?.id) throw new Error("Habla (GPU serverless): RunPod no devolvió un trabajo.");
   return `rp:${d.id}`; // marker so status()/download() know this job is on the serverless endpoint
+}
+
+/** Ends a job on the serverless endpoint (queued or running), so a stuck one stops using a GPU. Best effort. */
+export async function cancelRunpodJob(jobId: string): Promise<boolean> {
+  if (!itkServerlessOn() || !jobId.startsWith("rp:")) return false;
+  const res = await fetch(`https://api.runpod.ai/v2/${itkEndpoint()}/cancel/${jobId.slice(3)}`, { method: "POST", headers: runpodHeaders() }).catch(() => null);
+  return Boolean(res?.ok);
 }
 
 async function runpodTalkStatus(jobId: string): Promise<JobStatus> {
@@ -282,10 +293,17 @@ async function runpodTalkDownload(url: string): Promise<ArrayBuffer> {
 /** InfiniteTalk on the GPU — «avatar que habla» with natural head/body/hand movement (replaces
  *  Kling/MiniMax/HeyGen). Apache-2.0. `talking`: takes a face image + the recorded voice (refs) and the clip
  *  lasts as long as the audio. */
+// What one second of talking video really costs us on the RunPod endpoint (owner, 18 Nov 2026: «que al cliente
+// se le descuente lo que realmente cuesta»). A worker costs ~US$1.89/h (48 GB Pro, US$0.000525/s); a cut of ~5 s
+// keeps one busy ~5 min (start ~30–60 s + render 2–4 min + 60 s idle before it shuts down) ≈ US$0.16, so ≈ US$0.03
+// per second of video. That is also the «~25 créditos por un video con avatar de ~15 s» the plans were built on.
+// If the GPU or its speed changes, set RUNPOD_ITK_USD_PER_SEC in Vercel.
+export const ITK_USD_PER_SEC = Number(process.env.RUNPOD_ITK_USD_PER_SEC ?? "0.03") || 0.03;
+
 export const infiniteTalkGpu: VideoProvider = {
   id: "infinitetalk-gpu",
   label: "InfiniteTalk (GPU propia)",
-  usdPerSecond: 0,
+  usdPerSecond: ITK_USD_PER_SEC,
   talking: true,
   aspects: ["9:16", "1:1", "4:5"],
   // On when EITHER the serverless endpoint (preferred, scales) OR the single ComfyUI pod is configured.
